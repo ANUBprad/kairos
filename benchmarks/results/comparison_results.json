@@ -1,0 +1,51 @@
+{
+  "total_queries": 30,
+  "recall_delta": 0.0,
+  "precision_delta": 0.0,
+  "latency_delta_s": -0.11507643000125731,
+  "failure_delta": {
+    "empty_retrieval_rate": 0.0,
+    "timeout_rate": 0.0,
+    "planner_fallback_rate": 0.09999999999999998,
+    "generation_failure_rate": 0.0,
+    "overall_failure_rate": 0.10000000000000003
+  },
+  "per_type_recall_delta": {
+    "complex": 0.0,
+    "multi_hop": 0.0,
+    "simple": 0.0
+  },
+  "per_type_precision_delta": {
+    "complex": 0.0,
+    "multi_hop": 0.0,
+    "simple": 0.0
+  },
+  "per_type_latency_delta_s": {
+    "complex": -3.341000071183468e-05,
+    "multi_hop": -5.5339999380521474e-05,
+    "simple": -0.11498768000116494
+  },
+  "per_type_failure_delta": {
+    "complex": {
+      "empty_retrieval_rate": 0.0,
+      "timeout_rate": 0.0,
+      "planner_fallback_rate": 0.0,
+      "generation_failure_rate": 0.0,
+      "overall_failure_rate": 0.0
+    },
+    "multi_hop": {
+      "empty_retrieval_rate": 0.0,
+      "timeout_rate": 0.0,
+      "planner_fallback_rate": 0.3,
+      "generation_failure_rate": 0.0,
+      "overall_failure_rate": 0.29999999999999993
+    },
+    "simple": {
+      "empty_retrieval_rate": 0.0,
+      "timeout_rate": 0.0,
+      "planner_fallback_rate": 0.0,
+      "generation_failure_rate": 0.0,
+      "overall_failure_rate": 0.0
+    }
+  }
+}

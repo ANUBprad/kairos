@@ -1,0 +1,28 @@
+# Kairos Experiment Summary
+
+**Generated:** {{ timestamp }}
+
+## Executive Summary
+
+Comparison of **Baseline** (static strategy) vs **Treatment** (Kairos adaptive retrieval) across {{ total }} queries.
+
+### Key Findings
+
+- Recall delta: {{ recall_delta }}
+- Precision delta: {{ precision_delta }}
+- Latency delta: {{ latency_delta }}
+- Overall failure rate delta: {{ failure_delta }}
+
+## Aggregate Metrics
+
+| Metric | Baseline | Treatment | Delta |
+|--------|----------|-----------|-------|
+{% for row in aggregate_rows %}{{ row }}
+{% endfor %}
+
+## Charts
+
+![Recall](recall_comparison.png)
+![Precision](precision_comparison.png)
+![Latency](latency_comparison.png)
+![Failure Rate](failure_rate_comparison.png)

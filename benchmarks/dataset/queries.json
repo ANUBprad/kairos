@@ -1,0 +1,520 @@
+[
+  {
+    "id": "SIMPLE-001",
+    "text": "According to Article 3(1) of the EU AI Act, what is the formal definition of an 'AI system'?",
+    "query_type": "simple",
+    "domain": "definitions",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 3(1)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single definition lookup from a specific sub-article. Unambiguous, exact-match retrieval from one chunk.",
+    "expected_chunks": [
+      "chunk_art_3_1"
+    ]
+  },
+  {
+    "id": "SIMPLE-002",
+    "text": "Under Article 5(1)(a) of the EU AI Act, what type of AI practice involving subliminal techniques is explicitly prohibited?",
+    "query_type": "simple",
+    "domain": "prohibited_practices",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 5(1)(a)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single prohibition clause, clearly scoped to one sub-article. Direct lookup.",
+    "expected_chunks": [
+      "chunk_art_5_1_a"
+    ]
+  },
+  {
+    "id": "SIMPLE-003",
+    "text": "According to Article 6(1) of the EU AI Act, under what condition is an AI system automatically classified as high-risk based on being a safety component of a regulated product?",
+    "query_type": "simple",
+    "domain": "classification",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 6(1)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single classification rule, direct lookup from Article 6. Unambiguous.",
+    "expected_chunks": [
+      "chunk_art_6_1"
+    ]
+  },
+  {
+    "id": "SIMPLE-004",
+    "text": "Under Article 50(1) of the EU AI Act, what transparency obligation applies to providers of AI systems that interact directly with natural persons?",
+    "query_type": "simple",
+    "domain": "transparency",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 50(1)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single transparency rule with a clear exception for law enforcement. Direct lookup.",
+    "expected_chunks": [
+      "chunk_art_50_1"
+    ]
+  },
+  {
+    "id": "SIMPLE-005",
+    "text": "What is the maximum administrative fine under Article 99(3) of the EU AI Act for non-compliance with the prohibition of AI practices listed in Article 5?",
+    "query_type": "simple",
+    "domain": "penalties",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 99(3)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single fine amount (EUR 35 million or 7% of turnover). Factual lookup.",
+    "expected_chunks": [
+      "chunk_art_99_3"
+    ]
+  },
+  {
+    "id": "SIMPLE-006",
+    "text": "According to Article 51(2) of the EU AI Act, what computational threshold in floating point operations creates a presumption that a general-purpose AI model has high impact capabilities and thus systemic risk?",
+    "query_type": "simple",
+    "domain": "general_purpose_ai",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 51(2)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single numerical threshold (10^25 FLOP). Factual lookup.",
+    "expected_chunks": [
+      "chunk_art_51_2"
+    ]
+  },
+  {
+    "id": "SIMPLE-007",
+    "text": "Under Article 14(1) of the EU AI Act, for what purpose must high-risk AI systems be designed and developed with human oversight?",
+    "query_type": "simple",
+    "domain": "human_oversight",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 14(1)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single requirement statement about the purpose of human oversight. Direct lookup.",
+    "expected_chunks": [
+      "chunk_art_14_1"
+    ]
+  },
+  {
+    "id": "SIMPLE-008",
+    "text": "According to Article 3(44) of the EU AI Act, what is the definition of a 'general-purpose AI model'?",
+    "query_type": "simple",
+    "domain": "definitions",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 3(44)"
+    ],
+    "confidence_category": "high",
+    "notes": "Definition lookup from the definitions article. Unambiguous, single chunk.",
+    "expected_chunks": [
+      "chunk_art_3_44"
+    ]
+  },
+  {
+    "id": "SIMPLE-009",
+    "text": "Under Article 9(1) of the EU AI Act, what must providers of high-risk AI systems establish, document, and maintain throughout the system lifecycle?",
+    "query_type": "simple",
+    "domain": "risk_management",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 9(1)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single obligation about risk management systems. Direct lookup.",
+    "expected_chunks": [
+      "chunk_art_9_1"
+    ]
+  },
+  {
+    "id": "SIMPLE-010",
+    "text": "According to Article 11(1) of the EU AI Act, what must the technical documentation of a high-risk AI system demonstrate before the system is placed on the market?",
+    "query_type": "simple",
+    "domain": "documentation",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 11(1)"
+    ],
+    "confidence_category": "high",
+    "notes": "Single documentation requirement. Direct lookup from technical documentation article.",
+    "expected_chunks": [
+      "chunk_art_11_1"
+    ]
+  },
+  {
+    "id": "COMPLEX-001",
+    "text": "Compare the definition of 'AI system' in Article 3(1) of the EU AI Act with the definition of 'general-purpose AI model' in Article 3(44). How does the scope of the two definitions differ, and why does the regulation treat them as distinct categories?",
+    "query_type": "complex",
+    "domain": "definitions",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 3(1)",
+      "Article 3(44)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Requires retrieving two definitions from the same article and synthesising the conceptual distinction. Not a single-chunk lookup.",
+    "expected_chunks": [
+      "chunk_art_3_1",
+      "chunk_art_3_44"
+    ]
+  },
+  {
+    "id": "COMPLEX-002",
+    "text": "How do the obligations of providers of high-risk AI systems under Article 16 of the EU AI Act differ from the obligations of deployers under Article 26? Analyse the key responsibilities assigned to each role.",
+    "query_type": "complex",
+    "domain": "obligations",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 16",
+      "Article 26"
+    ],
+    "confidence_category": "medium",
+    "notes": "Cross-article comparison of obligations for two different operator roles. Requires synthesis across multiple articles.",
+    "expected_chunks": [
+      "chunk_art_16",
+      "chunk_art_26"
+    ]
+  },
+  {
+    "id": "COMPLEX-003",
+    "text": "Under Article 50 of the EU AI Act, what is the distinction between the marking obligation for providers of AI systems that generate synthetic content under Article 50(2) and the disclosure obligation for deployers of deep fakes under Article 50(4)? How do these obligations complement each other?",
+    "query_type": "complex",
+    "domain": "transparency",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 50(2)",
+      "Article 50(4)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Comparison of two related but distinct transparency obligations within the same article. Requires understanding both sub-articles.",
+    "expected_chunks": [
+      "chunk_art_50_2",
+      "chunk_art_50_4"
+    ]
+  },
+  {
+    "id": "COMPLEX-004",
+    "text": "Describe the relationship between the classification of high-risk AI systems under Article 6(2) of the EU AI Act (which references Annex III) and the power of the European Commission to amend Annex III under Article 7. What are the conditions under which the Commission can update the high-risk list?",
+    "query_type": "complex",
+    "domain": "classification",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 6(2)",
+      "Article 7"
+    ],
+    "confidence_category": "low",
+    "notes": "Connects a static classification rule to its dynamic amendment procedure. The relationship between the two articles requires inference, not just lookup.",
+    "expected_chunks": [
+      "chunk_art_6_2",
+      "chunk_art_7"
+    ]
+  },
+  {
+    "id": "COMPLEX-005",
+    "text": "Under the EU AI Act, how do the risk management requirements in Article 9 and the data governance requirements in Article 10 complement each other for high-risk AI systems? What aspects of system safety does each article address?",
+    "query_type": "complex",
+    "domain": "requirements",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 9",
+      "Article 10"
+    ],
+    "confidence_category": "medium",
+    "notes": "Synthesis of two consecutive articles (risk management and data governance) that address complementary aspects of high-risk AI compliance.",
+    "expected_chunks": [
+      "chunk_art_9",
+      "chunk_art_10"
+    ]
+  },
+  {
+    "id": "COMPLEX-006",
+    "text": "Analyse the distinction between the prohibition of social scoring AI systems under Article 5(1)(c) of the EU AI Act and the prohibition of real-time remote biometric identification for law enforcement under Article 5(1)(d). What different risks does each prohibition address?",
+    "query_type": "complex",
+    "domain": "prohibited_practices",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 5(1)(c)",
+      "Article 5(1)(d)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Comparison of two distinct prohibited practices within the same article. Requires understanding the rationale behind each prohibition.",
+    "expected_chunks": [
+      "chunk_art_5_1_c",
+      "chunk_art_5_1_d"
+    ]
+  },
+  {
+    "id": "COMPLEX-007",
+    "text": "Under Article 51 of the EU AI Act, what conditions classify a general-purpose AI model as having systemic risk? What are the implications of this classification for the provider's obligations, including model evaluation, incident reporting, and cybersecurity?",
+    "query_type": "complex",
+    "domain": "general_purpose_ai",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 51",
+      "Article 55"
+    ],
+    "confidence_category": "low",
+    "notes": "Requires understanding the classification criteria (Art 51) and then finding the corresponding obligations (Art 55). The causal link between classification and obligations has multiple dimensions.",
+    "expected_chunks": [
+      "chunk_art_51",
+      "chunk_art_55"
+    ]
+  },
+  {
+    "id": "COMPLEX-008",
+    "text": "Article 99 of the EU AI Act establishes three tiers of administrative fines. Compare the maximum fine amounts and applicable violations under Article 99(3), 99(4), and 99(5). Which types of non-compliance fall into each tier?",
+    "query_type": "complex",
+    "domain": "penalties",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 99(3)",
+      "Article 99(4)",
+      "Article 99(5)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Three-way comparison of penalty tiers within the same article. Requires extracting and contrasting multiple data points.",
+    "expected_chunks": [
+      "chunk_art_99_3",
+      "chunk_art_99_4",
+      "chunk_art_99_5"
+    ]
+  },
+  {
+    "id": "COMPLEX-009",
+    "text": "Under Article 14 of the EU AI Act, what are the specific human oversight obligations that apply to providers versus deployers of high-risk AI systems? How is responsibility for oversight allocated between these two actors?",
+    "query_type": "complex",
+    "domain": "human_oversight",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 14"
+    ],
+    "confidence_category": "medium",
+    "notes": "Requires extracting role-specific obligations from a single article that addresses both providers and deployers. Differentiating responsibility requires synthesis.",
+    "expected_chunks": [
+      "chunk_art_14"
+    ]
+  },
+  {
+    "id": "COMPLEX-010",
+    "text": "How do the record-keeping obligations in Article 12 of the EU AI Act interact with the transparency and provision of information requirements in Article 13? What documentation must a provider maintain, and what must be disclosed to deployers and end-users?",
+    "query_type": "complex",
+    "domain": "accountability",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 12",
+      "Article 13"
+    ],
+    "confidence_category": "medium",
+    "notes": "Understanding the distinction and overlap between two related but distinct obligations. Record-keeping is internal; transparency is external.",
+    "expected_chunks": [
+      "chunk_art_12",
+      "chunk_art_13"
+    ]
+  },
+  {
+    "id": "MULTIHOP-001",
+    "text": "According to Article 3(1) of the EU AI Act, what is an AI system? If such a system is used by a public authority for social scoring as described in Article 5, under which sub-article is this practice prohibited, and what is the maximum penalty under Article 99(3)?",
+    "query_type": "multi_hop",
+    "domain": "prohibited_practices",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 3(1)",
+      "Article 5(1)(c)",
+      "Article 99(3)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Hop 1: find the definition of AI system. Hop 2: determine the social scoring prohibition applies. Hop 3: find the penalty tier. Each hop depends on the previous.",
+    "expected_chunks": [
+      "chunk_art_3_1",
+      "chunk_art_5_1_c",
+      "chunk_art_99_3"
+    ]
+  },
+  {
+    "id": "MULTIHOP-002",
+    "text": "A provider places a high-risk AI system on the market that falls within an area listed in Annex III, as referenced in Article 6(2). According to Article 7, who can amend that annex? Once classified as high-risk, what obligations does the provider have under Article 16, and what fine applies under Article 99(4) for non-compliance?",
+    "query_type": "multi_hop",
+    "domain": "classification",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 6(2)",
+      "Article 7",
+      "Article 16",
+      "Article 99(4)"
+    ],
+    "confidence_category": "low",
+    "notes": "Hop 1: Annex III reference in Article 6(2). Hop 2: amendment power in Article 7. Hop 3: provider obligations in Article 16. Hop 4: penalty in Article 99(4). Multi-step causal chain.",
+    "expected_chunks": [
+      "chunk_art_6_2",
+      "chunk_art_7",
+      "chunk_art_16",
+      "chunk_art_99_4"
+    ]
+  },
+  {
+    "id": "MULTIHOP-003",
+    "text": "Under Article 50(2) of the EU AI Act, what marking obligation applies to providers of AI systems that generate synthetic audio, image, video, or text content? If a deployer uses such a system to create a deep fake, what disclosure does Article 50(4) require, and by what time must this information be provided according to Article 50(5)?",
+    "query_type": "multi_hop",
+    "domain": "transparency",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 50(2)",
+      "Article 50(4)",
+      "Article 50(5)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Hop 1: provider marking obligation. Hop 2: deployer deep fake disclosure. Hop 3: timing requirement. Clear causal chain through three sub-articles.",
+    "expected_chunks": [
+      "chunk_art_50_2",
+      "chunk_art_50_4",
+      "chunk_art_50_5"
+    ]
+  },
+  {
+    "id": "MULTIHOP-004",
+    "text": "Article 51(1) of the EU AI Act defines the conditions under which a general-purpose AI model is classified as having systemic risk. Under Article 51(2), what FLOP training threshold creates a presumption of systemic risk? If a provider fails to comply with the obligations for such models, what penalty applies under Article 99(4)?",
+    "query_type": "multi_hop",
+    "domain": "general_purpose_ai",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 51(1)",
+      "Article 51(2)",
+      "Article 99(4)"
+    ],
+    "confidence_category": "low",
+    "notes": "Hop 1: classification criteria (Art 51(1)). Hop 2: computational threshold (Art 51(2)). Hop 3: penalty for non-compliance (Art 99(4)). Compounding uncertainty across hops.",
+    "expected_chunks": [
+      "chunk_art_51_1",
+      "chunk_art_51_2",
+      "chunk_art_99_4"
+    ]
+  },
+  {
+    "id": "MULTIHOP-005",
+    "text": "An AI system uses manipulative techniques prohibited under Article 5(1)(a) of the EU AI Act. According to Article 99(3), what is the maximum fine? Separately, if the same system is also used for social scoring prohibited under Article 5(1)(c), does the penalty increase and under which article is each prohibition defined?",
+    "query_type": "multi_hop",
+    "domain": "prohibited_practices",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 5(1)(a)",
+      "Article 5(1)(c)",
+      "Article 99(3)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Hop 1: identify first prohibition (Art 5(1)(a)). Hop 2: identify second prohibition (Art 5(1)(c)). Hop 3: find the common penalty tier. Requires understanding that both prohibitions fall under the same Article 99(3) penalty.",
+    "expected_chunks": [
+      "chunk_art_5_1_a",
+      "chunk_art_5_1_c",
+      "chunk_art_99_3"
+    ]
+  },
+  {
+    "id": "MULTIHOP-006",
+    "text": "An AI system is a safety component of a medical device regulated under EU product safety legislation, making it high-risk under Article 6(1) of the EU AI Act. Under Article 9(1), what risk management system must the provider establish? If a previously unidentified risk emerges during use, what obligation does the provider have to address it, and which article establishes the provider's overall duty of compliance?",
+    "query_type": "multi_hop",
+    "domain": "risk_management",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 6(1)",
+      "Article 9",
+      "Article 16"
+    ],
+    "confidence_category": "low",
+    "notes": "Hop 1: identify high-risk classification basis (Art 6(1)). Hop 2: find risk management requirements (Art 9). Hop 3: find overarching provider obligations (Art 16). Long causal chain.",
+    "expected_chunks": [
+      "chunk_art_6_1",
+      "chunk_art_9",
+      "chunk_art_16"
+    ]
+  },
+  {
+    "id": "MULTIHOP-007",
+    "text": "An AI system that interacts with natural persons must disclose that it is an AI system under Article 50(1) of the EU AI Act. If such a system generates synthetic content, what additional marking obligation applies under Article 50(2)? If a deployer generates a deep fake using this system, what disclosure is required under Article 50(4), and by when must all transparency information be provided under Article 50(5)?",
+    "query_type": "multi_hop",
+    "domain": "transparency",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 50(1)",
+      "Article 50(2)",
+      "Article 50(4)",
+      "Article 50(5)"
+    ],
+    "confidence_category": "low",
+    "notes": "Hop 1: basic interaction transparency (Art 50(1)). Hop 2: content marking (Art 50(2)). Hop 3: deep fake disclosure (Art 50(4)). Hop 4: timing (Art 50(5)). Four-hop chain within a single article.",
+    "expected_chunks": [
+      "chunk_art_50_1",
+      "chunk_art_50_2",
+      "chunk_art_50_4",
+      "chunk_art_50_5"
+    ]
+  },
+  {
+    "id": "MULTIHOP-008",
+    "text": "According to Article 3(44) of the EU AI Act, what is a general-purpose AI model? If such a model is trained with more than 10^25 floating point operations, how is it classified under Article 51(2)? Under Article 99(4), what is the maximum fine for a provider that fails to comply with their obligations for such a systemically risky model?",
+    "query_type": "multi_hop",
+    "domain": "general_purpose_ai",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 3(44)",
+      "Article 51(2)",
+      "Article 99(4)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Hop 1: define GPAI model (Art 3(44)). Hop 2: apply the FLOP threshold classification (Art 51(2)). Hop 3: find the applicable penalty (Art 99(4)). Clear dependency chain.",
+    "expected_chunks": [
+      "chunk_art_3_44",
+      "chunk_art_51_2",
+      "chunk_art_99_4"
+    ]
+  },
+  {
+    "id": "MULTIHOP-009",
+    "text": "A deployer uses an AI system to generate video content that constitutes a deep fake. Under Article 50(4) of the EU AI Act, what disclosure must the deployer make? What exception applies if the deep fake forms part of an artistic or satirical work? Separately, what technical marking obligation does the provider of the underlying AI system have under Article 50(2)?",
+    "query_type": "multi_hop",
+    "domain": "transparency",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 50(2)",
+      "Article 50(4)"
+    ],
+    "confidence_category": "medium",
+    "notes": "Hop 1: find the deep fake disclosure obligation. Hop 2: find the artistic exception within the same article. Hop 3: find the provider's marking obligation. Requires navigating exceptions within sub-articles.",
+    "expected_chunks": [
+      "chunk_art_50_2",
+      "chunk_art_50_4"
+    ]
+  },
+  {
+    "id": "MULTIHOP-010",
+    "text": "An AI system is classified as high-risk under Article 6(2) because it falls into an area listed in Annex III. Under Article 7, can the European Commission amend that annex without a full legislative process? If the provider of this system fails to comply with their obligations under Article 16, which penalty tier in Article 99 applies, and how does it compare to the penalty for deploying a prohibited practice under Article 5?",
+    "query_type": "multi_hop",
+    "domain": "enforcement",
+    "corpus_ref": "EU_AI_Act.pdf",
+    "expected_articles": [
+      "Article 6(2)",
+      "Article 7",
+      "Article 16",
+      "Article 5",
+      "Article 99(3)",
+      "Article 99(4)"
+    ],
+    "confidence_category": "low",
+    "notes": "Hop 1: classification under Art 6(2) and Annex III. Hop 2: amendment power (Art 7). Hop 3: provider obligations (Art 16). Hop 4: penalty for non-compliance (Art 99(4)). Hop 5: compare with prohibited practice penalty (Art 99(3)). Five-hop chain with comparative reasoning.",
+    "expected_chunks": [
+      "chunk_art_6_2",
+      "chunk_art_7",
+      "chunk_art_16",
+      "chunk_art_5",
+      "chunk_art_99_3",
+      "chunk_art_99_4"
+    ]
+  }
+]

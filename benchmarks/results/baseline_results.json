@@ -1,0 +1,698 @@
+{
+  "metadata": {
+    "total_queries": 30,
+    "timestamp": 1781854357.1137784
+  },
+  "aggregate": {
+    "average_recall": 0.4,
+    "average_precision": 0.43333333333333335,
+    "average_latency": {
+      "classify": 0.00014537333336193115,
+      "planning": 0.11501521333314789,
+      "retrieval": 1.579999904303501e-06,
+      "generation": 0.0,
+      "total": 0.11516216666641413
+    },
+    "aggregate_latency": {
+      "classify": 0.004361200000857934,
+      "planning": 3.4504563999944367,
+      "retrieval": 4.739999712910503e-05,
+      "generation": 0.0,
+      "total": 3.4548649999924237
+    },
+    "aggregate_failures": {
+      "empty_retrieval": 2,
+      "timeout": 0,
+      "planner_fallback": 7,
+      "generation_failure": 0,
+      "total_queries": 30
+    },
+    "failure_rates": {
+      "empty_retrieval_rate": 0.06666666666666667,
+      "timeout_rate": 0.0,
+      "planner_fallback_rate": 0.23333333333333334,
+      "generation_failure_rate": 0.0,
+      "overall_failure_rate": 0.3
+    }
+  },
+  "per_type": {
+    "recall": {
+      "simple": 0.5,
+      "complex": 0.5,
+      "multi_hop": 0.2
+    },
+    "precision": {
+      "simple": 0.5,
+      "complex": 0.5,
+      "multi_hop": 0.3
+    },
+    "latency": {
+      "simple": {
+        "classify": 0.0019017000158783048,
+        "planning": 3.4486655999935465,
+        "retrieval": 1.7400001524947584e-05,
+        "generation": 0.0,
+        "total": 3.4505847000109497
+      },
+      "complex": {
+        "classify": 0.0009762999834492803,
+        "planning": 0.0007907000108389184,
+        "retrieval": 1.2999997125007212e-05,
+        "generation": 0.0,
+        "total": 0.0017799999914132059
+      },
+      "multi_hop": {
+        "classify": 0.0014832000015303493,
+        "planning": 0.0010000999900512397,
+        "retrieval": 1.6999998479150236e-05,
+        "generation": 0.0,
+        "total": 0.0025002999900607392
+      }
+    },
+    "failures": {
+      "simple": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 10
+      },
+      "complex": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 5,
+        "generation_failure": 0,
+        "total_queries": 10
+      },
+      "multi_hop": {
+        "empty_retrieval": 2,
+        "timeout": 0,
+        "planner_fallback": 2,
+        "generation_failure": 0,
+        "total_queries": 10
+      }
+    }
+  },
+  "queries": [
+    {
+      "id": "SIMPLE-001",
+      "query_type": "simple",
+      "latency": {
+        "classify": 0.0002145999897038564,
+        "planning": 3.448042899995926,
+        "retrieval": 4.7000066842883825e-06,
+        "generation": 0.0,
+        "total": 3.448262199992314
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "SIMPLE-002",
+      "query_type": "simple",
+      "latency": {
+        "classify": 0.0010556000052019954,
+        "planning": 0.00012280000373721123,
+        "retrieval": 3.40001133736223e-06,
+        "generation": 0.0,
+        "total": 0.0011818000202765688
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "SIMPLE-003",
+      "query_type": "simple",
+      "latency": {
+        "classify": 9.339999814983457e-05,
+        "planning": 8.009999874047935e-05,
+        "retrieval": 1.4999968698248267e-06,
+        "generation": 0.0,
+        "total": 0.00017499999376013875
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "SIMPLE-004",
+      "query_type": "simple",
+      "latency": {
+        "classify": 8.230000094044954e-05,
+        "planning": 7.369999366346747e-05,
+        "retrieval": 1.300009898841381e-06,
+        "generation": 0.0,
+        "total": 0.00015730000450275838
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "SIMPLE-005",
+      "query_type": "simple",
+      "latency": {
+        "classify": 6.940000457689166e-05,
+        "planning": 5.830000736750662e-05,
+        "retrieval": 1.1999945854768157e-06,
+        "generation": 0.0,
+        "total": 0.0001289000065298751
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "SIMPLE-006",
+      "query_type": "simple",
+      "latency": {
+        "classify": 0.00011560000712051988,
+        "planning": 6.370000483002514e-05,
+        "retrieval": 1.3999961083754897e-06,
+        "generation": 0.0,
+        "total": 0.0001807000080589205
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "SIMPLE-007",
+      "query_type": "simple",
+      "latency": {
+        "classify": 5.7900004321709275e-05,
+        "planning": 5.5900003644637764e-05,
+        "retrieval": 1.1999945854768157e-06,
+        "generation": 0.0,
+        "total": 0.00011500000255182385
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "SIMPLE-008",
+      "query_type": "simple",
+      "latency": {
+        "classify": 5.530001362785697e-05,
+        "planning": 5.6599994422867894e-05,
+        "retrieval": 1.00000761449337e-06,
+        "generation": 0.0,
+        "total": 0.00011290001566521823
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "SIMPLE-009",
+      "query_type": "simple",
+      "latency": {
+        "classify": 5.6599994422867894e-05,
+        "planning": 5.6899996707215905e-05,
+        "retrieval": 9.999930625781417e-07,
+        "generation": 0.0,
+        "total": 0.00011449998419266194
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "SIMPLE-010",
+      "query_type": "simple",
+      "latency": {
+        "classify": 0.00010099999781232327,
+        "planning": 5.469999450724572e-05,
+        "retrieval": 6.999907782301307e-07,
+        "generation": 0.0,
+        "total": 0.00015639998309779912
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "COMPLEX-001",
+      "query_type": "complex",
+      "latency": {
+        "classify": 5.459999374579638e-05,
+        "planning": 5.2700008382089436e-05,
+        "retrieval": 1.0999938240274787e-06,
+        "generation": 0.0,
+        "total": 0.0001083999959519133
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 1,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "COMPLEX-002",
+      "query_type": "complex",
+      "latency": {
+        "classify": 6.400000711437315e-05,
+        "planning": 6.16999896010384e-05,
+        "retrieval": 1.300009898841381e-06,
+        "generation": 0.0,
+        "total": 0.00012700000661425292
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 1,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "COMPLEX-003",
+      "query_type": "complex",
+      "latency": {
+        "classify": 6.469999789260328e-05,
+        "planning": 7.03999976394698e-05,
+        "retrieval": 1.1999945854768157e-06,
+        "generation": 0.0,
+        "total": 0.0001362999901175499
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 1,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "COMPLEX-004",
+      "query_type": "complex",
+      "latency": {
+        "classify": 0.00010659999679774046,
+        "planning": 5.7900004321709275e-05,
+        "retrieval": 1.00000761449337e-06,
+        "generation": 0.0,
+        "total": 0.0001655000087339431
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 1,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "COMPLEX-005",
+      "query_type": "complex",
+      "latency": {
+        "classify": 5.509999755304307e-05,
+        "planning": 5.339999916031957e-05,
+        "retrieval": 1.0999938240274787e-06,
+        "generation": 0.0,
+        "total": 0.00010959999053739011
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 1,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "id": "COMPLEX-006",
+      "query_type": "complex",
+      "latency": {
+        "classify": 6.029999349266291e-05,
+        "planning": 5.740000051446259e-05,
+        "retrieval": 1.100008375942707e-06,
+        "generation": 0.0,
+        "total": 0.0001188000023830682
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "COMPLEX-007",
+      "query_type": "complex",
+      "latency": {
+        "classify": 6.679999933112413e-05,
+        "planning": 0.00013070000568404794,
+        "retrieval": 1.3999961083754897e-06,
+        "generation": 0.0,
+        "total": 0.00019890000112354755
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "COMPLEX-008",
+      "query_type": "complex",
+      "latency": {
+        "classify": 0.00012029999925289303,
+        "planning": 6.930000381544232e-05,
+        "retrieval": 9.999930625781417e-07,
+        "generation": 0.0,
+        "total": 0.0001905999961309135
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "COMPLEX-009",
+      "query_type": "complex",
+      "latency": {
+        "classify": 6.160000339150429e-05,
+        "planning": 5.729999975301325e-05,
+        "retrieval": 9.00006853044033e-07,
+        "generation": 0.0,
+        "total": 0.00011980000999756157
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "COMPLEX-010",
+      "query_type": "complex",
+      "latency": {
+        "classify": 0.0003222999948775396,
+        "planning": 0.0001799000019673258,
+        "retrieval": 2.8999929782003164e-06,
+        "generation": 0.0,
+        "total": 0.0005050999898230657
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "MULTIHOP-001",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 0.00012630000128410757,
+        "planning": 9.940000018104911e-05,
+        "retrieval": 1.3999961083754897e-06,
+        "generation": 0.0,
+        "total": 0.00022709999757353216
+      },
+      "failures": {
+        "empty_retrieval": 1,
+        "timeout": 0,
+        "planner_fallback": 1,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "MULTIHOP-002",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 0.00032279999868478626,
+        "planning": 0.0001233000075444579,
+        "retrieval": 1.5999976312741637e-06,
+        "generation": 0.0,
+        "total": 0.00044770000386051834
+      },
+      "failures": {
+        "empty_retrieval": 1,
+        "timeout": 0,
+        "planner_fallback": 1,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "MULTIHOP-003",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 0.00016310000501107424,
+        "planning": 0.00010180000390391797,
+        "retrieval": 2.5999906938523054e-06,
+        "generation": 0.0,
+        "total": 0.0002674999996088445
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.6666666666666666,
+      "precision": 1.0
+    },
+    {
+      "id": "MULTIHOP-004",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 9.020000288728625e-05,
+        "planning": 0.00014039999223314226,
+        "retrieval": 2.4000037228688598e-06,
+        "generation": 0.0,
+        "total": 0.00023299999884329736
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.6666666666666666,
+      "precision": 1.0
+    },
+    {
+      "id": "MULTIHOP-005",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 0.0001218999968841672,
+        "planning": 8.789999992586672e-05,
+        "retrieval": 1.3999961083754897e-06,
+        "generation": 0.0,
+        "total": 0.0002111999929184094
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.6666666666666666,
+      "precision": 1.0
+    },
+    {
+      "id": "MULTIHOP-006",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 0.00014399999054148793,
+        "planning": 7.439999899361283e-05,
+        "retrieval": 1.6999983927235007e-06,
+        "generation": 0.0,
+        "total": 0.00022009998792782426
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "MULTIHOP-007",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 7.639999967068434e-05,
+        "planning": 6.880000000819564e-05,
+        "retrieval": 1.400010660290718e-06,
+        "generation": 0.0,
+        "total": 0.0001466000103391707
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "MULTIHOP-008",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 8.64000030560419e-05,
+        "planning": 7.339999137911946e-05,
+        "retrieval": 9.00006853044033e-07,
+        "generation": 0.0,
+        "total": 0.00016070000128820539
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "MULTIHOP-009",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 0.00020929999300278723,
+        "planning": 0.00012709999282378703,
+        "retrieval": 2.0000006770715117e-06,
+        "generation": 0.0,
+        "total": 0.0003383999865036458
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    },
+    {
+      "id": "MULTIHOP-010",
+      "query_type": "multi_hop",
+      "latency": {
+        "classify": 0.00014280001050792634,
+        "planning": 0.0001036000030580908,
+        "retrieval": 1.5999976312741637e-06,
+        "generation": 0.0,
+        "total": 0.0002480000111972913
+      },
+      "failures": {
+        "empty_retrieval": 0,
+        "timeout": 0,
+        "planner_fallback": 0,
+        "generation_failure": 0,
+        "total_queries": 1
+      },
+      "recall": 0.0,
+      "precision": 0.0
+    }
+  ]
+}
