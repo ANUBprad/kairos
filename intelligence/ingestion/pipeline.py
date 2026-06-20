@@ -1,7 +1,7 @@
-from embeddings.base_embedder import BaseEmbedder
+from intelligence.embeddings.base_embedder import BaseEmbedder
 from .chunker import Chunker
 from .document_loader import load_document
-from vectorstore.chroma_store import ChromaStore
+from intelligence.vectorstore.chroma_store import ChromaStore
 
 class IngestionPipeline:
     def __init__(self, embedder: BaseEmbedder, chunker: Chunker, store: ChromaStore):

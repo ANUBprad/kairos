@@ -1,5 +1,5 @@
 from math import sqrt
-from embeddings.base_embedder import BaseEmbedder
+from intelligence.embeddings.base_embedder import BaseEmbedder
 from semantic_text_splitter import TextSplitter
 
 def calculate_cosine_similarity(embed_a: list[float], embed_b: list[float]):

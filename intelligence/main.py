@@ -1,3 +1,3 @@
-from server.grpc_server import serve
+from intelligence.server.grpc_server import serve
 
 serve()

@@ -1,7 +1,7 @@
 from typing import Union, Literal
-from embeddings.base_embedder import BaseEmbedder
+from intelligence.embeddings.base_embedder import BaseEmbedder
 from openai import OpenAI
-from vectorstore.chroma_store import ChromaStore
+from intelligence.vectorstore.chroma_store import ChromaStore
 from .retriever import BaseRetriever
 from pydantic import BaseModel
 from google import genai

@@ -54,6 +54,7 @@ message ClassifyQueryRequest{
 message ClassifyQueryResponse{
   QueryType query_type = 1;
   RetrievalConfig config = 2;
+  float confidence_score = 3;
 }
 
 message ExecuteRetrievalRequest{

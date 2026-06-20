@@ -1,9 +1,9 @@
 # Hybrid retrieval
 
 from rank_bm25 import BM25Okapi
-from embeddings.base_embedder import BaseEmbedder
+from intelligence.embeddings.base_embedder import BaseEmbedder
 from .retriever import BaseRetriever
-from vectorstore.chroma_store import ChromaStore
+from intelligence.vectorstore.chroma_store import ChromaStore
 
 
 class SimpleRetriever(BaseRetriever):

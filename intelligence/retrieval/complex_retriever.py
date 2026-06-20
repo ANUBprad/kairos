@@ -2,9 +2,9 @@ from typing import Union, Literal
 from google import genai
 import numpy as np
 from openai import OpenAI
-from embeddings.base_embedder import BaseEmbedder
-from reranker.cross_encoder_reranker import CrossEncoderReranker
-from vectorstore.chroma_store import ChromaStore
+from intelligence.embeddings.base_embedder import BaseEmbedder
+from intelligence.reranker.cross_encoder_reranker import CrossEncoderReranker
+from intelligence.vectorstore.chroma_store import ChromaStore
 from .retriever import BaseRetriever
 
 
@@ -18,22 +18,29 @@ class ComplexRetriever(BaseRetriever):
         self.cross_encoder = cross_encoder
         self.llm_provider = model_provider
 
-    def retrieve_top_k(self, namespace: str, top_k: int, query: str):
+    def retrieve_top_k(self, namespace: str, top_k: int, query: str, rerank: bool = True, decompose: bool = True):
         query_embed = self.embedder.embed(query)
-        hypothetical_answer_embed = self._compute_hypothesis_embedding(query)
-        sub_query_embed = self._compute_sub_query_embedding(query)
 
-        dense_retrieval = self.store.query(namespace, top_k, query_embed, return_embeddings = True)
-        hypothesis_retrieval = self.store.query(namespace, top_k, hypothetical_answer_embed, return_embeddings = True)
-        sub_query_retrieval = self.store.query(namespace, top_k, sub_query_embed, return_embeddings = True)
+        if decompose:
+            hypothetical_answer_embed = self._compute_hypothesis_embedding(query)
+            sub_query_embed = self._compute_sub_query_embedding(query)
 
-        all_retrieval = dense_retrieval["documents"][0] + hypothesis_retrieval["documents"][0] + sub_query_retrieval["documents"][0]
+            dense_retrieval = self.store.query(namespace, top_k, query_embed, return_embeddings = True)
+            hypothesis_retrieval = self.store.query(namespace, top_k, hypothetical_answer_embed, return_embeddings = True)
+            sub_query_retrieval = self.store.query(namespace, top_k, sub_query_embed, return_embeddings = True)
 
-        dense_embeddings = dense_retrieval["embeddings"][0]
-        hypothesis_embeddings = hypothesis_retrieval["embeddings"][0]
-        sub_query_embeddings = sub_query_retrieval["embeddings"][0]
+            all_retrieval = dense_retrieval["documents"][0] + hypothesis_retrieval["documents"][0] + sub_query_retrieval["documents"][0]
 
-        all_embeddings = dense_embeddings + hypothesis_embeddings + sub_query_embeddings
+            dense_embeddings = dense_retrieval["embeddings"][0]
+            hypothesis_embeddings = hypothesis_retrieval["embeddings"][0]
+            sub_query_embeddings = sub_query_retrieval["embeddings"][0]
+
+            all_embeddings = dense_embeddings + hypothesis_embeddings + sub_query_embeddings
+        else:
+            dense_retrieval = self.store.query(namespace, top_k, query_embed, return_embeddings = True)
+            all_retrieval = dense_retrieval["documents"][0]
+            all_embeddings = dense_retrieval["embeddings"][0]
+
         seen = set()
         cleaned_retrieval = []
         cleaned_embeddings = []
@@ -50,9 +57,9 @@ class ComplexRetriever(BaseRetriever):
                                     top_k = top_k,
                                     lambda_val = self.lambda_val)
 
-        reranked_chunks = self.cross_encoder.rerank(query, chunks = mmr_result, top_k = top_k)
-
-        return reranked_chunks
+        if rerank:
+            return self.cross_encoder.rerank(query, chunks = mmr_result, top_k = top_k)
+        return mmr_result
 
     def _compute_hypothesis_embedding(self, query: str):
         prompt = f"""Generate a hypothetical answer for this query,
