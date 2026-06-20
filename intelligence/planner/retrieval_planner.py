@@ -79,12 +79,13 @@ class RetrievalPlanner:
         strategy_selector: Optional[_StrategySelector] = None,
         calibrator: Optional[object] = None,
         optimizer: Optional[object] = None,
+        feedback_adjuster: Optional[object] = None,
     ) -> None:
         """Initialise the planner with its dependencies.
 
         Args:
             classifier: An object that exposes
-                ``classify_with_confidence(query) → ResponseSchema``,
+                ``classify_with_confidence(query) -> ResponseSchema``,
                 where ``ResponseSchema`` has ``query_type`` (str),
                 ``domain`` (str | None), and ``confidence_score`` (float).
             strategy_selector: Optional callable with the same signature
@@ -99,10 +100,16 @@ class RetrievalPlanner:
                 When provided and *use_learned_budget* is ``True``
                 in :meth:`plan`, the learned budget table replaces
                 the static budget allocation.
+            feedback_adjuster: Optional :class:`FeedbackAdjuster` instance.
+                When provided and *use_feedback_learning* is ``True``
+                in :meth:`plan`, historical feedback is used to adjust
+                budget decisions when a config has historically poor
+                acceptance.
         """
         self._classifier = classifier
         self._calibrator = calibrator
         self._optimizer = optimizer
+        self._feedback_adjuster = feedback_adjuster
 
         if strategy_selector is not None:
             self._get_config = strategy_selector
@@ -120,6 +127,7 @@ class RetrievalPlanner:
         query: str,
         use_calibrated_confidence: bool = True,
         use_learned_budget: bool = True,
+        use_feedback_learning: bool = False,
     ) -> PlannerDecision:
         """Classify the query and produce a retrieval config.
 
@@ -133,6 +141,9 @@ class RetrievalPlanner:
             use_learned_budget: If ``True`` and an optimizer is
                 available, use the learned budget table instead of the
                 static hand-crafted budget table.
+            use_feedback_learning: If ``True`` and a feedback adjuster
+                is available, adjust budget decisions based on
+                historical feedback patterns.
 
         Returns:
             A :class:`PlannerDecision` with config and confidence.
@@ -168,10 +179,22 @@ class RetrievalPlanner:
                 rerank=rec.recommended_rerank,
                 decompose=rec.recommended_decompose,
             )
-            config = self._get_config(result, budget_confidence, budget)
         else:
             budget = allocate_budget(QueryType(query_type_str), budget_confidence)
-            config = self._get_config(result, budget_confidence, budget)
+
+        # --- Feedback Adjustment Layer ---
+        if use_feedback_learning and self._feedback_adjuster is not None and self._feedback_adjuster.fitted:
+            adj_top_k, adj_rerank, adj_decompose = self._feedback_adjuster.adjust_config(
+                query_type_str, budget.top_k, budget.rerank, budget.decompose,
+            )
+            if adj_top_k != budget.top_k or adj_rerank != budget.rerank or adj_decompose != budget.decompose:
+                budget = RetrievalBudget(
+                    top_k=adj_top_k,
+                    rerank=adj_rerank,
+                    decompose=adj_decompose,
+                )
+
+        config = self._get_config(result, budget_confidence, budget)
 
         return PlannerDecision(
             config=config,
@@ -187,6 +210,7 @@ class RetrievalPlanner:
         chunk_count: int,
         use_calibrated_confidence: bool = True,
         use_learned_budget: bool = True,
+        use_feedback_learning: bool = False,
     ) -> PlannerDecision:
         """Plan and evaluate retrieval quality in one call.
 
@@ -201,21 +225,17 @@ class RetrievalPlanner:
                          retrieval attempt.
             use_calibrated_confidence: Passed through to :meth:`plan`.
             use_learned_budget: Passed through to :meth:`plan`.
+            use_feedback_learning: Passed through to :meth:`plan`.
 
         Returns:
             A :class:`PlannerDecision` with ``fallback_decision``
             populated.
-
-        Examples:
-            >>> decision = planner.plan_with_evaluation(
-            ...     "Who wrote Les Misérables?", 1)
-            >>> decision.fallback_decision.should_fallback
-            True
         """
         decision = self.plan(
             query,
             use_calibrated_confidence=use_calibrated_confidence,
             use_learned_budget=use_learned_budget,
+            use_feedback_learning=use_feedback_learning,
         )
         budget_confidence = (
             decision.calibrated_confidence if use_calibrated_confidence else decision.confidence

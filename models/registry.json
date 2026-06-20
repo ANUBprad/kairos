@@ -1,0 +1,400 @@
+{
+  "entries": [
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:04:51.782661",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmp3qh00x3b\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v2",
+      "timestamp": "2026-06-20T18:04:51.825173",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmp3keueaxg\\budget_optimizer_v2.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:04:51.862616",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmp41u42o_k\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:04:51.902229",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpe40oukom\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v2",
+      "timestamp": "2026-06-20T18:04:51.908738",
+      "training_samples": 7,
+      "dataset_hash": "f0394103b5b5b3a7021e2a402e244e6faacfeb7b6721142e432405bb5c3e5671",
+      "evaluation_metrics": {
+        "static_avg_score": 0.7532214285714286,
+        "learned_avg_score": 0.7675071428571429,
+        "score_lift": 0.014285714285714362,
+        "static_success_rate": 0.8571428571428571,
+        "learned_success_rate": 0.8571428571428571,
+        "static_avg_latency": 106.42857142857143,
+        "learned_avg_latency": 106.42857142857143,
+        "static_fallback_rate": 0.14285714285714285,
+        "learned_fallback_rate": 0.14285714285714285
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpe40oukom\\budget_optimizer_v2.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:04:51.959383",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmp6uu4m63c\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:04:51.988997",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmppjmsf4cs\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:05:41.998942",
+      "training_samples": 8,
+      "dataset_hash": "b74904e2b9d550b4f6e2813a4fd7d04d7c215cf6c12557d99ae3f3d6bd46e3f4",
+      "evaluation_metrics": {
+        "static_avg_score": 0.5909875,
+        "learned_avg_score": 0.5834875,
+        "score_lift": -0.007499999999999951,
+        "static_success_rate": 0.75,
+        "learned_success_rate": 0.75,
+        "static_avg_latency": 151.25,
+        "learned_avg_latency": 151.25,
+        "static_fallback_rate": 0.25,
+        "learned_fallback_rate": 0.25
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpmfxtimk8\\models\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:09:47.220804",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmplprewp75\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v2",
+      "timestamp": "2026-06-20T18:09:47.255798",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmp9c25tks1\\budget_optimizer_v2.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:09:47.270796",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpgwdzxmxv\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:09:47.291797",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmp5hmqag33\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v2",
+      "timestamp": "2026-06-20T18:09:47.299906",
+      "training_samples": 7,
+      "dataset_hash": "f0394103b5b5b3a7021e2a402e244e6faacfeb7b6721142e432405bb5c3e5671",
+      "evaluation_metrics": {
+        "static_avg_score": 0.7532214285714286,
+        "learned_avg_score": 0.7675071428571429,
+        "score_lift": 0.014285714285714362,
+        "static_success_rate": 0.8571428571428571,
+        "learned_success_rate": 0.8571428571428571,
+        "static_avg_latency": 106.42857142857143,
+        "learned_avg_latency": 106.42857142857143,
+        "static_fallback_rate": 0.14285714285714285,
+        "learned_fallback_rate": 0.14285714285714285
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmp5hmqag33\\budget_optimizer_v2.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:09:47.357013",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpst81_hea\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:09:47.390901",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpxlr2f146\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:18:31.499237",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmppmwtahc3\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v2",
+      "timestamp": "2026-06-20T18:18:31.511237",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpgfkcdmqo\\budget_optimizer_v2.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:18:31.522257",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpbfxg7z4r\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:18:31.533530",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpajv_ix7j\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v2",
+      "timestamp": "2026-06-20T18:18:31.537533",
+      "training_samples": 7,
+      "dataset_hash": "f0394103b5b5b3a7021e2a402e244e6faacfeb7b6721142e432405bb5c3e5671",
+      "evaluation_metrics": {
+        "static_avg_score": 0.7532214285714286,
+        "learned_avg_score": 0.7675071428571429,
+        "score_lift": 0.014285714285714362,
+        "static_success_rate": 0.8571428571428571,
+        "learned_success_rate": 0.8571428571428571,
+        "static_avg_latency": 106.42857142857143,
+        "learned_avg_latency": 106.42857142857143,
+        "static_fallback_rate": 0.14285714285714285,
+        "learned_fallback_rate": 0.14285714285714285
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpajv_ix7j\\budget_optimizer_v2.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:18:31.553526",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmpu59l__go\\budget_optimizer_v1.json"
+    },
+    {
+      "version": "v1",
+      "timestamp": "2026-06-20T18:18:31.565026",
+      "training_samples": 6,
+      "dataset_hash": "fae667521d4b745083e99a4afb9aabff078cfc06841f14b0db219091c8481066",
+      "evaluation_metrics": {
+        "static_avg_score": 0.972425,
+        "learned_avg_score": 0.9890916666666666,
+        "score_lift": 0.016666666666666607,
+        "static_success_rate": 1.0,
+        "learned_success_rate": 1.0,
+        "static_avg_latency": 90.83333333333333,
+        "learned_avg_latency": 90.83333333333333,
+        "static_fallback_rate": 0.0,
+        "learned_fallback_rate": 0.0
+      },
+      "path": "C:\\Users\\ANUBHAV\\AppData\\Local\\Temp\\tmp1_mxl5h3\\budget_optimizer_v1.json"
+    }
+  ]
+}
