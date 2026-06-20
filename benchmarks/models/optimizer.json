@@ -1,0 +1,40 @@
+{
+  "fitted": true,
+  "scorer": {
+    "success_weight": 1.0,
+    "latency_weight": 0.01,
+    "fallback_weight": 0.5,
+    "top_k_penalty_weight": 0.02,
+    "top_k_reference": 5
+  },
+  "min_samples_per_config": 2,
+  "table": {
+    "simple": {
+      "high": {
+        "recommended_top_k": 3,
+        "recommended_rerank": false,
+        "recommended_decompose": false,
+        "expected_success": 0.98,
+        "expected_latency": 207.42022000602446
+      }
+    },
+    "complex": {
+      "medium": {
+        "recommended_top_k": 5,
+        "recommended_rerank": false,
+        "recommended_decompose": false,
+        "expected_success": 0.92,
+        "expected_latency": 191.45557799958624
+      }
+    },
+    "multi_hop": {
+      "low": {
+        "recommended_top_k": 5,
+        "recommended_rerank": false,
+        "recommended_decompose": false,
+        "expected_success": 0.74,
+        "expected_latency": 195.81094199966174
+      }
+    }
+  }
+}

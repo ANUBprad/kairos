@@ -16,7 +16,7 @@ from typing import Callable, Optional, Tuple
 
 from .budget_allocator import allocate_budget
 from .fallback_manager import FallbackDecision, FallbackManager
-from .planner_config import QueryType
+from .planner_config import QueryType, RetrievalBudget
 
 # ---------------------------------------------------------------------------
 # Return type
@@ -28,18 +28,23 @@ class PlannerDecision:
     """Pure planning output — no chunks, no I/O side effects.
 
     Attributes:
-        config:            Final retrieval config dict (``retrieval_type``,
-                           ``top_k``, ``rerank``, ``decompose``).
-        confidence:        Classifier confidence for the query.
-        query_type:        The classified query type string.
-        fallback_decision: Optional fallback evaluation result.  Populated
-                           when using :meth:`plan_with_evaluation`.
+        config:               Final retrieval config dict (``retrieval_type``,
+                              ``top_k``, ``rerank``, ``decompose``).
+        confidence:           Classifier confidence for the query.
+        calibrated_confidence:Calibrated confidence (same as *confidence* when
+                              calibration disabled).
+        query_type:           The classified query type string.
+        fallback_decision:    Optional fallback evaluation result.  Populated
+                              when using :meth:`plan_with_evaluation`.
+        calibration_method:   Calibration strategy name or ``None``.
     """
 
     config: dict
     confidence: float
     query_type: str
     fallback_decision: Optional[FallbackDecision] = None
+    calibrated_confidence: Optional[float] = None
+    calibration_method: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -72,6 +77,8 @@ class RetrievalPlanner:
         self,
         classifier: object,
         strategy_selector: Optional[_StrategySelector] = None,
+        calibrator: Optional[object] = None,
+        optimizer: Optional[object] = None,
     ) -> None:
         """Initialise the planner with its dependencies.
 
@@ -84,8 +91,18 @@ class RetrievalPlanner:
                 as :func:`~intelligence.classifier.strategy_selector.get_config`.
                 Defaults to the real implementation (imported lazily to
                 avoid circular dependencies).
+            calibrator: Optional :class:`ConfidenceCalibrator` instance.
+                When provided and *use_calibrated_confidence* is ``True``
+                in :meth:`plan`, the raw classifier confidence is passed
+                through the calibrator before budget allocation.
+            optimizer: Optional :class:`BudgetOptimizer` instance.
+                When provided and *use_learned_budget* is ``True``
+                in :meth:`plan`, the learned budget table replaces
+                the static budget allocation.
         """
         self._classifier = classifier
+        self._calibrator = calibrator
+        self._optimizer = optimizer
 
         if strategy_selector is not None:
             self._get_config = strategy_selector
@@ -98,7 +115,12 @@ class RetrievalPlanner:
     # Public API
     # ------------------------------------------------------------------
 
-    def plan(self, query: str) -> PlannerDecision:
+    def plan(
+        self,
+        query: str,
+        use_calibrated_confidence: bool = True,
+        use_learned_budget: bool = True,
+    ) -> PlannerDecision:
         """Classify the query and produce a retrieval config.
 
         This method performs **no I/O** — it only runs the classifier
@@ -106,6 +128,11 @@ class RetrievalPlanner:
 
         Args:
             query: The user's query string.
+            use_calibrated_confidence: If ``True`` and a calibrator is
+                available, apply calibration before budget allocation.
+            use_learned_budget: If ``True`` and an optimizer is
+                available, use the learned budget table instead of the
+                static hand-crafted budget table.
 
         Returns:
             A :class:`PlannerDecision` with config and confidence.
@@ -120,22 +147,46 @@ class RetrievalPlanner:
             'RETRIEVAL_TYPE_UNSPECIFIED'
         """
         result = self._classifier.classify_with_confidence(query)
+        raw_confidence = result.confidence_score
         query_type_str = result.query_type
-        confidence = result.confidence_score
 
-        budget = allocate_budget(QueryType(query_type_str), confidence)
-        config = self._get_config(result, confidence, budget)
+        calibrated_confidence: Optional[float] = None
+        calibration_method: Optional[str] = None
+
+        if use_calibrated_confidence and self._calibrator is not None and self._calibrator.fitted:
+            cal_result = self._calibrator.calibrate(raw_confidence)
+            calibrated_confidence = cal_result.calibrated_confidence
+            calibration_method = cal_result.method
+            budget_confidence = calibrated_confidence
+        else:
+            budget_confidence = raw_confidence
+
+        if use_learned_budget and self._optimizer is not None and self._optimizer.fitted:
+            rec = self._optimizer.recommend_budget(query_type_str, budget_confidence)
+            budget = RetrievalBudget(
+                top_k=rec.recommended_top_k,
+                rerank=rec.recommended_rerank,
+                decompose=rec.recommended_decompose,
+            )
+            config = self._get_config(result, budget_confidence, budget)
+        else:
+            budget = allocate_budget(QueryType(query_type_str), budget_confidence)
+            config = self._get_config(result, budget_confidence, budget)
 
         return PlannerDecision(
             config=config,
-            confidence=confidence,
+            confidence=raw_confidence,
+            calibrated_confidence=calibrated_confidence or raw_confidence,
             query_type=query_type_str,
+            calibration_method=calibration_method,
         )
 
     def plan_with_evaluation(
         self,
         query: str,
         chunk_count: int,
+        use_calibrated_confidence: bool = True,
+        use_learned_budget: bool = True,
     ) -> PlannerDecision:
         """Plan and evaluate retrieval quality in one call.
 
@@ -148,6 +199,8 @@ class RetrievalPlanner:
             query:       The user's query string.
             chunk_count: Number of chunks returned by the initial
                          retrieval attempt.
+            use_calibrated_confidence: Passed through to :meth:`plan`.
+            use_learned_budget: Passed through to :meth:`plan`.
 
         Returns:
             A :class:`PlannerDecision` with ``fallback_decision``
@@ -159,15 +212,24 @@ class RetrievalPlanner:
             >>> decision.fallback_decision.should_fallback
             True
         """
-        decision = self.plan(query)
+        decision = self.plan(
+            query,
+            use_calibrated_confidence=use_calibrated_confidence,
+            use_learned_budget=use_learned_budget,
+        )
+        budget_confidence = (
+            decision.calibrated_confidence if use_calibrated_confidence else decision.confidence
+        )
         fb = FallbackManager.evaluate(
             config=decision.config,
             chunk_count=chunk_count,
-            confidence=decision.confidence,
+            confidence=budget_confidence,
         )
         return PlannerDecision(
             config=decision.config,
             confidence=decision.confidence,
+            calibrated_confidence=decision.calibrated_confidence,
             query_type=decision.query_type,
             fallback_decision=fb,
+            calibration_method=decision.calibration_method,
         )

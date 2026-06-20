@@ -89,13 +89,20 @@ def get_config(
             "decompose": False,
         }
 
-    # --- 2.  Confidence-aware overrides (only when conf < HIGH) ---
+    # --- 2.  Apply provided budget or confidence-aware overrides ---
 
-    if confidence >= CONFIDENCE_HIGH:
+    if budget is not None:
+        # Caller-provided budget (learned or static) always applied
+        config["top_k"] = budget.top_k
+        config["rerank"] = budget.rerank
+        config["decompose"] = budget.decompose
         return config
 
-    if budget is None:
-        budget = allocate_budget(QueryType(query_type), confidence)
+    if confidence >= CONFIDENCE_HIGH:
+        # High confidence → static defaults already match the budget table
+        return config
+
+    budget = allocate_budget(QueryType(query_type), confidence)
 
     config["top_k"] = budget.top_k
     config["rerank"] = budget.rerank

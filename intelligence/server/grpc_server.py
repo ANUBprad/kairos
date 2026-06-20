@@ -30,6 +30,7 @@ from intelligence.vectorstore.chroma_store import ChromaStore
 from intelligence.classifier.query_classifier import ClassifyQuery
 from intelligence.server.config import ServerConfig, validate_env
 from intelligence.server.engine import RetrievalEngine
+from intelligence.telemetry import TelemetryCollector, TelemetryStorage
 from intelligence.server.health import HealthServicer, add_health_servicer_to_server, SERVING
 
 import grpc
@@ -184,7 +185,8 @@ def _wrap_chroma_with_cb(store, breaker):
 
 def _build_engine(store, embedder, client, llm_client, cfg,
                   classifier_model_name, retriever_model_name,
-                  llm_circuit_breaker=None, chroma_circuit_breaker=None) -> RetrievalEngine:
+                  llm_circuit_breaker=None, chroma_circuit_breaker=None,
+                  telemetry_collector=None) -> RetrievalEngine:
     simple_retriever = SimpleRetriever(store=store, embedder=embedder)
     classifier = ClassifyQuery(
         client=client, model_name=classifier_model_name,
@@ -213,10 +215,12 @@ def _build_engine(store, embedder, client, llm_client, cfg,
         llm_client=llm_client,
         llm_circuit_breaker=llm_circuit_breaker,
         chroma_circuit_breaker=chroma_circuit_breaker,
+        telemetry_collector=telemetry_collector,
     )
 
 
-def _register_server(server, engine, cfg, health: HealthServicer | None = None):
+def _register_server(server, engine, cfg, health: HealthServicer | None = None,
+                     telemetry_collector=None):
     servicer = IntelligenceServiceServicer(engine=engine)
     rag_pb2_grpc.add_IntelligenceServiceServicer_to_server(servicer, server)
     if health is not None:
@@ -225,7 +229,11 @@ def _register_server(server, engine, cfg, health: HealthServicer | None = None):
     server.add_insecure_port(f"0.0.0.0:{cfg.intelligence_port}")
     print(f"Starting the server at port 0.0.0.0:{cfg.intelligence_port}")
     server.start()
-    server.wait_for_termination()
+    try:
+        server.wait_for_termination()
+    finally:
+        if telemetry_collector is not None:
+            telemetry_collector.close()
 
 
 def serve():
@@ -255,6 +263,9 @@ def serve():
         on_state_change=_make_cb_on_change("chroma"),
     )
 
+    # --- Telemetry collector ---------------------------------------------
+    telemetry_collector = TelemetryCollector(storage=TelemetryStorage())
+
     # --- Metrics interceptor & server ------------------------------------
     interceptor = MetricsInterceptor() if cfg.metrics_enabled else None
     interceptors = ([interceptor] if interceptor else [])
@@ -279,8 +290,10 @@ def serve():
                 retriever_model_name=cfg.small_groq_model,
                 llm_circuit_breaker=llm_breaker,
                 chroma_circuit_breaker=chroma_breaker,
+                telemetry_collector=telemetry_collector,
             )
-            _register_server(server, engine, cfg, health=health)
+            _register_server(server, engine, cfg, health=health,
+                             telemetry_collector=telemetry_collector)
         else:
             raise ValueError(
                 f"Unsupported LLM provider: {cfg.llm_provider}. "
@@ -321,12 +334,14 @@ def serve():
             retriever_model_name=model_name,
             llm_circuit_breaker=llm_breaker,
             chroma_circuit_breaker=chroma_breaker,
+            telemetry_collector=telemetry_collector,
         )
 
         if cfg.metrics_enabled:
             start_metrics_server(cfg.metrics_port)
 
-        _register_server(server, engine, cfg, health=health)
+        _register_server(server, engine, cfg, health=health,
+                         telemetry_collector=telemetry_collector)
 
 
 if __name__ == "__main__":

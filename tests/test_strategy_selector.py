@@ -226,8 +226,7 @@ class TestExplicitBudget:
         custom_budget = RetrievalBudget(top_k=99, rerank=False, decompose=False)
         cfg = get_config(details, confidence=0.99, budget=custom_budget)
 
-        # High confidence path: budget is ignored, static config returned
-        assert cfg["top_k"] == 3
+        assert cfg["top_k"] == 99  # explicit budget is honoured at all confidence levels
 
 
 # ======================================================================

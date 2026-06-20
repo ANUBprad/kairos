@@ -19,6 +19,7 @@ from intelligence.metrics.prometheus_metrics import (
     fallback_total,
 )
 from intelligence.retrieval.simple_retriever import SimpleRetriever
+from intelligence.telemetry.collector import TelemetryCollector
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ class RetrievalEngine:
         llm_client: Union[GeminiLLM, OpenaiLLM],
         llm_circuit_breaker: CircuitBreaker | None = None,
         chroma_circuit_breaker: CircuitBreaker | None = None,
+        telemetry_collector: TelemetryCollector | None = None,
     ):
         self.pipeline = pipeline
         self.classifier = classifier
@@ -52,12 +54,23 @@ class RetrievalEngine:
         self.planner = RetrievalPlanner(classifier=classifier)
         self.llm_circuit_breaker = llm_circuit_breaker
         self.chroma_circuit_breaker = chroma_circuit_breaker
+        self._telemetry = telemetry_collector
+        self._last_decision: dict | None = None
 
     def compute_embeddings(self, query: str) -> list[float]:
         return self.embedder.embed(query)
 
     def classify_query(self, query: str) -> dict:
         decision = self.planner.plan(query)
+        self._last_decision = {
+            "query": query,
+            "query_type": decision.query_type.upper(),
+            "confidence": decision.confidence,
+            "retrieval_type": decision.config["retrieval_type"],
+            "top_k": decision.config["top_k"],
+            "rerank": decision.config["rerank"],
+            "decompose": decision.config["decompose"],
+        }
         import rag_pb2 as _pb2
         _rt = decision.config["retrieval_type"]
         _cb = "high" if decision.confidence >= 0.8 else "medium" if decision.confidence >= 0.5 else "low"
@@ -67,6 +80,19 @@ class RetrievalEngine:
         ).inc()
         retrieval_type = _pb2.RetrievalType.Value(_rt)
         query_type = _pb2.QueryType.Value(decision.query_type.upper())
+
+        if self._telemetry:
+            self._telemetry.record_retrieval(
+                query=query,
+                query_type=decision.query_type.upper(),
+                confidence=decision.confidence,
+                retrieval_type=_rt,
+                top_k=decision.config["top_k"],
+                rerank=decision.config["rerank"],
+                decompose=decision.config["decompose"],
+                event_type="classification",
+            )
+
         return {
             "query_type": query_type,
             "retrieval_type": retrieval_type,
@@ -149,6 +175,24 @@ class RetrievalEngine:
         retrieval_duration_seconds.labels(
             retrieval_type=_pb.RetrievalType.Name(used_type),
         ).observe(_elapsed)
+
+        if self._telemetry:
+            _ctx = self._last_decision or {}
+            self._telemetry.record_retrieval(
+                query=query,
+                query_type=_ctx.get("query_type", "UNKNOWN"),
+                confidence=_ctx.get("confidence", 0.0),
+                retrieval_type=_pb.RetrievalType.Name(used_type),
+                top_k=top_k,
+                rerank=rerank,
+                decompose=decompose,
+                event_type="retrieval",
+                retrieved_chunks=len(chunks),
+                retrieval_latency_ms=_elapsed * 1000.0,
+                fallback_triggered=fallback_triggered,
+                fallback_reason=escalated_tier_str if fallback_triggered else None,
+                success=True,
+            )
 
         logger.info(
             "Retrieval executed",

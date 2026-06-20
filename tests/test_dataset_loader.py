@@ -15,6 +15,7 @@ from benchmarks.dataset.loader import (
     _QUERY_TYPE_VALUES,
     _raw_to_entry,
     dataset_summary,
+    generate_statistics,
     get_by_type,
     iter_entries,
     load_dataset,
@@ -370,6 +371,193 @@ class TestIterEntries:
         yielded = list(iter_entries(entries))
         assert len(yielded) == 3
         assert yielded[0].id == "SIMPLE-001"
+
+
+# ======================================================================
+# Field aliases (backward compat)
+# ======================================================================
+
+
+class TestQueryEntryAliases:
+    def test_query_alias(self) -> None:
+        entry = QueryEntry(id="X", text="hello", query_type="simple")
+        assert entry.query == "hello"
+
+    def test_difficulty_alias(self) -> None:
+        entry = QueryEntry(id="X", text="?", query_type="multi_hop")
+        assert entry.difficulty == "multi_hop"
+
+    def test_confidence_band_alias(self) -> None:
+        entry = QueryEntry(
+            id="X", text="?", query_type="simple",
+            confidence_category="high",
+        )
+        assert entry.confidence_band == "high"
+
+    def test_confidence_band_none(self) -> None:
+        entry = QueryEntry(id="X", text="?", query_type="simple")
+        assert entry.confidence_band is None
+
+
+class TestRawToEntryAliases:
+    def test_accepts_query_alias(self) -> None:
+        item = {"id": "X", "query": "what is AI?", "query_type": "simple"}
+        entry = _raw_to_entry(item)
+        assert entry.text == "what is AI?"
+        assert entry.query == "what is AI?"
+
+    def test_accepts_difficulty_alias(self) -> None:
+        item = {"id": "X", "text": "?", "difficulty": "complex"}
+        entry = _raw_to_entry(item)
+        assert entry.query_type == "complex"
+        assert entry.difficulty == "complex"
+
+    def test_accepts_confidence_band_alias(self) -> None:
+        item = {
+            "id": "X", "text": "?", "query_type": "simple",
+            "confidence_band": "low",
+        }
+        entry = _raw_to_entry(item)
+        assert entry.confidence_category == "low"
+        assert entry.confidence_band == "low"
+
+    def test_prefers_canonical_over_alias(self) -> None:
+        """When both text and query are present, text wins."""
+        item = {
+            "id": "X", "text": "canonical", "query": "alias",
+            "query_type": "simple",
+        }
+        entry = _raw_to_entry(item)
+        assert entry.text == "canonical"
+
+    def test_confidence_band_validated(self) -> None:
+        with pytest.raises(ValueError, match="not in"):
+            _raw_to_entry({
+                "id": "X", "text": "?", "query_type": "simple",
+                "confidence_band": "invalid",
+            })
+
+    def test_difficulty_validated(self) -> None:
+        with pytest.raises(ValueError, match="not in"):
+            _raw_to_entry({
+                "id": "X", "text": "?", "difficulty": "invalid_type",
+            })
+
+
+# ======================================================================
+# New 150‑query dataset
+# ======================================================================
+
+_EU_AI_ACT_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "benchmarks" / "dataset" / "eu_ai_act_queries.json"
+)
+
+_EXPECTED_150_COUNTS = {
+    "simple": 50,
+    "complex": 50,
+    "multi_hop": 50,
+}
+
+
+class TestEuAiActDataset:
+    def test_loads_all_150(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        assert len(entries) == 150
+
+    def test_validate_150(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        report = validate_dataset(entries, expected_counts=_EXPECTED_150_COUNTS)
+        assert report.valid
+        assert report.query_count == 150
+
+    def test_validate_150_via_load_dataset(self) -> None:
+        entries = load_dataset(
+            _EU_AI_ACT_PATH, expected_counts=_EXPECTED_150_COUNTS,
+        )
+        assert len(entries) == 150
+
+    def test_type_distribution(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        counts = {"simple": 0, "complex": 0, "multi_hop": 0}
+        for e in entries:
+            counts[e.query_type] += 1
+        assert counts == _EXPECTED_150_COUNTS
+
+    def test_all_have_corpus_ref(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        for e in entries:
+            assert e.corpus_ref == "EU_AI_Act.pdf", f"{e.id} missing corpus_ref"
+
+    def test_all_have_confidence_band(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        for e in entries:
+            assert e.confidence_category is not None, f"{e.id} missing confidence_category"
+
+    def test_all_have_expected_articles(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        for e in entries:
+            assert e.expected_articles, f"{e.id} missing expected_articles"
+
+    def test_ids_are_unique(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        ids = [e.id for e in entries]
+        assert len(ids) == len(set(ids))
+
+
+class TestValidateDatasetExpectedCounts:
+    def test_custom_counts_passes(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        report = validate_dataset(entries, expected_counts=_EXPECTED_150_COUNTS)
+        assert report.valid
+
+    def test_custom_counts_fails(self) -> None:
+        entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
+        report = validate_dataset(entries, expected_counts={"simple": 1, "complex": 1, "multi_hop": 1})
+        assert not report.valid
+        assert any("simple" in e for e in report.errors)
+
+
+class TestDatasetSummaryExtended:
+    def test_includes_confidence_distribution(self) -> None:
+        entries = load_dataset()
+        summary = dataset_summary(entries)
+        assert "confidence_distribution" in summary
+
+    def test_includes_article_coverage(self) -> None:
+        entries = load_dataset()
+        summary = dataset_summary(entries)
+        assert "article_coverage" in summary
+        ac = summary["article_coverage"]
+        assert "unique_articles" in ac
+        assert "total_references" in ac
+        assert "most_referenced" in ac
+
+
+class TestGenerateStatistics:
+    def test_returns_string(self) -> None:
+        entries = load_dataset()
+        report = generate_statistics(entries)
+        assert isinstance(report, str)
+        assert "Total queries" in report
+
+    def test_lists_type_counts(self) -> None:
+        entries = load_dataset()
+        report = generate_statistics(entries)
+        assert "simple" in report
+        assert "complex" in report
+        assert "multi_hop" in report
+
+    def test_lists_article_coverage(self) -> None:
+        entries = load_dataset()
+        report = generate_statistics(entries)
+        assert "Article coverage" in report
+        assert "Unique articles" in report
+
+    def test_lists_confidence_bands(self) -> None:
+        entries = load_dataset()
+        report = generate_statistics(entries)
+        assert "Confidence-band" in report
 
 
 # ======================================================================
