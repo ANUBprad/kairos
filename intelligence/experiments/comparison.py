@@ -12,6 +12,23 @@ class RunComparison:
 
     All deltas are **treatment minus baseline** so a positive *recall_delta*
     means the treatment run improved recall.
+
+    Attributes:
+        baseline_run_id:   ID of the baseline run.
+        treatment_run_id:  ID of the treatment run.
+        baseline_name:     Human-readable name of the baseline.
+        treatment_name:    Human-readable name of the treatment.
+        recall_delta:      Recall delta.
+        precision_delta:   Precision delta.
+        latency_delta_ms:  Latency delta in milliseconds.
+        success_rate_delta:    Success rate delta.
+        fallback_rate_delta:   Fallback rate delta.
+        ece_delta:         Expected calibration error delta.
+        mce_delta:         Maximum calibration error delta.
+        brier_score_delta: Brier score delta.
+        score_lift_delta:  Score lift delta.
+        metadata:          Arbitrary key-value metadata.
+        validation:        Optional statistical validation result.
     """
 
     baseline_run_id: str
@@ -28,17 +45,20 @@ class RunComparison:
     brier_score_delta: Optional[float] = None
     score_lift_delta: Optional[float] = None
     metadata: Dict[str, str] = field(default_factory=dict)
+    validation: Optional["ValidationResult"] = None
 
 
 def compare_runs(
     baseline: ExperimentRun,
     treatment: ExperimentRun,
+    validation: Optional["ValidationResult"] = None,
 ) -> RunComparison:
     """Compute metric deltas between two experiment runs.
 
     Args:
-        baseline:  The reference run.
-        treatment: The run to compare against *baseline*.
+        baseline:   The reference run.
+        treatment:  The run to compare against *baseline*.
+        validation: Optional pre-computed :class:`ValidationResult`.
 
     Returns:
         A :class:`RunComparison` with deltas for all shared metrics.
@@ -60,6 +80,7 @@ def compare_runs(
         mce_delta=_opt_sub(tm.mce, bm.mce),
         brier_score_delta=_opt_sub(tm.brier_score, bm.brier_score),
         score_lift_delta=_opt_sub(tm.score_lift, bm.score_lift),
+        validation=validation,
     )
 
 
@@ -97,6 +118,32 @@ def generate_comparison_report(
             formatted = _fmt_delta(val)
             lines.append(f"| {name:<18} | {formatted:<12} |")
         lines.append("")
+
+        if comp.validation:
+            lines.append("### Statistical Validation")
+            lines.append("")
+            v = comp.validation
+            lines.append(f"**{v.summary}**")
+            lines.append("")
+            lines.append("#### Significance Tests")
+            lines.append("")
+            lines.append("| Test | Statistic | p-value | Significant? |")
+            lines.append("| ---- | --------- | ------- | ------------ |")
+            for name, sig in v.significance.items():
+                lines.append(
+                    f"| {name:<20} | {sig.statistic:>9.4f} | {sig.p_value:>7.4f} "
+                    f"| {'Yes' if sig.significant else 'No':<4} |"
+                )
+            lines.append("")
+            if v.bootstrap:
+                bs = v.bootstrap
+                lines.append("#### Bootstrap Evaluation")
+                lines.append("")
+                lines.append(f"- **Point estimate:** {bs.point_estimate:.4f}")
+                lines.append(f"- **Bias:** {bs.bias:.4f}")
+                lines.append(f"- **Std error:** {bs.std_error:.4f}")
+                lines.append(f"- **95% CI:** [{bs.ci_lower:.4f}, {bs.ci_upper:.4f}]")
+                lines.append("")
 
     return "\n".join(lines)
 

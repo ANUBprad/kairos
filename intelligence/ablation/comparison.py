@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from benchmarks.runner import RunnerResult
 
@@ -42,6 +42,7 @@ class AblationComparison:
     per_type_precision_delta: Dict[str, Optional[float]] = field(default_factory=dict)
     per_type_latency_delta_ms: Dict[str, float] = field(default_factory=dict)
     metadata: Dict[str, str] = field(default_factory=dict)
+    validation: Optional["ValidationResult"] = None
 
 
 # ---------------------------------------------------------------------------
@@ -54,6 +55,8 @@ def compare_runs(
     treatment: RunnerResult,
     baseline_label: str = "Baseline",
     treatment_label: str = "Treatment",
+    metric_name: str = "recall",
+    include_validation: bool = True,
 ) -> AblationComparison:
     """Compute metric deltas between two ablation runs.
 
@@ -62,9 +65,12 @@ def compare_runs(
         treatment:  Result from the treatment ablation configuration.
         baseline_label:  Human-readable label for the baseline.
         treatment_label: Human-readable label for the treatment.
+        metric_name: Which per-query metric to validate (default ``"recall"``).
+        include_validation: Whether to run statistical validation.
 
     Returns:
-        An :class:`AblationComparison` with all computed deltas.
+        An :class:`AblationComparison` with all computed deltas, optionally
+        including a :class:`ValidationResult`.
 
     Raises:
         ValueError: If the two runs have different query counts.
@@ -116,6 +122,30 @@ def compare_runs(
         tl_avg = tl.total / treatment.total_queries if tl else 0.0
         per_type_latency_delta_ms[qt] = (tl_avg - bl_avg) * 1000.0
 
+    validation_result = None
+    if include_validation:
+        try:
+            from intelligence.statistics.reporting import generate_validation_report
+
+            bl_vals = [
+                getattr(r, metric_name, 0.0) or 0.0
+                for r in baseline.results
+            ]
+            tr_vals = [
+                getattr(r, metric_name, 0.0) or 0.0
+                for r in treatment.results
+            ]
+            if len(bl_vals) == total and len(tr_vals) == total:
+                validation_result = generate_validation_report(
+                    baseline=bl_vals,
+                    treatment=tr_vals,
+                    metric_name=metric_name,
+                    baseline_label=baseline_label,
+                    treatment_label=treatment_label,
+                )
+        except Exception:
+            validation_result = None
+
     return AblationComparison(
         baseline_label=baseline_label,
         treatment_label=treatment_label,
@@ -131,6 +161,7 @@ def compare_runs(
         metadata={
             "generated_at": datetime.now().isoformat(),
         },
+        validation=validation_result,
     )
 
 
@@ -229,6 +260,43 @@ def generate_ablation_report(
         for qt, delta in sorted(comp.per_type_latency_delta_ms.items()):
             lines.append(f"| {qt:<10} | {delta:+.1f} |")
         lines.append("")
+
+        if comp.validation:
+            lines.append("### Statistical Validation")
+            lines.append("")
+            lines.append(
+                f"**{comp.validation.summary}**"
+            )
+            lines.append("")
+            lines.append("#### Significance Tests")
+            lines.append("")
+            lines.append("| Test | Statistic | p-value | Significant? |")
+            lines.append("| ---- | --------- | ------- | ------------ |")
+            for name, sig in comp.validation.significance.items():
+                lines.append(
+                    f"| {name:<20} | {sig.statistic:>9.4f} | {sig.p_value:>7.4f} "
+                    f"| {'Yes' if sig.significant else 'No':<4} |"
+                )
+            lines.append("")
+            lines.append("#### Effect Sizes")
+            lines.append("")
+            lines.append("| Measure | Value | Magnitude | Direction |")
+            lines.append("| ------- | ----- | --------- | --------- |")
+            for name, es in comp.validation.effect_sizes.items():
+                lines.append(
+                    f"| {name:<15} | {es.value:>6.4f} | {es.magnitude:<10} "
+                    f"| {es.direction:<22} |"
+                )
+            lines.append("")
+            if comp.validation.bootstrap:
+                bs = comp.validation.bootstrap
+                lines.append("#### Bootstrap Evaluation")
+                lines.append("")
+                lines.append(f"- **Point estimate:** {bs.point_estimate:.4f}")
+                lines.append(f"- **Bias:** {bs.bias:.4f}")
+                lines.append(f"- **Std error:** {bs.std_error:.4f}")
+                lines.append(f"- **95% CI:** [{bs.ci_lower:.4f}, {bs.ci_upper:.4f}]")
+                lines.append("")
 
     lines.append("---")
     lines.append("*Report generated by ablation framework*")
