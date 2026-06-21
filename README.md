@@ -434,10 +434,21 @@ keiro/
 │   ├── embeddings/                    # Local, OpenAI, Gemini embedders
 │   ├── llm/                           # Gemini, OpenAI, Ollama LLM wrappers
 │   ├── ingestion/                     # Document loading, chunking, pipeline
-│   └── vectorstore/                   # ChromaDB namespace-scoped operations
+│   ├── vectorstore/                   # ChromaDB namespace-scoped operations
+│   ├── judging/                       # Phase 9C — LLM Judge Framework
+│   ├── config/                        # Phase 8A — Pydantic settings
+│   ├── api/                           # Phase 8B — FastAPI REST API
+│   ├── artifacts/                     # Phase 8E — Model/experiment/report registries
+│   ├── observability/                 # Phase 7A — Tracing, events, metrics, alerting
+│   └── evaluation/                    # Phase 7B — Ranking metrics, evaluator
 ├── sdk/                               # pip-installable Python client
 ├── benchmarks/
+│   ├── datasets/                      # Phase 9B — Gold dataset generator (1020 queries)
+│   ├── e2e/                           # Phase 9D-G — E2E benchmark pipeline
 │   └── results/                       # Eval scores and plots
+├── dashboard/
+│   ├── pages/                         # Phase 7C + 9H — 12 Streamlit pages
+│   └── app.py                         # Main dashboard app
 ├── docker-compose.yml
 ├── prometheus.yml
 └── .env.example

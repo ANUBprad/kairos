@@ -54,6 +54,21 @@ class MetricsRegistry:
     def clear(self) -> None:
         self._points.clear()
 
+    def list_metrics(self) -> List[MetricPoint]:
+        return list(self._points)
+
+    def get_metric(self, name: str) -> Optional[MetricPoint]:
+        for p in reversed(self._points):
+            if p.name == name:
+                return p
+        return None
+
+    @staticmethod
+    def get_instance() -> MetricsRegistry:
+        if not hasattr(MetricsRegistry, "_singleton"):
+            MetricsRegistry._singleton = MetricsRegistry()
+        return MetricsRegistry._singleton
+
 
 _default_registry = MetricsRegistry()
 

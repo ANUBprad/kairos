@@ -29,10 +29,13 @@ class PerformanceSnapshot:
 
 
 class PerformanceMonitor:
-    """Tracks latency distributions, success/failure rates, and throughput.
+    _instance: PerformanceMonitor | None = None
 
-    Thread-safe. Maintains a sliding window of observations.
-    """
+    @staticmethod
+    def get_instance() -> PerformanceMonitor:
+        if PerformanceMonitor._instance is None:
+            PerformanceMonitor._instance = PerformanceMonitor()
+        return PerformanceMonitor._instance
 
     def __init__(self, window_size: int = 1000) -> None:
         self._window_size = window_size

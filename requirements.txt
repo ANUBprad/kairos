@@ -9,3 +9,8 @@ google-genai
 rank_bm25
 numpy
 openai
+pydantic>=2.7.0
+pydantic-settings>=2.1.0
+fastapi>=0.111.0
+uvicorn>=0.30.0
+starlette>=0.37.0

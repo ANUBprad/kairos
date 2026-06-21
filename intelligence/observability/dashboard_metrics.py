@@ -9,11 +9,17 @@ from intelligence.observability.performance_monitor import PerformanceMonitor, P
 
 
 class DashboardMetricsCollector:
-    """Collects metrics specifically for dashboard consumption.
+    _instance: DashboardMetricsCollector | None = None
 
-    Aggregates data from the performance monitor, event logger,
-    metrics registry, and alert manager into dashboard-ready snapshots.
-    """
+    @staticmethod
+    def get_instance() -> DashboardMetricsCollector:
+        if DashboardMetricsCollector._instance is None:
+            DashboardMetricsCollector._instance = DashboardMetricsCollector(
+                monitor=PerformanceMonitor.get_instance(),
+                registry=MetricsRegistry.get_instance(),
+                alert_manager=AlertManager.get_instance(),
+            )
+        return DashboardMetricsCollector._instance
 
     def __init__(
         self,

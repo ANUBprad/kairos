@@ -136,7 +136,13 @@ class DegradedRecallAlertRule(AlertRule):
 
 
 class AlertManager:
-    """Manages alert rules and notifies handlers."""
+    _instance: AlertManager | None = None
+
+    @staticmethod
+    def get_instance() -> AlertManager:
+        if AlertManager._instance is None:
+            AlertManager._instance = AlertManager()
+        return AlertManager._instance
 
     def __init__(self) -> None:
         self._rules: List[AlertRule] = []

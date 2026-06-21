@@ -32,6 +32,51 @@ services:
       chromadb:
         condition: service_healthy
 
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      - KEIRO_ENVIRONMENT=${KEIRO_ENVIRONMENT:-development}
+      - KEIRO_CHROMA_STORE_HOST=chromadb
+      - KEIRO_INTELLIGENCE_HOST=intelligence
+    restart: unless-stopped
+    depends_on:
+      intelligence:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+    ports:
+      - "${DASHBOARD_PORT:-8501}:8501"
+    env_file:
+      - .env
+    environment:
+      - KEIRO_CHROMA_STORE_HOST=chromadb
+      - KEIRO_INTELLIGENCE_HOST=intelligence
+    restart: unless-stopped
+    depends_on:
+      - intelligence
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    env_file:
+      - .env
+    environment:
+      - KEIRO_CHROMA_STORE_HOST=chromadb
+    restart: unless-stopped
+    depends_on:
+      chromadb:
+        condition: service_healthy
+
   gateway:
     build:
       context: .

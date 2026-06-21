@@ -44,13 +44,22 @@ Response
 ```text
 kairos/
 │
-├── gateway/
-├── intelligence/
-├── proto/
-├── sdk/
-├── benchmarks/
-├── docker/
-├── docs/
+├── gateway/           # Go API gateway
+├── intelligence/      # Python intelligence layer
+│   ├── api/           # FastAPI management API (Phase 8)
+│   ├── config/        # Pydantic config system (Phase 8)
+│   ├── artifacts/     # Model/experiment/report registries (Phase 8)
+│   ├── observability/ # Tracing, logging, monitoring, alerting (Phase 7)
+│   ├── evaluation/    # Ranking metrics, evaluator, benchmarks (Phase 7)
+│   └── ...            # Classifier, retrievers, embeddings, etc.
+├── proto/             # gRPC contracts
+├── sdk/               # Python client SDK
+├── benchmarks/        # Evaluation datasets and results
+├── docker/            # Dockerfiles (Phase 8)
+├── docs/              # Architecture, deployment, operations docs
+├── scripts/           # Release, build, benchmark, validation (Phase 8)
+├── .github/workflows/ # CI/CD pipelines (Phase 8)
+├── dashboard/         # Streamlit research dashboard (Phase 7)
 │
 ├── docker-compose.yml
 ├── prometheus.yml
