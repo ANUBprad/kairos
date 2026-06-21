@@ -46,7 +46,12 @@ class ConfidenceCalibrator:
     def n_training_samples(self) -> int:
         return self._n_training_samples
 
-    def fit(self, confidences: np.ndarray, successes: np.ndarray) -> None:
+    def fit(
+        self,
+        confidences: np.ndarray,
+        successes: np.ndarray,
+        tracker: Optional[object] = None,
+    ) -> None:
         confidences = np.asarray(confidences, dtype=float).ravel()
         successes = np.asarray(successes, dtype=float).ravel()
 
@@ -65,6 +70,14 @@ class ConfidenceCalibrator:
         self._ece = compute_ece(
             self._strategy.predict(confidences), successes
         )
+
+        if tracker is not None:
+            tracker.log_metrics({
+                "ece": self._ece,
+                "training_samples": float(self._n_training_samples),
+                "accuracy": self._accuracy,
+            })
+            tracker.log_parameter("calibrator_type", self._strategy.name)
 
     def predict(self, confidence: float) -> float:
         if not self._fitted:

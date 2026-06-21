@@ -30,6 +30,7 @@ class AblationRunner:
         calibrator: Optional[object] = None,
         optimizer: Optional[object] = None,
         feedback_adjuster: Optional[object] = None,
+        tracker: Optional[object] = None,
     ):
         self._config = config
         self._classifier = classifier
@@ -37,6 +38,7 @@ class AblationRunner:
         self._calibrator = calibrator
         self._optimizer = optimizer
         self._feedback_adjuster = feedback_adjuster
+        self._tracker = tracker
 
     # ------------------------------------------------------------------
     # Public API
@@ -57,7 +59,42 @@ class AblationRunner:
             classifier=self._classifier,
             retriever=self._retriever,
         )
+
+        if self._tracker is not None:
+            label = self._config.label
+            return self._tracked_run(runner, list(entries), label)
+
         return runner.run_all(list(entries))
+
+    def _tracked_run(
+        self,
+        runner: object,
+        entries: list[QueryEntry],
+        label: str,
+    ) -> RunnerResult:
+        from intelligence.experiments import ExperimentParameters  # noqa: PLC0415
+
+        cfg = self._config
+        params = ExperimentParameters(
+            planner_enabled=cfg.planner_enabled,
+            calibration_enabled=cfg.calibration_enabled,
+            optimization_enabled=cfg.optimization_enabled,
+            feedback_enabled=cfg.feedback_enabled,
+            dataset_name="benchmark",
+            query_types=",".join(
+                sorted({e.query_type for e in entries})
+            ),
+        )
+        with self._tracker.start_run(
+            name=f"ablation-{label}",
+            description=f"Ablation run with config: {label}",
+            phase="ablation",
+            parameters=params,
+            tags={"config_label": label},
+        ):
+            result = runner.run_all(list(entries))  # type: ignore[arg-type]
+            self._tracker.log_metrics_from_result(result)
+            return result
 
     # ------------------------------------------------------------------
     # Internal — planner factory

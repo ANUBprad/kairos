@@ -41,6 +41,7 @@ class BudgetRetrainer:
         records: List[Dict[str, Any]],
         version: Optional[str] = None,
         min_samples_per_config: int = 2,
+        tracker: Optional[object] = None,
     ) -> Dict[str, Any]:
         """Train a new budget optimizer from training records.
 
@@ -48,6 +49,7 @@ class BudgetRetrainer:
             records:              List of training record dicts.
             version:              Version string (auto-incremented if ``None``).
             min_samples_per_config: Minimum samples per config to consider.
+            tracker:              Optional experiment tracker to log results.
 
         Returns:
             Dict with ``version``, ``path``, ``evaluation``, ``timestamp``,
@@ -62,7 +64,7 @@ class BudgetRetrainer:
 
         # Fit optimizer
         opt = BudgetOptimizer(min_samples_per_config=min_samples_per_config)
-        opt.fit(entries)
+        opt.fit(entries, tracker=tracker)
 
         # Evaluate
         eval_results = opt.evaluate(entries)
@@ -105,6 +107,15 @@ class BudgetRetrainer:
             path=model_path,
         )
         self._registry.register(entry)
+
+        if tracker is not None:
+            tracker.log_metrics({
+                "score_lift": eval_results.get("score_lift", 0.0),
+                "learned_avg_score": eval_results.get("learned_avg_score", 0.0),
+                "static_avg_score": eval_results.get("static_avg_score", 0.0),
+                "training_samples": float(len(records)),
+            })
+            tracker.log_artifact(model_path)
 
         return {
             "version": version,

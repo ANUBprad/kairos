@@ -79,7 +79,11 @@ class BudgetOptimizer:
     def _config_key(self, top_k: int, rerank: bool, decompose: bool) -> str:
         return f"{top_k}_{rerank}_{decompose}"
 
-    def fit(self, entries: List[BudgetDatasetEntry]) -> None:
+    def fit(
+        self,
+        entries: List[BudgetDatasetEntry],
+        tracker: Optional[object] = None,
+    ) -> None:
         for entry in entries:
             group_key, band = self._key(entry.query_type, entry.confidence)
             cfg_key = self._config_key(entry.top_k, entry.rerank, entry.decompose)
@@ -128,6 +132,27 @@ class BudgetOptimizer:
                     expected_latency=stats.avg_latency,
                 ))
                 self._fitted = len(entries) > 0
+
+        if tracker is not None:
+            learned_score_sum = 0.0
+            learned_score_count = 0
+            for g in grouped.values():
+                for ck, s in g.items():
+                    if s.count >= self._min_samples:
+                        parts = ck.split("_")
+                        top_k_val = int(parts[0]) if len(parts) >= 1 else 3
+                        learned_score_sum += self._scorer.score(
+                            s.success_rate, s.avg_latency,
+                            s.fallback_rate, top_k_val,
+                        )
+                        learned_score_count += 1
+            avg_score = learned_score_sum / max(learned_score_count, 1)
+            tracker.log_metrics({
+                "training_samples": float(len(entries)),
+                "learned_avg_score": avg_score,
+            })
+            tracker.log_parameter("optimizer_min_samples",
+                                  str(self._min_samples))
 
     def recommend_budget(
         self,
