@@ -13,6 +13,25 @@ from intelligence.circuit_breaker.circuit_breaker import (
 )
 
 
+def _wait_for_state(
+    cb: CircuitBreaker,
+    expected: CircuitState,
+    timeout: float = 0.2,
+    pause: float = 0.01,
+) -> None:
+    """Poll *cb.state* until it reaches *expected*.
+    
+    Replaces a fixed ``sleep`` + single assertion pattern that is flaky
+    on Windows where ``time.sleep`` granularity is ~15.6 ms.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if cb.state == expected:
+            return
+        time.sleep(pause)
+    assert cb.state == expected
+
+
 class TestCircuitBreakerInitialState:
     def test_initial_state_is_closed(self) -> None:
         cb = CircuitBreaker()
@@ -85,8 +104,7 @@ class TestCircuitBreakerCall:
         except ValueError:
             pass
         assert cb.state == CircuitState.OPEN
-        time.sleep(0.06)
-        assert cb.state == CircuitState.HALF_OPEN
+        _wait_for_state(cb, CircuitState.HALF_OPEN)
         result = cb.call(lambda: "ok")
         assert result == "ok"
         assert cb.state == CircuitState.CLOSED
@@ -103,7 +121,7 @@ class TestCircuitBreakerCall:
         except ValueError:
             pass
         assert cb.state == CircuitState.OPEN
-        time.sleep(0.06)
+        _wait_for_state(cb, CircuitState.HALF_OPEN)
         with pytest.raises(ValueError):
             cb.call(lambda: (_ for _ in ()).throw(ValueError("fail still")))
         assert cb.state == CircuitState.OPEN
