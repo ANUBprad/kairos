@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -47,6 +48,22 @@ def sample_training_records() -> list:
 def temp_model_dir() -> str:
     with tempfile.TemporaryDirectory() as tmp:
         yield tmp
+
+
+@pytest.fixture
+def temp_registry_path() -> str:
+    """Return a path inside a temporary directory for the registry file."""
+    with tempfile.TemporaryDirectory() as tmp:
+        yield os.path.join(tmp, "registry.json")
+
+
+@pytest.fixture
+def retrainer(temp_model_dir, temp_registry_path) -> BudgetRetrainer:
+    """A BudgetRetrainer that writes both models and registry to temp dirs."""
+    return BudgetRetrainer(
+        model_dir=temp_model_dir,
+        registry=ModelRegistry(temp_registry_path),
+    )
 
 
 # ======================================================================
@@ -154,30 +171,25 @@ class TestComputeDatasetHash:
 
 
 class TestBudgetRetrainer:
-    def test_train(self, sample_training_records, temp_model_dir) -> None:
-        retrainer = BudgetRetrainer(model_dir=temp_model_dir)
+    def test_train(self, sample_training_records, retrainer) -> None:
         result = retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
         assert result["version"] == "v1"
         assert result["training_samples"] == 6
         assert "evaluation" in result
         assert os.path.exists(result["path"])
 
-    def test_train_auto_version(self, sample_training_records, temp_model_dir) -> None:
-        retrainer = BudgetRetrainer(model_dir=temp_model_dir)
+    def test_train_auto_version(self, sample_training_records, retrainer) -> None:
         result = retrainer.train(sample_training_records, min_samples_per_config=1)
         assert result["version"].startswith("v")
 
-    def test_evaluate(self, sample_training_records, temp_model_dir) -> None:
-        retrainer = BudgetRetrainer(model_dir=temp_model_dir)
+    def test_evaluate(self, sample_training_records, retrainer) -> None:
         train_result = retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
         eval_results = retrainer.evaluate(sample_training_records, train_result["path"])
         assert isinstance(eval_results, dict)
         assert "static_avg_score" in eval_results
 
-    def test_compare_models(self, sample_training_records, temp_model_dir) -> None:
-        retrainer = BudgetRetrainer(model_dir=temp_model_dir)
+    def test_compare_models(self, sample_training_records, retrainer) -> None:
         retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
-        # Add more varied data for v2
         extra = sample_training_records + [
             {"query_type": "multi_hop", "confidence": 0.40, "retrieval_type": "SELF_QUERYING",
              "top_k": 8, "rerank": True, "decompose": True, "latency_ms": 200.0,
@@ -188,20 +200,17 @@ class TestBudgetRetrainer:
         assert comparison["version_a"] == "v1"
         assert comparison["version_b"] == "v2"
 
-    def test_compare_models_not_found(self, temp_model_dir) -> None:
-        retrainer = BudgetRetrainer(model_dir=temp_model_dir)
+    def test_compare_models_not_found(self, retrainer) -> None:
         with pytest.raises(ValueError):
             retrainer.compare_models("v1", "v99")
 
-    def test_generate_training_report(self, sample_training_records, temp_model_dir) -> None:
-        retrainer = BudgetRetrainer(model_dir=temp_model_dir)
+    def test_generate_training_report(self, sample_training_records, retrainer) -> None:
         result = retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
         report = retrainer.generate_training_report(result, sample_training_records)
         assert "Retraining Report" in report
         assert result["version"] in report
 
-    def test_registers_in_registry(self, sample_training_records, temp_model_dir) -> None:
-        retrainer = BudgetRetrainer(model_dir=temp_model_dir)
+    def test_registers_in_registry(self, sample_training_records, retrainer) -> None:
         retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
         assert retrainer._registry.latest_version() == "v1"
 
@@ -257,3 +266,52 @@ class TestRetrainingScheduler:
         scheduler = RetrainingScheduler(retrain_fn=lambda r: {}, min_records=1)
         scheduler.trigger([{"a": 1}])
         assert scheduler.last_run is not None
+
+
+# ======================================================================
+# Regression: no tracked files mutated
+# ======================================================================
+
+
+class TestTrackedFilesNotMutated:
+    """Verify that running tests does not dirty the git working tree.
+
+    This test captures the blob hashes of tracked files under ``models/``
+    before and after running the retrainer tests to detect any mutation.
+    """
+
+    def test_models_directory_not_modified(self, sample_training_records, temp_model_dir, temp_registry_path) -> None:
+        repo = Path(__file__).resolve().parent.parent
+        models_dir = repo / "models"
+        before: dict[str, str] = {}
+        if models_dir.is_dir():
+            for f in sorted(models_dir.rglob("*")):
+                if f.is_file():
+                    result = subprocess.run(
+                        ["git", "hash-object", str(f)],
+                        capture_output=True, text=True, cwd=repo,
+                    )
+                    before[str(f.relative_to(repo))] = result.stdout.strip()
+
+        # Run a retrainer test that would have polluted the registry
+        registry_path = os.path.join(temp_registry_path)
+        retrainer = BudgetRetrainer(
+            model_dir=temp_model_dir,
+            registry=ModelRegistry(registry_path),
+        )
+        retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
+
+        # Verify production registry was NOT modified
+        after: dict[str, str] = {}
+        if models_dir.is_dir():
+            for f in sorted(models_dir.rglob("*")):
+                if f.is_file():
+                    result = subprocess.run(
+                        ["git", "hash-object", str(f)],
+                        capture_output=True, text=True, cwd=repo,
+                    )
+                    after[str(f.relative_to(repo))] = result.stdout.strip()
+
+        changed = {k for k in before if before.get(k) != after.get(k)}
+        if changed:
+            pytest.fail(f"Tests modified tracked files under models/: {changed}")

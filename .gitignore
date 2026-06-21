@@ -11,6 +11,9 @@ venv/
 # Benchmark outputs
 benchmarks/results/
 
+# Trained models and registry (generated artifacts)
+models/
+
 # OS
 .DS_Store
 Thumbs.db
