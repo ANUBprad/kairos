@@ -12,7 +12,7 @@ venv/
 benchmarks/results/
 
 # Trained models and registry (generated artifacts)
-models/
+models/*
 
 # OS
 .DS_Store
@@ -28,3 +28,10 @@ Thumbs.db
 .keras/
 *.pyc
 __pycache__/
+
+# Cache directories
+.pytest_cache/
+.ruff_cache/
+
+# Compiled binaries
+gateway/main

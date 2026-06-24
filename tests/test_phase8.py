@@ -309,10 +309,10 @@ from intelligence.api.auth.api_key import APIKeyValidator, get_api_key_validator
 from intelligence.api.rate_limit.token_bucket import TokenBucket, TokenBucketStore
 from intelligence.api.versioning.versions import ApiVersion, parse_version_header, current_api_version
 from intelligence.api.health.endpoints import get_health_status, HealthStatus
-from intelligence.api.midlware.auth import AuthMiddleware
-from intelligence.api.midlware.logging import LoggingMiddleware
-from intelligence.api.midlware.rate_limit import RateLimitMiddleware
-from intelligence.api.midlware.versioning import VersioningMiddleware
+from intelligence.api.middleware.auth import AuthMiddleware
+from intelligence.api.middleware.logging import LoggingMiddleware
+from intelligence.api.middleware.rate_limit import RateLimitMiddleware
+from intelligence.api.middleware.versioning import VersioningMiddleware
 from intelligence.config.settings import Settings, reset_settings
 
 

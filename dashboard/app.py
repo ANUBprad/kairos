@@ -36,7 +36,7 @@ def main() -> None:
             st.switch_page(f"pages/{page}.py")
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### Phase 9 — Research V2")
+    st.sidebar.markdown("### Research V2")
 
     v2_pages = {
         "Leaderboard": "leaderboard",
@@ -55,7 +55,7 @@ def main() -> None:
     st.sidebar.markdown("---")
     st.sidebar.markdown("### System Info")
     st.sidebar.markdown("**Status:** Dashboard Ready")
-    st.sidebar.markdown("**Version:** Phase 9")
+    st.sidebar.markdown("**Version:** Kairos v3.0")
 
     st.title("🔬 Kairos Research Dashboard")
     st.markdown(
@@ -71,7 +71,7 @@ def main() -> None:
         - **Statistics** — View p-values, confidence intervals, effect sizes
         - **Observability** — Monitor latency, failures, alerts, throughput
 
-        ### Phase 9 — Research V2
+        ### Research V2
         - **Leaderboard** — Cross-domain mode rankings
         - **Domain Analysis** — Per-domain performance breakdown
         - **Planner Analysis** — Planner decision and strategy distribution

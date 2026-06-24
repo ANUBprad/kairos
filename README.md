@@ -1,90 +1,170 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/anomalyco/kairos/main/assets/logo-dark.svg">
-    <img alt="Kairos" src="https://raw.githubusercontent.com/anomalyco/kairos/main/assets/logo-light.svg" width="600">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo/kairos-logo.png">
+    <img src="docs/assets/logo/kairos-logo.png" alt="Kairos" width="120">
   </picture>
 </p>
 
+<h1 align="center">Kairos</h1>
+
 <p align="center">
-  <em>Adaptive Retrieval-Augmented Generation for Production RAG Systems</em>
+  <strong>Adaptive Retrieval Infrastructure for Production AI Systems</strong>
 </p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white" alt="Python"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat&logo=go&logoColor=white" alt="Go"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Tests-1671%20passed-22c55e?style=flat" alt="Tests"></a>
-  <a href="#"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat" alt="License"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Docker-compose-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker"></a>
-  <a href="#"><img src="https://img.shields.io/badge/ChromaDB-vector%20store-FF6B35?style=flat" alt="ChromaDB"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B?style=flat" alt="Dashboard"></a>
-  <a href="#"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20639902-4285F4?style=flat" alt="DOI"></a>
+  Every query deserves a different retrieval strategy.
 </p>
 
----
+<p align="center">
+  Kairos classifies, plans, and routes every query to the optimal retrieval strategy —<br>
+  balancing quality, latency, confidence, and cost in real time.
+</p>
 
-## Kairos
-
-**Kairos** (καιρός — the right, critical moment) is a self-hostable adaptive RAG infrastructure that routes queries through three retrieval tiers based on complexity, validated across 1,671 tests, 5 benchmark modes, and 5 domains.
-
-A single `docker compose up` starts the full stack — Go API gateway, Python intelligence services, ChromaDB vector store, and Streamlit dashboard.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Go-1.26-00ADD8?style=flat&logo=go&logoColor=white" alt="Go">
+  <img src="https://img.shields.io/badge/Tests-1802-22c55e?style=flat" alt="Tests">
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat" alt="License">
+  <img src="https://img.shields.io/badge/Docker-compose-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker">
+</p>
 
 ---
 
 ## Why Kairos Exists
 
-Most RAG implementations treat every query identically: embed, retrieve `k` chunks, call the LLM. This wastes tokens on simple lookups and retrieves too little context for complex synthesis or chained reasoning.
+Most RAG systems treat every query identically — embed, retrieve `k` chunks, call the LLM. This wastes compute on simple lookups and retrieves too little context for complex questions.
 
-Kairos classifies each query *before* retrieval and routes it through the optimal strategy:
+Kairos solves this by analyzing each query before retrieval:
 
-| Query Type | Strategy | Top-K | Rerank | Hops |
-|-----------|----------|-------|--------|------|
-| **Simple** | Direct retrieval, skip reranker | 2–3 | No | 1 |
-| **Complex** | MMR diversity + cross-encoder rerank | 5–8 | Yes | 1 |
-| **Multi-Hop** | Iterative retrieval with query reformulation | 5–7 | Yes | 2–3 |
+- **Classifies** query complexity (simple, complex, multi-hop)
+- **Predicts** confidence for each strategy
+- **Selects** the optimal retrieval strategy per query
+- **Allocates** retrieval budget based on difficulty
+- **Monitors** outcomes and adjusts over time
+- **Learns** from feedback signals
 
-**Result:** Computation scales proportionally to query difficulty — validated by a **23.6% improvement** over traditional RAG across 1,020 gold-standard queries.
-
----
-
-## Core Features
-
-- **Adaptive Query Routing** — Planner classifies queries into simple / complex / multi-hop and selects the optimal strategy
-- **Three Retrieval Tiers** — Direct, diversity-reranked, and iterative multi-hop retrieval
-- **Confidence Calibration** — Platt-scaled classifier confidence scores
-- **LLM Judge Framework** — 4-dimensional answer quality evaluation (Faithfulness, Relevance, Hallucination, Grounding)
-- **Research Dashboard** — 12 Streamlit pages for experiments, benchmarks, ablations, observability, and cost analysis
-- **Full Observability** — Distributed tracing, event logging, performance monitoring, alerting, Prometheus metrics
-- **Production API** — FastAPI management API with auth, rate limiting, versioning, health checks
-- **Dockerized** — Full stack in one `docker compose up`
-- **1,671 Tests** — Comprehensive test suite with zero regressions
+The result: a system that adapts to the question, not the other way around.
 
 ---
 
-## Architecture Overview
+## Problem
+
+A simple question like "What is our refund policy?" needs a cheap keyword lookup — a few milliseconds. A complex question like "Compare Q1 and Q3 revenue and explain the variance" requires multi-hop retrieval across documents, taking seconds.
+
+Traditional systems treat both identically. Simple queries are over-engineered and expensive. Complex queries return shallow results.
+
+Kairos adapts. Each query is classified, analyzed, and routed to the retrieval strategy that fits — no more, no less.
+
+---
+
+## Solution
 
 ```
-                    ┌─────────────────────────────────────────────┐
-                    │               Go API Gateway                │
-  HTTP Request  ──► │  Auth → Namespace → Rate Limit → Cache     │
-                    └─────────────────────┬───────────────────────┘
-                                          │ gRPC
-                    ┌─────────────────────▼───────────────────────┐
-                    │          Python Intelligence Service        │
-                    │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-                    │  │Classifier│  │ Planner  │  │Retriever │  │
-                    │  └──────────┘  └──────────┘  └──────────┘  │
-                    │  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-                    │  │  Judge   │  │Evaluator │  │  Cache   │  │
-                    │  └──────────┘  └──────────┘  └──────────┘  │
-                    └─────────────────────┬───────────────────────┘
-                                          │
-                    ┌─────────────────────▼───────────────────────┐
-                    │           ChromaDB Vector Store             │
-                    │  Finance │ Legal │ Healthcare │ Tech │ Gen  │
-                    └─────────────────────────────────────────────┘
+User Query
+    |
+    v
+Query Analysis
+    |
+    v
+Complexity Classification
+    |
+    +-- Simple      --> Hybrid Keyword + Vector Search
+    +-- Complex     --> MMR Diversity + Cross-Encoder Rerank
+    +-- Multi-Hop   --> Iterative Retrieval with Query Reformulation (2-3 hops)
+    |
+    v
+Confidence Prediction
+    |
+    v
+Strategy Selection
+    |
+    v
+Retrieval Execution
+    |
+    v
+Answer + Cited Sources
+    |
+    v
+Feedback Loop
 ```
 
-See [docs/diagrams/](docs/diagrams/) for detailed flow diagrams.
+The system runs on a Go API gateway with gRPC transport to a Python intelligence service. Every step is instrumented — latency, confidence, cost, and strategy selection are visible per query.
+
+---
+
+## Architecture
+
+```
+gateway/          Go API gateway — auth, rate limiting, caching, gRPC routing
+intelligence/     Python intelligence service — 28 modules
+benchmarks/       Benchmark suite — runner, metrics, datasets, leaderboard
+dashboard/        Streamlit research dashboard — experiments, observability
+tests/            1,802 tests across 37 test files
+proto/            gRPC protocol buffer definitions
+sdk/keiro/        Python client SDK
+docs/             Architecture, benchmarks, deployment, operations
+docker/           Dockerfiles for each service
+```
+
+```
+                    +-------------------------------------+
+                    |          Go API Gateway             |
+  HTTP Request -->  |  Auth -> Rate Limit -> Cache -> gRPC |
+                    +------------------+------------------+
+                                       | gRPC
+                    +------------------v------------------+
+                    |     Python Intelligence Service      |
+                    |  +----------+  +----------+         |
+                    |  |Classifier|  | Planner  |         |
+                    |  +----------+  +----------+         |
+                    |  +----------+  +----------+         |
+                    |  |Retrievers|  |Evaluator |         |
+                    |  +----------+  +----------+         |
+                    |  +----------+  +----------+         |
+                    |  |Calibrator|  | Judge    |         |
+                    |  +----------+  +----------+         |
+                    +------------------+------------------+
+                                       |
+                    +------------------v------------------+
+                    |        ChromaDB Vector Store         |
+                    |  Finance | Legal | Medical | Tech   |
+                    +-------------------------------------+
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the complete system design.
+
+---
+
+## Core Capabilities
+
+| Capability | Description |
+|-----------|-------------|
+| **Adaptive Retrieval Planning** | Routes every query to the optimal retrieval strategy based on complexity classification |
+| **Confidence Calibration** | Platt-scaled and isotonic regression confidence scores for every query |
+| **Budget Optimization** | Allocates retrieval budget (top-k, rerank, hops) proportional to query difficulty |
+| **Multi-Strategy Routing** | Three retrieval tiers — hybrid, deep semantic, and iterative multi-hop |
+| **Feedback Learning** | Thumbs up/down signals improve strategy selection over time |
+| **Observability** | Per-query latency, confidence, cost, and strategy breakdown exposed via Prometheus |
+| **Benchmarking** | Standardized benchmark suite across 5 domains with 5 execution modes |
+| **Evaluation Framework** | Recall, precision, MRR, MAP, NDCG, faithfulness, and cost analysis |
+
+---
+
+## Benchmark Results
+
+End-to-end benchmark across 5 domains (finance, legal, healthcare, technology, general) with 204 queries each — 1,020 total queries, 5 execution modes.
+
+| Rank | Mode | Composite | Recall | Precision | MRR | MAP | NDCG | Hit Rate | Faithfulness | Latency (ms) | Cost/Query |
+|------|------|-----------|--------|-----------|-----|-----|------|----------|--------------|-------------|------------|
+| 1 | **Kairos Adaptive** | **0.890** | 0.940 | 0.870 | 0.930 | 0.850 | 0.900 | 0.980 | 0.910 | 163.0 | $0.0145 |
+| 2 | Always Multi-Hop | 0.800 | 0.910 | 0.800 | 0.890 | 0.780 | 0.840 | 0.960 | 0.820 | 190.0 | $0.0220 |
+| 3 | Always Complex | 0.780 | 0.900 | 0.780 | 0.880 | 0.760 | 0.820 | 0.950 | 0.800 | 170.0 | $0.0184 |
+| 4 | Always Simple | 0.750 | 0.880 | 0.750 | 0.860 | 0.730 | 0.790 | 0.930 | 0.770 | 133.0 | $0.0100 |
+| 5 | Naive RAG | 0.720 | 0.850 | 0.720 | 0.830 | 0.700 | 0.760 | 0.910 | 0.740 | 145.0 | $0.0123 |
+
+Kairos Adaptive achieves the highest scores across all retrieval quality metrics while maintaining competitive latency and cost.
+
+Source: [benchmarks/leaderboard/leaderboard.md](benchmarks/leaderboard/leaderboard.md)
 
 ---
 
@@ -92,131 +172,123 @@ See [docs/diagrams/](docs/diagrams/) for detailed flow diagrams.
 
 ```bash
 # Clone the repository
-git clone https://github.com/anomalyco/kairos.git
-cd kairos
+git clone https://github.com/ANUBprad/Kairos.git
+cd Kairos
 
-# (Recommended) Create virtual environment
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# .\venv\Scripts\activate  # Windows
+source venv/bin/activate    # Linux / macOS
+# .\venv\Scripts\activate   # Windows
 
 # Install Python dependencies
 pip install -r requirements.txt
 
+# Run the test suite (1,802 tests)
+pytest tests/ -v
+
 # Start the full stack
 docker compose up -d
 
-# Run the test suite
-pytest tests/ -v
-
-# Start the research dashboard
+# Launch the research dashboard
 streamlit run dashboard/app.py
 ```
 
 ---
 
-## Docker Setup
-
-```yaml
-services:
-  gateway:    # Go API gateway (port 8080)
-  api:        # FastAPI management API (port 8000)
-  dashboard:  # Streamlit research dashboard (port 8501)
-  worker:     # Background task worker
-  chromadb:   # Vector store
-```
-
-```bash
-docker compose up -d
-docker compose logs -f
-```
-
----
-
-## Dashboard Preview
-
-![Dashboard](demo/screenshots/dashboard.png)
-
-| Page | Description |
-|------|-------------|
-| **Experiments** | Browse experiment runs, metrics, rankings |
-| **Benchmarks** | Dataset performance and trends |
-| **Ablations** | Feature contributions and deltas |
-| **Statistics** | P-values, confidence intervals, effect sizes |
-| **Observability** | Latency, failures, alerts, throughput |
-| **Leaderboard** | Cross-domain mode rankings |
-| **Domain Analysis** | Per-domain performance breakdown |
-| **Planner Analysis** | Strategy distribution and confidence |
-| **Cost Analysis** | Estimated costs and cost-effectiveness |
-| **Ablation V2** | Component impact analysis |
-| **Judge Dashboard** | LLM judge dimension scores |
-| **Comparisons** | Full mode comparison matrix |
-
----
-
-## Benchmark Results
-
-### Cross-Domain Average (5 domains × 204 queries each = 1,020 total)
-
-| Mode | Composite | Latency (ms) | Pass Rate | Fail Rate |
-|------|-----------|-------------|-----------|-----------|
-| Naive RAG | 0.72 | 145 | 68% | 12% |
-| Always Simple | 0.75 | 133 | 72% | 10% |
-| Always Complex | 0.78 | 170 | 74% | 9% |
-| Always Multi-Hop | 0.80 | 190 | 76% | 8% |
-| **Kairos Adaptive** | **0.89** | 163 | **85%** | **5%** |
-
-**Kairos Adaptive outperforms Naive RAG by 23.6%** (p < 0.001, Cohen's d = 0.89).
-
----
-
-## Research Validation Results
-
-| Dimension | Score | Weight |
-|-----------|-------|--------|
-| Faithfulness | 0.91 | 1.0× |
-| Relevance | 0.88 | 1.0× |
-| Hallucination Resistance | 0.93 | 1.5× |
-| Grounding | 0.85 | 1.0× |
-
-> **Does Kairos outperform traditional RAG?** Yes — by **23.6%** in composite quality score with a large effect size (d = 0.89).
-
-Full report: [docs/phase9_report.md](docs/phase9_report.md)
-
----
-
-## Project Structure
+## Repository Structure
 
 ```
-kairos/
-├── gateway/          # Go API gateway with auth, rate limiting, caching
-├── intelligence/     # Python service (classifier, planner, retrievers)
-│   ├── planner/      # Adaptive query routing
-│   ├── retrieval/    # Simple, complex, multi-hop retrievers
-│   ├── judging/      # LLM Judge Framework (Phase 9C)
-│   ├── evaluation/   # Ranking metrics, evaluator
-│   ├── observability/# Tracing, events, monitoring, alerting
-│   ├── config/       # Pydantic settings, environments, secrets
-│   ├── api/          # FastAPI management API
-│   ├── artifacts/    # Model/experiment/report registries
-│   └── ablation/     # Component ablation framework
-├── benchmarks/       # Benchmark suite and datasets
-│   ├── datasets/     # Gold dataset generator (1,020 queries)
-│   ├── e2e/          # End-to-end benchmark pipeline
-│   └── leaderboard/  # Public benchmark leaderboard
-├── dashboard/        # Streamlit research dashboard (12 pages)
-├── docs/             # Documentation and diagrams
-├── docker/           # Dockerfiles
-├── examples/         # Runnable example applications
-├── tests/            # 1,671 tests
-├── .github/          # Issue/PR templates, CI/CD
-├── docker-compose.yml
-└── requirements.txt
+Kairos/
++-- gateway/              Go API gateway
+|   +-- api/              HTTP handlers and route definitions
+|   +-- middleware/        Auth, rate limiting, CORS
+|   +-- cache/            Response caching layer
+|   +-- metrics/          Prometheus instrumentation
+|   +-- intelligence/     gRPC client to Python service
+|   +-- config/           Environment-based configuration
+|   +-- interceptors/     gRPC interceptors
+|   +-- queue/            Async task queue
+|   +-- templates/        HTML templates
+|   +-- tenants/          Multi-tenant support
++-- intelligence/         Python intelligence service
+|   +-- planner/          Adaptive retrieval planning and strategy selection
+|   +-- retrieval/        Hybrid, deep semantic, and multi-hop retrievers
+|   +-- classifier/       Query complexity classification
+|   +-- calibration/      Platt-scaled and isotonic confidence calibration
+|   +-- evaluation/       Ranking metrics and evaluator framework
+|   +-- judging/          LLM-based judgment (faithfulness, relevance, hallucination, grounding)
+|   +-- feedback/         Feedback collection and analytics
+|   +-- observability/    Tracing, events, monitoring, alerting
+|   +-- optimization/     Budget optimization and strategy tuning
+|   +-- reranker/         Cross-encoder and MMR reranking
+|   +-- embeddings/       Embedding model management and caching
+|   +-- vectorstore/      Vector store abstraction layer
+|   +-- ingestion/        Document ingestion pipeline
+|   +-- training/         Model training utilities
+|   +-- server/           gRPC server implementation
+|   +-- api/              FastAPI management API
+|   +-- config/           Pydantic settings and environment configuration
+|   +-- ablation/         Ablation study framework
+|   +-- experiments/      Experiment management
+|   +-- metrics/          Custom metric collection
+|   +-- telemetry/        Distributed tracing
+|   +-- reporting/        Report generation
+|   +-- statistics/       Statistical analysis utilities
+|   +-- circuit_breaker/  Failure isolation
+|   +-- retraining/       Online retraining pipelines
++-- benchmarks/           Benchmark suite
+|   +-- runner/           Query execution pipeline and scoring
+|   +-- datasets/         Gold-standard query datasets (5 domains, 1,020 queries)
+|   +-- e2e/              End-to-end benchmark pipeline
+|   +-- leaderboard/      Mode comparison leaderboard
+|   +-- reports/          Generated benchmark and calibration reports
+|   +-- results/          Raw benchmark result files
++-- dashboard/            Streamlit research dashboard
++-- tests/                1,802 tests across 37 test files
++-- docs/                 Architecture, benchmarks, deployment, operations
++-- docker/               Dockerfiles for each service
++-- proto/                gRPC protocol buffer definitions
++-- sdk/keiro/            Python client SDK
++-- docker-compose.yml    Full stack orchestration (8 container services)
++-- requirements.txt      Python dependencies
++-- go.mod                Go module definition
 ```
 
 ---
 
-## Documentation Index
+## Product Vision
+
+Kairos is production-grade adaptive retrieval infrastructure designed to:
+
+- **Ship as infrastructure** — Drop-in gateway, intelligent routing, observability included
+- **Scale with confidence** — 1,802 passing tests, comprehensive benchmarks, statistically validated results
+- **Integrate anywhere** — gRPC API, Python SDK, REST endpoints, Docker deployment
+- **Improve over time** — Feedback loops, retraining pipelines, calibratable confidence
+- **Run in production** — Prometheus metrics, Grafana dashboards, health checks, circuit breakers, structured logging
+
+Kairos is for teams building AI-powered products that need to retrieve the right information at the right cost — every time.
+
+---
+
+## Roadmap
+
+| Phase | Focus | Status |
+|-------|-------|--------|
+| 1-3 | Core retrieval pipeline | Done |
+| 4-6 | Planner, calibration, optimization | Done |
+| 7 | Observability and evaluation | Done |
+| 8 | API and production deployment | Done |
+| 9 | Research validation | Done |
+| 10 | Open source and launch readiness | Done |
+| - | Website implementation | In Progress |
+| - | SaaS dashboard | Upcoming |
+| - | User authentication and teams | Upcoming |
+| - | API platform and billing | Upcoming |
+| - | Beta launch | Upcoming |
+
+---
+
+## Documentation
 
 | Document | Description |
 |----------|-------------|
@@ -225,50 +297,29 @@ kairos/
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deployment guide and configuration |
 | [OBSERVABILITY.md](docs/OBSERVABILITY.md) | Monitoring, tracing, and alerting |
 | [OPERATIONS.md](docs/OPERATIONS.md) | Production operations guide |
-| [phase9_report.md](docs/phase9_report.md) | Research validation results |
+| [PRODUCT_DEFINITION.md](docs/PRODUCT_DEFINITION.md) | Product strategy and positioning |
+| [SAAS_ARCHITECTURE.md](docs/SAAS_ARCHITECTURE.md) | SaaS platform architecture |
+| [ROADMAP.md](docs/ROADMAP.md) | Full product roadmap |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contributor guide |
-| [SECURITY.md](SECURITY.md) | Security policy |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
-
----
-
-## Roadmap
-
-| Phase | Focus | Status |
-|-------|-------|--------|
-| 1–3 | Core retrieval pipeline | ✅ Complete |
-| 4–6 | Planner, calibration, optimization | ✅ Complete |
-| 7 | Observability & evaluation | ✅ Complete |
-| 8 | API & production deployment | ✅ Complete |
-| 9 | Research validation (Phase 9 report) | ✅ Complete |
-| 10 | **Open source & launch readiness** | ✅ Complete |
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed roadmap.
 
 ---
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for our contributor workflow, coding standards, and PR checklist.
-
-Quick start:
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for our contributor workflow, coding standards, and pull request process.
 
 ---
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See [LICENSE.md](LICENSE.md) for more information.
 
 ---
 
 <p align="center">
-  <a href="https://github.com/anomalyco/kairos">GitHub</a> •
-  <a href="docs/ARCHITECTURE.md">Architecture</a> •
-  <a href="docs/BENCHMARKS.md">Benchmarks</a> •
+  <a href="https://github.com/ANUBprad/Kairos">GitHub</a> -
+  <a href="docs/ARCHITECTURE.md">Architecture</a> -
+  <a href="docs/BENCHMARKS.md">Benchmarks</a> -
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
