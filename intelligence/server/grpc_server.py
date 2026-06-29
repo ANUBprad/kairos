@@ -227,7 +227,7 @@ def _register_server(server, engine, cfg, health: HealthServicer | None = None,
         add_health_servicer_to_server(health, server)
         health_status.labels(service="").set(1)
     server.add_insecure_port(f"0.0.0.0:{cfg.intelligence_port}")
-    print(f"Starting the server at port 0.0.0.0:{cfg.intelligence_port}")
+    logger.info(f"Starting the server at port 0.0.0.0:{cfg.intelligence_port}")
     server.start()
     try:
         server.wait_for_termination()

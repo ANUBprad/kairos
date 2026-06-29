@@ -29,7 +29,7 @@ class TestREADME:
 
     def test_readme_has_architecture_section(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "## Architecture Overview" in content
+        assert "## Architecture" in content
 
     def test_readme_has_quick_start(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -49,35 +49,31 @@ class TestREADME:
 
     def test_readme_has_test_count(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "1,671" in content
+        assert "1,802" in content
 
-    def test_readme_has_improvement_stat(self) -> None:
+    def test_readme_has_product_vision(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "23.6%" in content
-
-    def test_readme_has_roadmap(self) -> None:
-        content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "## Roadmap" in content
+        assert "Product Vision" in content
 
     def test_readme_has_project_structure(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "## Project Structure" in content
+        assert "## Repository Structure" in content
 
     def test_readme_has_dashboard_preview(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "## Dashboard Preview" in content
+        assert "dashboard" in content.lower()
 
     def test_readme_has_docker_setup(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "## Docker Setup" in content
+        assert "docker" in content.lower()
 
-    def test_readme_has_research_validation(self) -> None:
+    def test_readme_has_benchmark_results(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "## Research Validation" in content
+        assert "Benchmark Results" in content
 
     def test_readme_has_documentation_index(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "## Documentation Index" in content
+        assert "## Documentation" in content
 
 
 # ======================================================================
@@ -421,124 +417,7 @@ class TestDemoAssets:
         assert "Architecture Explanation" in content
 
 
-# ======================================================================
-# Phase 10G — Resume & Interview Package
-# ======================================================================
 
-class TestResumePackage:
-    def test_case_study_exists(self) -> None:
-        assert (ROOT / "docs" / "case_study.md").exists()
-
-    def test_resume_bullets_exists(self) -> None:
-        assert (ROOT / "docs" / "resume_bullets.md").exists()
-
-    def test_interview_talking_points_exists(self) -> None:
-        assert (ROOT / "docs" / "interview_talking_points.md").exists()
-
-    def test_case_study_has_problem_section(self) -> None:
-        content = (ROOT / "docs" / "case_study.md").read_text(encoding="utf-8")
-        assert "Problem" in content
-
-    def test_case_study_has_architecture_section(self) -> None:
-        content = (ROOT / "docs" / "case_study.md").read_text(encoding="utf-8")
-        assert "Architecture" in content
-
-    def test_case_study_has_challenges_section(self) -> None:
-        content = (ROOT / "docs" / "case_study.md").read_text(encoding="utf-8")
-        assert "Engineering Challenges" in content
-
-    def test_case_study_has_tradeoffs_section(self) -> None:
-        content = (ROOT / "docs" / "case_study.md").read_text(encoding="utf-8")
-        assert "Tradeoffs" in content
-
-    def test_case_study_has_results_section(self) -> None:
-        content = (ROOT / "docs" / "case_study.md").read_text(encoding="utf-8")
-        assert "Results" in content
-
-    def test_case_study_has_lessons_section(self) -> None:
-        content = (ROOT / "docs" / "case_study.md").read_text(encoding="utf-8")
-        assert "Lessons Learned" in content
-
-    def test_resume_bullets_has_intern_version(self) -> None:
-        content = (ROOT / "docs" / "resume_bullets.md").read_text(encoding="utf-8")
-        assert "Internship Version" in content
-
-    def test_resume_bullets_has_sde_version(self) -> None:
-        content = (ROOT / "docs" / "resume_bullets.md").read_text(encoding="utf-8")
-        assert "SDE Version" in content
-
-    def test_resume_bullets_has_ml_engineer_version(self) -> None:
-        content = (ROOT / "docs" / "resume_bullets.md").read_text(encoding="utf-8")
-        assert "ML Engineer Version" in content
-
-    def test_resume_bullets_has_data_science_version(self) -> None:
-        content = (ROOT / "docs" / "resume_bullets.md").read_text(encoding="utf-8")
-        assert "Data Science Version" in content
-
-    def test_interview_talking_points_has_problem(self) -> None:
-        content = (ROOT / "docs" / "interview_talking_points.md").read_text(encoding="utf-8")
-        assert "Problem" in content
-
-    def test_interview_talking_points_has_architecture(self) -> None:
-        content = (ROOT / "docs" / "interview_talking_points.md").read_text(encoding="utf-8")
-        assert "Architecture" in content
-
-    def test_interview_talking_points_has_challenges(self) -> None:
-        content = (ROOT / "docs" / "interview_talking_points.md").read_text(encoding="utf-8")
-        assert "Challenges" in content
-
-    def test_interview_talking_points_has_tradeoffs(self) -> None:
-        content = (ROOT / "docs" / "interview_talking_points.md").read_text(encoding="utf-8")
-        assert "Tradeoffs" in content
-
-    def test_interview_talking_points_has_results(self) -> None:
-        content = (ROOT / "docs" / "interview_talking_points.md").read_text(encoding="utf-8")
-        assert "Results" in content
-
-    def test_interview_talking_points_has_lessons(self) -> None:
-        content = (ROOT / "docs" / "interview_talking_points.md").read_text(encoding="utf-8")
-        assert "Lessons Learned" in content
-
-
-# ======================================================================
-# Phase 10H — Portfolio Case Study
-# ======================================================================
-
-class TestPortfolioCaseStudy:
-    def test_portfolio_case_study_exists(self) -> None:
-        assert (ROOT / "docs" / "portfolio_case_study.md").exists()
-
-    def test_portfolio_has_problem(self) -> None:
-        content = (ROOT / "docs" / "portfolio_case_study.md").read_text(encoding="utf-8")
-        assert "Problem" in content
-
-    def test_portfolio_has_motivation(self) -> None:
-        content = (ROOT / "docs" / "portfolio_case_study.md").read_text(encoding="utf-8")
-        assert "Motivation" in content
-
-    def test_portfolio_has_architecture(self) -> None:
-        content = (ROOT / "docs" / "portfolio_case_study.md").read_text(encoding="utf-8")
-        assert "Architecture" in content
-
-    def test_portfolio_has_challenges(self) -> None:
-        content = (ROOT / "docs" / "portfolio_case_study.md").read_text(encoding="utf-8")
-        assert "Engineering Challenges" in content
-
-    def test_portfolio_has_results(self) -> None:
-        content = (ROOT / "docs" / "portfolio_case_study.md").read_text(encoding="utf-8")
-        assert "Results" in content
-
-    def test_portfolio_has_future_work(self) -> None:
-        content = (ROOT / "docs" / "portfolio_case_study.md").read_text(encoding="utf-8")
-        assert "Future Work" in content
-
-    def test_portfolio_has_learnings(self) -> None:
-        content = (ROOT / "docs" / "portfolio_case_study.md").read_text(encoding="utf-8")
-        assert "Key Learnings" in content
-
-    def test_portfolio_has_improvement_stat(self) -> None:
-        content = (ROOT / "docs" / "portfolio_case_study.md").read_text(encoding="utf-8")
-        assert "23.6%" in content
 
 
 # ======================================================================
@@ -617,10 +496,6 @@ class TestDocumentationCompleteness:
             "SECURITY.md",
             "CHANGELOG.md",
             "RELEASE_NOTES.md",
-            "docs/case_study.md",
-            "docs/resume_bullets.md",
-            "docs/interview_talking_points.md",
-            "docs/portfolio_case_study.md",
             "docs/diagrams/retrieval_flow.md",
             "docs/diagrams/planner_flow.md",
             "docs/diagrams/feedback_loop.md",

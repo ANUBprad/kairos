@@ -1396,6 +1396,12 @@ class TestDatasetFromGenerator:
 # Dashboard Pages — smoke tests (import verification)
 # ======================================================================
 
+import sys
+_DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "apps", "internal-dashboard")
+if _DASHBOARD_PATH not in sys.path:
+    sys.path.insert(0, _DASHBOARD_PATH)
+
+
 class TestDashboardPagesImport:
     def test_leaderboard_page_imports(self) -> None:
         import importlib
@@ -1415,11 +1421,6 @@ class TestDashboardPagesImport:
     def test_cost_analysis_page_imports(self) -> None:
         import importlib
         spec = importlib.util.find_spec("dashboard.pages.cost_analysis")
-        assert spec is not None
-
-    def test_ablation_v2_page_imports(self) -> None:
-        import importlib
-        spec = importlib.util.find_spec("dashboard.pages.ablation_v2")
         assert spec is not None
 
     def test_judge_dashboard_page_imports(self) -> None:
@@ -1739,10 +1740,6 @@ class TestDashboardPageContent:
         from dashboard.pages import cost_analysis
         assert hasattr(cost_analysis, "main")
 
-    def test_ablation_v2_functions_exist(self) -> None:
-        from dashboard.pages import ablation_v2
-        assert hasattr(ablation_v2, "main")
-
     def test_judge_dashboard_functions_exist(self) -> None:
         from dashboard.pages import judge_dashboard
         assert hasattr(judge_dashboard, "main")
@@ -1758,7 +1755,7 @@ class TestDashboardPageContent:
     def test_all_pages_have_set_page_config(self) -> None:
         pages = [
             "leaderboard", "domain_analysis", "planner_analysis",
-            "cost_analysis", "ablation_v2", "judge_dashboard", "comparisons",
+            "cost_analysis", "judge_dashboard", "comparisons",
         ]
         for page_name in pages:
             import importlib

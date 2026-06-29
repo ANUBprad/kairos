@@ -20,8 +20,8 @@ func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, 
 	jobHandler := NewJobHandler(tracker)
 
 	mainRouter.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://*", "https://*"},
-		AllowedHeaders:   []string{"Content-Type", "X-Secret", "X-Namespace"},
+		AllowedOrigins:   []string{"*"},
+		AllowedHeaders:   []string{"Content-Type", "X-Secret", "X-Namespace", "X-Trace-ID"},
 		AllowCredentials: false,
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "OPTIONS"},
 		MaxAge:           500,
@@ -29,8 +29,8 @@ func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, 
 
 	queryHandler := NewQueryHandler(intelClient, envVar.Cache.TTL, envVar.Cache.MaxSize, float32(envVar.Cache.SimilarityThreshold))
 
-	mainRouter.Use(middleware.Logging)
 	mainRouter.Use(middleware.Tracing)
+	mainRouter.Use(middleware.Logging)
 
 	v1Router := chi.NewRouter()
 

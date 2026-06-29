@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -62,8 +65,8 @@ class EventLogger:
         for sink in self._sinks:
             try:
                 sink(event)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Event sink failed", extra={"sink": sink.__name__, "error": str(exc)})
         return event
 
     def flush(self) -> List[Event]:

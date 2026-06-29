@@ -1,37 +1,85 @@
+# ==========================
+# Dependencies
+# ==========================
+node_modules/
+**/node_modules/
+
+# ==========================
+# Next.js
+# ==========================
+.next/
+**/.next/
+
+out/
+**/out/
+
+# ==========================
+# Build
+# ==========================
+dist/
+build/
+coverage/
+
+# ==========================
+# Environment Variables
+# ==========================
+.env
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+!.env.example
+
+# ==========================
+# Logs
+# ==========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ==========================
+# Prisma
+# ==========================
+prisma/dev.db
+prisma/dev.db-journal
+
+# ==========================
 # Python
+# ==========================
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
-# Virtual env
 venv/
 .venv/
+.pytest_cache/
+.ruff_cache/
+.keras/
 
-# Benchmark outputs
+# ==========================
+# Models / Generated Files
+# ==========================
+models/*
 benchmarks/results/
 
-# Trained models and registry (generated artifacts)
-models/*
-
-# OS
-.DS_Store
-Thumbs.db
-
+# ==========================
 # IDE
+# ==========================
 .vscode/
 .idea/
 
-# Logs
-*.log
+# ==========================
+# OS
+# ==========================
+.DS_Store
+Thumbs.db
 
-.keras/
-*.pyc
-__pycache__/
+# ==========================
+# Misc
+# ==========================
+*.swp
+*.swo
 
-# Cache directories
-.pytest_cache/
-.ruff_cache/
-
-# Compiled binaries
 gateway/main

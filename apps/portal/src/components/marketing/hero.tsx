@@ -1,0 +1,223 @@
+"use client";
+
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Sparkles, Gauge, DollarSign, ShieldCheck } from "lucide-react";
+
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15, delayChildren: 0.1 },
+  },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const },
+  },
+};
+
+const fadeIn = {
+  hidden: { opacity: 0, x: 30 },
+  show: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
+  },
+};
+
+const floatingCards = [
+  {
+    icon: Gauge,
+    label: "Latency",
+    value: "163ms",
+    color: "text-info",
+    delay: 0.3,
+  },
+  {
+    icon: Sparkles,
+    label: "Recall",
+    value: "+24%",
+    color: "text-success",
+    delay: 0.6,
+  },
+  {
+    icon: DollarSign,
+    label: "Cost",
+    value: "-40%",
+    color: "text-warning",
+    delay: 0.9,
+  },
+  {
+    icon: ShieldCheck,
+    label: "Confidence",
+    value: "99.2%",
+    color: "text-brand",
+    delay: 1.2,
+  },
+];
+
+export function Hero() {
+  return (
+    <section className="relative overflow-hidden pt-32 pb-24 md:pb-32 min-h-[90vh] flex items-center">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+
+      <div className="absolute top-1/4 -left-32 w-[500px] h-[500px] rounded-full opacity-20 pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(255, 90, 10, 0.3) 0%, transparent 70%)",
+          filter: "blur(80px)",
+          animation: "float-slow 8s ease-in-out infinite",
+        }}
+      />
+      <div className="absolute bottom-1/4 -right-40 w-[600px] h-[600px] rounded-full opacity-10 pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%)",
+          filter: "blur(80px)",
+          animation: "float-slow 10s ease-in-out infinite reverse",
+        }}
+      />
+
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="relative mx-auto w-full max-w-[1280px] px-6 sm:px-8"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="max-w-[560px]">
+            <motion.div variants={fadeUp}>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-brand/30 bg-brand/5 text-[11px] font-semibold text-brand tracking-wide uppercase mb-6">
+                Adaptive Retrieval Intelligence Platform
+              </span>
+            </motion.div>
+
+            <motion.h1
+              variants={fadeUp}
+              className="text-[40px] sm:text-[48px] md:text-[56px] font-semibold tracking-tight leading-[1.08] text-balance"
+            >
+              Every query deserves a different retrieval strategy.
+            </motion.h1>
+
+            <motion.p
+              variants={fadeUp}
+              className="mt-5 text-[18px] text-text-secondary leading-relaxed max-w-[480px]"
+            >
+              Kairos classifies, plans, and routes every query to the optimal
+              retrieval strategy &mdash; balancing quality, latency, confidence,
+              and cost in real time.
+            </motion.p>
+
+            <motion.div
+              variants={fadeUp}
+              className="mt-8 flex flex-col sm:flex-row items-start gap-4"
+            >
+              <Button variant="primary" size="lg" className="gap-2" asChild>
+                <Link href="/signup">
+                  Start building
+                  <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </Button>
+              <Button variant="secondary" size="lg" asChild>
+                <Link href="#how-it-works">See how it works</Link>
+              </Button>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp}
+              className="mt-6 flex items-center gap-4 text-xs text-text-tertiary"
+            >
+              <span>1,802 tests passing</span>
+              <span className="w-1 h-1 rounded-full bg-text-tertiary/40" />
+              <span>5-domain benchmark</span>
+              <span className="w-1 h-1 rounded-full bg-text-tertiary/40" />
+              <span>No credit card</span>
+            </motion.div>
+          </div>
+
+          <motion.div variants={fadeIn} className="relative">
+            <div className="relative rounded-xl border border-border bg-surface/80 p-5 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/60">
+                <div className="w-2.5 h-2.5 rounded-full bg-error/70" />
+                <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
+                <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
+                <span className="ml-2 text-[11px] text-text-tertiary font-medium">Quickstart</span>
+              </div>
+              <div className="space-y-2 font-mono text-sm leading-relaxed">
+                <div className="text-text-secondary">
+                  <span className="text-text-tertiary">$ </span>
+                  <span className="text-success">pip install</span> kairos-client
+                </div>
+                <div className="text-text-secondary">
+                  <span className="text-text-tertiary">$ </span>
+                  <span className="text-info">python</span>
+                </div>
+                <div>
+                  <span className="text-text-tertiary">&gt;&gt;&gt; </span>
+                  <span className="text-brand">from</span> kairos{" "}
+                  <span className="text-brand">import</span> Kairos
+                </div>
+                <div>
+                  <span className="text-text-tertiary">&gt;&gt;&gt; </span>
+                  client = Kairos(api_key=
+                  <span className="text-warning">&quot;sk-...&quot;</span>)
+                </div>
+                <div>
+                  <span className="text-text-tertiary">&gt;&gt;&gt; </span>
+                  response = client.query(
+                  <span className="text-warning">
+                    &quot;What are our Q4 results?&quot;
+                  </span>
+                  )
+                </div>
+                <motion.div
+                  animate={{ opacity: [0.4, 1, 0.4] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <span className="text-text-tertiary">&gt;&gt;&gt; </span>
+                  <span className="text-info">print</span>(response.answer)
+                </motion.div>
+                <div className="text-text-tertiary">
+                  # &quot;According to the Q4 Financial Report...&quot;
+                </div>
+              </div>
+            </div>
+
+            {/* Floating metrics cards */}
+            {floatingCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <motion.div
+                  key={card.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: card.delay, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute hidden lg:flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-bg/90 backdrop-blur-sm shadow-md"
+                  style={{
+                    top: `${-10 + (floatingCards.indexOf(card) * 22)}%`,
+                    right: `${-20 + (floatingCards.indexOf(card) * 5)}%`,
+                  }}
+                >
+                  <Icon size={14} className={card.color} />
+                  <span className="text-[11px] font-medium text-text-secondary">{card.label}</span>
+                  <span className={`text-[11px] font-bold ${card.color}`}>{card.value}</span>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </motion.div>
+    </section>
+  );
+}

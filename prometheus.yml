@@ -7,3 +7,8 @@ scrape_configs:
     static_configs:
       - targets: ["gateway:8080"]
     metrics_path: "/metrics"
+
+  - job_name: "keiro_intelligence"
+    static_configs:
+      - targets: ["intelligence:28080"]
+    metrics_path: "/metrics"

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 class AlertSeverity:
@@ -166,10 +169,10 @@ class AlertManager:
                     for h in self._handlers:
                         try:
                             h(alert)
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+                        except Exception as exc:
+                            logger.warning("Alert handler failed", extra={"handler": h.__name__, "error": str(exc)})
+            except Exception as exc:
+                logger.warning("Alert evaluation failed", extra={"error": str(exc)})
         return fired
 
     @property

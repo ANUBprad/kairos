@@ -7,7 +7,7 @@ services:
       - chroma_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8000'"]
+      test: ["CMD", "python3", "-c", "import socket; s=socket.socket(); s.settimeout(5); s.connect(('localhost',8000)); s.close()"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -44,12 +44,23 @@ services:
       - KEIRO_ENVIRONMENT=${KEIRO_ENVIRONMENT:-development}
       - KEIRO_CHROMA_STORE_HOST=chromadb
       - KEIRO_INTELLIGENCE_HOST=intelligence
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "2G"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
     depends_on:
       intelligence:
         condition: service_healthy
 
-  dashboard:
+  internal-dashboard:
     build:
       context: .
       dockerfile: docker/dashboard.Dockerfile
@@ -60,9 +71,25 @@ services:
     environment:
       - KEIRO_CHROMA_STORE_HOST=chromadb
       - KEIRO_INTELLIGENCE_HOST=intelligence
+      - STREAMLIT_SERVER_HEADLESS=true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "1G"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
     depends_on:
-      - intelligence
+      intelligence:
+        condition: service_healthy
+    labels:
+      - "kairos.component=internal-dashboard"
+      - "kairos.description=Internal Developer Dashboard (not for public deployment)"
 
   worker:
     build:
@@ -73,6 +100,12 @@ services:
     environment:
       - KEIRO_CHROMA_STORE_HOST=chromadb
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if __import__('intelligence.worker', fromlist=['']).Worker is not None else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     depends_on:
       chromadb:
         condition: service_healthy
@@ -87,6 +120,17 @@ services:
       - .env
     environment:
       - PYTHON_INTELLIGENCE_ADDR=intelligence:28080
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
     depends_on:
       intelligence:
@@ -100,6 +144,12 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     depends_on:
       - gateway
 
@@ -112,11 +162,17 @@ services:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
       - ./docker/grafana/dashboards:/var/lib/grafana/dashboards
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     depends_on:
       - prometheus
 

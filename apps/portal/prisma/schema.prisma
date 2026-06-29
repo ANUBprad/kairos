@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+}
+
+/// Better Auth core tables
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  name          String?
+  image         String?
+  passwordHash  String?
+  role          UserRole @default(USER)
+
+  banned     Boolean   @default(false)
+  banReason  String?
+  banExpires DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions     Session[]
+  accounts     Account[]
+  members      Member[]
+  ownedOrgs    Organization[] @relation("OrganizationOwner")
+  apiKeys      ApiKey[]
+  activityLogs ActivityLog[]
+  Document     Document[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  token     String   @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Account {
+  id           String  @id @default(cuid())
+  accountId    String  @db.VarChar(255)
+  providerId   String  @db.VarChar(64)
+  userId       String
+  accessToken  String? @db.Text
+  refreshToken String? @db.Text
+  idToken      String? @db.Text
+  password     String? @db.VarChar(255)
+  scope        String? @db.VarChar(255)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String   @db.VarChar(255)
+  value      String   @db.Text
+  expiresAt  DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([expiresAt])
+}
+
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  USER
+}
+
+/// Organization / Multi-tenant
+
+model Organization {
+  id       String  @id @default(cuid())
+  name     String  @db.VarChar(255)
+  slug     String  @unique @db.VarChar(128)
+  logo     String?
+  metadata Json?
+
+  ownerId String
+  owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id])
+
+  members  Member[]
+  projects Project[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+model Member {
+  id             String     @id @default(cuid())
+  role           MemberRole @default(MEMBER)
+  organizationId String
+  userId         String
+  invitedBy      String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+/// Projects
+
+model Project {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  slug        String  @unique @db.VarChar(128)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  knowledgeBases KnowledgeBase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+/// Knowledge Bases
+
+model KnowledgeBase {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+/// Documents / Uploads
+
+model Document {
+  id              String         @id @default(cuid())
+  name            String         @db.VarChar(255)
+  fileType        String         @db.VarChar(64)
+  size            Int
+  storageProvider String         @default("cloudinary")
+  storageKey      String         @db.VarChar(512)
+  storageUrl      String?        @db.Text
+  metadata        Json?
+  status          DocumentStatus @default(PROCESSING)
+
+  knowledgeBaseId String
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  uploadedById String?
+  uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([knowledgeBaseId])
+  @@index([uploadedById])
+  @@index([status])
+}
+
+enum DocumentStatus {
+  PROCESSING
+  READY
+  ERROR
+  DELETED
+}
+
+/// API Keys
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String    @db.VarChar(255)
+  keyPrefix  String    @db.VarChar(16)
+  keyHash    String    @unique @db.VarChar(255)
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+/// Activity / Audit Logs
+
+model ActivityLog {
+  id         String  @id @default(cuid())
+  action     String  @db.VarChar(128)
+  resource   String? @db.VarChar(255)
+  resourceId String? @db.VarChar(255)
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id         String  @id @default(cuid())
+  action     String  @db.VarChar(128)
+  actorId    String? @db.VarChar(255)
+  actorType  String? @db.VarChar(64)
+  resource   String? @db.VarChar(255)
+  resourceId String? @db.VarChar(255)
+  details    Json?
+  ipAddress  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+}

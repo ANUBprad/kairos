@@ -88,8 +88,8 @@ class Tracer:
         for cb in self._on_span_finish:
             try:
                 cb(span)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Span callback failed", extra={"callback": cb.__name__, "error": str(exc)})
         # Restore parent
         if span.parent_span_id is not None:
             self._local.current_span = Span(

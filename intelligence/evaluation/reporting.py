@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional
 
 from intelligence.evaluation.evaluator import AggregateEvaluation, EvaluationResult
 

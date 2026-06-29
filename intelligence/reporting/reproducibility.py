@@ -148,8 +148,7 @@ def _get_git_commit() -> Optional[str]:
         if result.returncode == 0:
             return result.stdout.strip()
     except Exception:
-        pass
-    return None
+        return None
 
 
 def _get_installed_packages() -> Dict[str, str]:

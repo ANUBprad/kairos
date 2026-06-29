@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from intelligence.config.environments import EnvironmentProfile, get_environment_profile
+from intelligence.config.environments import get_environment_profile
 from intelligence.config.settings import Settings
 
 
