@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /// Better Auth core tables
@@ -26,13 +26,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessions     Session[]
-  accounts     Account[]
-  members      Member[]
-  ownedOrgs    Organization[] @relation("OrganizationOwner")
-  apiKeys      ApiKey[]
-  activityLogs ActivityLog[]
-  Document     Document[]
+  sessions         Session[]
+  accounts         Account[]
+  members          Member[]
+  ownedOrgs        Organization[]     @relation("OrganizationOwner")
+  apiKeys          ApiKey[]
+  activityLogs     ActivityLog[]
+  Document         Document[]
+  documentVersions DocumentVersion[]
+  documentActivity DocumentActivity[]
 }
 
 model Session {
@@ -181,11 +183,12 @@ model Document {
   name            String         @db.VarChar(255)
   fileType        String         @db.VarChar(64)
   size            Int
+  fileHash        String?        @db.VarChar(128)
   storageProvider String         @default("cloudinary")
   storageKey      String         @db.VarChar(512)
   storageUrl      String?        @db.Text
   metadata        Json?
-  status          DocumentStatus @default(PROCESSING)
+  status          DocumentStatus @default(QUEUED)
 
   knowledgeBaseId String
   knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
@@ -193,19 +196,129 @@ model Document {
   uploadedById String?
   uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
+  chunks         DocumentChunk[]
+  processingJobs ProcessingJob[]
+  versions       DocumentVersion[]
+  activities     DocumentActivity[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([knowledgeBaseId, fileHash])
   @@index([knowledgeBaseId])
   @@index([uploadedById])
   @@index([status])
+  @@index([knowledgeBaseId, status])
+}
+
+model DocumentChunk {
+  id         String @id @default(cuid())
+  content    String @db.Text
+  index      Int
+  metadata   Json?
+  tokenCount Int?
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  embedding DocumentEmbedding?
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId])
+  @@index([documentId, index])
+}
+
+model DocumentEmbedding {
+  id         String @id @default(cuid())
+  model      String @default("text-embedding-3-small")
+  dimensions Int    @default(1536)
+  status     String @default("pending")
+
+  chunkId String        @unique
+  chunk   DocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([chunkId])
+}
+
+model ProcessingJob {
+  id          String    @id @default(cuid())
+  type        String    @db.VarChar(64)
+  status      JobStatus @default(PENDING)
+  retryCount  Int       @default(0)
+  maxRetries  Int       @default(3)
+  error       String?   @db.Text
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([documentId, type])
+  @@index([status])
+}
+
+model DocumentVersion {
+  id         String  @id @default(cuid())
+  version    Int     @default(1)
+  fileType   String  @db.VarChar(64)
+  size       Int
+  storageKey String  @db.VarChar(512)
+  storageUrl String? @db.Text
+  metadata   Json?
+  changeNote String? @db.Text
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId, version])
+  @@index([documentId])
+}
+
+model DocumentActivity {
+  id      String @id @default(cuid())
+  action  String @db.VarChar(64)
+  details Json?
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId, createdAt])
+  @@index([documentId])
 }
 
 enum DocumentStatus {
-  PROCESSING
+  QUEUED
+  UPLOADING
+  STORED
+  EXTRACTING
+  CHUNKING
+  EMBEDDING_PENDING
   READY
   ERROR
-  DELETED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
 /// API Keys
