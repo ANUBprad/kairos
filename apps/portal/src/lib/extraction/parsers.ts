@@ -59,8 +59,10 @@ class PdfParser implements FileParser {
   }
 
   async parse(buffer: ArrayBuffer): Promise<ExtractionResult> {
-    const pdfParse = (await import("pdf-parse")).default;
-    const data = await pdfParse(Buffer.from(buffer));
+    const { PDFParse } = await import("pdf-parse");
+    const pdf = new PDFParse({ data: Buffer.from(buffer) });
+    const result = await pdf.getText();
+    const data = { text: result.text, numpages: result.total };
     return {
       text: data.text,
       metadata: {

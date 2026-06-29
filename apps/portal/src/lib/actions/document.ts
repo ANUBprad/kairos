@@ -22,13 +22,6 @@ const MIME_MAP: Record<string, string> = {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-const MEMBER_SELECT = {
-  members: {
-    where: {} as { userId: string },
-    select: { id: true, role: true },
-  },
-} as const;
-
 function getFileType(name: string, mime: string): string {
   const ext = name.split(".").pop()?.toLowerCase() || "";
   if (ALLOWED_EXTENSIONS.includes(ext)) return ext;
