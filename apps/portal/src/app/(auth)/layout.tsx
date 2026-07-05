@@ -16,9 +16,9 @@ export const metadata: Metadata = {
 
 const highlights = [
   { icon: Gauge, text: "24% better recall than static RAG" },
-  { icon: Sparkles, text: "Adaptive strategy per query" },
+  { icon: Sparkles, text: "Adaptive retrieval per query" },
   { icon: DollarSign, text: "40% lower cost on average" },
-  { icon: ShieldCheck, text: "SOC 2 compliant, encrypted at rest" },
+  { icon: ShieldCheck, text: "Built for RAG research and experimentation" },
 ];
 
 export default function AuthLayout({
@@ -70,10 +70,10 @@ export default function AuthLayout({
           <div className="space-y-8 max-w-md">
             <div>
               <h2 className="text-[28px] font-semibold text-white tracking-tight leading-[1.15]">
-                Adaptive retrieval for every query.
+                RAG research platform for AI/ML engineers.
               </h2>
               <p className="mt-3 text-[15px] text-white/60 leading-relaxed">
-                Kairos classifies, plans, and routes every query to the optimal strategy. Simple questions get fast answers. Complex questions get the depth they need.
+                Kairos provides production-grade retrieval-augmented generation with document intelligence, embeddings, semantic search, and explainable AI evaluation.
               </p>
             </div>
 

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Gauge, DollarSign, ShieldCheck } from "lucide-react";
+import { ArrowRight, Search, FileText, Layers, GitBranch } from "lucide-react";
 
 const container = {
   hidden: { opacity: 0 },
@@ -31,32 +31,32 @@ const fadeIn = {
   },
 };
 
-const floatingCards = [
+const capabilities = [
   {
-    icon: Gauge,
-    label: "Latency",
-    value: "163ms",
+    icon: Search,
+    label: "Semantic Search",
+    value: "dense + sparse",
     color: "text-info",
     delay: 0.3,
   },
   {
-    icon: Sparkles,
-    label: "Recall",
-    value: "+24%",
+    icon: FileText,
+    label: "Documents",
+    value: "PDF, DOCX, MD",
     color: "text-success",
     delay: 0.6,
   },
   {
-    icon: DollarSign,
-    label: "Cost",
-    value: "-40%",
+    icon: Layers,
+    label: "Embeddings",
+    value: "1536-dim",
     color: "text-warning",
     delay: 0.9,
   },
   {
-    icon: ShieldCheck,
-    label: "Confidence",
-    value: "99.2%",
+    icon: GitBranch,
+    label: "Strategies",
+    value: "hybrid + MMR",
     color: "text-brand",
     delay: 1.2,
   },
@@ -78,14 +78,12 @@ export function Hero() {
         style={{
           background: "radial-gradient(circle, rgba(255, 90, 10, 0.3) 0%, transparent 70%)",
           filter: "blur(80px)",
-          animation: "float-slow 8s ease-in-out infinite",
         }}
       />
       <div className="absolute bottom-1/4 -right-40 w-[600px] h-[600px] rounded-full opacity-10 pointer-events-none"
         style={{
           background: "radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%)",
           filter: "blur(80px)",
-          animation: "float-slow 10s ease-in-out infinite reverse",
         }}
       />
 
@@ -99,7 +97,7 @@ export function Hero() {
           <div className="max-w-[560px]">
             <motion.div variants={fadeUp}>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-brand/30 bg-brand/5 text-[11px] font-semibold text-brand tracking-wide uppercase mb-6">
-                Adaptive Retrieval Intelligence Platform
+                Open-Source RAG Research Platform
               </span>
             </motion.div>
 
@@ -107,16 +105,16 @@ export function Hero() {
               variants={fadeUp}
               className="text-[40px] sm:text-[48px] md:text-[56px] font-semibold tracking-tight leading-[1.08] text-balance"
             >
-              Every query deserves a different retrieval strategy.
+              Production-grade retrieval-augmented generation.
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="mt-5 text-[18px] text-text-secondary leading-relaxed max-w-[480px]"
             >
-              Kairos classifies, plans, and routes every query to the optimal
-              retrieval strategy &mdash; balancing quality, latency, confidence,
-              and cost in real time.
+              Kairos is an open-source platform for document intelligence, embeddings,
+              semantic search, and explainable AI evaluation. Build and experiment with
+              RAG pipelines.
             </motion.p>
 
             <motion.div
@@ -125,7 +123,7 @@ export function Hero() {
             >
               <Button variant="primary" size="lg" className="gap-2" asChild>
                 <Link href="/signup">
-                  Start building
+                  Get started
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </Button>
@@ -138,11 +136,11 @@ export function Hero() {
               variants={fadeUp}
               className="mt-6 flex items-center gap-4 text-xs text-text-tertiary"
             >
-              <span>1,802 tests passing</span>
+              <span>PDF, DOCX, CSV, MD</span>
               <span className="w-1 h-1 rounded-full bg-text-tertiary/40" />
-              <span>5-domain benchmark</span>
+              <span>pgvector embeddings</span>
               <span className="w-1 h-1 rounded-full bg-text-tertiary/40" />
-              <span>No credit card</span>
+              <span>OpenAI + Gemini</span>
             </motion.div>
           </div>
 
@@ -152,66 +150,58 @@ export function Hero() {
                 <div className="w-2.5 h-2.5 rounded-full bg-error/70" />
                 <div className="w-2.5 h-2.5 rounded-full bg-warning/70" />
                 <div className="w-2.5 h-2.5 rounded-full bg-success/70" />
-                <span className="ml-2 text-[11px] text-text-tertiary font-medium">Quickstart</span>
+                <span className="ml-2 text-[11px] text-text-tertiary font-medium">RAG Query</span>
               </div>
               <div className="space-y-2 font-mono text-sm leading-relaxed">
                 <div className="text-text-secondary">
                   <span className="text-text-tertiary">$ </span>
-                  <span className="text-success">pip install</span> kairos-client
-                </div>
-                <div className="text-text-secondary">
-                  <span className="text-text-tertiary">$ </span>
-                  <span className="text-info">python</span>
+                  <span className="text-success">POST</span> /api/ai/chat
                 </div>
                 <div>
-                  <span className="text-text-tertiary">&gt;&gt;&gt; </span>
-                  <span className="text-brand">from</span> kairos{" "}
-                  <span className="text-brand">import</span> Kairos
+                  <span className="text-text-tertiary">{`{`}</span>
+                </div>
+                <div className="pl-4">
+                  <span className="text-text-tertiary">&quot;query&quot;: </span>
+                  <span className="text-warning">&quot;What are the key findings?&quot;</span>
+                </div>
+                <div className="pl-4">
+                  <span className="text-text-tertiary">&quot;kbId&quot;: </span>
+                  <span className="text-warning">&quot;kb_123&quot;</span>
                 </div>
                 <div>
-                  <span className="text-text-tertiary">&gt;&gt;&gt; </span>
-                  client = Kairos(api_key=
-                  <span className="text-warning">&quot;sk-...&quot;</span>)
-                </div>
-                <div>
-                  <span className="text-text-tertiary">&gt;&gt;&gt; </span>
-                  response = client.query(
-                  <span className="text-warning">
-                    &quot;What are our Q4 results?&quot;
-                  </span>
-                  )
+                  <span className="text-text-tertiary">{`}`}</span>
                 </div>
                 <motion.div
                   animate={{ opacity: [0.4, 1, 0.4] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <span className="text-text-tertiary">&gt;&gt;&gt; </span>
-                  <span className="text-info">print</span>(response.answer)
+                  <span className="text-text-tertiary">{`>`}</span>
+                  <span className="text-info"> Searching </span>
+                  <span className="text-text-tertiary">1536-dim embeddings...</span>
                 </motion.div>
                 <div className="text-text-tertiary">
-                  # &quot;According to the Q4 Financial Report...&quot;
+                  # Retrieved 5 chunks (similarity: 0.89)
                 </div>
               </div>
             </div>
 
-            {/* Floating metrics cards */}
-            {floatingCards.map((card) => {
-              const Icon = card.icon;
+            {capabilities.map((cap) => {
+              const Icon = cap.icon;
               return (
                 <motion.div
-                  key={card.label}
+                  key={cap.label}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: card.delay, ease: [0.16, 1, 0.3, 1] }}
+                  transition={{ duration: 0.5, delay: cap.delay, ease: [0.16, 1, 0.3, 1] }}
                   className="absolute hidden lg:flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-bg/90 backdrop-blur-sm shadow-md"
                   style={{
-                    top: `${-10 + (floatingCards.indexOf(card) * 22)}%`,
-                    right: `${-20 + (floatingCards.indexOf(card) * 5)}%`,
+                    top: `${-10 + (capabilities.indexOf(cap) * 22)}%`,
+                    right: `${-20 + (capabilities.indexOf(cap) * 5)}%`,
                   }}
                 >
-                  <Icon size={14} className={card.color} />
-                  <span className="text-[11px] font-medium text-text-secondary">{card.label}</span>
-                  <span className={`text-[11px] font-bold ${card.color}`}>{card.value}</span>
+                  <Icon size={14} className={cap.color} />
+                  <span className="text-[11px] font-medium text-text-secondary">{cap.label}</span>
+                  <span className={`text-[11px] font-bold ${cap.color}`}>{cap.value}</span>
                 </motion.div>
               );
             })}

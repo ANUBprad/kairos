@@ -20,7 +20,7 @@ const sections = [
   {
     icon: ShieldCheck,
     title: "Compliance",
-    desc: "SOC 2 compliance for Enterprise plans. GDPR compliant with data processing agreements. Data residency options available for EU, US, and APAC regions. Regular third-party audits.",
+    desc: "Encryption standards aligned with academic research requirements. Data is isolated per project. Regular security reviews for research integrity.",
   },
   {
     icon: Key,
@@ -30,7 +30,7 @@ const sections = [
   {
     icon: Server,
     title: "Infrastructure",
-    desc: "Isolated containers per tenant with resource limits. Encrypted PostgreSQL databases with automated backups. Regular security patches and penetration testing. 99.9% uptime SLA on Enterprise plans.",
+    desc: "Encrypted PostgreSQL databases with automated backups. Regular security patches. Infrastructure designed for research workloads and academic deployments.",
   },
   {
     icon: Bug,
@@ -46,7 +46,7 @@ export default function SecurityPage() {
         <ScrollReveal>
           <h1 className="text-[40px] sm:text-[48px] font-semibold tracking-tight text-text-primary">Security</h1>
           <p className="mt-4 text-[18px] text-text-secondary max-w-2xl mx-auto">
-            Your data is encrypted, isolated, and protected at every layer of the Kairos platform.
+            Research data is encrypted, isolated, and protected at every layer of the platform.
           </p>
         </ScrollReveal>
       </div>
@@ -70,10 +70,10 @@ export default function SecurityPage() {
 
       <div className="text-center py-20 px-6 sm:px-8">
         <ScrollReveal>
-          <h2 className="text-[24px] font-semibold text-text-primary mb-4">Have security questions?</h2>
-          <p className="text-text-secondary mb-8">Contact our security team for detailed information about our practices.</p>
+          <h2 className="text-[24px] font-semibold text-text-primary mb-4">Questions about research security?</h2>
+          <p className="text-text-secondary mb-8">Contact us for detailed information about our security practices.</p>
           <Button variant="primary" size="lg" asChild>
-            <Link href="/contact">Contact Security Team</Link>
+            <Link href="/contact">Contact us</Link>
           </Button>
         </ScrollReveal>
       </div>

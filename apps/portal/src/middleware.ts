@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname === "/login" || pathname === "/signup") {
+  if (pathname === "/login") {
     const sessionCookie = request.cookies.get("better-auth.session_token");
     if (sessionCookie?.value) {
       return NextResponse.redirect(new URL("/app", request.url));
@@ -25,5 +25,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/app", "/login", "/signup"],
+  matcher: ["/app/:path*", "/app", "/login"],
 };

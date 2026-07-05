@@ -12,12 +12,12 @@ const plans = [
   {
     name: "Free",
     price: "$0",
-    desc: "Perfect for testing and small projects.",
+    desc: "Perfect for getting started with RAG.",
     features: [
-      "1,000 queries / month",
-      "3 strategies",
+      "Unlimited queries",
+      "5 chunking strategies",
+      "2 embedding providers",
       "Community support",
-      "Basic analytics",
     ],
     cta: "Get started",
     href: "/signup",
@@ -26,30 +26,30 @@ const plans = [
   },
   {
     name: "Developer",
-    price: "$49",
-    desc: "For individual developers and small teams.",
+    price: "$0",
+    desc: "For individual researchers and students.",
     features: [
-      "10,000 queries / month",
-      "All 3 strategies",
-      "Confidence calibration",
-      "Email support",
+      "All RAG strategies",
+      "Embedding experiments",
+      "Chunking studio",
+      "Retrieval evaluation",
       "API access",
     ],
-    cta: "Start building",
+    cta: "Get started",
     href: "/signup",
     variant: "ghost" as const,
     popular: false,
   },
   {
     name: "Pro",
-    price: "$199",
-    desc: "For growing teams that need more power.",
+    price: "$0",
+    desc: "For advanced AI/ML research projects.",
     features: [
-      "100,000 queries / month",
       "Multi-strategy engine",
-      "Feedback learning loop",
-      "Priority support",
-      "Custom strategies",
+      "Configurable embeddings",
+      "Retrieval comparison",
+      "Performance metrics",
+      "Explainable pipeline",
       "Full observability",
     ],
     cta: "Start building",
@@ -58,19 +58,19 @@ const plans = [
     popular: true,
   },
   {
-    name: "Enterprise",
-    price: "Custom",
-    desc: "For organizations with advanced requirements.",
+    name: "Research",
+    price: "Free",
+    desc: "For academic research and AI/ML projects.",
     features: [
-      "Unlimited queries",
-      "Custom strategy development",
-      "SOC 2 compliance",
-      "Dedicated support",
+      "All features included",
+      "Open-source codebase",
+      "GitHub authentication",
+      "Community support",
       "Self-hosting options",
-      "SLA guarantees",
+      "MIT license",
     ],
-    cta: "Contact sales",
-    href: "/contact",
+    cta: "Get started",
+    href: "/signup",
     variant: "secondary" as const,
     popular: false,
   },
@@ -80,9 +80,9 @@ export function PricingSection() {
   return (
     <SectionWrapper id="pricing">
       <ScrollReveal>
-        <SectionHeading>Simple, transparent pricing</SectionHeading>
+        <SectionHeading>Free and open-source</SectionHeading>
         <SectionSubheading>
-          Start free. Upgrade when you grow. Enterprise when you need control.
+          Built for AI research and education. Always free. MIT licensed.
         </SectionSubheading>
       </ScrollReveal>
 

@@ -15,6 +15,4 @@ export function LeafLogo({ size = 28 }: { size?: number }) {
   );
 }
 
-export function KairosWordmark() {
-  return null;
-}
+

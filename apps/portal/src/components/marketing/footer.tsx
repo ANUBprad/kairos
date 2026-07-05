@@ -1,24 +1,22 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Github, Twitter, MessageCircle, Linkedin, Mail } from "lucide-react";
+import { Github, Twitter, MessageCircle, Mail } from "lucide-react";
 
 const footerColumns = [
   {
     title: "Product",
     links: [
       { label: "Features", href: "/features" },
-      { label: "Pricing", href: "/pricing" },
       { label: "Docs", href: "/docs" },
       { label: "Changelog", href: "/changelog" },
     ],
   },
   {
-    title: "Developers",
+    title: "Resources",
     links: [
-      { label: "API Reference", href: "/docs/api-reference" },
-      { label: "SDKs", href: "/docs/sdks" },
       { label: "GitHub", href: "https://github.com/kairos-ai/kairos" },
-      { label: "Status", href: "/status" },
+      { label: "Architecture", href: "/docs/architecture" },
+      { label: "Deployment", href: "/docs/deployment" },
     ],
   },
   {
@@ -26,7 +24,6 @@ const footerColumns = [
     links: [
       { label: "About", href: "/about" },
       { label: "Blog", href: "/blog" },
-      { label: "Contact", href: "/contact" },
       { label: "Security", href: "/security" },
     ],
   },
@@ -43,7 +40,6 @@ const footerColumns = [
 const socialLinks = [
   { label: "GitHub", href: "https://github.com/kairos-ai/kairos", icon: Github },
   { label: "Twitter / X", href: "https://x.com/kairos_ai", icon: Twitter },
-  { label: "LinkedIn", href: "https://linkedin.com/company/kairos-ai", icon: Linkedin },
   { label: "Discord", href: "https://discord.gg/kairos", icon: MessageCircle },
   { label: "Email", href: "mailto:hello@kairos.dev", icon: Mail },
 ];
@@ -60,11 +56,11 @@ export function Footer() {
                 alt="Kairos"
                 width={120}
                 height={24}
-                className="object-contain"
+                className="object-contain h-auto"
               />
             </Link>
             <p className="text-[13px] text-text-tertiary leading-relaxed max-w-[200px]">
-              Adaptive Retrieval Intelligence Platform
+              RAG Research Platform
             </p>
           </div>
           {footerColumns.map((col) => (

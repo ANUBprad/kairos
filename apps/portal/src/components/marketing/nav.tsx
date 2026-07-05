@@ -11,7 +11,6 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 const navLinks = [
   { label: "Features", href: "/features" },
-  { label: "Pricing", href: "/pricing" },
   { label: "Docs", href: "/docs" },
   { label: "Blog", href: "/blog" },
 ];
@@ -71,7 +70,7 @@ export function Nav() {
           </Link>
           <ThemeToggle />
           <Button variant="primary" size="md" asChild>
-            <Link href="/signup">Start building</Link>
+            <Link href="/signup">Get started</Link>
           </Button>
         </div>
 
@@ -117,7 +116,7 @@ export function Nav() {
                 </Link>
                 <Button variant="primary" size="lg" className="w-full" asChild>
                   <Link href="/signup" onClick={() => setMobileOpen(false)}>
-                    Start building
+                    Get started
                   </Link>
                 </Button>
               </div>

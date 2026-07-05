@@ -32,7 +32,7 @@ export default async function AppLayout({
       <div className="flex flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-4 border-b border-border bg-bg/80 px-6 backdrop-blur-md">
           <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <span className="hidden sm:inline">{organization.name}</span>
+            <span className="hidden sm:inline">Kairos Research Platform</span>
           </div>
           <div className="flex items-center gap-2">
             <button

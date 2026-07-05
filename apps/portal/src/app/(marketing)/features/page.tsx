@@ -7,7 +7,7 @@ import { ScrollReveal, StaggerContainer } from "@/components/shared/scroll-revea
 
 export const metadata: Metadata = {
   title: "Features",
-  description: "Kairos adaptive retrieval platform features: adaptive routing, confidence calibration, budget optimization, feedback learning, observability, and enterprise security.",
+  description: "Kairos RAG research platform features: semantic search, chunking strategies, embedding models, retrieval evaluation, and explainable AI.",
 };
 
 const features = [
@@ -48,8 +48,8 @@ const features = [
   },
   {
     icon: Shield,
-    title: "Enterprise Security",
-    desc: "API keys hashed with SHA-256, TLS 1.3 in transit, AES-256 at rest. SOC 2 compliant. Self-hostable for air-gapped environments.",
+    title: "Security & Privacy",
+    desc: "API keys hashed with SHA-256, TLS 1.3 in transit, AES-256 at rest. GitHub OAuth authentication. Self-hostable for air-gapped environments.",
   },
 ];
 
@@ -60,7 +60,7 @@ export default function FeaturesPage() {
         <ScrollReveal>
           <h1 className="text-[40px] sm:text-[48px] font-semibold tracking-tight text-text-primary">Features</h1>
           <p className="mt-4 text-[18px] text-text-secondary max-w-2xl mx-auto">
-            Everything you need to build production-grade retrieval for your AI applications.
+            A research platform for studying and experimenting with retrieval-augmented generation.
           </p>
         </ScrollReveal>
       </div>
@@ -85,8 +85,8 @@ export default function FeaturesPage() {
 
       <div className="text-center py-20 px-6 sm:px-8">
         <ScrollReveal>
-          <h2 className="text-[24px] font-semibold text-text-primary mb-4">Ready to try adaptive retrieval?</h2>
-          <p className="text-text-secondary mb-8 max-w-md mx-auto">Start free. No credit card required.</p>
+          <h2 className="text-[24px] font-semibold text-text-primary mb-4">Ready to explore RAG?</h2>
+          <p className="text-text-secondary mb-8 max-w-md mx-auto">Start with GitHub authentication. No credit card required.</p>
           <Button variant="primary" size="lg" asChild>
             <Link href="/signup">Start building</Link>
           </Button>

@@ -35,6 +35,7 @@ model User {
   Document         Document[]
   documentVersions DocumentVersion[]
   documentActivity DocumentActivity[]
+  conversations    Conversation[]
 }
 
 model Session {
@@ -168,12 +169,77 @@ model KnowledgeBase {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  documents Document[]
+  documents         Document[]
+  conversations     Conversation[]
+  experiments       Experiment[]
+  experimentRuns    ExperimentRun[]
+  benchmarkDatasets BenchmarkDataset[]
+
+  retrievalConfig Json? @default("{}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([projectId])
+}
+
+/// Conversations / AI Chat
+
+model Conversation {
+  id       String  @id @default(cuid())
+  title    String? @db.VarChar(255)
+  model    String  @default("gpt-4o-mini")
+  provider String  @default("openai")
+
+  knowledgeBaseId String
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([knowledgeBaseId])
+  @@index([userId])
+  @@index([knowledgeBaseId, userId])
+}
+
+model Message {
+  id      String @id @default(cuid())
+  role    String @db.VarChar(16)
+  content String @db.Text
+  tokens  Int?
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  citations MessageCitation[]
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
+}
+
+model MessageCitation {
+  id           String @id @default(cuid())
+  chunkId      String
+  documentId   String @db.VarChar(255)
+  documentName String @db.VarChar(255)
+  chunkIndex   Int
+  pageNumber   Int?
+  excerpt      String @db.Text
+  similarity   Float?
+
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
 }
 
 /// Documents / Uploads
@@ -309,6 +375,8 @@ enum DocumentStatus {
   EXTRACTING
   CHUNKING
   EMBEDDING_PENDING
+  EMBEDDING
+  INDEXED
   READY
   ERROR
 }
@@ -339,6 +407,179 @@ model ApiKey {
   updatedAt DateTime  @updatedAt
 
   @@index([userId])
+}
+
+/// Experiment Tracking
+
+model Experiment {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+
+  knowledgeBaseId String
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  configA Json
+  configB Json?
+
+  status String  @default("draft")
+  winner String?
+
+  runs ExperimentRun[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([knowledgeBaseId])
+}
+
+model ExperimentRun {
+  id              String @id @default(cuid())
+  configSnapshot  Json
+  query           String @db.Text
+  retrievedChunks Json
+  metrics         Json?
+  debug           Json?
+
+  latencyEmbedding    Float?
+  latencyVectorSearch Float?
+  latencyPromptBuild  Float?
+  latencyLlmResponse  Float?
+  totalLatency        Float?
+
+  chunkCount Int?
+  tokensUsed Int?
+
+  embeddingModel String?
+  retrievalMode  String?
+
+  experimentId String?
+  experiment   Experiment? @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  knowledgeBaseId String
+  knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([experimentId])
+  @@index([knowledgeBaseId])
+}
+
+/// Benchmark Datasets
+
+model BenchmarkDataset {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  source      String? @db.VarChar(128)
+
+  knowledgeBaseId String?
+  knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: SetNull)
+
+  questions    BenchmarkQuestion[]
+  runs         BenchmarkRun[]
+  campaignRuns CampaignRun[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([knowledgeBaseId])
+}
+
+model BenchmarkQuestion {
+  id              String  @id @default(cuid())
+  question        String  @db.Text
+  expectedAnswer  String? @db.Text
+  expectedContext String? @db.Text
+  referenceDocId  String? @db.VarChar(255)
+  metadata        Json?
+
+  datasetId String
+  dataset   BenchmarkDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  results BenchmarkResult[]
+
+  createdAt DateTime @default(now())
+
+  @@index([datasetId])
+}
+
+model BenchmarkResult {
+  id         String            @id @default(cuid())
+  questionId String
+  question   BenchmarkQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  retrievedChunkIds String? @db.Text
+  retrievedChunks   Json?
+  generatedAnswer   String? @db.Text
+  promptUsed        String? @db.Text
+
+  retrievalMetrics  Json?
+  generationMetrics Json?
+
+  latencyEmbeddingMs  Float?
+  latencySearchMs     Float?
+  latencyPromptMs     Float?
+  latencyGenerationMs Float?
+  totalLatencyMs      Float?
+
+  configSnapshot Json?
+
+  runId String
+  run   BenchmarkRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([runId])
+  @@index([questionId])
+}
+
+model BenchmarkRun {
+  id          String  @id @default(cuid())
+  name        String? @db.VarChar(255)
+  description String? @db.Text
+  status      String  @default("running")
+
+  configSnapshot Json
+
+  aggregatedMetrics Json?
+
+  datasetId String
+  dataset   BenchmarkDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  results BenchmarkResult[]
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([datasetId])
+}
+
+/// Campaign Runs (Phase 24)
+
+model CampaignRun {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  status      String  @default("running")
+
+  configSnapshot Json
+  resultSnapshot Json?
+
+  datasetId String
+  dataset   BenchmarkDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([datasetId])
+  @@index([status])
 }
 
 /// Activity / Audit Logs

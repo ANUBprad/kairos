@@ -17,11 +17,11 @@ export const metadata: Metadata = {
     template: "%s | Kairos",
   },
   description:
-    "Kairos classifies, plans, and routes every query to the optimal retrieval strategy — balancing quality, latency, confidence, and cost in real time. 24% better recall. 40% lower cost.",
+    "Kairos is an open-source RAG research platform for document intelligence, embeddings, semantic search, and explainable AI. Build production-grade retrieval systems.",
   openGraph: {
     title: "Kairos — Adaptive Retrieval Intelligence Platform",
     description:
-      "Every query deserves a different retrieval strategy. Kairos adapts to every question.",
+      "Open-source RAG research platform for document intelligence, embeddings, semantic search, and explainable AI.",
     type: "website",
     siteName: "Kairos",
     locale: "en_US",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Kairos — Adaptive Retrieval Intelligence Platform",
     description:
-      "Every query deserves a different retrieval strategy. Kairos classifies, plans, and routes every query.",
+      "Open-source RAG research platform for document intelligence, embeddings, and semantic search.",
     images: ["/og-image.png"],
   },
   robots: {

@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { getStorageProvider } from "@/lib/storage";
 import { extractText } from "@/lib/extraction";
 import { chunkText } from "@/lib/chunking";
-import { jobQueue } from "@/lib/jobs/queue";
+import { generateEmbeddings } from "@/lib/ai/embeddings";
 import type { Prisma } from "@prisma/client";
 
 const ALLOWED_EXTENSIONS = ["pdf", "txt", "md", "markdown", "csv", "docx"];
@@ -208,7 +208,6 @@ export async function uploadDocument(kbId: string, formData: FormData) {
       fileHash: hash,
     });
 
-    jobQueue.enqueue(doc.id, "extract");
     results.push(doc);
 
     // Fire-and-forget processing
@@ -262,10 +261,15 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       data: { status: "CHUNKING" },
     });
 
+    const kb = await prisma.knowledgeBase.findUnique({
+      where: { id: doc.knowledgeBaseId },
+      select: { retrievalConfig: true },
+    });
+    const retrievalConfig = (kb?.retrievalConfig as { chunkStrategy?: string; chunkSize?: number; overlap?: number } | null) || {};
     const chunks = chunkText(extraction.text, {
-      strategy: "recursive",
-      chunkSize: 1000,
-      overlap: 200,
+      strategy: (retrievalConfig.chunkStrategy as "recursive" | "sentence" | "fixed" | "markdown" | "semantic") || "recursive",
+      chunkSize: retrievalConfig.chunkSize || 1000,
+      overlap: retrievalConfig.overlap || 200,
     });
 
     for (const chunk of chunks) {
@@ -290,9 +294,9 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       characters: extraction.metadata.characters,
     });
 
-    await prisma.document.update({
-      where: { id: docId },
-      data: { status: "READY" },
+    // Fire-and-forget embedding generation
+    generateEmbeddings(docId).catch((embedErr) => {
+      console.error(`Embedding failed for ${docId}:`, embedErr);
     });
   } catch (err) {
     console.error(`Processing error for ${docId}:`, err);
@@ -364,6 +368,10 @@ export async function deleteDocument(formData: FormData) {
   await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
 
   await logActivity(id, session.user.id, "DELETED", { fileName: doc.name });
+
+  const storage = getStorageProvider();
+  storage.delete(doc.storageKey).catch(() => {});
+
   await prisma.document.delete({ where: { id } });
 
   revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
@@ -406,15 +414,17 @@ export async function bulkDeleteDocuments(formData: FormData) {
 
   const docs = await prisma.document.findMany({
     where: { id: { in: ids } },
-    select: { id: true, knowledgeBaseId: true, name: true },
+    select: { id: true, knowledgeBaseId: true, name: true, storageKey: true, storageProvider: true },
   });
 
   if (docs.length === 0) throw new Error("No documents found");
 
   await getOrgFromKb(docs[0].knowledgeBaseId, session.user.id);
 
+  const storage = getStorageProvider();
   for (const doc of docs) {
     await logActivity(doc.id, session.user.id, "DELETED", { fileName: doc.name });
+    storage.delete(doc.storageKey).catch(() => {});
   }
 
   await prisma.document.deleteMany({ where: { id: { in: ids } } });

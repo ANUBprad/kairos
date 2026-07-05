@@ -1,6 +1,19 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Layers, BookOpen, Settings } from "lucide-react";
+import {
+  LayoutDashboard,
+  FolderOpen,
+  Code2,
+  FlaskConical,
+  Bot,
+  History,
+  BarChart3,
+  SlidersHorizontal,
+  GitBranch,
+  BookOpen,
+  Microscope,
+  GraduationCap,
+} from "lucide-react";
 
 interface SidebarProps {
   organization: {
@@ -17,8 +30,18 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { label: "Knowledge Bases", href: "/app", icon: BookOpen },
-  { label: "Settings", href: "/app/settings", icon: Settings },
+  { label: "Overview", href: "/app", icon: LayoutDashboard },
+  { label: "Document Repository", href: "/app/knowledge-bases", icon: FolderOpen },
+  { label: "Chunking Studio", href: "/app/chunking-studio", icon: Code2 },
+  { label: "Retrieval Lab", href: "/app/retrieval-lab", icon: FlaskConical },
+  { label: "Advanced Retrieval", href: "/app/advanced-retrieval", icon: GitBranch },
+  { label: "RAG Chat", href: "/app/rag-chat", icon: Bot },
+  { label: "Experiment History", href: "/app/experiments", icon: History },
+  { label: "Evaluation", href: "/app/evaluation", icon: BarChart3 },
+  { label: "Architecture", href: "/app/architecture", icon: BookOpen },
+  { label: "Research Dashboard", href: "/app/research", icon: Microscope },
+  { label: "Project Guide", href: "/app/project-guide", icon: GraduationCap },
+  { label: "Configuration", href: "/app/settings", icon: SlidersHorizontal },
 ];
 
 export function AppSidebar({ organization }: SidebarProps) {
@@ -41,7 +64,7 @@ export function AppSidebar({ organization }: SidebarProps) {
         {organization && (
           <div className="mb-4 rounded-lg border border-border bg-bg/50 px-3 py-2.5">
             <p className="text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
-              Organization
+              Project
             </p>
             <p className="mt-0.5 truncate text-sm font-medium text-text-primary">
               {organization.name}
@@ -64,32 +87,6 @@ export function AppSidebar({ organization }: SidebarProps) {
             );
           })}
         </nav>
-
-        {organization && organization.projects.length > 0 && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between px-3 py-1">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
-                Projects
-              </p>
-            </div>
-            <div className="mt-1 space-y-0.5">
-              {organization.projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-text-secondary"
-                >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <Layers size={15} className="shrink-0 text-text-tertiary" />
-                    <span className="truncate">{project.name}</span>
-                  </div>
-                  <span className="shrink-0 text-[11px] text-text-tertiary">
-                    {project._count.knowledgeBases}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </aside>
   );

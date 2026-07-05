@@ -5,7 +5,7 @@ import { CTASection } from "@/components/marketing/cta-section";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Simple, transparent pricing for teams of all sizes. Start free. Upgrade when you grow. Enterprise when you need control.",
+  description: "Free and open-source RAG research platform. Designed for AI/ML students, researchers, and practitioners.",
 };
 
 export default function PricingPage() {
@@ -14,7 +14,7 @@ export default function PricingPage() {
       <div className="pt-24 text-center px-6 sm:px-8">
         <h1 className="text-[40px] sm:text-[48px] font-semibold tracking-tight text-text-primary">Pricing</h1>
         <p className="mt-4 text-[18px] text-text-secondary max-w-xl mx-auto">
-          Start free. Upgrade when you grow. Enterprise when you need control.
+          Free and open-source. Built for RAG research and experimentation.
         </p>
       </div>
       <PricingSection />

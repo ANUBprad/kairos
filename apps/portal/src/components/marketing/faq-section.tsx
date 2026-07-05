@@ -12,35 +12,35 @@ import { ScrollReveal } from "@/components/shared/scroll-reveal";
 const faqs = [
   {
     q: "What makes Kairos different from LangChain or LlamaIndex?",
-    a: "LangChain and LlamaIndex are frameworks — they give you building blocks to assemble your own RAG pipeline. Kairos is a platform — you send a query, and we handle strategy selection, optimization, and observability automatically. You don't need to be a retrieval expert.",
+    a: "LangChain and LlamaIndex are frameworks for assembling RAG pipelines. Kairos is a platform for studying and experimenting with every stage of the RAG pipeline — from chunking to retrieval to prompt construction — with full observability into each step.",
   },
   {
-    q: "How is this different from just using GPT-4 with search?",
-    a: "GPT-4 with search applies the same approach to every query. It's expensive for simple lookups and under-powered for complex synthesis. Kairos classifies every query and routes it to the optimal strategy — getting better results at lower cost.",
+    q: "What embedding providers do you support?",
+    a: "Kairos supports OpenAI (text-embedding-3-small, text-embedding-3-large) and Gemini (text-embedding-004). The architecture supports adding local models like BGE, E5, MiniLM, and Ollama.",
   },
   {
     q: "Do I need to host anything?",
-    a: "No. The SaaS offering is fully managed. Sign up, create an API key, and start querying. If you need self-hosting, we offer Docker Compose and enterprise deployment options.",
+    a: "The platform runs locally via Docker Compose. Sign up with GitHub, upload documents, and start experimenting with retrieval strategies. Self-hosting is available.",
   },
   {
-    q: "What LLMs do you support?",
-    a: "Kairos is provider-agnostic. We support Gemini, OpenAI (GPT-4, GPT-4o), Groq, and Ollama. You can use any combination — or bring your own.",
+    q: "What LLMs do you support for generation?",
+    a: "Kairos supports OpenAI (GPT-4, GPT-4o-mini) and Gemini (2.0 flash). You can configure which model to use for generation in the settings.",
   },
   {
-    q: "What counts as a query?",
-    a: "Every request to the /v1/query endpoint counts as one query. Streaming responses count as one query regardless of stream length. Document ingestion, API key management, and analytics calls do not count toward your quota.",
+    q: "What chunking strategies are available?",
+    a: "Five strategies: Recursive (natural boundaries), Sentence (sentence-aware), Fixed Size (uniform segments), Markdown-Aware (heading-preserving), and Semantic-Ready (paragraph-aware). Each can be configured with custom chunk size and overlap.",
   },
   {
-    q: "Can I try it for free?",
-    a: "Yes. The Free tier includes 1,000 queries per month with no credit card required. Upgrade when you need more capacity.",
+    q: "Can I compare different retrieval configurations?",
+    a: "Yes. The Retrieval Lab supports side-by-side comparison. You can run the same query against two different configurations and compare retrieved chunks, similarity scores, and latency.",
   },
   {
-    q: "How does Kairos improve over time?",
-    a: "Kairos includes a feedback loop. When users rate responses (thumbs up or down), those signals retrain the strategy selector and budget optimizer. The system gets smarter with every query.",
+    q: "How does the explainable pipeline work?",
+    a: "After every query in RAG Chat, the platform displays each stage: user query, retrieval configuration, retrieved chunks with similarity scores, prompt construction, and the final LLM response with citations.",
   },
   {
-    q: "What about security and compliance?",
-    a: "All data is encrypted in transit (TLS 1.3) and at rest. API keys are hashed with SHA-256. We offer SOC 2 compliance for Enterprise plans. Self-hosted options are available for air-gapped environments.",
+    q: "What about security?",
+    a: "All data is encrypted in transit (TLS 1.3) and at rest. API keys are hashed with SHA-256. Authentication uses GitHub OAuth. Self-hosted options are available for air-gapped environments.",
   },
 ];
 

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   FileText,
   Upload,
@@ -21,6 +22,7 @@ import {
   Trash,
   RotateCcw,
   Filter,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
@@ -89,7 +91,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
     }
   };
 
-  const processingStatuses = ["QUEUED", "UPLOADING", "STORED", "EXTRACTING", "CHUNKING", "EMBEDDING_PENDING"];
+  const processingStatuses = ["QUEUED", "UPLOADING", "STORED", "EXTRACTING", "CHUNKING", "EMBEDDING_PENDING", "EMBEDDING"];
 
   const filtered = useMemo(() => {
     let list = items;
@@ -260,10 +262,18 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
             {items.length} document{items.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <Button variant="primary" onClick={() => setUploadOpen(true)}>
-          <Upload size={16} />
-          Upload
-        </Button>
+        <div className="flex gap-2">
+          <Link href={`/app/knowledge-bases/${kbId}/chat`}>
+            <Button variant="secondary">
+              <Bot size={16} />
+              Chat
+            </Button>
+          </Link>
+          <Button variant="primary" onClick={() => setUploadOpen(true)}>
+            <Upload size={16} />
+            Upload
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">

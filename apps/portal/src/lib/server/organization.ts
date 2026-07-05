@@ -71,22 +71,3 @@ export const ensureDefaultOrg = cache(async () => {
 
   return { organization, project };
 });
-
-export async function getUserOrganizations() {
-  const session = await getServerSession();
-  if (!session) throw new Error("Not authenticated");
-
-  return prisma.organization.findMany({
-    where: {
-      members: { some: { userId: session.user.id } },
-    },
-    include: {
-      projects: {
-        include: {
-          _count: { select: { knowledgeBases: true } },
-        },
-      },
-      _count: { select: { members: true } },
-    },
-  });
-}

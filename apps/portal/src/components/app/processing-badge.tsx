@@ -48,6 +48,16 @@ const STATUS_CONFIG: Record<
     icon: Cpu,
     className: "border-brand/30 bg-brand/10 text-brand",
   },
+  EMBEDDING: {
+    label: "Embedding",
+    icon: Cpu,
+    className: "border-brand/30 bg-brand/10 text-brand",
+  },
+  INDEXED: {
+    label: "Indexed",
+    icon: CheckCircle2,
+    className: "border-success/30 bg-success/10 text-success",
+  },
   READY: {
     label: "Ready",
     icon: CheckCircle2,
@@ -71,7 +81,8 @@ export function ProcessingBadge({ status, className }: Props) {
   const isLoading =
     status === "UPLOADING" ||
     status === "EXTRACTING" ||
-    status === "CHUNKING";
+    status === "CHUNKING" ||
+    status === "EMBEDDING";
 
   return (
     <span

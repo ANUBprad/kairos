@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, RotateCcw } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { SectionWrapper, SectionHeading, SectionSubheading } from "./section-wrapper";
 import { Card } from "@/components/ui/card";
 import { ScrollReveal, StaggerContainer, staggerItem } from "@/components/shared/scroll-reveal";
@@ -9,18 +9,18 @@ import { ScrollReveal, StaggerContainer, staggerItem } from "@/components/shared
 const steps = [
   {
     num: "1",
-    title: "Classify",
-    desc: "LLM analyzes query complexity in milliseconds",
+    title: "Upload Documents",
+    desc: "PDF, DOCX, CSV, or Markdown. Automatic text extraction and chunking.",
   },
   {
     num: "2",
-    title: "Select Strategy",
-    desc: "Budget allocator chooses the optimal approach",
+    title: "Generate Embeddings",
+    desc: "Choose OpenAI or Gemini models. Store vectors in pgvector.",
   },
   {
     num: "3",
-    title: "Retrieve & Answer",
-    desc: "Best retriever executes with confidence calibration",
+    title: "Search & Retrieve",
+    desc: "Semantic search with citations, similarity scores, and provenance.",
   },
 ];
 
@@ -30,7 +30,7 @@ export function HowItWorks() {
       <ScrollReveal>
         <SectionHeading>How Kairos Works</SectionHeading>
         <SectionSubheading>
-          One API call. Three retrieval strategies. Optimal results every time.
+          Upload. Embed. Search. Three steps to production-grade RAG.
         </SectionSubheading>
       </ScrollReveal>
 
@@ -52,19 +52,6 @@ export function HowItWorks() {
           </motion.div>
         ))}
       </StaggerContainer>
-
-      <ScrollReveal className="mt-10 mx-auto max-w-xl">
-        <div className="flex items-start gap-3 rounded-xl border border-border bg-surface/60 p-4 border-l-4 border-l-brand/60">
-          <RotateCcw size={16} className="text-brand mt-0.5 shrink-0" />
-          <div>
-            <span className="text-xs font-semibold text-text-primary">Fallback built-in: </span>
-            <span className="text-xs text-text-tertiary">
-              If confidence falls below threshold, Kairos automatically falls back to a
-              safer strategy &mdash; never leaving your question unanswered.
-            </span>
-          </div>
-        </div>
-      </ScrollReveal>
     </SectionWrapper>
   );
 }
