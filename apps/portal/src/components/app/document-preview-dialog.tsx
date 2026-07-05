@@ -162,6 +162,7 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
           <button
             onClick={onClose}
             className="shrink-0 text-text-tertiary transition-colors hover:text-text-primary"
+            aria-label="Close"
           >
             <X size={20} />
           </button>

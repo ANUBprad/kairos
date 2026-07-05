@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "@/lib/server/auth-utils";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const session = await getServerSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const config: Record<string, { available: boolean; models: string[] }> = {
     openai: {
       available: !!process.env.OPENAI_API_KEY,

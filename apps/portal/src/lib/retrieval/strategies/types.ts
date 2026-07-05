@@ -9,13 +9,15 @@ export interface StrategyDocument {
   source?: string;
 }
 
+export type ProviderType = "openai" | "gemini";
+
 export interface RetrievalContext {
   kbId: string;
   query: string;
   topK: number;
   minSimilarity: number;
   embeddingModel: string;
-  embeddingProvider: string;
+  embeddingProvider: ProviderType;
   expandedQueries?: string[];
 }
 

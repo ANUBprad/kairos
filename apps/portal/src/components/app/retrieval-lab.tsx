@@ -23,10 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import type { ChunkStrategy } from "@/lib/chunking/types";
 import type { ProviderType } from "@/lib/ai/types";
-import type { RetrievalConfig, RetrievalResultDisplay, RetrievedChunkDisplay, PerformanceMetrics } from "@/lib/retrieval/types";
-import { CHUNK_STRATEGIES } from "@/lib/chunking/types";
+import { CHUNK_STRATEGIES, type ChunkStrategy } from "@/lib/chunking/types";
+import { RETRIEVAL_STRATEGIES, type RetrievalConfig, type RetrievalResultDisplay, type RetrievedChunkDisplay, type PerformanceMetrics } from "@/lib/retrieval/types";
 import { EMBEDDING_MODELS, EMBEDDING_PROVIDERS, getModelInfo } from "@/lib/retrieval/embedding-models";
 import {
   getKbRetrievalConfig,
@@ -35,7 +34,6 @@ import {
   executeComparison,
   persistRun,
 } from "@/lib/actions/retrieval-lab";
-import { RETRIEVAL_STRATEGIES } from "@/lib/retrieval/types";
 
 interface RetrievalLabProps {
   kbs: { id: string; name: string; description: string | null }[];

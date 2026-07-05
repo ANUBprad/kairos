@@ -8,7 +8,7 @@ export class VectorStrategy implements RetrievalStrategy {
   readonly description = "Standard vector similarity search using embeddings";
 
   async retrieve(ctx: RetrievalContext): Promise<RetrievalResult> {
-    const provider = getEmbeddingProvider(ctx.embeddingProvider as never);
+    const provider = getEmbeddingProvider(ctx.embeddingProvider);
 
     const embedResponse = await provider.generateEmbedding({
       input: ctx.query,

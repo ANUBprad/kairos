@@ -66,6 +66,7 @@ export function RenameDocumentDialog({ document, onClose }: Props) {
             onClick={onClose}
             className="text-text-tertiary transition-colors hover:text-text-primary"
             disabled={isLoading}
+            aria-label="Close"
           >
             <X size={20} />
           </button>

@@ -105,16 +105,14 @@ export function Hero() {
               variants={fadeUp}
               className="text-[40px] sm:text-[48px] md:text-[56px] font-semibold tracking-tight leading-[1.08] text-balance"
             >
-              Production-grade retrieval-augmented generation.
+              A research platform for retrieval-augmented generation.
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="mt-5 text-[18px] text-text-secondary leading-relaxed max-w-[480px]"
             >
-              Kairos is an open-source platform for document intelligence, embeddings,
-              semantic search, and explainable AI evaluation. Build and experiment with
-              RAG pipelines.
+               An open-source platform for studying RAG pipelines — document chunking, embeddings, retrieval strategies, and evaluation metrics — with full observability into every stage.
             </motion.p>
 
             <motion.div
@@ -124,11 +122,11 @@ export function Hero() {
               <Button variant="primary" size="lg" className="gap-2" asChild>
                 <Link href="/signup">
                   Get started
-                  <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                  <ArrowRight size={16} />
                 </Link>
               </Button>
               <Button variant="secondary" size="lg" asChild>
-                <Link href="#how-it-works">See how it works</Link>
+                <Link href="#features">Explore research</Link>
               </Button>
             </motion.div>
 

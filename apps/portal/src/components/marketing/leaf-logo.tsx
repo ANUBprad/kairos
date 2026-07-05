@@ -1,14 +1,12 @@
 import Image from "next/image";
 
 export function LeafLogo({ size = 28 }: { size?: number }) {
-  const h = size;
-  const w = Math.round(h * (1648 / 954));
   return (
     <Image
-      src="/kairos-nav.png"
+      src="/kai.png"
       alt="Kairos"
-      width={w}
-      height={h}
+      width={size}
+      height={size}
       className="object-contain"
       priority
     />

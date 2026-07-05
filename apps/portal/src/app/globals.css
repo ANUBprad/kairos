@@ -92,6 +92,26 @@
     border-radius: var(--radius-sm);
   }
 
+  :root {
+    --primary: 255 90 10;
+    --border: 42 42 42;
+    --foreground: 240 240 240;
+    --muted-foreground: 139 139 139;
+    --background: 11 15 20;
+    --accent: 26 36 51;
+    --card: 20 24 29;
+  }
+
+  .light {
+    --primary: 255 90 10;
+    --border: 229 229 229;
+    --foreground: 10 10 10;
+    --muted-foreground: 107 107 107;
+    --background: 255 255 255;
+    --accent: 238 238 238;
+    --card: 245 245 245;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;

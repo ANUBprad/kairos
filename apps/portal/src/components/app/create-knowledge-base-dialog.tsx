@@ -70,6 +70,7 @@ export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
             onClick={() => onOpenChange(false)}
             className="text-text-tertiary hover:text-text-primary transition-colors"
             disabled={isLoading}
+            aria-label="Close"
           >
             <X size={20} />
           </button>

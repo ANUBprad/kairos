@@ -46,6 +46,7 @@ export function DeleteKnowledgeBaseDialog({ kb, onClose }: Props) {
             onClick={onClose}
             className="text-text-tertiary hover:text-text-primary transition-colors"
             disabled={isLoading}
+            aria-label="Close"
           >
             <X size={20} />
           </button>

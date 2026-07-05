@@ -65,7 +65,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
       const result = await executeRetrieval(selectedKb, query.trim(), config, true);
       setResults(result);
     } catch (err) {
-      console.error(err);
+      console.error("Advanced retrieval execution failed:", err);
     } finally {
       setLoading(false);
     }
@@ -93,7 +93,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Advanced Retrieval</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-text-secondary">
           Compare retrieval strategies and analyze performance
         </p>
       </div>
@@ -113,11 +113,11 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Knowledge Base</label>
+            <label className="text-xs font-medium text-text-secondary mb-1 block">Knowledge Base</label>
             <select
               value={selectedKb}
               onChange={(e) => setSelectedKb(e.target.value)}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm"
             >
               {kbs.map((kb) => (
                 <option key={kb.id} value={kb.id}>{kb.name}</option>
@@ -126,36 +126,36 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Strategy</label>
+            <label className="text-xs font-medium text-text-secondary mb-1 block">Strategy</label>
             <select
               value={strategy}
               onChange={(e) => setStrategy(e.target.value)}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm"
             >
               {strategies.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-text-secondary mt-1">
               {strategies.find((s) => s.value === strategy)?.description}
             </p>
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Query</label>
+            <label className="text-xs font-medium text-text-secondary mb-1 block">Query</label>
             <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Enter a test query..."
               rows={3}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none"
+              className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm resize-none"
             />
           </div>
 
           <button
             onClick={handleRun}
             disabled={loading || !query.trim()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand text-white hover:bg-brand-hover disabled:opacity-50 text-sm font-medium"
           >
             {loading ? (
               <span className="flex items-center gap-2">
@@ -178,7 +178,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
           </div>
           {results ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-3 text-xs text-text-secondary">
                 <span>{results.totalChunks} chunks</span>
                 <span>{results.latencyMs.toFixed(1)}ms</span>
               </div>
@@ -186,11 +186,11 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
                 {results.chunks.map((chunk) => (
                   <div key={chunk.id} className="rounded-lg border border-border p-3 text-sm">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-primary">#{chunk.rank}</span>
-                      <span className="text-xs text-muted-foreground">{Math.round(chunk.similarity * 100)}%</span>
-                      <span className="text-xs text-muted-foreground truncate">{chunk.documentName}</span>
+                      <span className="text-xs font-mono text-brand">#{chunk.rank}</span>
+                      <span className="text-xs text-text-secondary">{Math.round(chunk.similarity * 100)}%</span>
+                      <span className="text-xs text-text-secondary truncate">{chunk.documentName}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-3">{chunk.content}</p>
+                    <p className="text-xs text-text-secondary line-clamp-3">{chunk.content}</p>
                   </div>
                 ))}
               </div>
@@ -200,7 +200,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
                   <div className="space-y-1">
                     {results.debug.traceSteps.map((step, i) => (
                       <div key={i} className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">{step.description}</span>
+                        <span className="text-text-secondary">{step.description}</span>
                         <span className="font-mono">{step.durationMs.toFixed(1)}ms</span>
                       </div>
                     ))}
@@ -209,7 +209,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
               )}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center py-12 text-text-secondary">
               <FlaskConical size={32} className="mb-2" />
               <p className="text-sm">Run a retrieval to see results</p>
             </div>
@@ -225,12 +225,12 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
             <div>
-              <div className="text-xs text-muted-foreground mb-2">Recall@K (Top 10 benchmark runs)</div>
+              <div className="text-xs text-text-secondary mb-2">Recall@K (Top 10 benchmark runs)</div>
               <BarChart data={benchmarkChartData} height={200} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg border border-border p-3">
-                <div className="text-xs text-muted-foreground mb-1">Avg Recall@K</div>
+                <div className="text-xs text-text-secondary mb-1">Avg Recall@K</div>
                 <div className="text-lg font-semibold font-mono">
                   {completedRuns.length > 0
                     ? (completedRuns.reduce((s, r) => {
@@ -241,7 +241,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
                 </div>
               </div>
               <div className="rounded-lg border border-border p-3">
-                <div className="text-xs text-muted-foreground mb-1">Avg MRR</div>
+                <div className="text-xs text-text-secondary mb-1">Avg MRR</div>
                 <div className="text-lg font-semibold font-mono">
                   {completedRuns.length > 0
                     ? (completedRuns.reduce((s, r) => {
@@ -264,11 +264,11 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
           </div>
           <div className="space-y-2">
             {strategies.map((s) => (
-              <div key={s.value} className="flex items-start gap-3 p-2 rounded-lg hover:bg-accent/50">
-                <GitBranch size={14} className="mt-0.5 text-muted-foreground" />
+              <div key={s.value} className="flex items-start gap-3 p-2 rounded-lg hover:bg-surface-hover">
+                <GitBranch size={14} className="mt-0.5 text-text-secondary" />
                 <div>
                   <p className="text-sm font-medium">{s.label}</p>
-                  <p className="text-xs text-muted-foreground">{s.description}</p>
+                  <p className="text-xs text-text-secondary">{s.description}</p>
                 </div>
               </div>
             ))}
@@ -282,66 +282,66 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
           </div>
           <div className="space-y-3 text-sm">
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">1</span>
+              <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-brand">1</span>
               </div>
               <div>
                 <p className="font-medium">Vector Search</p>
-                <p className="text-xs text-muted-foreground">Embedding-based semantic similarity search</p>
+                <p className="text-xs text-text-secondary">Embedding-based semantic similarity search</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">2</span>
+              <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-brand">2</span>
               </div>
               <div>
                 <p className="font-medium">BM25 Keyword Search</p>
-                <p className="text-xs text-muted-foreground">Term-frequency based lexical search</p>
+                <p className="text-xs text-text-secondary">Term-frequency based lexical search</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">3</span>
+              <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-brand">3</span>
               </div>
               <div>
                 <p className="font-medium">RRF Fusion</p>
-                <p className="text-xs text-muted-foreground">Reciprocal Rank Fusion combines multiple rankings</p>
+                <p className="text-xs text-text-secondary">Reciprocal Rank Fusion combines multiple rankings</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">4</span>
+              <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-brand">4</span>
               </div>
               <div>
                 <p className="font-medium">Query Expansion</p>
-                <p className="text-xs text-muted-foreground">LLM generates alternative query phrasings</p>
+                <p className="text-xs text-text-secondary">LLM generates alternative query phrasings</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">5</span>
+              <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-brand">5</span>
               </div>
               <div>
                 <p className="font-medium">Multi-Query</p>
-                <p className="text-xs text-muted-foreground">Multiple semantic variations searched independently</p>
+                <p className="text-xs text-text-secondary">Multiple semantic variations searched independently</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">6</span>
+              <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-brand">6</span>
               </div>
               <div>
                 <p className="font-medium">Cross-Encoder Reranking</p>
-                <p className="text-xs text-muted-foreground">LLM-based relevance scoring reranks top results</p>
+                <p className="text-xs text-text-secondary">LLM-based relevance scoring reranks top results</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-primary">7</span>
+              <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
+                <span className="text-xs font-bold text-brand">7</span>
               </div>
               <div>
                 <p className="font-medium">Context Compression</p>
-                <p className="text-xs text-muted-foreground">Dedup, merge, and trim redundant context</p>
+                <p className="text-xs text-text-secondary">Dedup, merge, and trim redundant context</p>
               </div>
             </div>
           </div>

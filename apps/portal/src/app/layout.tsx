@@ -26,9 +26,9 @@ export const metadata: Metadata = {
     siteName: "Kairos",
     locale: "en_US",
     images: [{
-      url: "/og-image.png",
-      width: 1200,
-      height: 630,
+      url: "/kai.png",
+      width: 500,
+      height: 500,
       alt: "Kairos — Adaptive Retrieval Intelligence Platform",
     }],
   },
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     title: "Kairos — Adaptive Retrieval Intelligence Platform",
     description:
       "Open-source RAG research platform for document intelligence, embeddings, and semantic search.",
-    images: ["/og-image.png"],
+    images: ["/kai.png"],
   },
   robots: {
     index: true,
@@ -51,10 +51,9 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: { url: "/favicon.png", type: "image/png" },
-    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
+    icon: { url: "/kai.png", type: "image/png" },
+    apple: { url: "/kai.png", sizes: "500x500" },
   },
-  manifest: "/site.webmanifest",
   metadataBase: new URL("https://kairos.dev"),
   alternates: {
     canonical: "/",

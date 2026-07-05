@@ -43,15 +43,18 @@ export function FormField({
   const isPassword = type === "password";
   const inputType = isPassword && showPassword ? "text" : type;
 
+  const inputId = `field-${register.name || label.toLowerCase().replace(/\s+/g, "-")}`;
+
   return (
     <div className="space-y-1.5">
-      <label className="block text-[13px] font-medium text-text-primary">
+      <label htmlFor={inputId} className="block text-[13px] font-medium text-text-primary">
         {label}
       </label>
 
       <div className="relative">
         <input
           {...register}
+          id={inputId}
           type={inputType}
           placeholder={placeholder}
           maxLength={maxChars}

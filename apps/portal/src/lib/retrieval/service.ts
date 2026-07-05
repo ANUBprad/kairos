@@ -62,7 +62,7 @@ export async function runRetrieval(
       kbId,
       query,
       {
-        strategy: strategyName as never,
+        strategy: strategyName as "vector" | "keyword" | "hybrid" | "query-expansion" | "multi-query" | "reranking",
         topK: config.topK,
         enableQueryExpansion: config.enableQueryExpansion || false,
         enableMultiQuery: config.enableMultiQuery || false,

@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
             kbId,
             query,
             {
-              strategy: (retrievalConfig.retrievalStrategy || retrievalConfig.retrievalMode || "vector") as never,
+              strategy: (retrievalConfig.retrievalStrategy || retrievalConfig.retrievalMode || "vector") as "vector" | "keyword" | "hybrid" | "query-expansion" | "multi-query" | "reranking",
               topK: retrievalConfig.topK,
               enableQueryExpansion: retrievalConfig.enableQueryExpansion || false,
               enableMultiQuery: retrievalConfig.enableMultiQuery || false,

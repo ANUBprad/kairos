@@ -363,6 +363,7 @@ export function RagChat({ kbs }: Props) {
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className="text-text-tertiary hover:text-text-primary transition-colors"
+            aria-label={showSidebar ? "Collapse sidebar" : "Expand sidebar"}
           >
             {showSidebar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
@@ -561,12 +562,12 @@ export function RagChat({ kbs }: Props) {
                           <div className="rounded-lg border border-border bg-bg p-3 space-y-2 max-h-96 overflow-y-auto">
                             <div className="flex items-center justify-between">
                               <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">System Prompt</span>
-                              <button onClick={() => copyToClipboard(msg.pipeline!.prompt.systemPrompt)} className="text-text-tertiary hover:text-text-primary"><Copy size={10} /></button>
+                              <button onClick={() => copyToClipboard(msg.pipeline!.prompt.systemPrompt)} className="text-text-tertiary hover:text-text-primary" aria-label="Copy system prompt"><Copy size={10} /></button>
                             </div>
                             <pre className="text-[11px] text-text-secondary whitespace-pre-wrap font-mono bg-bg/50 rounded p-2">{msg.pipeline.prompt.systemPrompt}</pre>
                             <div className="flex items-center justify-between mt-2">
                               <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Full Prompt ({msg.pipeline.prompt.messages.length} messages)</span>
-                              <button onClick={() => copyToClipboard(msg.pipeline!.prompt.messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n"))} className="text-text-tertiary hover:text-text-primary"><Copy size={10} /></button>
+                              <button onClick={() => copyToClipboard(msg.pipeline!.prompt.messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n"))} className="text-text-tertiary hover:text-text-primary" aria-label="Copy full prompt"><Copy size={10} /></button>
                             </div>
                             {msg.pipeline.prompt.messages.map((m, i) => (
                               <div key={i} className="text-[11px]">
@@ -637,14 +638,15 @@ export function RagChat({ kbs }: Props) {
               placeholder={activeConversation ? "Ask a question..." : "Start a conversation first..."}
               disabled={!activeConversation || isStreaming}
               rows={1}
+              aria-label="RAG chat message input"
               className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:border-brand disabled:opacity-40"
             />
             {isStreaming ? (
-              <Button variant="secondary" onClick={stopGeneration} title="Stop">
+              <Button variant="secondary" onClick={stopGeneration} title="Stop" aria-label="Stop generation">
                 <Square size={16} />
               </Button>
             ) : (
-              <Button variant="primary" onClick={handleSubmit} disabled={!input.trim() || !activeConversation}>
+              <Button variant="primary" onClick={handleSubmit} disabled={!input.trim() || !activeConversation} aria-label="Send message">
                 <Send size={16} />
               </Button>
             )}

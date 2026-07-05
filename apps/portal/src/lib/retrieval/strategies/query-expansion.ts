@@ -1,5 +1,6 @@
 import type { RetrievalStrategy, RetrievalContext, RetrievalResult, StrategyDocument, ExpansionResult } from "./types";
 import { getAIProvider } from "@/lib/ai/providers";
+import { logError } from "@/lib/errors";
 
 const EXPANSION_PROMPT = `You are a query expansion specialist. Given a user's search query, generate up to 5 alternative phrasings or related search terms that would help retrieve relevant documents.
 
@@ -12,7 +13,7 @@ export async function expandQuery(
   query: string,
   provider?: string,
 ): Promise<ExpansionResult> {
-  const aiProvider = getAIProvider(provider as never);
+  const aiProvider = getAIProvider(provider as "openai" | "gemini" | undefined);
   const prompt = EXPANSION_PROMPT.replace("{{query}}", query);
 
   try {
@@ -31,6 +32,7 @@ export async function expandQuery(
       try {
         expanded = JSON.parse(jsonMatch[0]);
       } catch {
+        logError("query-expansion:parse", new Error("Failed to parse LLM response as JSON"), { raw: jsonMatch[0].slice(0, 200) });
         expanded = [];
       }
     }
@@ -47,7 +49,8 @@ export async function expandQuery(
       originalQuery: query,
       expandedQueries: expanded.slice(0, 5),
     };
-  } catch {
+  } catch (error) {
+    logError("query-expansion:generate", error, { query: query.slice(0, 100) });
     return { originalQuery: query, expandedQueries: [] };
   }
 }

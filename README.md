@@ -331,6 +331,34 @@ Reduces retrieved context by 30-50% through deduplication, overlap merging, and 
 
 ---
 
+## Deployment
+
+Kairos deploys to **Vercel** (Next.js) + **Supabase** (PostgreSQL) with zero code changes.
+
+### Quick Deploy
+
+1. Fork the repository
+2. Create a Supabase project and enable the `pgvector` extension
+3. Create a Vercel project and import the repository
+4. Set environment variables in Vercel (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))
+5. Deploy — Prisma migrations run automatically
+
+For detailed instructions, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+---
+
+## GitHub Topics
+
+Suggested topics for repository discoverability:
+
+```
+rag  retrieval-augmented-generation  llm  embeddings  vector-search  
+pgvector  evaluation  benchmarking  nextjs  prisma  openai  gemini  
+research  ai  nlp  information-retrieval  chunking  semantic-search
+```
+
+---
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
@@ -341,5 +369,5 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 - Built with Next.js, Prisma, PostgreSQL, and pgvector
 - Powered by OpenAI, Google Gemini, and Anthropic Claude APIs
-- Inspired by the LlamaIndex and LangChain ecosystems
+- Inspired by the LlamaIndex and LangChain ecosystem
 - IR metric conventions follow TREC and NIST evaluation standards

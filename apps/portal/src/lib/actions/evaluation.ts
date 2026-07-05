@@ -3,6 +3,7 @@
 import { getServerSession } from "@/lib/server/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { logError } from "@/lib/errors";
 import {
   createBenchmarkDataset,
   getBenchmarkDatasets,
@@ -15,6 +16,9 @@ import {
   compareBenchmarkRuns,
   runStrategyBenchmark,
 } from "@/lib/evaluation/benchmark";
+import { runBenchmarkCampaign, type CampaignConfig, type CampaignResult } from "@/lib/evaluation/campaign";
+import { generateLeaderboard, type LeaderboardEntry } from "@/lib/evaluation/leaderboard";
+import { generateRecommendations, type StrategyConfig, type Recommendation } from "@/lib/evaluation/recommendations";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 
 async function assertKbAccess(kbId: string, userId: string) {
@@ -53,13 +57,18 @@ export async function createDataset(data: {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
-  if (data.knowledgeBaseId) {
-    await assertKbAccess(data.knowledgeBaseId, session.user.id);
-  }
+  try {
+    if (data.knowledgeBaseId) {
+      await assertKbAccess(data.knowledgeBaseId, session.user.id);
+    }
 
-  const dataset = await createBenchmarkDataset(data);
-  revalidatePath("/app/evaluation");
-  return dataset;
+    const dataset = await createBenchmarkDataset(data);
+    revalidatePath("/app/evaluation");
+    return dataset;
+  } catch (error) {
+    logError("createDataset", error, { userId: session.user.id, kbId: data.knowledgeBaseId });
+    throw error;
+  }
 }
 
 export async function importJsonDataset(
@@ -149,28 +158,38 @@ export async function startBenchmark(
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
-  await assertKbAccess(knowledgeBaseId, session.user.id);
+  try {
+    await assertKbAccess(knowledgeBaseId, session.user.id);
 
-  const runId = await runBenchmark(datasetId, knowledgeBaseId, config, label);
-  revalidatePath("/app/evaluation");
-  return runId;
+    const runId = await runBenchmark(datasetId, knowledgeBaseId, config, label);
+    revalidatePath("/app/evaluation");
+    return runId;
+  } catch (error) {
+    logError("startBenchmark", error, { userId: session.user.id, datasetId, kbId: knowledgeBaseId });
+    throw error;
+  }
 }
 
 export async function getReport(runId: string) {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
-  const run = await prisma.benchmarkRun.findUnique({
-    where: { id: runId },
-    include: {
-      dataset: true,
-      results: { take: 1 },
-    },
-  });
+  try {
+    const run = await prisma.benchmarkRun.findUnique({
+      where: { id: runId },
+      include: {
+        dataset: true,
+        results: { take: 1 },
+      },
+    });
 
-  if (!run) throw new Error("Run not found");
+    if (!run) throw new Error("Run not found");
 
-  return generateEvaluationReport(run as never);
+    return generateEvaluationReport(run as never);
+  } catch (error) {
+    logError("getReport", error, { userId: session.user.id, runId });
+    throw error;
+  }
 }
 
 export async function compareRuns(runAId: string, runBId: string) {
@@ -231,4 +250,60 @@ export async function getBaselines() {
     orderBy: { createdAt: "desc" },
     take: 10,
   });
+}
+
+export async function runCampaign(
+  datasetId: string,
+  knowledgeBaseId: string,
+  strategies: CampaignConfig["strategies"],
+  embeddingModels: string[],
+  chunkStrategies: string[],
+  topKs: number[],
+  campaignName: string,
+): Promise<CampaignResult> {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  try {
+    await assertKbAccess(knowledgeBaseId, session.user.id);
+
+    return runBenchmarkCampaign(
+      {
+        datasetId,
+        knowledgeBaseId,
+        strategies,
+        embeddingModels,
+      chunkStrategies,
+      topKs,
+    },
+    campaignName,
+  );
+  } catch (error) {
+    logError("runCampaign", error, { userId: session.user.id, datasetId, kbId: knowledgeBaseId });
+    throw error;
+  }
+}
+
+export async function getLeaderboard(runIds: string[]): Promise<LeaderboardEntry[]> {
+  const session = await getServerSession();
+  if (!session) return [];
+
+  const runs = await prisma.benchmarkRun.findMany({
+    where: { id: { in: runIds } },
+    select: { name: true, aggregatedMetrics: true },
+  });
+
+  return generateLeaderboard(
+    runs.map((r) => ({
+      label: r.name || "Unnamed",
+      aggregatedMetrics: r.aggregatedMetrics as Record<string, number> | null,
+    })),
+  );
+}
+
+export async function getRecommendations(strategyConfigs: StrategyConfig[]): Promise<Recommendation[]> {
+  const session = await getServerSession();
+  if (!session) return [];
+
+  return generateRecommendations(strategyConfigs);
 }

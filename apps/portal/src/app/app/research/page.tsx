@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "@/lib/server/auth-utils";
-import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/server/auth-utils";
 import { ResearchDashboard } from "./research-client";
 
 export const metadata = {
@@ -8,8 +7,7 @@ export const metadata = {
 };
 
 export default async function ResearchPage() {
-  const session = await getServerSession();
-  if (!session) redirect("/login");
+  await requireSession();
 
   const { ensureDefaultOrg } = await import("@/lib/server/organization");
   const { project } = await ensureDefaultOrg();

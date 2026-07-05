@@ -1,5 +1,6 @@
 import type { RetrievalStrategy, RetrievalContext, RetrievalResult, StrategyDocument } from "./types";
 import { getAIProvider } from "@/lib/ai/providers";
+import { logError } from "@/lib/errors";
 
 const MULTI_QUERY_PROMPT = `You are a retrieval specialist. Given a user question, generate 3 different versions of the question that capture different semantic angles or sub-topics. Each version should help retrieve different but relevant documents.
 
@@ -9,7 +10,7 @@ Return ONLY a JSON array of 3 strings.
 Example: ["semantic variation 1", "semantic variation 2", "semantic variation 3"]`;
 
 export async function generateMultiQueries(query: string, provider?: string): Promise<string[]> {
-  const aiProvider = getAIProvider(provider as never);
+  const aiProvider = getAIProvider(provider as "openai" | "gemini" | undefined);
   const prompt = MULTI_QUERY_PROMPT.replace("{{query}}", query);
 
   try {
@@ -28,7 +29,7 @@ export async function generateMultiQueries(query: string, provider?: string): Pr
         const parsed = JSON.parse(jsonMatch[0]);
         if (Array.isArray(parsed)) return parsed.slice(0, 3);
       } catch {
-        // fall through
+        logError("multi-query:parse", new Error("Failed to parse LLM response"), { raw: jsonMatch[0].slice(0, 200) });
       }
     }
 
@@ -37,7 +38,8 @@ export async function generateMultiQueries(query: string, provider?: string): Pr
       .map((l: string) => l.replace(/^\d+[.)]\s*/, "").trim())
       .filter((l: string) => l.length > 5);
     return lines.slice(0, 3);
-  } catch {
+  } catch (error) {
+    logError("multi-query:generate", error, { query: query.slice(0, 100) });
     return [];
   }
 }

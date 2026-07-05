@@ -104,6 +104,7 @@ export function KnowledgeBaseList({ items }: Props) {
               <button
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === kb.id ? null : kb.id); }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary opacity-0 transition-opacity hover:bg-surface-hover hover:text-text-secondary group-hover:opacity-100"
+                aria-label="Knowledge base actions"
               >
                 <MoreHorizontal size={16} />
               </button>

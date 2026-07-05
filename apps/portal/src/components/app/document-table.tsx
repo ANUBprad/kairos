@@ -287,6 +287,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
               setSearch(e.target.value);
               setPage(0);
             }}
+            aria-label="Search documents"
             className="w-full rounded-[10px] border border-border bg-bg py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none"
           />
         </div>
@@ -363,7 +364,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
           <thead>
             <tr className="border-b border-border bg-surface">
               <th className="w-10 px-2 py-3">
-                <button onClick={toggleSelectAll} className="mx-auto flex">
+                <button onClick={toggleSelectAll} className="mx-auto flex" aria-label={allSelected ? "Deselect all" : "Select all"}>
                   {allSelected ? (
                     <CheckSquare size={16} className="text-brand" />
                   ) : someSelected ? (
@@ -435,7 +436,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                 }`}
               >
                 <td className="px-2 py-3.5">
-                  <button onClick={() => toggleSelect(doc.id)} className="mx-auto flex">
+                  <button onClick={() => toggleSelect(doc.id)} className="mx-auto flex" aria-label={selected.has(doc.id) ? "Deselect document" : "Select document"}>
                     {selected.has(doc.id) ? (
                       <CheckSquare size={16} className="text-brand" />
                     ) : (
@@ -484,6 +485,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                     <button
                       onClick={() => setMenuOpen(menuOpen === doc.id ? null : doc.id)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-secondary"
+                      aria-label="Document actions"
                     >
                       <MoreHorizontal size={16} />
                     </button>

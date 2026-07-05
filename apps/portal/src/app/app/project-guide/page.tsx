@@ -1,5 +1,4 @@
-import { getServerSession } from "@/lib/server/auth-utils";
-import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/server/auth-utils";
 import { ProjectGuide } from "./project-guide-client";
 
 export const metadata = {
@@ -7,8 +6,7 @@ export const metadata = {
 };
 
 export default async function ProjectGuidePage() {
-  const session = await getServerSession();
-  if (!session) redirect("/login");
+  await requireSession();
 
   return <ProjectGuide />;
 }

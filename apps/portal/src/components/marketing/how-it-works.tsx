@@ -1,57 +1,45 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { FileText, Scissors, Database, FlaskConical, FileSearch, Cpu, BarChart3 } from "lucide-react";
 import { SectionWrapper, SectionHeading, SectionSubheading } from "./section-wrapper";
-import { Card } from "@/components/ui/card";
-import { ScrollReveal, StaggerContainer, staggerItem } from "@/components/shared/scroll-reveal";
+import { ScrollReveal } from "@/components/shared/scroll-reveal";
+import { Pipeline } from "@/components/research/pipeline";
+import { ResearchNote } from "@/components/research/research-note";
 
-const steps = [
-  {
-    num: "1",
-    title: "Upload Documents",
-    desc: "PDF, DOCX, CSV, or Markdown. Automatic text extraction and chunking.",
-  },
-  {
-    num: "2",
-    title: "Generate Embeddings",
-    desc: "Choose OpenAI or Gemini models. Store vectors in pgvector.",
-  },
-  {
-    num: "3",
-    title: "Search & Retrieve",
-    desc: "Semantic search with citations, similarity scores, and provenance.",
-  },
+const PIPELINE_STAGES = [
+  { id: "documents", label: "Documents", icon: FileText, color: "bg-blue-500" },
+  { id: "chunking", label: "Chunking", icon: Scissors, color: "bg-teal-500" },
+  { id: "embeddings", label: "Embeddings", icon: Database, color: "bg-emerald-500" },
+  { id: "retrieval", label: "Retrieval", icon: FlaskConical, color: "bg-yellow-500" },
+  { id: "prompt", label: "Prompt", icon: FileSearch, color: "bg-orange-500" },
+  { id: "llm", label: "LLM", icon: Cpu, color: "bg-purple-500" },
+  { id: "evaluation", label: "Evaluation", icon: BarChart3, color: "bg-violet-500" },
 ];
 
 export function HowItWorks() {
   return (
     <SectionWrapper id="how-it-works">
       <ScrollReveal>
-        <SectionHeading>How Kairos Works</SectionHeading>
+        <SectionHeading>RAG Pipeline Architecture</SectionHeading>
         <SectionSubheading>
-          Upload. Embed. Search. Three steps to production-grade RAG.
+          Every stage of the retrieval-augmented generation pipeline is observable, configurable, and measurable.
         </SectionSubheading>
       </ScrollReveal>
 
-      <StaggerContainer className="mt-16 flex flex-col md:flex-row items-center justify-center gap-6" staggerDelay={0.12}>
-        {steps.map((step, i) => (
-          <motion.div key={step.num} variants={staggerItem()} className="flex items-center gap-4 md:gap-0">
-            <Card className="w-full md:w-56 text-center py-8">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-brand/10 text-brand text-sm font-bold mx-auto mb-4">
-                {step.num}
-              </div>
-              <h3 className="text-sm font-semibold text-text-primary mb-1.5">{step.title}</h3>
-              <p className="text-xs text-text-tertiary leading-relaxed max-w-[160px] mx-auto">{step.desc}</p>
-            </Card>
-            {i < steps.length - 1 && (
-              <div className="hidden md:flex items-center">
-                <ArrowRight size={18} className="text-text-tertiary/60" />
-              </div>
-            )}
-          </motion.div>
-        ))}
-      </StaggerContainer>
+      <div className="mt-12">
+        <div className="rounded-xl border border-border bg-surface p-6">
+          <Pipeline stages={PIPELINE_STAGES} size="lg" />
+        </div>
+      </div>
+
+      <div className="mt-8 max-w-2xl mx-auto">
+        <ResearchNote title="How RAG Works">
+          Documents are parsed and split into chunks. Each chunk is converted to a vector embedding and stored in a
+          vector database. When a query arrives, the system retrieves the most relevant chunks via similarity search,
+          assembles them into a prompt with the original query, and sends it to an LLM for generation. Each stage
+          produces measurable outputs for evaluation.
+        </ResearchNote>
+      </div>
     </SectionWrapper>
   );
 }

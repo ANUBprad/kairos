@@ -1,4 +1,4 @@
-import type { RetrievalStrategy, RetrievalContext, FullRetrievalTrace, StrategyStep } from "./types";
+import type { RetrievalStrategy, RetrievalContext, FullRetrievalTrace, StrategyStep, ProviderType } from "./types";
 import { VectorStrategy } from "./vector";
 import { KeywordStrategy } from "./keyword";
 import { HybridStrategy } from "./hybrid";
@@ -66,7 +66,7 @@ export async function executeRetrievalWithTrace(
   query: string,
   config: StrategyConfig,
   embeddingModel: string,
-  embeddingProvider: string,
+  embeddingProvider: ProviderType,
 ): Promise<FullRetrievalTrace> {
   const startTotal = performance.now();
   const steps: StrategyStep[] = [];
@@ -175,7 +175,7 @@ export async function executeStrategyComparison(
   query: string,
   configs: StrategyConfig[],
   embeddingModel: string,
-  embeddingProvider: string,
+  embeddingProvider: ProviderType,
 ): Promise<FullRetrievalTrace[]> {
   return Promise.all(
     configs.map((cfg) =>

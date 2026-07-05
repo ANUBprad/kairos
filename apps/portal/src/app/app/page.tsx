@@ -1,29 +1,50 @@
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "@/lib/server/auth-utils";
-import { redirect } from "next/navigation";
+import { requireSession } from "@/lib/server/auth-utils";
 import Link from "next/link";
 import {
   FileSearch,
   Scissors,
   FlaskConical,
-  Bot,
   BarChart3,
-  BookOpen,
   ArrowRight,
-  Database,
+  Upload,
+  BookOpen,
+  FileText,
   Layers,
   Cpu,
+  Database,
 } from "lucide-react";
 import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
+import { MetricCard } from "@/components/research/metric-card";
+import { ResearchNote } from "@/components/research/research-note";
+import { EmptyState } from "@/components/research/empty-state";
+import { Pipeline } from "@/components/research/pipeline";
+import { Button } from "@/components/ui/button";
+
+const PIPELINE_STAGES = [
+  { id: "documents", label: "Documents", icon: FileText, color: "bg-blue-500" },
+  { id: "chunking", label: "Chunking", icon: Scissors, color: "bg-teal-500" },
+  { id: "embeddings", label: "Embeddings", icon: Database, color: "bg-emerald-500" },
+  { id: "retrieval", label: "Retrieval", icon: FlaskConical, color: "bg-yellow-500" },
+  { id: "prompt", label: "Prompt", icon: FileSearch, color: "bg-orange-500" },
+  { id: "llm", label: "LLM", icon: Cpu, color: "bg-purple-500" },
+  { id: "evaluation", label: "Evaluation", icon: BarChart3, color: "bg-violet-500" },
+];
+
+const quickActions = [
+  { label: "Upload Documents", href: "/app/knowledge-bases", icon: Upload },
+  { label: "Open Retrieval Lab", href: "/app/retrieval-lab", icon: FlaskConical },
+  { label: "Run Evaluation", href: "/app/evaluation", icon: BarChart3 },
+  { label: "View Architecture", href: "/app/architecture", icon: BookOpen },
+];
 
 export default async function AppPage() {
-  const session = await getServerSession();
-  if (!session) redirect("/login");
+  await requireSession();
 
   const { ensureDefaultOrg } = await import("@/lib/server/organization");
   const { project } = await ensureDefaultOrg();
 
-  const [knowledgeBases, docCount, chunkCount, experimentCount] = await Promise.all([
+  const [knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark] = await Promise.all([
     listKnowledgeBases(),
     prisma.document.count({
       where: { knowledgeBase: { projectId: project.id } },
@@ -34,186 +55,194 @@ export default async function AppPage() {
     prisma.experimentRun.count({
       where: { knowledgeBase: { projectId: project.id } },
     }),
+    prisma.benchmarkRun.findFirst({
+      where: { status: "completed", dataset: { knowledgeBase: { projectId: project.id } } },
+      orderBy: { createdAt: "desc" },
+      select: { name: true, createdAt: true, aggregatedMetrics: true },
+    }),
   ]);
 
-  const pipelineStages = [
-    {
-      title: "Document Ingestion",
-      description: "Upload and extract text from PDF, DOCX, CSV, Markdown files",
-      href: "/app/knowledge-bases",
-      icon: FileSearch,
-      color: "text-blue-400",
-      bg: "bg-blue-500/10",
-    },
-    {
-      title: "Chunking",
-      description: "Split documents into manageable pieces using configurable strategies",
-      href: "/app/chunking-studio",
-      icon: Scissors,
-      color: "text-purple-400",
-      bg: "bg-purple-500/10",
-    },
-    {
-      title: "Embedding & Retrieval",
-      description: "Generate vector embeddings and search semantically",
-      href: "/app/retrieval-lab",
-      icon: FlaskConical,
-      color: "text-brand",
-      bg: "bg-brand/10",
-    },
-    {
-      title: "RAG Chat",
-      description: "Query documents with explainable, cited responses",
-      href: "/app/rag-chat",
-      icon: Bot,
-      color: "text-emerald-400",
-      bg: "bg-emerald-500/10",
-    },
-    {
-      title: "Evaluation",
-      description: "Measure retrieval quality and system performance",
-      href: "/app/evaluation",
-      icon: BarChart3,
-      color: "text-amber-400",
-      bg: "bg-amber-500/10",
-    },
-  ];
+  const currentKb = knowledgeBases[0] ?? null;
+  const currentConfig = currentKb
+    ? (currentKb.retrievalConfig as Record<string, unknown> | null)
+    : null;
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-text-primary">Research Overview</h1>
-        <p className="mt-1 text-sm text-text-secondary max-w-2xl">
-          Kairos is an experimental platform for studying Retrieval-Augmented Generation (RAG).
-          Explore each stage of the pipeline below.
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center gap-2 text-xs font-medium text-text-tertiary mb-2">
-            <BookOpen size={14} />
-            Knowledge Bases
-          </div>
-          <p className="text-2xl font-semibold text-text-primary font-mono">{knowledgeBases.length}</p>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-text-primary">Kairos</h1>
+          <p className="mt-1 text-sm text-text-secondary max-w-2xl">
+            Adaptive Retrieval-Augmented Generation Research Platform
+          </p>
         </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center gap-2 text-xs font-medium text-text-tertiary mb-2">
-            <FileSearch size={14} />
-            Documents
-          </div>
-          <p className="text-2xl font-semibold text-text-primary font-mono">{docCount}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center gap-2 text-xs font-medium text-text-tertiary mb-2">
-            <Layers size={14} />
-            Chunks
-          </div>
-          <p className="text-2xl font-semibold text-text-primary font-mono">{chunkCount}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <div className="flex items-center gap-2 text-xs font-medium text-text-tertiary mb-2">
-            <BarChart3 size={14} />
-            Experiments
-          </div>
-          <p className="text-2xl font-semibold text-text-primary font-mono">{experimentCount}</p>
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">RAG Pipeline</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {pipelineStages.map((stage) => {
-            const Icon = stage.icon;
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
             return (
-              <Link
-                key={stage.href}
-                href={stage.href}
-                className="group rounded-xl border border-border bg-surface p-5 transition-all hover:border-brand/30 hover:shadow-md"
-              >
-                <div className="flex items-center justify-between">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stage.bg}`}>
-                    <Icon className={`h-5 w-5 ${stage.color}`} />
-                  </div>
-                  <ArrowRight size={16} className="text-text-tertiary transition-transform group-hover:translate-x-0.5" />
-                </div>
-                <h3 className="mt-4 text-sm font-medium text-text-primary">{stage.title}</h3>
-                <p className="mt-1 text-xs text-text-secondary">{stage.description}</p>
-              </Link>
+              <Button key={action.href} variant="secondary" size="sm" asChild>
+                <Link href={action.href}>
+                  <Icon size={14} />
+                  {action.label}
+                </Link>
+              </Button>
             );
           })}
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-3">What is RAG?</h2>
-        <div className="space-y-3 text-sm text-text-secondary leading-relaxed">
-          <p>
-            <strong className="text-text-primary">Retrieval-Augmented Generation (RAG)</strong> is an AI architecture
-            that combines information retrieval with text generation. Instead of relying solely on a model&apos;s
-            parametric knowledge, RAG retrieves relevant documents from a knowledge base and provides them as context
-            to the language model.
-          </p>
-          <p className="text-xs text-text-tertiary border-l-2 border-brand/30 pl-3 py-1">
-            RAG addresses key limitations of large language models: hallucination, stale knowledge, and lack of
-            source transparency. By grounding responses in retrieved documents, RAG systems can cite sources and
-            provide verifiable answers.
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <h2 className="text-lg font-semibold text-text-primary mb-3">Technology Stack</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary">
-              <Database size={12} />
-              Vector Database
-            </div>
-            <p className="text-sm text-text-primary">PostgreSQL + pgvector</p>
+      {/* Current Configuration */}
+      {currentKb && (
+        <div className="rounded-xl border border-border bg-surface p-5">
+          <div className="flex items-center gap-2 text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-4">
+            <Cpu size={14} />
+            Current Configuration
           </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary">
-              <Cpu size={12} />
-              Embedding Models
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="space-y-1">
+              <span className="text-xs text-text-tertiary">Knowledge Base</span>
+              <p className="text-sm font-medium text-text-primary truncate">{currentKb.name}</p>
+              <p className="text-xs text-text-tertiary">{currentKb._count.documents} documents</p>
             </div>
-            <p className="text-sm text-text-primary">OpenAI / Gemini (configurable)</p>
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary">
-              <Layers size={12} />
-              Chunking Strategies
+            <div className="space-y-1">
+              <span className="text-xs text-text-tertiary">Retrieval Strategy</span>
+              <p className="text-sm font-medium text-text-primary capitalize">
+                {String(currentConfig?.retrievalMode ?? currentConfig?.retrievalStrategy ?? "vector")}
+              </p>
             </div>
-            <p className="text-sm text-text-primary">5 configurable strategies</p>
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-xs font-medium text-text-tertiary">
-              <Bot size={12} />
-              LLM Providers
+            <div className="space-y-1">
+              <span className="text-xs text-text-tertiary">Embedding Model</span>
+              <p className="text-sm font-medium text-text-primary">
+                {String(currentConfig?.embeddingModel ?? "—")}
+              </p>
             </div>
-            <p className="text-sm text-text-primary">OpenAI GPT-4 / Gemini</p>
+            <div className="space-y-1">
+              <span className="text-xs text-text-tertiary">Chunking Strategy</span>
+              <p className="text-sm font-medium text-text-primary capitalize">
+                {String(currentConfig?.chunkStrategy ?? "—")}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs text-text-tertiary">Last Benchmark</span>
+              <p className="text-sm font-medium text-text-primary">
+                {latestBenchmark ? new Date(latestBenchmark.createdAt).toLocaleDateString() : "—"}
+              </p>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Pipeline */}
+      <div className="rounded-xl border border-border bg-surface p-5">
+        <div className="flex items-center gap-2 text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-4">
+          <Layers size={14} />
+          RAG Pipeline
+        </div>
+        <Pipeline stages={PIPELINE_STAGES} size="md" />
       </div>
 
+      {/* Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          label="Knowledge Bases"
+          value={String(knowledgeBases.length)}
+          icon={BookOpen}
+          description="Total knowledge bases"
+        />
+        <MetricCard
+          label="Documents"
+          value={String(docCount)}
+          icon={FileText}
+          description="Uploaded documents"
+        />
+        <MetricCard
+          label="Chunks"
+          value={String(chunkCount)}
+          icon={Layers}
+          description="Document segments"
+        />
+        <MetricCard
+          label="Experiments"
+          value={String(experimentCount)}
+          icon={BarChart3}
+          description="Total experiment runs"
+        />
+      </div>
+
+      {/* Latest Benchmark */}
+      {latestBenchmark && latestBenchmark.aggregatedMetrics && (
+        <div className="rounded-xl border border-border bg-surface p-5">
+          <div className="flex items-center gap-2 text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-4">
+            <BarChart3 size={14} />
+            Latest Benchmark — {latestBenchmark.name ?? "Unnamed"}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {Object.entries(latestBenchmark.aggregatedMetrics as Record<string, number>)
+              .filter(([k]) => k.startsWith("avg") && k !== "avgLatencyMs")
+              .slice(0, 10)
+              .map(([key, val]) => (
+                <div key={key} className="space-y-1">
+                  <span className="text-xs text-text-tertiary">{key.replace("avg", "Avg ")}</span>
+                  <p className="text-lg font-semibold text-text-primary font-mono">
+                    {(val as number).toFixed(4)}
+                  </p>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* What is RAG? */}
+      <ResearchNote title="About RAG">
+        <strong className="text-text-primary">Retrieval-Augmented Generation (RAG)</strong> is an AI architecture
+        that combines information retrieval with text generation. Instead of relying solely on a model&apos;s
+        parametric knowledge, RAG retrieves relevant documents from a knowledge base and provides them as context
+        to the language model. This addresses key limitations of LLMs: hallucination, stale knowledge, and lack of
+        source transparency.
+      </ResearchNote>
+
+      {/* Knowledge Bases Quick List */}
       {knowledgeBases.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-text-primary mb-3">Knowledge Bases</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-text-primary">Knowledge Bases</h2>
+            <Link
+              href="/app/knowledge-bases"
+              className="text-xs font-medium text-brand hover:text-brand-hover transition-colors"
+            >
+              View all
+            </Link>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {knowledgeBases.slice(0, 6).map((kb) => (
               <Link
                 key={kb.id}
                 href={`/app/knowledge-bases/${kb.id}`}
-                className="rounded-lg border border-border bg-surface/50 p-4 transition-colors hover:bg-surface-hover"
+                className="group rounded-lg border border-border bg-surface/50 p-4 transition-all duration-200 hover:border-border-hover hover:bg-surface-hover"
               >
-                <p className="text-sm font-medium text-text-primary truncate">{kb.name}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-text-primary truncate">{kb.name}</p>
+                  <ArrowRight size={14} className="text-text-tertiary opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+                </div>
                 <p className="mt-1 text-xs text-text-tertiary">
-                  {kb._count.documents} documents
+                  {kb._count.documents} document{kb._count.documents !== 1 ? "s" : ""}
                 </p>
               </Link>
             ))}
           </div>
         </div>
+      )}
+
+      {/* Empty State */}
+      {knowledgeBases.length === 0 && (
+        <EmptyState
+          icon={BookOpen}
+          title="No knowledge bases yet"
+          description="Create your first knowledge base to start uploading documents and building retrieval systems."
+          actionHref="/app/knowledge-bases"
+          actionLabel="Create knowledge base"
+        />
       )}
     </div>
   );

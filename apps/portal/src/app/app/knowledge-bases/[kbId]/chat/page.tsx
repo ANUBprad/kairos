@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "@/lib/server/auth-utils";
+import { requireSession } from "@/lib/server/auth-utils";
 import { redirect } from "next/navigation";
 import { ChatInterface } from "@/components/app/chat-interface";
 
@@ -8,8 +8,7 @@ interface Props {
 }
 
 export default async function ChatPage({ params }: Props) {
-  const session = await getServerSession();
-  if (!session) redirect("/login");
+  const session = await requireSession();
 
   const { kbId } = await params;
 

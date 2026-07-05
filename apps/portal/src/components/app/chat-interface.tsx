@@ -274,6 +274,7 @@ export function ChatInterface({ kbId, kbName }: Props) {
                     deleteConv(conv.id);
                   }}
                   className="shrink-0 opacity-0 group-hover:opacity-100 text-text-tertiary hover:text-error transition-all"
+                  aria-label="Delete conversation"
                 >
                   <Trash2 size={12} />
                 </button>
@@ -293,6 +294,7 @@ export function ChatInterface({ kbId, kbName }: Props) {
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className="text-text-tertiary hover:text-text-primary transition-colors"
+            aria-label={showSidebar ? "Collapse sidebar" : "Expand sidebar"}
           >
             {showSidebar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
@@ -380,6 +382,7 @@ export function ChatInterface({ kbId, kbName }: Props) {
               placeholder={activeConversation ? "Ask a question..." : "Start a conversation first..."}
               disabled={!activeConversation || isStreaming}
               rows={1}
+              aria-label="Chat message input"
               className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:border-brand disabled:opacity-40"
             />
             {isStreaming ? (
@@ -387,6 +390,7 @@ export function ChatInterface({ kbId, kbName }: Props) {
                 variant="secondary"
                 onClick={stopGeneration}
                 title="Stop"
+                aria-label="Stop generation"
               >
                 <Square size={16} />
               </Button>
@@ -395,6 +399,7 @@ export function ChatInterface({ kbId, kbName }: Props) {
                 variant="primary"
                 onClick={handleSubmit}
                 disabled={!input.trim() || !activeConversation}
+                aria-label="Send message"
               >
                 <Send size={16} />
               </Button>

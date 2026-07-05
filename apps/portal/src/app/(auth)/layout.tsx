@@ -58,10 +58,10 @@ export default function AuthLayout({
         <div className="relative flex flex-col justify-between w-full p-12 xl:p-16">
           <Link href="/" className="inline-flex items-center gap-3" aria-label="Kairos home">
             <Image
-              src="/kairos-nav.png"
+              src="/kai.png"
               alt="Kairos"
-              width={130}
-              height={30}
+              width={36}
+              height={36}
               priority
               className="object-contain"
             />
@@ -105,10 +105,10 @@ export default function AuthLayout({
           <div className="lg:hidden flex justify-center mb-10">
             <Link href="/" aria-label="Kairos home">
               <Image
-                src="/kairos-nav.png"
+                src="/kai.png"
                 alt="Kairos"
-                width={120}
-                height={28}
+                width={32}
+                height={32}
                 priority
                 className="object-contain"
               />

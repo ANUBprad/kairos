@@ -210,7 +210,7 @@ function EducationSidebar({ eduContentId, onClose }: { eduContentId: string; onC
                 ))}
               </div>
             </div>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">&times;</button>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none" aria-label="Close">&times;</button>
           </div>
           <p className="text-sm text-muted-foreground">{content.summary}</p>
           <div className="text-sm leading-relaxed whitespace-pre-line">{content.body}</div>

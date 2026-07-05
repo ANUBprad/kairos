@@ -261,6 +261,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
             onClick={() => onOpenChange(false)}
             className="text-text-tertiary transition-colors hover:text-text-primary"
             disabled={isUploading}
+            aria-label="Close"
           >
             <X size={20} />
           </button>

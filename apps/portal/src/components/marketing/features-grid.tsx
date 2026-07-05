@@ -61,9 +61,9 @@ export function FeaturesGrid() {
   return (
     <SectionWrapper id="features">
       <ScrollReveal>
-        <SectionHeading>Built for RAG research and experimentation</SectionHeading>
+        <SectionHeading>Research capabilities across the RAG pipeline</SectionHeading>
         <SectionSubheading>
-          Production-grade retrieval infrastructure for AI/ML engineers.
+          Every component is observable, configurable, and measurable.
         </SectionSubheading>
       </ScrollReveal>
 

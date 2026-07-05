@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "@/lib/server/auth-utils";
+import { requireSession } from "@/lib/server/auth-utils";
 import { redirect } from "next/navigation";
 import { DocumentTable } from "@/components/app/document-table";
 import { listDocuments } from "@/lib/actions/document";
@@ -9,8 +9,7 @@ interface Props {
 }
 
 export default async function KnowledgeBasePage({ params }: Props) {
-  const session = await getServerSession();
-  if (!session) redirect("/login");
+  const session = await requireSession();
 
   const { kbId } = await params;
 

@@ -52,11 +52,11 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="inline-block mb-4" aria-label="Kairos home">
               <Image
-                src="/kairos-footer.png"
+                src="/kai.png"
                 alt="Kairos"
-                width={120}
-                height={24}
-                className="object-contain h-auto"
+                width={28}
+                height={28}
+                className="object-contain"
               />
             </Link>
             <p className="text-[13px] text-text-tertiary leading-relaxed max-w-[200px]">
