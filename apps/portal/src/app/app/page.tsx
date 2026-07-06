@@ -2,17 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/server/auth-utils";
 import Link from "next/link";
 import {
-  FileSearch,
-  Scissors,
-  FlaskConical,
-  BarChart3,
   ArrowRight,
-  Upload,
-  BookOpen,
-  FileText,
-  Layers,
   Cpu,
-  Database,
+  Layers,
+  BarChart3,
 } from "lucide-react";
 import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
 import { MetricCard } from "@/components/research/metric-card";
@@ -22,20 +15,20 @@ import { Pipeline } from "@/components/research/pipeline";
 import { Button } from "@/components/ui/button";
 
 const PIPELINE_STAGES = [
-  { id: "documents", label: "Documents", icon: FileText, color: "bg-blue-500" },
-  { id: "chunking", label: "Chunking", icon: Scissors, color: "bg-teal-500" },
-  { id: "embeddings", label: "Embeddings", icon: Database, color: "bg-emerald-500" },
-  { id: "retrieval", label: "Retrieval", icon: FlaskConical, color: "bg-yellow-500" },
-  { id: "prompt", label: "Prompt", icon: FileSearch, color: "bg-orange-500" },
-  { id: "llm", label: "LLM", icon: Cpu, color: "bg-purple-500" },
-  { id: "evaluation", label: "Evaluation", icon: BarChart3, color: "bg-violet-500" },
+  { id: "documents", label: "Documents", icon: "FileText", color: "bg-blue-500" },
+  { id: "chunking", label: "Chunking", icon: "Scissors", color: "bg-teal-500" },
+  { id: "embeddings", label: "Embeddings", icon: "Database", color: "bg-emerald-500" },
+  { id: "retrieval", label: "Retrieval", icon: "FlaskConical", color: "bg-yellow-500" },
+  { id: "prompt", label: "Prompt", icon: "FileSearch", color: "bg-orange-500" },
+  { id: "llm", label: "LLM", icon: "Cpu", color: "bg-purple-500" },
+  { id: "evaluation", label: "Evaluation", icon: "BarChart3", color: "bg-violet-500" },
 ];
 
 const quickActions = [
-  { label: "Upload Documents", href: "/app/knowledge-bases", icon: Upload },
-  { label: "Open Retrieval Lab", href: "/app/retrieval-lab", icon: FlaskConical },
-  { label: "Run Evaluation", href: "/app/evaluation", icon: BarChart3 },
-  { label: "View Architecture", href: "/app/architecture", icon: BookOpen },
+  { label: "Upload Documents", href: "/app/knowledge-bases", icon: "Upload" },
+  { label: "Open Retrieval Lab", href: "/app/retrieval-lab", icon: "FlaskConical" },
+  { label: "Run Evaluation", href: "/app/evaluation", icon: "BarChart3" },
+  { label: "View Architecture", href: "/app/architecture", icon: "BookOpen" },
 ];
 
 export default async function AppPage() {
@@ -78,17 +71,13 @@ export default async function AppPage() {
           </p>
         </div>
         <div className="hidden sm:flex items-center gap-2 shrink-0">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Button key={action.href} variant="secondary" size="sm" asChild>
-                <Link href={action.href}>
-                  <Icon size={14} />
-                  {action.label}
-                </Link>
-              </Button>
-            );
-          })}
+          {quickActions.map((action) => (
+            <Button key={action.href} variant="secondary" size="sm" asChild>
+              <Link href={action.href}>
+                {action.label}
+              </Link>
+            </Button>
+          ))}
         </div>
       </div>
 
@@ -147,25 +136,25 @@ export default async function AppPage() {
         <MetricCard
           label="Knowledge Bases"
           value={String(knowledgeBases.length)}
-          icon={BookOpen}
+          icon="BookOpen"
           description="Total knowledge bases"
         />
         <MetricCard
           label="Documents"
           value={String(docCount)}
-          icon={FileText}
+          icon="FileText"
           description="Uploaded documents"
         />
         <MetricCard
           label="Chunks"
           value={String(chunkCount)}
-          icon={Layers}
+          icon="Layers"
           description="Document segments"
         />
         <MetricCard
           label="Experiments"
           value={String(experimentCount)}
-          icon={BarChart3}
+          icon="BarChart3"
           description="Total experiment runs"
         />
       </div>
@@ -237,7 +226,7 @@ export default async function AppPage() {
       {/* Empty State */}
       {knowledgeBases.length === 0 && (
         <EmptyState
-          icon={BookOpen}
+          icon="BookOpen"
           title="No knowledge bases yet"
           description="Create your first knowledge base to start uploading documents and building retrieval systems."
           actionHref="/app/knowledge-bases"

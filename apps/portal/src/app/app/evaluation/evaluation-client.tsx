@@ -8,7 +8,10 @@ import {
   TrendingUp, Minus, SplitSquareHorizontal,
   Trophy, Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { InputDialog } from "@/components/ui/input-dialog";
 import {
   createDataset,
   importJsonDataset,
@@ -325,6 +328,17 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
     runs: Array<{ id: string; name: string | null; status: string; createdAt: Date }>;
   } | null>(null);
 
+  // Dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [benchmarkDialogOpen, setBenchmarkDialogOpen] = useState(false);
+  const [benchmarkDatasetId, setBenchmarkDatasetId] = useState<string | null>(null);
+  const [benchmarkKbId, setBenchmarkKbId] = useState("");
+  const [benchmarkLabel, setBenchmarkLabel] = useState("");
+  const [benchmarkLoading, setBenchmarkLoading] = useState(false);
+  const [availableKbs, setAvailableKbs] = useState<Array<{ name: string; id: string }>>([]);
+
   const loadDetail = useCallback(async (id: string) => {
     const d = await getDataset(id) as {
       id: string; name: string; description: string | null;
@@ -370,24 +384,46 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this dataset and all its runs?")) return;
-    await deleteDataset(id);
-    if (selectedDataset === id) {
-      onSelect(null);
-      setDatasetDetail(null);
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+    setDeleteLoading(true);
+    try {
+      await deleteDataset(deleteTargetId);
+      if (selectedDataset === deleteTargetId) {
+        onSelect(null);
+        setDatasetDetail(null);
+      }
+      toast.success("Dataset deleted");
+    } catch {
+      toast.error("Failed to delete dataset");
+    } finally {
+      setDeleteLoading(false);
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
     }
   };
 
-  const handleRunBenchmark = async (datasetId: string) => {
+  const openDeleteDialog = (id: string) => {
+    setDeleteTargetId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const openBenchmarkDialog = async (datasetId: string) => {
     const kbs = await listKbsForLab();
     if (kbs.length === 0) {
-      alert("No knowledge bases available. Create one first.");
+      toast.error("No knowledge bases available. Create one first.");
       return;
     }
-    const kbId = prompt(`Enter Knowledge Base ID (available: ${kbs.map((k: { name: string; id: string }) => `${k.name} (${k.id})`).join(", ")})`);
-    if (!kbId) return;
-    const label = prompt("Run name (optional):") || undefined;
+    setAvailableKbs(kbs);
+    setBenchmarkDatasetId(datasetId);
+    setBenchmarkKbId("");
+    setBenchmarkLabel("");
+    setBenchmarkDialogOpen(true);
+  };
+
+  const handleRunBenchmark = async () => {
+    if (!benchmarkDatasetId || !benchmarkKbId.trim()) return;
+    setBenchmarkLoading(true);
     try {
       const config: RetrievalConfig = {
         topK: 4,
@@ -399,10 +435,13 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
         retrievalMode: "vector" as const,
         embeddingProvider: "openai",
       };
-      await startBenchmark(datasetId, kbId, config, label);
-      alert("Benchmark started! Check the Runs tab.");
+      await startBenchmark(benchmarkDatasetId, benchmarkKbId.trim(), config, benchmarkLabel.trim() || undefined);
+      toast.success("Benchmark started! Check the Runs tab.");
+      setBenchmarkDialogOpen(false);
     } catch (err) {
-      alert(`Error: ${err}`);
+      toast.error(`Error: ${err}`);
+    } finally {
+      setBenchmarkLoading(false);
     }
   };
 
@@ -510,14 +549,14 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleRunBenchmark(ds.id); }}
+                    onClick={(e) => { e.stopPropagation(); openBenchmarkDialog(ds.id); }}
                     className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-brand/10 text-brand hover:bg-brand-hover"
                   >
                     <Play size={12} />
                     Run
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(ds.id); }}
+                    onClick={(e) => { e.stopPropagation(); openDeleteDialog(ds.id); }}
                     className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20"
                     aria-label="Delete dataset"
                   >
@@ -548,6 +587,36 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
           </div>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={() => { setDeleteDialogOpen(false); setDeleteTargetId(null); }}
+        onConfirm={handleDelete}
+        title="Delete Dataset"
+        description="This will permanently delete this dataset and all its benchmark runs. This action cannot be undone."
+        confirmLabel="Delete"
+        isLoading={deleteLoading}
+      />
+
+      {/* Benchmark Input Dialog */}
+      <InputDialog
+        open={benchmarkDialogOpen}
+        onClose={() => { setBenchmarkDialogOpen(false); setBenchmarkDatasetId(null); }}
+        onSubmit={async (value) => {
+          if (!benchmarkKbId.trim()) {
+            setBenchmarkKbId(value);
+          } else {
+            setBenchmarkLabel(value);
+            await handleRunBenchmark();
+          }
+        }}
+        title={benchmarkKbId ? "Run Benchmark" : "Select Knowledge Base"}
+        description={benchmarkKbId ? "Optional: Enter a name for this benchmark run." : `Available: ${availableKbs.map((k) => `${k.name} (${k.id})`).join(", ")}`}
+        placeholder={benchmarkKbId ? "Run name (optional)" : "Enter Knowledge Base ID"}
+        confirmLabel={benchmarkKbId ? "Start Benchmark" : "Next"}
+        isLoading={benchmarkLoading}
+      />
     </div>
   );
 }

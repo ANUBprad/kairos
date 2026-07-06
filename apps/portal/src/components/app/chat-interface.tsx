@@ -155,6 +155,11 @@ export function ChatInterface({ kbId, kbName }: Props) {
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
+    // Abort any previous streaming request
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
     const controller = new AbortController();
     abortRef.current = controller;
 

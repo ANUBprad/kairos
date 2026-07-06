@@ -15,8 +15,8 @@ const footerColumns = [
     title: "Resources",
     links: [
       { label: "GitHub", href: "https://github.com/kairos-ai/kairos" },
-      { label: "Architecture", href: "/docs/architecture" },
-      { label: "Deployment", href: "/docs/deployment" },
+      { label: "Architecture", href: "/app/architecture" },
+      { label: "Project Guide", href: "/app/project-guide" },
     ],
   },
   {

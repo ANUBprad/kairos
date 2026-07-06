@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowRight, type LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { getIcon } from "./icon-registry";
 
 export interface PipelineStage {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: string;
   color: string;
 }
 
@@ -25,21 +26,24 @@ export function Pipeline({ stages, className = "", size = "md" }: PipelineProps)
   const s = sizeMap[size];
   return (
     <div className={`flex items-center justify-center flex-wrap gap-0 sm:gap-1 ${className}`}>
-      {stages.map((stage, i) => (
-        <div key={stage.id} className="flex items-center">
-          <div className="flex flex-col items-center gap-1.5 px-1.5 sm:px-2 py-2 rounded-lg">
-            <div className={`${s.dot} rounded-full flex items-center justify-center text-white ${stage.color}`}>
-              <stage.icon size={s.icon} />
+      {stages.map((stage, i) => {
+        const Icon = getIcon(stage.icon);
+        return (
+          <div key={stage.id} className="flex items-center">
+            <div className="flex flex-col items-center gap-1.5 px-1.5 sm:px-2 py-2 rounded-lg">
+              <div className={`${s.dot} rounded-full flex items-center justify-center text-white ${stage.color}`}>
+                <Icon size={s.icon} />
+              </div>
+              <span className={`${s.text} font-medium text-text-secondary whitespace-nowrap`}>
+                {stage.label}
+              </span>
             </div>
-            <span className={`${s.text} font-medium text-text-secondary whitespace-nowrap`}>
-              {stage.label}
-            </span>
+            {i < stages.length - 1 && (
+              <ArrowRight size={size === "sm" ? 12 : 14} className="text-text-tertiary/30 mx-0.5 sm:mx-1 shrink-0" />
+            )}
           </div>
-          {i < stages.length - 1 && (
-            <ArrowRight size={size === "sm" ? 12 : 14} className="text-text-tertiary/30 mx-0.5 sm:mx-1 shrink-0" />
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

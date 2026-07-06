@@ -1,55 +1,90 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GitBranch, Gauge, DollarSign, RefreshCw, BarChart3, Plug, Layers, Shield } from "lucide-react";
+import {
+  FileText, Scissors, Database, FlaskConical, Eye, BarChart3,
+  Beaker, Trophy, FileBarChart, ArrowRight,
+} from "lucide-react";
 import { SectionWrapper } from "@/components/marketing/section-wrapper";
 import { Button } from "@/components/ui/button";
-import { ScrollReveal, StaggerContainer } from "@/components/shared/scroll-reveal";
+import { ScrollReveal } from "@/components/shared/scroll-reveal";
 
 export const metadata: Metadata = {
   title: "Features",
-  description: "Kairos RAG research platform features: semantic search, chunking strategies, embedding models, retrieval evaluation, and explainable AI.",
+  description: "Research modules for studying chunking strategies, embedding models, retrieval algorithms, evaluation metrics, and explainable AI in RAG systems.",
 };
 
-const features = [
+const modules = [
   {
-    icon: GitBranch,
-    title: "Adaptive Routing",
-    desc: "Every query is classified by complexity and routed to the optimal retrieval strategy — simple keyword search, dense vector retrieval, or multi-hop reasoning across documents.",
+    icon: FileText,
+    title: "Document Intelligence",
+    what: "Upload PDF, DOCX, TXT, CSV, and Markdown files with automatic text extraction, SHA-256 deduplication, and processing status tracking.",
+    why: "Garbage in, garbage out. Document quality determines retrieval quality. Proper ingestion is the foundation of any RAG system.",
+    learn: "How document preprocessing affects downstream retrieval. Why deduplication matters. How file type impacts extraction quality.",
+    href: "/app/knowledge-bases",
   },
   {
-    icon: Gauge,
-    title: "Confidence Calibration",
-    desc: "Every answer includes a calibrated confidence score using Platt scaling and isotonic regression. Know exactly how reliable each response is.",
+    icon: Scissors,
+    title: "Chunking Strategies",
+    what: "Five chunking strategies: recursive (general-purpose), sentence (factual QA), fixed-size (predictable), Markdown (structured docs), and semantic (narrative). Configurable chunk size and overlap.",
+    why: "Chunk size and strategy directly determine what information is available for retrieval. Too small loses context. Too large introduces noise.",
+    learn: "The precision-recall tradeoff in chunking. Why 500-1000 tokens is the sweet spot. How overlap prevents information loss at boundaries.",
+    href: "/app/chunking-studio",
   },
   {
-    icon: DollarSign,
-    title: "Budget Optimization",
-    desc: "An ML model allocates compute budget proportional to query difficulty. Simple queries cost pennies. Complex queries get the resources they need.",
+    icon: Database,
+    title: "Embedding Pipeline",
+    what: "Multi-provider embeddings (OpenAI, Gemini) stored in pgvector. Model selection, dimension configuration, and batch processing.",
+    why: "Embeddings are the bridge between text and search. The choice of embedding model determines what 'similarity' means for your system.",
+    learn: "How embedding models differ. Why dimensions matter. The relationship between embedding quality and retrieval accuracy.",
+    href: "/app/retrieval-lab",
   },
   {
-    icon: RefreshCw,
-    title: "Feedback Learning",
-    desc: "Thumbs up or down on any answer. Those signals retrain the strategy selector and budget optimizer, making the system smarter with every query.",
+    icon: FlaskConical,
+    title: "Retrieval Science",
+    what: "Interactive retrieval testing with real-time parameter adjustment. Compare vector search, BM25, hybrid (RRF), query expansion, multi-query, and reranking strategies.",
+    why: "No single strategy works best for all queries. The research shows hybrid approaches consistently outperform individual strategies.",
+    learn: "When to use each strategy. How Reciprocal Rank Fusion combines results. Why query expansion improves recall by 5-10%.",
+    href: "/app/retrieval-lab",
+  },
+  {
+    icon: Eye,
+    title: "Explainable AI",
+    what: "View which chunks were retrieved, why they matched (similarity scores), and how they influenced the generated answer. Full prompt visibility with citations.",
+    why: "A RAG system that cannot explain its answers is a black box. Explainability is required for debugging, validation, and trust.",
+    learn: "How to identify retrieval failures. Why some chunks are retrieved but not used. How prompt construction affects answer quality.",
+    href: "/app/rag-chat",
   },
   {
     icon: BarChart3,
-    title: "Full Observability",
-    desc: "Per-query latency, confidence, cost, and strategy breakdown. Every decision is instrumented and visible in your dashboard.",
+    title: "Evaluation Framework",
+    what: "10+ Information Retrieval metrics: Recall@K, Precision@K, MRR, nDCG, Hit Rate, Faithfulness, Context Precision, Context Recall. Statistical analysis with confidence intervals.",
+    why: "Single metrics are misleading. Statistical rigor requires confidence intervals, distribution analysis, and proper comparison methodology.",
+    learn: "What each metric actually measures. Why Recall@K matters more than accuracy for retrieval. How to interpret nDCG scores.",
+    href: "/app/evaluation",
   },
   {
-    icon: Plug,
-    title: "Provider Agnostic",
-    desc: "Works with any LLM (OpenAI, Gemini, Claude, Groq, Ollama), any vector store, and any embedding model. No vendor lock-in.",
+    icon: Beaker,
+    title: "Experiment Tracking",
+    what: "Record every experiment configuration, capture retrieval traces, and compare results across runs. Automatic metric calculation and aggregation.",
+    why: "Reproducibility requires capturing every variable. Without experiment tracking, results cannot be validated or compared.",
+    learn: "How to design controlled experiments. Why configuration snapshots matter. The importance of latency tracking alongside quality metrics.",
+    href: "/app/experiments",
   },
   {
-    icon: Layers,
-    title: "Multi-Strategy Engine",
-    desc: "Three built-in retrieval strategies — hybrid keyword+vector, MMR with cross-encoder rerank, and iterative multi-hop reasoning.",
+    icon: Trophy,
+    title: "Benchmark Campaigns",
+    what: "Run multiple strategies, embedding models, and chunk configurations against labeled datasets. Leaderboard ranking with composite scores.",
+    why: "Individual experiments show what works for one configuration. Campaigns show what works best across the configuration space.",
+    learn: "How to design benchmark datasets. Why multi-configuration comparison is necessary. How composite scores weight different metrics.",
+    href: "/app/evaluation",
   },
   {
-    icon: Shield,
-    title: "Security & Privacy",
-    desc: "API keys hashed with SHA-256, TLS 1.3 in transit, AES-256 at rest. GitHub OAuth authentication. Self-hostable for air-gapped environments.",
+    icon: FileBarChart,
+    title: "Academic Report Generation",
+    what: "Export comprehensive evaluation reports in Markdown and JSON. Title page, executive summary, configuration matrix, metric tables, statistical analysis, and recommendations.",
+    why: "Research requires documentation. Reports enable sharing findings, peer review, and building on previous work.",
+    learn: "How to structure a research report. What belongs in an executive summary. How to present statistical results clearly.",
+    href: "/app/evaluation",
   },
 ];
 
@@ -58,37 +93,63 @@ export default function FeaturesPage() {
     <>
       <div className="pt-28 pb-8 text-center px-6 sm:px-8">
         <ScrollReveal>
-          <h1 className="text-[40px] sm:text-[48px] font-semibold tracking-tight text-text-primary">Features</h1>
+          <h1 className="text-[40px] sm:text-[48px] font-semibold tracking-tight text-text-primary">
+            Research Modules
+          </h1>
           <p className="mt-4 text-[18px] text-text-secondary max-w-2xl mx-auto">
-            A research platform for studying and experimenting with retrieval-augmented generation.
+            Nine modules covering the complete RAG research pipeline — from document ingestion to academic reporting.
           </p>
         </ScrollReveal>
       </div>
 
       <SectionWrapper>
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4" staggerDelay={0.06}>
-          {features.map((feature) => {
-            const Icon = feature.icon;
+        <div className="max-w-4xl mx-auto space-y-8">
+          {modules.map((mod, i) => {
+            const Icon = mod.icon;
             return (
-              <div
-                key={feature.title}
-                className="rounded-[14px] border border-border bg-surface/50 p-6 transition-all duration-300 hover:-translate-y-[2px] hover:border-brand/20 hover:bg-surface hover:shadow-lg"
-              >
-                <Icon size={18} className="text-brand mb-3" />
-                <h3 className="text-sm font-semibold text-text-primary mb-1.5">{feature.title}</h3>
-                <p className="text-xs text-text-tertiary leading-relaxed">{feature.desc}</p>
-              </div>
+              <ScrollReveal key={mod.title} delay={i * 0.04}>
+                <div className="rounded-[14px] border border-border bg-surface/50 p-6 sm:p-8 transition-all duration-300 hover:border-brand/20 hover:bg-surface hover:shadow-lg group">
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 mt-1">
+                      <Icon size={20} className="text-brand" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-lg font-semibold text-text-primary mb-3">{mod.title}</h2>
+                      <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                        <div>
+                          <span className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">What it is</span>
+                          <p className="mt-1 text-text-secondary leading-relaxed">{mod.what}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">Why it matters</span>
+                          <p className="mt-1 text-text-secondary leading-relaxed">{mod.why}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-text-tertiary uppercase tracking-wider">What you learn</span>
+                          <p className="mt-1 text-text-secondary leading-relaxed">{mod.learn}</p>
+                        </div>
+                      </div>
+                      <Link
+                        href={mod.href}
+                        className="inline-flex items-center gap-1 mt-4 text-sm font-medium text-brand group-hover:gap-2 transition-all"
+                      >
+                        Try it <ArrowRight size={14} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </ScrollReveal>
             );
           })}
-        </StaggerContainer>
+        </div>
       </SectionWrapper>
 
       <div className="text-center py-20 px-6 sm:px-8">
         <ScrollReveal>
-          <h2 className="text-[24px] font-semibold text-text-primary mb-4">Ready to explore RAG?</h2>
-          <p className="text-text-secondary mb-8 max-w-md mx-auto">Start with GitHub authentication. No credit card required.</p>
+          <h2 className="text-[24px] font-semibold text-text-primary mb-4">Start experimenting</h2>
+          <p className="text-text-secondary mb-8 max-w-md mx-auto">Upload documents, run retrieval tests, and generate evaluation reports.</p>
           <Button variant="primary" size="lg" asChild>
-            <Link href="/signup">Start building</Link>
+            <Link href="/app">Open Platform <ArrowRight size={16} /></Link>
           </Button>
         </ScrollReveal>
       </div>

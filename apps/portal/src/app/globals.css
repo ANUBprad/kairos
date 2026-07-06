@@ -42,25 +42,26 @@
 }
 
 .light {
-  --color-bg: #FFFFFF;
-  --color-bg-secondary: #F5F5F5;
-  --color-surface: #F5F5F5;
-  --color-surface-hover: #EEEEEE;
-  --color-border: #E5E5E5;
-  --color-border-hover: #D0D0D0;
+  --color-bg: #FAFBFC;
+  --color-bg-secondary: #F1F3F5;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8F9FA;
+  --color-border: #E9ECEF;
+  --color-border-hover: #DEE2E6;
 
-  --color-text-primary: #0A0A0A;
-  --color-text-secondary: #6B6B6B;
-  --color-text-tertiary: #A0A0A0;
+  --color-text-primary: #212529;
+  --color-text-secondary: #495057;
+  --color-text-tertiary: #868E96;
 
   --color-success-bg: #F0FDF4;
+  --color-brand-muted: rgba(255, 90, 10, 0.08);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
-  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 20px rgba(255, 90, 10, 0.1);
-  --shadow-glow-strong: 0 0 40px rgba(255, 90, 10, 0.15);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.08), 0 8px 16px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 20px rgba(255, 90, 10, 0.08);
+  --shadow-glow-strong: 0 0 40px rgba(255, 90, 10, 0.12);
 }
 
 @layer base {
@@ -82,8 +83,8 @@
   }
 
   ::selection {
-    background-color: rgba(255, 90, 10, 0.3);
-    color: #F0F0F0;
+    background-color: rgba(255, 90, 10, 0.25);
+    color: #212529;
   }
 
   :focus-visible {
@@ -104,12 +105,12 @@
 
   .light {
     --primary: 255 90 10;
-    --border: 229 229 229;
-    --foreground: 10 10 10;
-    --muted-foreground: 107 107 107;
-    --background: 255 255 255;
-    --accent: 238 238 238;
-    --card: 245 245 245;
+    --border: 233 236 239;
+    --foreground: 33 37 41;
+    --muted-foreground: 73 80 87;
+    --background: 250 251 252;
+    --accent: 241 243 245;
+    --card: 255 255 255;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -134,8 +135,11 @@
 }
 
 .light .glass {
-  background: rgba(255, 255, 255, 0.7);
-  border-bottom: 1px solid rgba(229, 229, 229, 0.7);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(233, 236, 239, 0.8);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 @utility glow {
@@ -173,4 +177,59 @@
 
 @utility animate-accordion-up {
   animation: accordion-up 200ms ease-out;
+}
+
+.light * {
+  border-color: var(--color-border);
+}
+
+.light .bg-surface {
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.light .bg-surface\/50 {
+  background-color: rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-sm);
+}
+
+.light .bg-surface\/80 {
+  background-color: rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-sm);
+}
+
+.light .border-border {
+  border-color: var(--color-border);
+}
+
+.light .hover\:border-border-hover:hover {
+  border-color: var(--color-border-hover);
+}
+
+.light .hover\:bg-surface-hover:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.light .hover\:bg-surface\/80:hover {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.light .text-text-primary {
+  color: var(--color-text-primary);
+}
+
+.light .text-text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.light .text-text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.light .bg-bg {
+  background-color: var(--color-bg);
+}
+
+.light .bg-bg-secondary {
+  background-color: var(--color-bg-secondary);
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { type LucideIcon, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { getIcon } from "./icon-registry";
 
 interface MetricCardProps {
   label: string;
   value: string;
   description?: string;
-  icon?: LucideIcon;
+  icon?: string;
   trend?: "up" | "down" | "neutral";
   trendValue?: string;
   className?: string;
@@ -16,11 +17,12 @@ export function MetricCard({
   label,
   value,
   description,
-  icon: Icon,
+  icon,
   trend,
   trendValue,
   className = "",
 }: MetricCardProps) {
+  const Icon = icon ? getIcon(icon) : null;
   const TrendIcon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : Minus;
   const trendColor = trend === "up" ? "text-success" : trend === "down" ? "text-error" : "text-text-tertiary";
 

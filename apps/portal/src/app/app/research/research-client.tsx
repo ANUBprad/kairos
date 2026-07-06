@@ -1,10 +1,9 @@
 "use client";
 
 import {
-  Database, FileText, Scissors, TableProperties,
-  FlaskConical, BarChart3, Clock, TrendingUp,
-  CheckCircle2, BookOpen, Search,
-  ScrollText, Bot, Cpu, Layers,
+  BarChart3, Clock, TrendingUp,
+  CheckCircle2, BookOpen,
+  Cpu, Layers,
 } from "lucide-react";
 import { MetricCard } from "@/components/research/metric-card";
 import { Pipeline } from "@/components/research/pipeline";
@@ -45,13 +44,13 @@ interface ResearchDashboardProps {
 }
 
 const PIPELINE_STAGES = [
-  { id: "documents", label: "Documents", icon: FileText, color: "bg-blue-500" },
-  { id: "chunks", label: "Chunks", icon: Scissors, color: "bg-teal-500" },
-  { id: "embeddings", label: "Embeddings", icon: TableProperties, color: "bg-emerald-500" },
-  { id: "retrieval", label: "Retrieval", icon: Search, color: "bg-yellow-500" },
-  { id: "prompt", label: "Prompt", icon: ScrollText, color: "bg-orange-500" },
-  { id: "llm", label: "LLM", icon: Bot, color: "bg-purple-500" },
-  { id: "evaluation", label: "Evaluation", icon: BarChart3, color: "bg-violet-500" },
+  { id: "documents", label: "Documents", icon: "FileText", color: "bg-blue-500" },
+  { id: "chunks", label: "Chunks", icon: "Scissors", color: "bg-teal-500" },
+  { id: "embeddings", label: "Embeddings", icon: "TableProperties", color: "bg-emerald-500" },
+  { id: "retrieval", label: "Retrieval", icon: "Search", color: "bg-yellow-500" },
+  { id: "prompt", label: "Prompt", icon: "ScrollText", color: "bg-orange-500" },
+  { id: "llm", label: "LLM", icon: "Bot", color: "bg-purple-500" },
+  { id: "evaluation", label: "Evaluation", icon: "BarChart3", color: "bg-violet-500" },
 ];
 
 export function ResearchDashboard({
@@ -139,14 +138,14 @@ export function ResearchDashboard({
 
       {/* KB Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <MetricCard label="Knowledge Bases" value={String(knowledgeBases)} icon={Database} />
-        <MetricCard label="Documents" value={String(totalDocuments)} icon={FileText} />
-        <MetricCard label="Chunks" value={String(totalChunks)} icon={Scissors} />
-        <MetricCard label="Embeddings" value={String(totalEmbeddings)} icon={TableProperties} />
-        <MetricCard label="Experiments" value={String(totalExperiments)} icon={FlaskConical} />
-        <MetricCard label="Experiment Runs" value={String(totalExperimentRuns)} icon={BarChart3} />
-        <MetricCard label="Avg Recall@K" value={avgRecall.toFixed(4)} icon={TrendingUp} />
-        <MetricCard label="Datasets" value={String(datasets.length)} icon={BookOpen} />
+        <MetricCard label="Knowledge Bases" value={String(knowledgeBases)} icon="Database" />
+        <MetricCard label="Documents" value={String(totalDocuments)} icon="FileText" />
+        <MetricCard label="Chunks" value={String(totalChunks)} icon="Scissors" />
+        <MetricCard label="Embeddings" value={String(totalEmbeddings)} icon="TableProperties" />
+        <MetricCard label="Experiments" value={String(totalExperiments)} icon="FlaskConical" />
+        <MetricCard label="Experiment Runs" value={String(totalExperimentRuns)} icon="BarChart3" />
+        <MetricCard label="Avg Recall@K" value={avgRecall.toFixed(4)} icon="TrendingUp" />
+        <MetricCard label="Datasets" value={String(datasets.length)} icon="BookOpen" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 mb-8">

@@ -1,10 +1,10 @@
 "use client";
 
-import { type LucideIcon, BookOpen } from "lucide-react";
+import { getIcon } from "./icon-registry";
 import { Button } from "@/components/ui/button";
 
 interface EmptyStateProps {
-  icon?: LucideIcon;
+  icon?: string;
   title: string;
   description: string;
   actionLabel?: string;
@@ -14,7 +14,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  icon: Icon = BookOpen,
+  icon = "BookOpen",
   title,
   description,
   actionLabel,
@@ -22,6 +22,7 @@ export function EmptyState({
   actionHref,
   className = "",
 }: EmptyStateProps) {
+  const Icon = getIcon(icon);
   const actionProps = actionHref
     ? { asChild: true as const, onClick: undefined as (() => void) | undefined }
     : { asChild: false as const, onClick: onAction };

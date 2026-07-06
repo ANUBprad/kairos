@@ -214,28 +214,27 @@ npm run dev
 ### Environment Variables
 
 ```env
-# Database
+# Database (Required)
 DATABASE_URL="postgresql://user:password@host:5432/kairos"
-DIRECT_URL="postgresql://user:password@host:5432/kairos"
 
-# Authentication
+# Authentication (Required)
 BETTER_AUTH_SECRET="your-secret-key"
-BETTER_AUTH_URL="http://localhost:3000"
+
+# GitHub OAuth (Optional)
 GITHUB_CLIENT_ID="your-github-client-id"
 GITHUB_CLIENT_SECRET="your-github-client-secret"
 
-# AI Services
+# File Storage (Required for uploads)
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
+
+# AI Providers (At least one required)
 OPENAI_API_KEY="sk-..."
 GEMINI_API_KEY="AIza..."
-
-# File Storage
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME="..."
-CLOUIDNARY_API_KEY="..."
-CLOUDINARY_API_SECRET="..."
-
-# Next.js
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
+
+See `apps/portal/.env.example` for the complete list of environment variables.
 
 ---
 

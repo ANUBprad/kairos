@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 function getInitials(name?: string | null, email?: string): string {
@@ -10,6 +10,15 @@ function getInitials(name?: string | null, email?: string): string {
     return name.slice(0, 2).toUpperCase();
   }
   return (email?.charAt(0) || "?").toUpperCase();
+}
+
+function isValidImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 interface UserAvatarProps {
@@ -28,15 +37,18 @@ const sizeMap = {
 
 export function UserAvatar({ image, name, email, size = "sm", className }: UserAvatarProps) {
   const initials = getInitials(name, email);
+  const [imgError, setImgError] = useState(false);
 
-  if (image) {
+  if (image && !imgError && isValidImageUrl(image)) {
     return (
-      <Image
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
         src={image}
         alt={name || email}
         width={40}
         height={40}
         className={cn("rounded-full object-cover shrink-0", sizeMap[size], className)}
+        onError={() => setImgError(true)}
       />
     );
   }

@@ -186,6 +186,11 @@ export function RagChat({ kbs }: Props) {
     const assistantMsg: Message = { id: `assistant-${Date.now()}`, role: "assistant", content: "", pipeline: undefined };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
+    // Abort any previous streaming request
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+
     const controller = new AbortController();
     abortRef.current = controller;
 
