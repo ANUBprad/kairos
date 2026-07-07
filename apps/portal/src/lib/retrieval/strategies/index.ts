@@ -112,6 +112,7 @@ export async function executeRetrievalWithTrace(
       durationMs: mqDuration,
       output: { variations },
     });
+    ctx.multiQueryVariations = variations;
     activeStrategy = wrapper;
   }
 
@@ -161,12 +162,17 @@ export async function executeRetrievalWithTrace(
 
   const totalDurationMs = Math.round((performance.now() - startTotal) * 100) / 100;
 
+  const embeddingMs = (result.metadata?.embeddingMs as number) || 0;
+  const vectorSearchMs = (result.metadata?.vectorSearchMs as number) || 0;
+
   return {
     strategy: mergedConfig.strategy,
     query,
     steps,
     result: finalChunks,
     totalDurationMs,
+    embeddingMs,
+    vectorSearchMs,
   };
 }
 

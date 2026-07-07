@@ -10,21 +10,25 @@ export class VectorStrategy implements RetrievalStrategy {
   async retrieve(ctx: RetrievalContext): Promise<RetrievalResult> {
     const provider = getEmbeddingProvider(ctx.embeddingProvider);
 
+    const embedStart = performance.now();
     const embedResponse = await provider.generateEmbedding({
       input: ctx.query,
       model: ctx.embeddingModel || undefined,
     });
+    const embedDuration = Math.round((performance.now() - embedStart) * 100) / 100;
 
     const queryEmbedding = embedResponse.embeddings[0];
     if (!queryEmbedding) {
-      return { chunks: [], metadata: { error: "Failed to generate embedding" } };
+      return { chunks: [], metadata: { error: "Failed to generate embedding", embeddingMs: embedDuration, vectorSearchMs: 0 } };
     }
 
+    const searchStart = performance.now();
     const results = await vectorStore.similaritySearch(queryEmbedding, {
       knowledgeBaseIds: [ctx.kbId],
       topK: ctx.topK,
       minSimilarity: ctx.minSimilarity,
     });
+    const searchDuration = Math.round((performance.now() - searchStart) * 100) / 100;
 
     const docIds = [...new Set(results.map((r) => r.documentId))];
     const docs = docIds.length > 0
@@ -55,6 +59,8 @@ export class VectorStrategy implements RetrievalStrategy {
       metadata: {
         embeddingModel: ctx.embeddingModel,
         dimensions: queryEmbedding.length,
+        embeddingMs: embedDuration,
+        vectorSearchMs: searchDuration,
       },
     };
   }

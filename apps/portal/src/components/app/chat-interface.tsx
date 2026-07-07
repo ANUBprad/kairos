@@ -210,6 +210,12 @@ export function ChatInterface({ kbId, kbName }: Props) {
                     : m,
                 ),
               );
+            } else if (data.type === "citations") {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id ? { ...m, citations: data.citations } : m,
+                ),
+              );
             }
           } catch {
             // skip malformed SSE

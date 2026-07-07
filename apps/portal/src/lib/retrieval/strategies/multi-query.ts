@@ -51,7 +51,9 @@ export class MultiQueryStrategy implements RetrievalStrategy {
   constructor(private baseStrategy: RetrievalStrategy) {}
 
   async retrieve(ctx: RetrievalContext): Promise<RetrievalResult> {
-    const variations = await generateMultiQueries(ctx.query, ctx.embeddingProvider);
+    const variations = ctx.multiQueryVariations && ctx.multiQueryVariations.length > 0
+      ? ctx.multiQueryVariations
+      : await generateMultiQueries(ctx.query, ctx.embeddingProvider);
 
     if (variations.length === 0) {
       return this.baseStrategy.retrieve(ctx);

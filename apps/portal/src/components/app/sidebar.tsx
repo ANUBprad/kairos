@@ -130,7 +130,10 @@ export function AppSidebar({ organization }: SidebarProps) {
               <div className="space-y-0.5">
                 {section.items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = pathname === item.href;
+                  const isActive =
+                    item.href === "/app"
+                      ? pathname === "/app"
+                      : pathname.startsWith(item.href);
                   return (
                     <Link
                       key={item.href}

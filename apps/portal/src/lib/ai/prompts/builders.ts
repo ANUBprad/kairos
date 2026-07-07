@@ -73,10 +73,11 @@ export function formatForProvider(
   provider: string,
 ): AIMessage[] {
   if (provider === "gemini") {
-    return messages.filter((m) => {
-      if (m.role === "system") return true;
-      return true;
-    });
+    return messages.map((m) =>
+      m.role === "system"
+        ? { ...m, role: "user" as const, content: `[System Instruction]\n${m.content}` }
+        : m,
+    );
   }
   return messages;
 }

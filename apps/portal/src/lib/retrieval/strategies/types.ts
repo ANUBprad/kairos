@@ -19,6 +19,7 @@ export interface RetrievalContext {
   embeddingModel: string;
   embeddingProvider: ProviderType;
   expandedQueries?: string[];
+  multiQueryVariations?: string[];
 }
 
 export interface RetrievalStrategy {
@@ -79,4 +80,6 @@ export interface FullRetrievalTrace {
   steps: StrategyStep[];
   result: StrategyDocument[];
   totalDurationMs: number;
+  embeddingMs: number;
+  vectorSearchMs: number;
 }

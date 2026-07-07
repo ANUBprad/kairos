@@ -87,6 +87,8 @@ export async function runRetrieval(
 
     const totalMs = Math.round((performance.now() - startTotal) * 100) / 100;
     metrics.totalMs = totalMs;
+    metrics.embeddingMs = trace.embeddingMs || 0;
+    metrics.vectorSearchMs = trace.vectorSearchMs || 0;
 
     const chunks: RetrievedChunkDisplay[] = trace.result.map((c, i) => ({
       id: c.chunkId,

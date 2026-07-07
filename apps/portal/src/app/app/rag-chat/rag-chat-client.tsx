@@ -248,6 +248,12 @@ export function RagChat({ kbs }: Props) {
                   m.id === assistantMsg.id ? { ...m, content: `**Error:** ${data.content}` } : m,
                 ),
               );
+            } else if (data.type === "citations") {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id ? { ...m, citations: data.citations } : m,
+                ),
+              );
             }
           } catch { /* skip */ }
         }

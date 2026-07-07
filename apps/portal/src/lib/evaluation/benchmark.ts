@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 import { runRetrieval } from "@/lib/retrieval/service";
+import { getAIProvider } from "@/lib/ai/providers";
 import { calculateRetrievalMetrics } from "./metrics/retrieval";
 import { calculateGenerationMetrics } from "./metrics/generation";
 import { calculateAverageMetrics } from "./metrics/retrieval";
@@ -140,9 +141,31 @@ export async function runBenchmark(
       );
 
       const contexts = retrievalResult.chunks.map((c) => c.content);
+
+      let generatedAnswer = "";
+      try {
+        const provider = getAIProvider((config.embeddingProvider as "openai" | "gemini") || "openai");
+        const contextStr = contexts.map((c, i) => `[Source ${i + 1}] ${c}`).join("\n\n");
+        const genResponse = await provider.generateChat({
+          model: (config as unknown as Record<string, unknown>).chatModel as string || provider.getDefaultModel(),
+          messages: [
+            {
+              role: "system",
+              content: `Answer the user's question based ONLY on the provided context. Cite sources using [Source N] format.\n\n## Context\n${contextStr || "No context available."}`,
+            },
+            { role: "user", content: q.question },
+          ],
+          temperature: 0.1,
+          maxTokens: 1024,
+        });
+        generatedAnswer = genResponse.content;
+      } catch {
+        generatedAnswer = "";
+      }
+
       const generationMetrics = calculateGenerationMetrics({
         question: q.question,
-        generatedAnswer: "",
+        generatedAnswer,
         retrievedContexts: contexts,
         expectedAnswer: q.expectedAnswer || undefined,
       });
@@ -152,7 +175,7 @@ export async function runBenchmark(
         runId: run.id,
         retrievedChunkIds: allChunkIds.join(","),
         retrievedChunks: retrievalResult.chunks as never,
-        generatedAnswer: null,
+        generatedAnswer,
         retrievalMetrics: retrievalMetrics as never,
         generationMetrics: generationMetrics as never,
         latencyEmbeddingMs: retrievalResult.metrics?.embeddingMs ?? null,

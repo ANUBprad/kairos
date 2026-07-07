@@ -65,11 +65,13 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        let trace: Awaited<ReturnType<typeof executeRetrievalWithTrace>> | null = null;
+
         if (explainable) {
           const retrievalConfig = await getRetrievalConfig(kbId);
           const retrievalStart = performance.now();
 
-          const trace = await executeRetrievalWithTrace(
+          trace = await executeRetrievalWithTrace(
             kbId,
             query,
             {
@@ -174,6 +176,28 @@ ${contextStr || "No relevant documents found."}`;
           controller.enqueue(encoder.encode(`data: ${pipelineEvent}\n\n`));
         }
 
+        let citationsPayload: Array<{
+          chunkId: string;
+          documentId: string;
+          documentName: string;
+          chunkIndex: number;
+          pageNumber: number | null;
+          excerpt: string;
+          similarity: number;
+        }> = [];
+
+        if (explainable && trace) {
+          citationsPayload = trace.result.map((c) => ({
+            chunkId: c.chunkId,
+            documentId: c.documentId,
+            documentName: ((c.metadata as Record<string, unknown> | null)?.documentName as string) || "Unknown",
+            chunkIndex: c.index,
+            pageNumber: null,
+            excerpt: c.content.slice(0, 200),
+            similarity: c.similarity,
+          }));
+        }
+
         const gen = streamChatResponse({
           conversationId,
           kbId,
@@ -183,9 +207,27 @@ ${contextStr || "No relevant documents found."}`;
         });
 
         for await (const chunk of gen) {
-          if (chunk.done) break;
+          if (chunk.done) {
+            if (!explainable && chunk.citations && chunk.citations.length > 0) {
+              citationsPayload = chunk.citations.map((c) => ({
+                chunkId: c.chunkId,
+                documentId: c.documentId,
+                documentName: c.documentName,
+                chunkIndex: c.chunkIndex,
+                pageNumber: c.pageNumber ?? null,
+                excerpt: c.excerpt,
+                similarity: c.similarity,
+              }));
+            }
+            break;
+          }
           const data = JSON.stringify({ type: "chunk", content: chunk.content });
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+        }
+
+        if (citationsPayload.length > 0) {
+          const citationsData = JSON.stringify({ type: "citations", citations: citationsPayload });
+          controller.enqueue(encoder.encode(`data: ${citationsData}\n\n`));
         }
 
         const finalData = JSON.stringify({ type: "done" });

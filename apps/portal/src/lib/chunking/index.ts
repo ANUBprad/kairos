@@ -40,7 +40,7 @@ export function estimateChunkStats(
   return {
     estimatedChunkCount: estimatedCount,
     averageChunkSize: avgSize,
-    averageTokenCount: estimateTokens(String(avgSize)),
+    averageTokenCount: Math.ceil(avgSize / 4),
     totalCharacters: totalChars,
   };
 }
@@ -135,6 +135,7 @@ function chunkBySentence(text: string, opts: ChunkingOptions): Chunk[] {
 function chunkFixed(text: string, opts: ChunkingOptions): Chunk[] {
   const chunks: Chunk[] = [];
   const { chunkSize, overlap } = opts;
+  const step = Math.max(1, chunkSize - overlap);
   let start = 0;
   let index = 0;
 
@@ -149,7 +150,7 @@ function chunkFixed(text: string, opts: ChunkingOptions): Chunk[] {
         metadata: { strategy: "fixed", chunkSize, overlap },
       });
     }
-    start += chunkSize - overlap;
+    start += step;
   }
 
   return chunks;

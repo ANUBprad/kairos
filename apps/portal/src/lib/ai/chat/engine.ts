@@ -132,5 +132,5 @@ export async function* streamChatResponse(
     citations,
   );
 
-  yield { content: "", done: true };
+  yield { content: "", done: true, citations };
 }

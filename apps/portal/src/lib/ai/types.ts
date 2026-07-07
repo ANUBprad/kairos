@@ -24,6 +24,7 @@ export interface ChatCompletionResponse {
 export interface StreamChunk {
   content: string;
   done: boolean;
+  citations?: CitationSource[];
 }
 
 export interface EmbeddingRequest {

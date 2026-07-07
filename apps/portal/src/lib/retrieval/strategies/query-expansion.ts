@@ -62,13 +62,15 @@ export class QueryExpansionStrategy implements RetrievalStrategy {
   constructor(private baseStrategy: RetrievalStrategy) {}
 
   async retrieve(ctx: RetrievalContext): Promise<RetrievalResult> {
-    const expansion = await expandQuery(ctx.query, ctx.embeddingProvider);
+    const expandedQueries = ctx.expandedQueries && ctx.expandedQueries.length > 0
+      ? ctx.expandedQueries
+      : (await expandQuery(ctx.query, ctx.embeddingProvider)).expandedQueries;
 
-    if (expansion.expandedQueries.length === 0) {
+    if (expandedQueries.length === 0) {
       return this.baseStrategy.retrieve(ctx);
     }
 
-    const allQueries = [ctx.query, ...expansion.expandedQueries];
+    const allQueries = [ctx.query, ...expandedQueries];
     const allResults = await Promise.all(
       allQueries.map((q) =>
         this.baseStrategy.retrieve({ ...ctx, query: q }),
@@ -92,7 +94,7 @@ export class QueryExpansionStrategy implements RetrievalStrategy {
     return {
       chunks: merged.slice(0, ctx.topK),
       metadata: {
-        expandedQueries: expansion.expandedQueries,
+        expandedQueries,
         originalQuery: ctx.query,
         queryCount: allQueries.length,
       },

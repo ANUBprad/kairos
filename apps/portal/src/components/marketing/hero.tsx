@@ -225,12 +225,8 @@ export function Hero() {
     <section className="relative overflow-hidden pt-32 pb-24 md:pb-32 min-h-[90vh] flex items-center">
       {/* Background grid */}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            "radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
+        className="absolute inset-0 pointer-events-none dark:bg-[image:radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[image:radial-gradient(rgba(0,0,0,0.04)_1px,transparent_1px)]"
+        style={{ backgroundSize: "32px 32px" }}
       />
 
       {/* Ambient glows */}
@@ -268,9 +264,9 @@ export function Hero() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-[56px] sm:text-[64px] md:text-[72px] font-bold tracking-tight leading-[0.95]"
+              className="text-[56px] sm:text-[64px] md:text-[72px] font-bold tracking-tight leading-[0.95] text-text-primary"
             >
-              <span className="bg-gradient-to-r from-white via-white to-white/60 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-text-primary via-text-primary to-text-secondary bg-clip-text text-transparent">
                 <AnimatedKairos />
               </span>
             </motion.h1>

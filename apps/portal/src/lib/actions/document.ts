@@ -268,8 +268,8 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
     const retrievalConfig = (kb?.retrievalConfig as { chunkStrategy?: string; chunkSize?: number; overlap?: number } | null) || {};
     const chunks = chunkText(extraction.text, {
       strategy: (retrievalConfig.chunkStrategy as "recursive" | "sentence" | "fixed" | "markdown" | "semantic") || "recursive",
-      chunkSize: retrievalConfig.chunkSize || 1000,
-      overlap: retrievalConfig.overlap || 200,
+      chunkSize: retrievalConfig.chunkSize ?? 1000,
+      overlap: retrievalConfig.overlap ?? 200,
     });
 
     for (const chunk of chunks) {
