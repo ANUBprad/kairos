@@ -63,8 +63,11 @@ class RetrainingScheduler:
         self._running = True
         self._thread = Thread(target=self._loop, daemon=True, name="retrain-scheduler")
         self._thread.start()
-        logger.info("RetrainingScheduler started (interval=%ds, min_records=%d)",
-                     self._interval_seconds, self._min_records)
+        logger.info(
+            "RetrainingScheduler started (interval=%ds, min_records=%d)",
+            self._interval_seconds,
+            self._min_records,
+        )
 
     def stop(self) -> None:
         """Stop the retraining scheduler."""
@@ -78,9 +81,15 @@ class RetrainingScheduler:
         """Manually trigger a retraining run."""
         logger.info("Manual retraining triggered with %d records", len(records))
         if len(records) < self._min_records:
-            logger.info("Skipping retraining: %d < %d min_records",
-                        len(records), self._min_records)
-            return {"skipped": True, "reason": f"Only {len(records)} records, need {self._min_records}"}
+            logger.info(
+                "Skipping retraining: %d < %d min_records",
+                len(records),
+                self._min_records,
+            )
+            return {
+                "skipped": True,
+                "reason": f"Only {len(records)} records, need {self._min_records}",
+            }
         result = self._retrain_fn(records)
         self._last_run = time.time()
         return result

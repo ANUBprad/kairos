@@ -5,7 +5,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import List
 
 
 @dataclass
@@ -50,7 +50,7 @@ class PerformanceMonitor:
         with self._lock:
             self._latencies.append(latency_ms)
             if len(self._latencies) > self._window_size:
-                self._latencies = self._latencies[-self._window_size:]
+                self._latencies = self._latencies[-self._window_size :]
             if success:
                 self._successes += 1
             else:
@@ -62,7 +62,7 @@ class PerformanceMonitor:
         with self._lock:
             self._latencies.append(latency_ms)
             if len(self._latencies) > self._window_size:
-                self._latencies = self._latencies[-self._window_size:]
+                self._latencies = self._latencies[-self._window_size :]
 
     def record_success(self) -> None:
         with self._lock:

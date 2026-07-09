@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 from threading import RLock
-from typing import Iterator, List, Optional
+from typing import Iterator, List
 
 from intelligence.feedback.models import FeedbackRecord
 

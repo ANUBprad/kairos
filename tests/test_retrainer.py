@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import tempfile
@@ -10,7 +9,11 @@ from pathlib import Path
 
 import pytest
 
-from intelligence.retraining.model_registry import ModelRegistry, RegistryEntry, compute_dataset_hash
+from intelligence.retraining.model_registry import (
+    ModelRegistry,
+    RegistryEntry,
+    compute_dataset_hash,
+)
 from intelligence.retraining.retrainer import BudgetRetrainer
 from intelligence.retraining.scheduler import RetrainingScheduler
 
@@ -23,24 +26,72 @@ from intelligence.retraining.scheduler import RetrainingScheduler
 @pytest.fixture
 def sample_training_records() -> list:
     return [
-        {"query_type": "simple", "confidence": 0.95, "retrieval_type": "HYBRID",
-         "top_k": 3, "rerank": False, "decompose": False, "latency_ms": 50.0,
-         "fallback_triggered": False, "accepted": True},
-        {"query_type": "simple", "confidence": 0.95, "retrieval_type": "HYBRID",
-         "top_k": 5, "rerank": False, "decompose": False, "latency_ms": 70.0,
-         "fallback_triggered": False, "accepted": True},
-        {"query_type": "simple", "confidence": 0.60, "retrieval_type": "HYBRID",
-         "top_k": 5, "rerank": True, "decompose": False, "latency_ms": 100.0,
-         "fallback_triggered": False, "accepted": True},
-        {"query_type": "complex", "confidence": 0.85, "retrieval_type": "MULTI_VECTOR",
-         "top_k": 8, "rerank": True, "decompose": False, "latency_ms": 150.0,
-         "fallback_triggered": False, "accepted": True},
-        {"query_type": "complex", "confidence": 0.55, "retrieval_type": "MULTI_VECTOR",
-         "top_k": 5, "rerank": False, "decompose": False, "latency_ms": 95.0,
-         "fallback_triggered": False, "accepted": True},
-        {"query_type": "multi_hop", "confidence": 0.90, "retrieval_type": "SELF_QUERYING",
-         "top_k": 3, "rerank": False, "decompose": True, "latency_ms": 80.0,
-         "fallback_triggered": False, "accepted": True},
+        {
+            "query_type": "simple",
+            "confidence": 0.95,
+            "retrieval_type": "HYBRID",
+            "top_k": 3,
+            "rerank": False,
+            "decompose": False,
+            "latency_ms": 50.0,
+            "fallback_triggered": False,
+            "accepted": True,
+        },
+        {
+            "query_type": "simple",
+            "confidence": 0.95,
+            "retrieval_type": "HYBRID",
+            "top_k": 5,
+            "rerank": False,
+            "decompose": False,
+            "latency_ms": 70.0,
+            "fallback_triggered": False,
+            "accepted": True,
+        },
+        {
+            "query_type": "simple",
+            "confidence": 0.60,
+            "retrieval_type": "HYBRID",
+            "top_k": 5,
+            "rerank": True,
+            "decompose": False,
+            "latency_ms": 100.0,
+            "fallback_triggered": False,
+            "accepted": True,
+        },
+        {
+            "query_type": "complex",
+            "confidence": 0.85,
+            "retrieval_type": "MULTI_VECTOR",
+            "top_k": 8,
+            "rerank": True,
+            "decompose": False,
+            "latency_ms": 150.0,
+            "fallback_triggered": False,
+            "accepted": True,
+        },
+        {
+            "query_type": "complex",
+            "confidence": 0.55,
+            "retrieval_type": "MULTI_VECTOR",
+            "top_k": 5,
+            "rerank": False,
+            "decompose": False,
+            "latency_ms": 95.0,
+            "fallback_triggered": False,
+            "accepted": True,
+        },
+        {
+            "query_type": "multi_hop",
+            "confidence": 0.90,
+            "retrieval_type": "SELF_QUERYING",
+            "top_k": 3,
+            "rerank": False,
+            "decompose": True,
+            "latency_ms": 80.0,
+            "fallback_triggered": False,
+            "accepted": True,
+        },
     ]
 
 
@@ -81,34 +132,57 @@ class TestModelRegistry:
     def test_register(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             reg = ModelRegistry(os.path.join(tmp, "registry.json"))
-            reg.register(RegistryEntry(
-                version="v1", timestamp="2026-01-01", training_samples=100,
-                dataset_hash="abc123", evaluation_metrics={"score": 0.8},
-                path="/tmp/model.json",
-            ))
+            reg.register(
+                RegistryEntry(
+                    version="v1",
+                    timestamp="2026-01-01",
+                    training_samples=100,
+                    dataset_hash="abc123",
+                    evaluation_metrics={"score": 0.8},
+                    path="/tmp/model.json",
+                )
+            )
             assert len(reg.entries) == 1
             assert reg.latest_version() == "v1"
 
     def test_register_multiple(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             reg = ModelRegistry(os.path.join(tmp, "registry.json"))
-            reg.register(RegistryEntry(
-                version="v1", timestamp="2026-01-01", training_samples=100,
-                dataset_hash="abc123", evaluation_metrics={}, path="/tmp/v1.json",
-            ))
-            reg.register(RegistryEntry(
-                version="v2", timestamp="2026-06-01", training_samples=200,
-                dataset_hash="def456", evaluation_metrics={}, path="/tmp/v2.json",
-            ))
+            reg.register(
+                RegistryEntry(
+                    version="v1",
+                    timestamp="2026-01-01",
+                    training_samples=100,
+                    dataset_hash="abc123",
+                    evaluation_metrics={},
+                    path="/tmp/v1.json",
+                )
+            )
+            reg.register(
+                RegistryEntry(
+                    version="v2",
+                    timestamp="2026-06-01",
+                    training_samples=200,
+                    dataset_hash="def456",
+                    evaluation_metrics={},
+                    path="/tmp/v2.json",
+                )
+            )
             assert reg.latest_version() == "v2"
 
     def test_get(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             reg = ModelRegistry(os.path.join(tmp, "registry.json"))
-            reg.register(RegistryEntry(
-                version="v1", timestamp="2026-01-01", training_samples=100,
-                dataset_hash="abc123", evaluation_metrics={}, path="/tmp/v1.json",
-            ))
+            reg.register(
+                RegistryEntry(
+                    version="v1",
+                    timestamp="2026-01-01",
+                    training_samples=100,
+                    dataset_hash="abc123",
+                    evaluation_metrics={},
+                    path="/tmp/v1.json",
+                )
+            )
             entry = reg.get("v1")
             assert entry is not None
             assert entry.version == "v1"
@@ -122,10 +196,16 @@ class TestModelRegistry:
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp, "registry.json")
             reg = ModelRegistry(path)
-            reg.register(RegistryEntry(
-                version="v1", timestamp="2026-01-01", training_samples=100,
-                dataset_hash="abc123", evaluation_metrics={}, path="/tmp/v1.json",
-            ))
+            reg.register(
+                RegistryEntry(
+                    version="v1",
+                    timestamp="2026-01-01",
+                    training_samples=100,
+                    dataset_hash="abc123",
+                    evaluation_metrics={},
+                    path="/tmp/v1.json",
+                )
+            )
             reg2 = ModelRegistry(path)
             assert len(reg2.entries) == 1
             assert reg2.latest_version() == "v1"
@@ -133,10 +213,16 @@ class TestModelRegistry:
     def test_to_dict(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             reg = ModelRegistry(os.path.join(tmp, "registry.json"))
-            reg.register(RegistryEntry(
-                version="v1", timestamp="2026-01-01", training_samples=100,
-                dataset_hash="abc123", evaluation_metrics={}, path="/tmp/v1.json",
-            ))
+            reg.register(
+                RegistryEntry(
+                    version="v1",
+                    timestamp="2026-01-01",
+                    training_samples=100,
+                    dataset_hash="abc123",
+                    evaluation_metrics={},
+                    path="/tmp/v1.json",
+                )
+            )
             d = reg.to_dict()
             assert "entries" in d
             assert len(d["entries"]) == 1
@@ -172,7 +258,9 @@ class TestComputeDatasetHash:
 
 class TestBudgetRetrainer:
     def test_train(self, sample_training_records, retrainer) -> None:
-        result = retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
+        result = retrainer.train(
+            sample_training_records, version="v1", min_samples_per_config=1
+        )
         assert result["version"] == "v1"
         assert result["training_samples"] == 6
         assert "evaluation" in result
@@ -183,7 +271,9 @@ class TestBudgetRetrainer:
         assert result["version"].startswith("v")
 
     def test_evaluate(self, sample_training_records, retrainer) -> None:
-        train_result = retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
+        train_result = retrainer.train(
+            sample_training_records, version="v1", min_samples_per_config=1
+        )
         eval_results = retrainer.evaluate(sample_training_records, train_result["path"])
         assert isinstance(eval_results, dict)
         assert "static_avg_score" in eval_results
@@ -191,9 +281,17 @@ class TestBudgetRetrainer:
     def test_compare_models(self, sample_training_records, retrainer) -> None:
         retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
         extra = sample_training_records + [
-            {"query_type": "multi_hop", "confidence": 0.40, "retrieval_type": "SELF_QUERYING",
-             "top_k": 8, "rerank": True, "decompose": True, "latency_ms": 200.0,
-             "fallback_triggered": True, "accepted": False},
+            {
+                "query_type": "multi_hop",
+                "confidence": 0.40,
+                "retrieval_type": "SELF_QUERYING",
+                "top_k": 8,
+                "rerank": True,
+                "decompose": True,
+                "latency_ms": 200.0,
+                "fallback_triggered": True,
+                "accepted": False,
+            },
         ]
         retrainer.train(extra, version="v2", min_samples_per_config=1)
         comparison = retrainer.compare_models("v1", "v2")
@@ -205,7 +303,9 @@ class TestBudgetRetrainer:
             retrainer.compare_models("v1", "v99")
 
     def test_generate_training_report(self, sample_training_records, retrainer) -> None:
-        result = retrainer.train(sample_training_records, version="v1", min_samples_per_config=1)
+        result = retrainer.train(
+            sample_training_records, version="v1", min_samples_per_config=1
+        )
         report = retrainer.generate_training_report(result, sample_training_records)
         assert "Retraining Report" in report
         assert result["version"] in report
@@ -215,9 +315,19 @@ class TestBudgetRetrainer:
         assert retrainer._registry.latest_version() == "v1"
 
     def test_records_to_entries(self) -> None:
-        records = [{"query_type": "simple", "confidence": 0.9, "retrieval_type": "HYBRID",
-                    "top_k": 3, "rerank": False, "decompose": False, "latency_ms": 50.0,
-                    "fallback_triggered": False, "accepted": True}]
+        records = [
+            {
+                "query_type": "simple",
+                "confidence": 0.9,
+                "retrieval_type": "HYBRID",
+                "top_k": 3,
+                "rerank": False,
+                "decompose": False,
+                "latency_ms": 50.0,
+                "fallback_triggered": False,
+                "accepted": True,
+            }
+        ]
         entries = BudgetRetrainer._records_to_entries(records)
         assert len(entries) == 1
         assert entries[0].top_k == 3
@@ -250,9 +360,11 @@ class TestRetrainingScheduler:
 
     def test_trigger_runs(self) -> None:
         called = []
+
         def retrain_fn(records):
             called.append(records)
             return {"version": "v1", "status": "ok"}
+
         scheduler = RetrainingScheduler(retrain_fn=retrain_fn, min_records=1)
         result = scheduler.trigger([{"a": 1}])
         assert result["version"] == "v1"
@@ -280,7 +392,9 @@ class TestTrackedFilesNotMutated:
     before and after running the retrainer tests to detect any mutation.
     """
 
-    def test_models_directory_not_modified(self, sample_training_records, temp_model_dir, temp_registry_path) -> None:
+    def test_models_directory_not_modified(
+        self, sample_training_records, temp_model_dir, temp_registry_path
+    ) -> None:
         repo = Path(__file__).resolve().parent.parent
         models_dir = repo / "models"
         before: dict[str, str] = {}
@@ -289,7 +403,9 @@ class TestTrackedFilesNotMutated:
                 if f.is_file():
                     result = subprocess.run(
                         ["git", "hash-object", str(f)],
-                        capture_output=True, text=True, cwd=repo,
+                        capture_output=True,
+                        text=True,
+                        cwd=repo,
                     )
                     before[str(f.relative_to(repo))] = result.stdout.strip()
 
@@ -308,7 +424,9 @@ class TestTrackedFilesNotMutated:
                 if f.is_file():
                     result = subprocess.run(
                         ["git", "hash-object", str(f)],
-                        capture_output=True, text=True, cwd=repo,
+                        capture_output=True,
+                        text=True,
+                        cwd=repo,
                     )
                     after[str(f.relative_to(repo))] = result.stdout.strip()
 

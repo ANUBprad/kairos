@@ -23,11 +23,11 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from benchmarks.dataset.loader import QueryEntry
 
-from intelligence.benchmarks.loaders import _to_str_list, _to_text
+from intelligence.benchmarks.loaders import _to_text
 
 
 def load_squad(
@@ -76,9 +76,12 @@ def load_squad(
                     continue
 
                 answers = qa.get("answers", [])
-                is_impossible = qa.get("is_impossible", False)
                 if isinstance(answers, list) and answers:
-                    answer_text = _to_text(answers[0].get("text", "")) if isinstance(answers[0], dict) else ""
+                    answer_text = (
+                        _to_text(answers[0].get("text", ""))
+                        if isinstance(answers[0], dict)
+                        else ""
+                    )
                 else:
                     answer_text = ""
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List
 
-from intelligence.judging.judge import JudgeResult, Judgment
+from intelligence.judging.judge import JudgeResult
 
 
 @dataclass
@@ -21,9 +21,7 @@ class JudgingReport:
             "answer": self.answer[:200] if self.answer else "",
             "composite_score": self.composite_score,
             "composite_judgment": self.composite_judgment,
-            "dimensions": {
-                k: v.to_dict() for k, v in self.dimension_results.items()
-            },
+            "dimensions": {k: v.to_dict() for k, v in self.dimension_results.items()},
             "num_context_docs": self.num_context_docs,
         }
 

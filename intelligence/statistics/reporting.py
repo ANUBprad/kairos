@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence
+from dataclasses import dataclass
+from typing import Dict, Optional, Sequence
 
 import numpy as np
 
+from intelligence.statistics.bootstrap import BootstrapResult
 from intelligence.statistics.significance import (
     SignificanceResult,
     paired_t_test,
@@ -17,7 +18,6 @@ from intelligence.statistics.confidence_intervals import (
     bootstrap_confidence_interval,
 )
 from intelligence.statistics.effect_size import EffectSize, cohens_d, cliffs_delta
-from intelligence.statistics.bootstrap import BootstrapEvaluator
 
 
 @dataclass
@@ -81,7 +81,6 @@ def generate_validation_report(
     Returns:
         A :class:`ValidationResult`.
     """
-    from intelligence.statistics.bootstrap import BootstrapResult
 
     results: ValidationResult = ValidationResult(
         baseline_label=baseline_label,
@@ -104,38 +103,51 @@ def generate_validation_report(
         list(treatment), confidence=0.95
     )
     if include_bootstrap:
-        results.confidence_intervals[
-            f"{baseline_label} (bootstrap)"
-        ] = bootstrap_confidence_interval(
-            list(baseline), confidence=0.95, n_resamples=bootstrap_resamples,
-            random_seed=random_seed,
+        results.confidence_intervals[f"{baseline_label} (bootstrap)"] = (
+            bootstrap_confidence_interval(
+                list(baseline),
+                confidence=0.95,
+                n_resamples=bootstrap_resamples,
+                random_seed=random_seed,
+            )
         )
-        results.confidence_intervals[
-            f"{treatment_label} (bootstrap)"
-        ] = bootstrap_confidence_interval(
-            list(treatment), confidence=0.95, n_resamples=bootstrap_resamples,
-            random_seed=random_seed,
+        results.confidence_intervals[f"{treatment_label} (bootstrap)"] = (
+            bootstrap_confidence_interval(
+                list(treatment),
+                confidence=0.95,
+                n_resamples=bootstrap_resamples,
+                random_seed=random_seed,
+            )
         )
 
     # -- Significance tests ---------------------------------------------------
     results.significance["Paired t-test"] = paired_t_test(
-        list(baseline), list(treatment), alpha=alpha,
+        list(baseline),
+        list(treatment),
+        alpha=alpha,
     )
     results.significance["Wilcoxon signed-rank"] = wilcoxon_signed_rank(
-        list(baseline), list(treatment), alpha=alpha,
+        list(baseline),
+        list(treatment),
+        alpha=alpha,
     )
     if include_permutation:
         results.significance["Permutation test"] = permutation_test(
-            list(baseline), list(treatment), alpha=alpha,
-            n_resamples=bootstrap_resamples, random_seed=random_seed,
+            list(baseline),
+            list(treatment),
+            alpha=alpha,
+            n_resamples=bootstrap_resamples,
+            random_seed=random_seed,
         )
 
     # -- Effect sizes ---------------------------------------------------------
     results.effect_sizes["Cohen's d"] = cohens_d(
-        list(baseline), list(treatment),
+        list(baseline),
+        list(treatment),
     )
     results.effect_sizes["Cliff's delta"] = cliffs_delta(
-        list(baseline), list(treatment),
+        list(baseline),
+        list(treatment),
     )
 
     # -- Bootstrap evaluator --------------------------------------------------
@@ -146,7 +158,9 @@ def generate_validation_report(
 
         from intelligence.statistics.bootstrap import BootstrapEvaluator as BE
 
-        be = BE(metric=delta_mean, n_resamples=bootstrap_resamples, random_seed=random_seed)
+        be = BE(
+            metric=delta_mean, n_resamples=bootstrap_resamples, random_seed=random_seed
+        )
         results.bootstrap = be.evaluate(
             [float(t) - float(b) for t, b in zip(treatment, baseline)],
             metric_name=f"Δ{metric_name}",
@@ -158,14 +172,8 @@ def generate_validation_report(
 
     # Build summary
     d = results.effect_sizes["Cohen's d"]
-    best_sig = next(
-        (r for r in results.significance.values() if r.significant),
-        None,
-    )
     sig_tag = "significant" if any_sig else "not significant"
-    p_vals = ", ".join(
-        f"{k}: {v.p_value:.4f}" for k, v in results.significance.items()
-    )
+    p_vals = ", ".join(f"{k}: {v.p_value:.4f}" for k, v in results.significance.items())
     results.summary = (
         f"{metric_name}: {treatment_label} vs {baseline_label} — "
         f"{sig_tag} ({p_vals}), "

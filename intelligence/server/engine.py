@@ -14,8 +14,8 @@ from intelligence.retrieval.complex_retriever import ComplexRetriever
 from intelligence.retrieval.multihop_retriever import MultiHopRetriever
 from intelligence.circuit_breaker.circuit_breaker import CircuitBreaker
 from intelligence.metrics.prometheus_metrics import (
-    requests_total, request_duration_seconds,
-    planner_decisions_total, retrieval_duration_seconds,
+    planner_decisions_total,
+    retrieval_duration_seconds,
     fallback_total,
 )
 from intelligence.retrieval.simple_retriever import SimpleRetriever
@@ -72,8 +72,15 @@ class RetrievalEngine:
             "decompose": decision.config["decompose"],
         }
         import rag_pb2 as _pb2
+
         _rt = decision.config["retrieval_type"]
-        _cb = "high" if decision.confidence >= 0.8 else "medium" if decision.confidence >= 0.5 else "low"
+        _cb = (
+            "high"
+            if decision.confidence >= 0.8
+            else "medium"
+            if decision.confidence >= 0.5
+            else "low"
+        )
         planner_decisions_total.labels(
             query_type=decision.query_type.upper(),
             confidence_band=_cb,
@@ -112,14 +119,24 @@ class RetrievalEngine:
         decompose: bool = False,
     ) -> tuple[list[str], int]:
         import rag_pb2 as _pb
-        if retrieval_type in (_pb.RetrievalType.HYBRID, _pb.RetrievalType.RETRIEVAL_TYPE_UNSPECIFIED):
+
+        if retrieval_type in (
+            _pb.RetrievalType.HYBRID,
+            _pb.RetrievalType.RETRIEVAL_TYPE_UNSPECIFIED,
+        ):
             return self.simple.retrieve_top_k(namespace, top_k, query), retrieval_type
         elif retrieval_type == _pb.RetrievalType.MULTI_VECTOR:
             return self.complex.retrieve_top_k(
-                namespace, top_k, query, rerank=rerank, decompose=decompose,
+                namespace,
+                top_k,
+                query,
+                rerank=rerank,
+                decompose=decompose,
             ), retrieval_type
         elif retrieval_type == _pb.RetrievalType.SELF_QUERYING:
-            return self.multi_hop.retrieve_top_k(namespace, top_k, query), retrieval_type
+            return self.multi_hop.retrieve_top_k(
+                namespace, top_k, query
+            ), retrieval_type
         else:
             raise ValueError(f"Unknown retrieval type: {retrieval_type}")
 
@@ -137,8 +154,12 @@ class RetrievalEngine:
 
         _start = _time.monotonic()
         chunks, used_type = self.retrieve(
-            namespace, query, top_k, retrieval_type,
-            rerank=rerank, decompose=decompose,
+            namespace,
+            query,
+            top_k,
+            retrieval_type,
+            rerank=rerank,
+            decompose=decompose,
         )
 
         fb = FallbackManager.evaluate(
@@ -157,8 +178,12 @@ class RetrievalEngine:
             escalated_tier_str = fb.escalated_tier
             escalated_type = self._tier_to_pb_type(fb.escalated_tier)
             extra_chunks, _ = self.retrieve(
-                namespace, query, top_k, escalated_type,
-                rerank=True, decompose=True,
+                namespace,
+                query,
+                top_k,
+                escalated_type,
+                rerank=True,
+                decompose=True,
             )
             fallback_total.labels(
                 escalated_tier=escalated_tier_str,
@@ -224,13 +249,19 @@ class RetrievalEngine:
         }
 
     def ingest_document(
-        self, content: bytes, namespace: str, strategy: int, mime_type: str, filename: str
+        self,
+        content: bytes,
+        namespace: str,
+        strategy: int,
+        mime_type: str,
+        filename: str,
     ) -> int:
         return self.pipeline.compute(content, namespace, strategy, mime_type, filename)
 
     @staticmethod
     def _tier_to_pb_type(tier: str) -> int:
         import rag_pb2 as _pb
+
         mapping = {
             "simple": _pb.RetrievalType.HYBRID,
             "complex": _pb.RetrievalType.MULTI_VECTOR,

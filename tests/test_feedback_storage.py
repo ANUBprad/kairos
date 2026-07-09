@@ -68,10 +68,17 @@ class TestFeedbackStorage:
     def test_save_overwrites(self, temp_storage, sample_record) -> None:
         temp_storage.append(sample_record)
         r2 = FeedbackRecord(
-            query_id="q002", query="test", query_type="COMPLEX",
-            retrieval_type="MULTI_VECTOR", confidence=0.8,
-            calibrated_confidence=0.78, top_k=5, rerank=True,
-            decompose=False, answer_accepted=False, answer_rating=2,
+            query_id="q002",
+            query="test",
+            query_type="COMPLEX",
+            retrieval_type="MULTI_VECTOR",
+            confidence=0.8,
+            calibrated_confidence=0.78,
+            top_k=5,
+            rerank=True,
+            decompose=False,
+            answer_accepted=False,
+            answer_rating=2,
         )
         temp_storage.save([r2])
         records = list(temp_storage.load())

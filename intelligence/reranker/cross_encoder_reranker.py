@@ -9,5 +9,5 @@ class CrossEncoderReranker:
         query_chunk_pair = [(query, chunk) for chunk in chunks]
         scores = self.cross_encoder.predict(query_chunk_pair)
 
-        scored_chunks = sorted(zip(chunks, scores), key = lambda x: x[1], reverse = True)
+        scored_chunks = sorted(zip(chunks, scores), key=lambda x: x[1], reverse=True)
         return [chunk for chunk, score in scored_chunks]

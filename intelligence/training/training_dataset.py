@@ -54,19 +54,21 @@ class TrainingDataset:
         *default_rating* fill the feedback fields.
         """
         for e in events:
-            self._records.append({
-                "query_type": e.query_type,
-                "confidence": e.confidence,
-                "calibrated_confidence": e.confidence,
-                "retrieval_type": e.retrieval_type,
-                "top_k": e.top_k,
-                "rerank": e.rerank,
-                "decompose": e.decompose,
-                "latency_ms": e.retrieval_latency_ms,
-                "fallback_triggered": e.fallback_triggered,
-                "accepted": default_accepted and e.success,
-                "rating": default_rating,
-            })
+            self._records.append(
+                {
+                    "query_type": e.query_type,
+                    "confidence": e.confidence,
+                    "calibrated_confidence": e.confidence,
+                    "retrieval_type": e.retrieval_type,
+                    "top_k": e.top_k,
+                    "rerank": e.rerank,
+                    "decompose": e.decompose,
+                    "latency_ms": e.retrieval_latency_ms,
+                    "fallback_triggered": e.fallback_triggered,
+                    "accepted": default_accepted and e.success,
+                    "rating": default_rating,
+                }
+            )
 
     def add_from_benchmark(
         self,
@@ -83,19 +85,23 @@ class TrainingDataset:
                 if not line:
                     continue
                 d = json.loads(line)
-                self._records.append({
-                    "query_type": d.get("query_type", "UNKNOWN"),
-                    "confidence": d.get("confidence", 0.5),
-                    "calibrated_confidence": d.get("calibrated_confidence", d.get("confidence", 0.5)),
-                    "retrieval_type": d.get("retrieval_type", "UNKNOWN"),
-                    "top_k": d.get("top_k", 3),
-                    "rerank": d.get("rerank", False),
-                    "decompose": d.get("decompose", False),
-                    "latency_ms": d.get("latency_ms", 0.0),
-                    "fallback_triggered": d.get("fallback_triggered", False),
-                    "accepted": d.get("accepted", default_accepted),
-                    "rating": d.get("rating"),
-                })
+                self._records.append(
+                    {
+                        "query_type": d.get("query_type", "UNKNOWN"),
+                        "confidence": d.get("confidence", 0.5),
+                        "calibrated_confidence": d.get(
+                            "calibrated_confidence", d.get("confidence", 0.5)
+                        ),
+                        "retrieval_type": d.get("retrieval_type", "UNKNOWN"),
+                        "top_k": d.get("top_k", 3),
+                        "rerank": d.get("rerank", False),
+                        "decompose": d.get("decompose", False),
+                        "latency_ms": d.get("latency_ms", 0.0),
+                        "fallback_triggered": d.get("fallback_triggered", False),
+                        "accepted": d.get("accepted", default_accepted),
+                        "rating": d.get("rating"),
+                    }
+                )
 
     def add_from_feedback_records(
         self,
@@ -110,21 +116,23 @@ class TrainingDataset:
                      ``fallback_triggered``, ``answer_accepted``, ``answer_rating``.
         """
         for r in records:
-            self._records.append({
-                "query_id": r.query_id,
-                "query": getattr(r, "query", ""),
-                "query_type": r.query_type,
-                "confidence": r.confidence,
-                "calibrated_confidence": r.calibrated_confidence,
-                "retrieval_type": r.retrieval_type,
-                "top_k": r.top_k,
-                "rerank": r.rerank,
-                "decompose": r.decompose,
-                "latency_ms": r.latency_ms,
-                "fallback_triggered": r.fallback_triggered,
-                "accepted": r.answer_accepted,
-                "rating": r.answer_rating,
-            })
+            self._records.append(
+                {
+                    "query_id": r.query_id,
+                    "query": getattr(r, "query", ""),
+                    "query_type": r.query_type,
+                    "confidence": r.confidence,
+                    "calibrated_confidence": r.calibrated_confidence,
+                    "retrieval_type": r.retrieval_type,
+                    "top_k": r.top_k,
+                    "rerank": r.rerank,
+                    "decompose": r.decompose,
+                    "latency_ms": r.latency_ms,
+                    "fallback_triggered": r.fallback_triggered,
+                    "accepted": r.answer_accepted,
+                    "rating": r.answer_rating,
+                }
+            )
 
     def to_dicts(self) -> List[Dict[str, Any]]:
         return list(self._records)

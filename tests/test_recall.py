@@ -71,9 +71,7 @@ class TestRecallEdgeCases:
         """k=None is equivalent to k=len(retrieved)."""
         relevant = {"a", "b", "c"}
         retrieved = ["a", "x", "y"]
-        assert recall_at_k(relevant, retrieved) == recall_at_k(
-            relevant, retrieved, k=3
-        )
+        assert recall_at_k(relevant, retrieved) == recall_at_k(relevant, retrieved, k=3)
 
     def test_returns_float(self) -> None:
         result = recall_at_k({"a"}, ["a"])

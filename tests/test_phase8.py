@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
-import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,16 +12,25 @@ from fastapi.testclient import TestClient
 # Phase 8A — Configuration System
 # ======================================================================
 
-import os
 from intelligence.config.settings import Settings, get_settings, reset_settings
 from intelligence.config.environments import (
-    EnvironmentProfile, get_environment_profile, get_profile_overrides,
-    apply_profile_overrides, PROFILE_REGISTRY,
+    EnvironmentProfile,
+    get_environment_profile,
+    get_profile_overrides,
+    apply_profile_overrides,
+    PROFILE_REGISTRY,
 )
-from intelligence.config.validation import validate_config, ConfigValidationError, validate_config_or_raise
+from intelligence.config.validation import (
+    validate_config,
+    ConfigValidationError,
+    validate_config_or_raise,
+)
 from intelligence.config.secrets import (
-    EnvSecretProvider, DictSecretProvider, ChainedSecretProvider,
-    get_secret_provider, set_secret_provider,
+    EnvSecretProvider,
+    DictSecretProvider,
+    ChainedSecretProvider,
+    get_secret_provider,
+    set_secret_provider,
 )
 
 
@@ -46,7 +52,9 @@ class TestSettings:
             Settings(log_level="TRACE")
 
     def test_custom_values(self) -> None:
-        s = Settings(environment="production", log_level="DEBUG", intelligence_port=9999)
+        s = Settings(
+            environment="production", log_level="DEBUG", intelligence_port=9999
+        )
         assert s.environment == "production"
         assert s.log_level == "DEBUG"
         assert s.intelligence_port == 9999
@@ -87,19 +95,30 @@ class TestSettings:
 
 class TestEnvironments:
     def test_from_string_development(self) -> None:
-        assert EnvironmentProfile.from_string("development") == EnvironmentProfile.DEVELOPMENT
+        assert (
+            EnvironmentProfile.from_string("development")
+            == EnvironmentProfile.DEVELOPMENT
+        )
 
     def test_from_string_staging(self) -> None:
         assert EnvironmentProfile.from_string("staging") == EnvironmentProfile.STAGING
 
     def test_from_string_production(self) -> None:
-        assert EnvironmentProfile.from_string("production") == EnvironmentProfile.PRODUCTION
+        assert (
+            EnvironmentProfile.from_string("production")
+            == EnvironmentProfile.PRODUCTION
+        )
 
     def test_from_string_case_insensitive(self) -> None:
-        assert EnvironmentProfile.from_string("PRODUCTION") == EnvironmentProfile.PRODUCTION
+        assert (
+            EnvironmentProfile.from_string("PRODUCTION")
+            == EnvironmentProfile.PRODUCTION
+        )
 
     def test_from_string_invalid_defaults_development(self) -> None:
-        assert EnvironmentProfile.from_string("unknown") == EnvironmentProfile.DEVELOPMENT
+        assert (
+            EnvironmentProfile.from_string("unknown") == EnvironmentProfile.DEVELOPMENT
+        )
 
     def test_is_development(self) -> None:
         assert EnvironmentProfile.DEVELOPMENT.is_development
@@ -160,7 +179,11 @@ class TestValidation:
         assert any("GEMINI_API_KEY" in e for e in errors)
 
     def test_llm_provider_gemini_valid(self) -> None:
-        settings = Settings(llm_provider="gemini", gemini_api_key="sk-test", gemini_model_name="gemini-pro")
+        settings = Settings(
+            llm_provider="gemini",
+            gemini_api_key="sk-test",
+            gemini_model_name="gemini-pro",
+        )
         errors = validate_config(settings)
         assert len(errors) == 0
 
@@ -170,7 +193,9 @@ class TestValidation:
         assert any("OPENAI_API_KEY" in e for e in errors)
 
     def test_llm_provider_openai_valid(self) -> None:
-        settings = Settings(llm_provider="openai", openai_api_key="sk-test", openai_model_name="gpt-4")
+        settings = Settings(
+            llm_provider="openai", openai_api_key="sk-test", openai_model_name="gpt-4"
+        )
         errors = validate_config(settings)
         assert len(errors) == 0
 
@@ -180,7 +205,11 @@ class TestValidation:
         assert any("KEIRO_OLLAMA_MODEL_NAME" in e for e in errors)
 
     def test_llm_provider_ollama_valid(self) -> None:
-        settings = Settings(llm_provider="ollama", ollama_model_name="llama2", ollama_url="http://localhost:11434")
+        settings = Settings(
+            llm_provider="ollama",
+            ollama_model_name="llama2",
+            ollama_url="http://localhost:11434",
+        )
         errors = validate_config(settings)
         assert len(errors) == 0
 
@@ -206,12 +235,16 @@ class TestValidation:
         assert any("api_secret" in e for e in errors)
 
     def test_production_no_local_embedding(self) -> None:
-        settings = Settings(environment="production", embedding_model="local", api_secret="test")
+        settings = Settings(
+            environment="production", embedding_model="local", api_secret="test"
+        )
         errors = validate_config(settings)
         assert any("local embedding" in e for e in errors)
 
     def test_validate_config_or_raise_passes(self) -> None:
-        settings = Settings(llm_provider="openai", openai_api_key="sk-test", openai_model_name="gpt-4")
+        settings = Settings(
+            llm_provider="openai", openai_api_key="sk-test", openai_model_name="gpt-4"
+        )
         validate_config_or_raise(settings)
 
     def test_validate_config_or_raise_fails(self) -> None:
@@ -304,16 +337,18 @@ class TestSecrets:
 # Phase 8B — API Platform
 # ======================================================================
 
-from intelligence.api.app import create_app, get_app
-from intelligence.api.auth.api_key import APIKeyValidator, get_api_key_validator
-from intelligence.api.rate_limit.token_bucket import TokenBucket, TokenBucketStore
-from intelligence.api.versioning.versions import ApiVersion, parse_version_header, current_api_version
-from intelligence.api.health.endpoints import get_health_status, HealthStatus
-from intelligence.api.middleware.auth import AuthMiddleware
-from intelligence.api.middleware.logging import LoggingMiddleware
-from intelligence.api.middleware.rate_limit import RateLimitMiddleware
-from intelligence.api.middleware.versioning import VersioningMiddleware
-from intelligence.config.settings import Settings, reset_settings
+from intelligence.api.app import create_app, get_app  # noqa: E402
+from intelligence.api.auth.api_key import APIKeyValidator  # noqa: E402
+from intelligence.api.rate_limit.token_bucket import TokenBucket, TokenBucketStore  # noqa: E402
+from intelligence.api.versioning.versions import (  # noqa: E402
+    ApiVersion,
+    parse_version_header,
+    current_api_version,
+)
+from intelligence.api.health.endpoints import get_health_status, HealthStatus  # noqa: E402
+from intelligence.api.middleware.auth import AuthMiddleware  # noqa: E402
+from intelligence.api.middleware.logging import LoggingMiddleware  # noqa: E402
+from intelligence.api.middleware.rate_limit import RateLimitMiddleware  # noqa: E402
 
 
 class TestAPIApp:
@@ -324,6 +359,7 @@ class TestAPIApp:
 
     def test_create_app_accepts_settings(self) -> None:
         import intelligence.api.app as api_app
+
         api_app._app_instance = None
         settings = Settings(environment="production", api_secret="test")
         app = create_app(settings)
@@ -675,7 +711,11 @@ class TestEvaluationRoutes:
         client = TestClient(app)
         response = client.post(
             "/api/v1/evaluation/ground-truth",
-            json={"query": "test query", "relevant_docs": ["doc1", "doc2"], "query_type": "simple"},
+            json={
+                "query": "test query",
+                "relevant_docs": ["doc1", "doc2"],
+                "query_type": "simple",
+            },
         )
         assert response.status_code == 200, response.text
         data = response.json()
@@ -714,11 +754,16 @@ class TestArtifactRoutes:
 # Phase 8E — Artifact Management
 # ======================================================================
 
-from intelligence.artifacts.model_registry import ModelRegistry, ModelVersion, ModelArtifact
-from intelligence.artifacts.experiment_registry import ExperimentRegistry, ExperimentEntry
-from intelligence.artifacts.report_registry import ReportRegistry, ReportEntry
-from intelligence.artifacts.version_tracking import (
-    VersionTracker, SemanticVersion, parse_semver,
+from intelligence.artifacts.model_registry import ModelRegistry, ModelVersion  # noqa: E402
+from intelligence.artifacts.experiment_registry import (  # noqa: E402
+    ExperimentRegistry,
+    ExperimentEntry,
+)
+from intelligence.artifacts.report_registry import ReportRegistry, ReportEntry  # noqa: E402
+from intelligence.artifacts.version_tracking import (  # noqa: E402
+    VersionTracker,
+    SemanticVersion,
+    parse_semver,
 )
 
 
@@ -823,7 +868,9 @@ class TestModelRegistry:
         return ModelRegistry(storage_dir=str(tmp_path / "models"))
 
     def test_register_version(self, temp_registry: ModelRegistry) -> None:
-        mv = temp_registry.register_version("test-model", "1.0.0", description="Initial release")
+        mv = temp_registry.register_version(
+            "test-model", "1.0.0", description="Initial release"
+        )
         assert mv.version == "1.0.0"
         assert mv.model_name == "test-model"
 
@@ -873,14 +920,20 @@ class TestModelRegistry:
         temp_registry.register_version("test-model", "1.0.0")
         source = tmp_path / "model.bin"
         source.write_bytes(b"model data")
-        artifact = temp_registry.add_artifact("test-model", "1.0.0", "weights", str(source))
+        artifact = temp_registry.add_artifact(
+            "test-model", "1.0.0", "weights", str(source)
+        )
         assert artifact is not None
         assert artifact.name == "weights"
 
-    def test_add_artifact_nonexistent_version(self, temp_registry: ModelRegistry, tmp_path: Path) -> None:
+    def test_add_artifact_nonexistent_version(
+        self, temp_registry: ModelRegistry, tmp_path: Path
+    ) -> None:
         source = tmp_path / "model.bin"
         source.write_bytes(b"data")
-        artifact = temp_registry.add_artifact("test-model", "1.0.0", "weights", str(source))
+        artifact = temp_registry.add_artifact(
+            "test-model", "1.0.0", "weights", str(source)
+        )
         assert artifact is None
 
     def test_model_version_to_dict(self) -> None:
@@ -890,7 +943,13 @@ class TestModelRegistry:
         assert d["model_name"] == "test"
 
     def test_model_version_from_dict(self) -> None:
-        data = {"version": "1.0.0", "model_name": "test", "created_at": "2024-01-01", "artifacts": [], "metadata": {}}
+        data = {
+            "version": "1.0.0",
+            "model_name": "test",
+            "created_at": "2024-01-01",
+            "artifacts": [],
+            "metadata": {},
+        }
         mv = ModelVersion.from_dict(data)
         assert mv.version == "1.0.0"
         assert mv.model_name == "test"
@@ -919,17 +978,23 @@ class TestExperimentRegistry:
         assert entry is not None
         assert entry.experiment_id == "exp-1"
 
-    def test_get_experiment_nonexistent(self, temp_registry: ExperimentRegistry) -> None:
+    def test_get_experiment_nonexistent(
+        self, temp_registry: ExperimentRegistry
+    ) -> None:
         assert temp_registry.get_experiment("nonexistent") is None
 
     def test_update_results(self, temp_registry: ExperimentRegistry) -> None:
         temp_registry.register_experiment("exp-1", "Test")
-        updated = temp_registry.update_results("exp-1", {"accuracy": 0.95}, {"accuracy": 0.95})
+        updated = temp_registry.update_results(
+            "exp-1", {"accuracy": 0.95}, {"accuracy": 0.95}
+        )
         assert updated is not None
         assert updated.results["accuracy"] == 0.95
         assert updated.metrics["accuracy"] == 0.95
 
-    def test_update_results_nonexistent(self, temp_registry: ExperimentRegistry) -> None:
+    def test_update_results_nonexistent(
+        self, temp_registry: ExperimentRegistry
+    ) -> None:
         assert temp_registry.update_results("nonexistent", {}) is None
 
     def test_list_experiments(self, temp_registry: ExperimentRegistry) -> None:
@@ -955,7 +1020,9 @@ class TestExperimentRegistry:
         assert temp_registry.remove_experiment("exp-1") is True
         assert temp_registry.get_experiment("exp-1") is None
 
-    def test_remove_experiment_nonexistent(self, temp_registry: ExperimentRegistry) -> None:
+    def test_remove_experiment_nonexistent(
+        self, temp_registry: ExperimentRegistry
+    ) -> None:
         assert temp_registry.remove_experiment("nonexistent") is False
 
     def test_list_by_tag(self, temp_registry: ExperimentRegistry) -> None:
@@ -984,7 +1051,17 @@ class TestExperimentRegistry:
         assert d["status"] == "completed"
 
     def test_experiment_entry_from_dict(self) -> None:
-        data = {"experiment_id": "e1", "name": "test", "config": {}, "results": {}, "metrics": {}, "tags": [], "created_at": "", "description": "", "status": "completed"}
+        data = {
+            "experiment_id": "e1",
+            "name": "test",
+            "config": {},
+            "results": {},
+            "metrics": {},
+            "tags": [],
+            "created_at": "",
+            "description": "",
+            "status": "completed",
+        }
         entry = ExperimentEntry.from_dict(data)
         assert entry.experiment_id == "e1"
 

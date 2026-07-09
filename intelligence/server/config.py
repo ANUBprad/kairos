@@ -69,9 +69,7 @@ class ServerConfig:
             overlap=int(os.getenv("KEIRO_OVERLAP", "150")),
             llm_provider=os.getenv("KEIRO_LLM_PROVIDER"),
             deployment=os.getenv("KEIRO_DEPLOYMENT") == "True",
-            mmr_retrieval_lambda=float(
-                os.getenv("KEIRO_MMR_RETRIEVAL_LAMBDA", "0.5")
-            ),
+            mmr_retrieval_lambda=float(os.getenv("KEIRO_MMR_RETRIEVAL_LAMBDA", "0.5")),
             gemini_api_key=os.getenv("GEMINI_API_KEY"),
             gemini_model_name=os.getenv("KEIRO_GEMINI_MODEL_NAME"),
             openai_api_key=os.getenv("OPENAI_API_KEY"),
@@ -84,7 +82,8 @@ class ServerConfig:
             small_groq_model=os.getenv("KEIRO_SMALL_GROQ_MODEL"),
             cache_maxsize=int(os.getenv("KEIRO_CACHE_MAXSIZE", "4096")),
             cache_ttl_seconds=int(os.getenv("KEIRO_CACHE_TTL_SECONDS", "300")),
-            health_check_enabled=os.getenv("KEIRO_HEALTH_CHECK_ENABLED", "True") == "True",
+            health_check_enabled=os.getenv("KEIRO_HEALTH_CHECK_ENABLED", "True")
+            == "True",
             provider_timeout_seconds=float(
                 os.getenv("KEIRO_PROVIDER_TIMEOUT_SECONDS", "30.0")
             ),
@@ -157,9 +156,7 @@ def validate_env(cfg: ServerConfig) -> list[str]:
                 "KEIRO_OLLAMA_MODEL_NAME is required when KEIRO_LLM_PROVIDER=ollama"
             )
         if not cfg.ollama_url:
-            errors.append(
-                "KEIRO_OLLAMA_URL is required when KEIRO_LLM_PROVIDER=ollama"
-            )
+            errors.append("KEIRO_OLLAMA_URL is required when KEIRO_LLM_PROVIDER=ollama")
         return errors
 
     if cfg.large_groq_model and cfg.small_groq_model:

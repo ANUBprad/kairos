@@ -23,7 +23,7 @@ class SimpleRetriever(BaseRetriever):
 
         if not all_docs:
             return dense_chunks
-        
+
         tokenized_corpus = [doc.lower().split() for doc in all_docs]
         tokenized_query = query.lower().split()
         bm25 = BM25Okapi(tokenized_corpus)

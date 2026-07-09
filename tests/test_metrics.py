@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from intelligence.metrics.prometheus_metrics import (
     requests_total,
-    request_duration_seconds,
     planner_decisions_total,
     retrieval_duration_seconds,
     fallback_total,
@@ -28,7 +26,9 @@ class TestMetricsDefinitions:
         )
 
     def test_planner_decisions_counter(self) -> None:
-        planner_decisions_total.labels(query_type="complex", confidence_band="low").inc(2)
+        planner_decisions_total.labels(query_type="complex", confidence_band="low").inc(
+            2
+        )
         sample = planner_decisions_total.labels(
             query_type="complex", confidence_band="low"
         )._value.get()
@@ -36,9 +36,7 @@ class TestMetricsDefinitions:
 
     def test_fallback_counter(self) -> None:
         fallback_total.labels(escalated_tier="multi_hop").inc()
-        assert (
-            fallback_total.labels(escalated_tier="multi_hop")._value.get() >= 1
-        )
+        assert fallback_total.labels(escalated_tier="multi_hop")._value.get() >= 1
 
     def test_cache_hits_counter(self) -> None:
         cache_hits_total.labels(cache_name="embedding").inc(3)
@@ -50,13 +48,9 @@ class TestMetricsDefinitions:
 
     def test_circuit_breaker_gauge(self) -> None:
         circuit_breaker_state.labels(breaker_name="llm_client").set(1)
-        assert (
-            circuit_breaker_state.labels(breaker_name="llm_client")._value.get() == 1
-        )
+        assert circuit_breaker_state.labels(breaker_name="llm_client")._value.get() == 1
         circuit_breaker_state.labels(breaker_name="llm_client").set(3)
-        assert (
-            circuit_breaker_state.labels(breaker_name="llm_client")._value.get() == 3
-        )
+        assert circuit_breaker_state.labels(breaker_name="llm_client")._value.get() == 3
 
     def test_health_status_gauge(self) -> None:
         health_status.labels(service="").set(1)
@@ -67,9 +61,7 @@ class TestMetricsDefinitions:
     def test_retrieval_duration_histogram(self) -> None:
         retrieval_duration_seconds.labels(retrieval_type="MULTI_VECTOR").observe(0.5)
         assert (
-            retrieval_duration_seconds.labels(
-                retrieval_type="MULTI_VECTOR"
-            )._sum.get()
+            retrieval_duration_seconds.labels(retrieval_type="MULTI_VECTOR")._sum.get()
             >= 0.49
         )
 
@@ -80,7 +72,6 @@ class TestMetricsInterceptor:
         assert interceptor is not None
 
     def test_interceptor_counts_requests(self) -> None:
-        from grpc import _server, _interceptor
 
         handler = MagicMock()
         handler.unary_unary = MagicMock(return_value=lambda req, ctx: "ok")

@@ -4,8 +4,7 @@ import json
 import os
 import random
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 
 @dataclass
@@ -49,7 +48,9 @@ class BudgetDatasetGenerator:
             qid = rec.get("query_id", "")
             if qid.upper().startswith("COMPLEX") or "MULTI_VECTOR" in retrieval_type:
                 qt = "complex"
-            elif qid.upper().startswith("MULTI_HOP") or "SELF_QUERYING" in retrieval_type:
+            elif (
+                qid.upper().startswith("MULTI_HOP") or "SELF_QUERYING" in retrieval_type
+            ):
                 qt = "multi_hop"
             else:
                 qt = "simple"
@@ -60,17 +61,19 @@ class BudgetDatasetGenerator:
             rerank = bool(rec.get("rerank", False))
             decompose = bool(rec.get("decompose", False))
 
-            entries.append(BudgetDatasetEntry(
-                query_type=qt,
-                confidence=confidence,
-                retrieval_type=retrieval_type,
-                top_k=int(top_k) if not isinstance(top_k, bool) else 5,
-                rerank=rerank,
-                decompose=decompose,
-                latency_ms=float(latency),
-                fallback_triggered=fallback,
-                success=success,
-            ))
+            entries.append(
+                BudgetDatasetEntry(
+                    query_type=qt,
+                    confidence=confidence,
+                    retrieval_type=retrieval_type,
+                    top_k=int(top_k) if not isinstance(top_k, bool) else 5,
+                    rerank=rerank,
+                    decompose=decompose,
+                    latency_ms=float(latency),
+                    fallback_triggered=fallback,
+                    success=success,
+                )
+            )
 
         return entries
 
@@ -106,23 +109,33 @@ class BudgetDatasetGenerator:
             for top_k in self._TOP_K_OPTIONS:
                 for rerank in [False, True]:
                     for decompose in [False, True]:
-                        if top_k == entry.top_k and rerank == entry.rerank and decompose == entry.decompose:
+                        if (
+                            top_k == entry.top_k
+                            and rerank == entry.rerank
+                            and decompose == entry.decompose
+                        ):
                             continue
                         success, latency = self._simulate_outcome(
-                            entry.success, entry.latency_ms,
-                            entry.confidence, top_k, rerank, decompose,
+                            entry.success,
+                            entry.latency_ms,
+                            entry.confidence,
+                            top_k,
+                            rerank,
+                            decompose,
                         )
-                        augmented.append(BudgetDatasetEntry(
-                            query_type=entry.query_type,
-                            confidence=entry.confidence,
-                            retrieval_type=entry.retrieval_type,
-                            top_k=top_k,
-                            rerank=rerank,
-                            decompose=decompose,
-                            latency_ms=latency,
-                            fallback_triggered=not success,
-                            success=success,
-                        ))
+                        augmented.append(
+                            BudgetDatasetEntry(
+                                query_type=entry.query_type,
+                                confidence=entry.confidence,
+                                retrieval_type=entry.retrieval_type,
+                                top_k=top_k,
+                                rerank=rerank,
+                                decompose=decompose,
+                                latency_ms=latency,
+                                fallback_triggered=not success,
+                                success=success,
+                            )
+                        )
         return augmented
 
     def generate(
@@ -140,16 +153,21 @@ class BudgetDatasetGenerator:
         if output_path:
             with open(output_path, "w") as f:
                 for e in entries:
-                    f.write(json.dumps({
-                        "query_type": e.query_type,
-                        "confidence": e.confidence,
-                        "retrieval_type": e.retrieval_type,
-                        "top_k": e.top_k,
-                        "rerank": e.rerank,
-                        "decompose": e.decompose,
-                        "latency_ms": e.latency_ms,
-                        "fallback_triggered": e.fallback_triggered,
-                        "success": e.success,
-                    }) + "\n")
+                    f.write(
+                        json.dumps(
+                            {
+                                "query_type": e.query_type,
+                                "confidence": e.confidence,
+                                "retrieval_type": e.retrieval_type,
+                                "top_k": e.top_k,
+                                "rerank": e.rerank,
+                                "decompose": e.decompose,
+                                "latency_ms": e.latency_ms,
+                                "fallback_triggered": e.fallback_triggered,
+                                "success": e.success,
+                            }
+                        )
+                        + "\n"
+                    )
 
         return entries

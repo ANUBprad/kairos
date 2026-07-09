@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from intelligence.planner.retrieval_planner import RetrievalPlanner, PlannerDecision
+from intelligence.planner.retrieval_planner import RetrievalPlanner
 from intelligence.retrieval.retrieval_result import RetrievedDocument, RetrievalResult
 
 
@@ -48,7 +48,9 @@ class RealRetriever:
 
         try:
             if hasattr(retriever, "retrieve_top_k"):
-                raw = retriever.retrieve_top_k(namespace=namespace, top_k=top_k, query=query)
+                raw = retriever.retrieve_top_k(
+                    namespace=namespace, top_k=top_k, query=query
+                )
                 if isinstance(raw, list):
                     documents = self._normalize_documents(raw)
                 elif isinstance(raw, dict) and "chunks" in raw:
@@ -86,18 +88,26 @@ class RealRetriever:
         **classifier_kwargs: Any,
     ) -> RetrievalResult:
         if self._planner is None:
-            return self.retrieve(query, namespace=namespace, query_id=query_id, query_type=query_type)
+            return self.retrieve(
+                query, namespace=namespace, query_id=query_id, query_type=query_type
+            )
 
-        decision = self._planner.plan(query=query, query_type=query_type, **classifier_kwargs)
+        decision = self._planner.plan(
+            query=query, query_type=query_type, **classifier_kwargs
+        )
         planner_decision = {}
         if hasattr(decision, "to_dict"):
             planner_decision = decision.to_dict()
         elif isinstance(decision, dict):
             planner_decision = decision
 
-        strategy = planner_decision.get("strategy", "simple") if planner_decision else "simple"
+        strategy = (
+            planner_decision.get("strategy", "simple") if planner_decision else "simple"
+        )
         top_k = planner_decision.get("top_k", 5) if planner_decision else 5
-        confidence = planner_decision.get("confidence", 0.5) if planner_decision else 0.5
+        confidence = (
+            planner_decision.get("confidence", 0.5) if planner_decision else 0.5
+        )
 
         result = self.retrieve(
             query=query,
@@ -122,9 +132,11 @@ class RealRetriever:
             elif isinstance(item, tuple) and len(item) >= 2:
                 docs.append(RetrievedDocument(text=str(item[0]), score=float(item[1])))
             elif isinstance(item, dict):
-                docs.append(RetrievedDocument(
-                    text=str(item.get("text", item.get("content", str(item)))),
-                    score=float(item.get("score", item.get("similarity", 0.0))),
-                    source_id=str(item.get("source_id", item.get("id", ""))),
-                ))
+                docs.append(
+                    RetrievedDocument(
+                        text=str(item.get("text", item.get("content", str(item)))),
+                        score=float(item.get("score", item.get("similarity", 0.0))),
+                        source_id=str(item.get("source_id", item.get("id", ""))),
+                    )
+                )
         return docs

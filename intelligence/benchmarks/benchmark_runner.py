@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from benchmarks.dataset.loader import QueryEntry
 from benchmarks.runner import BenchmarkRunner as CoreRunner
@@ -10,7 +10,10 @@ from intelligence.benchmarks.benchmark_result import BenchmarkResult
 from intelligence.benchmarks.dataset_registry import DatasetRegistry
 from intelligence.experiments.tracker import ExperimentTracker
 from intelligence.experiments.models import ExperimentParameters
-from intelligence.statistics.reporting import generate_validation_report
+from intelligence.statistics.reporting import (
+    generate_validation_report,
+    ValidationResult,
+)
 
 
 class BenchmarkRunner:
@@ -96,11 +99,7 @@ class BenchmarkRunner:
         Returns:
             List of :class:`BenchmarkResult` objects, one per dataset.
         """
-        names = (
-            dataset_names
-            if dataset_names is not None
-            else registry.dataset_names()
-        )
+        names = dataset_names if dataset_names is not None else registry.dataset_names()
         results: List[BenchmarkResult] = []
         for name in names:
             entries = registry.get_entries(name)
@@ -128,12 +127,9 @@ class BenchmarkRunner:
         failures = result.aggregated_failures()
         avg_lat = result.average_latency()
 
-        per_recall = [
-            float(r.recall) for r in result.results if r.recall is not None
-        ]
+        per_recall = [float(r.recall) for r in result.results if r.recall is not None]
         per_precision = [
-            float(r.precision) for r in result.results
-            if r.precision is not None
+            float(r.precision) for r in result.results if r.precision is not None
         ]
         per_latency = [r.latency.total * 1000.0 for r in result.results]
 
@@ -184,9 +180,7 @@ class BenchmarkRunner:
     ) -> None:
         if self._tracker is None:
             return
-        types = sorted(
-            set(r.entry.query_type for r in runner_result.results)
-        )
+        types = sorted(set(r.entry.query_type for r in runner_result.results))
         exp_params = ExperimentParameters(
             dataset_name=dataset_name,
             query_types=",".join(types),
@@ -195,5 +189,5 @@ class BenchmarkRunner:
             name=run_name or f"benchmark-{dataset_name}",
             phase="benchmark",
             parameters=exp_params,
-        ) as run:
+        ):
             self._tracker.log_metrics_from_result(runner_result)

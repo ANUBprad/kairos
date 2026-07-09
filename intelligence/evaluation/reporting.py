@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-from intelligence.evaluation.evaluator import AggregateEvaluation, EvaluationResult
+from intelligence.evaluation.evaluator import AggregateEvaluation
 
 
 def generate_evaluation_report(
@@ -31,12 +31,14 @@ def generate_evaluation_report(
     ]
 
     if evaluation.per_query_results:
-        lines.extend([
-            "## Per-Query Results",
-            "",
-            "| ID | Type | Recall | Precision | RR | AP | NDCG | Hit | Latency (ms) | Success |",
-            "| -- | ---- | ------ | --------- | -- | -- | ---- | --- | ------------ | ------- |",
-        ])
+        lines.extend(
+            [
+                "## Per-Query Results",
+                "",
+                "| ID | Type | Recall | Precision | RR | AP | NDCG | Hit | Latency (ms) | Success |",
+                "| -- | ---- | ------ | --------- | -- | -- | ---- | --- | ------------ | ------- |",
+            ]
+        )
         for r in evaluation.per_query_results:
             lines.append(
                 f"| {r.query_id[:10]:<10} "

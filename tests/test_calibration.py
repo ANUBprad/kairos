@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import json
-import math
 import os
 import tempfile
-from typing import List
 
 import numpy as np
 import pytest
@@ -302,7 +300,9 @@ class TestConfidenceCalibrator:
         cc = ConfidenceCalibrator()
         cc.fit(conf, success)
         result = cc.calibrate(0.85)
-        assert abs(result.confidence_delta - (result.calibrated_confidence - 0.85)) < 1e-10
+        assert (
+            abs(result.confidence_delta - (result.calibrated_confidence - 0.85)) < 1e-10
+        )
 
     def test_calibrate_with_metadata(self, perfect_data):
         conf, success = perfect_data
@@ -349,12 +349,19 @@ class TestConfidenceCalibrator:
     def test_predict_clips_to_unit_interval(self):
         class _OutOfRangeCalibrator(CalibrationStrategy):
             name = "out_of_range"
-            def fit(self, c, s): pass
+
+            def fit(self, c, s):
+                pass
+
             def predict(self, c):
                 return np.array([-0.5 if x < 0.5 else 1.5 for x in c.ravel()])
-            def get_params(self): return {}
+
+            def get_params(self):
+                return {}
+
             @classmethod
-            def from_params(cls, p): return cls()
+            def from_params(cls, p):
+                return cls()
 
         cc = ConfidenceCalibrator()
         cc._fitted = True
@@ -377,12 +384,31 @@ class TestConfidenceCalibrator:
             cc.fit(np.array([]), np.array([]))
 
     def test_accuracy_after_perfect_fit(self):
-        conf = np.array([0.3, 0.3, 0.4, 0.4, 0.5, 0.5, 0.6, 0.6,
-                         0.7, 0.7, 0.8, 0.8, 0.9, 0.9, 1.0, 1.0,
-                         0.3, 0.4, 0.5, 0.6])
-        success = np.array([0, 1, 0, 1, 0, 1, 1, 1,
-                            1, 1, 1, 1, 1, 1, 1, 1,
-                            0, 0, 1, 1])
+        conf = np.array(
+            [
+                0.3,
+                0.3,
+                0.4,
+                0.4,
+                0.5,
+                0.5,
+                0.6,
+                0.6,
+                0.7,
+                0.7,
+                0.8,
+                0.8,
+                0.9,
+                0.9,
+                1.0,
+                1.0,
+                0.3,
+                0.4,
+                0.5,
+                0.6,
+            ]
+        )
+        success = np.array([0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1])
         cc = ConfidenceCalibrator()
         cc.fit(conf, success)
         expected_acc = success.mean()
@@ -558,7 +584,9 @@ class TestCalibrationReport:
         conf, success = overconfident_data
         report = generate_calibration_report(conf, success, conf)
         lines = report.split("\n")
-        metric_lines = [l for l in lines if "ECE" in l or "MCE" in l or "Brier" in l]
+        metric_lines = [
+            line for line in lines if "ECE" in line or "MCE" in line or "Brier" in line
+        ]
         assert len(metric_lines) >= 3
 
     def test_report_empty_data(self, empty_data):
@@ -588,7 +616,9 @@ class TestCalibrationStorage:
             assert loaded.n_training_samples == len(conf)
             r1 = cc.calibrate(0.85)
             r2 = loaded.calibrate(0.85)
-            assert r1.calibrated_confidence == pytest.approx(r2.calibrated_confidence, abs=1e-6)
+            assert r1.calibrated_confidence == pytest.approx(
+                r2.calibrated_confidence, abs=1e-6
+            )
         finally:
             if os.path.exists(path):
                 os.unlink(path)
@@ -606,7 +636,9 @@ class TestCalibrationStorage:
             assert loaded.fitted
             r1 = cc.calibrate(0.85)
             r2 = loaded.calibrate(0.85)
-            assert r1.calibrated_confidence == pytest.approx(r2.calibrated_confidence, abs=1e-6)
+            assert r1.calibrated_confidence == pytest.approx(
+                r2.calibrated_confidence, abs=1e-6
+            )
         finally:
             if os.path.exists(path):
                 os.unlink(path)
@@ -669,6 +701,7 @@ class _FakeClassifier:
             query_type = "simple"
             domain = None
             confidence_score = 0.95
+
         return _FakeResponse()
 
 
@@ -690,6 +723,7 @@ class _FakeCalibrator(ConfidenceCalibrator):
 class TestPlannerCalibrationIntegration:
     def test_planner_accepts_calibrator(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         cc = _FakeCalibrator()
         planner = RetrievalPlanner(classifier=_FakeClassifier(), calibrator=cc)
         decision = planner.plan("test", use_calibrated_confidence=True)
@@ -697,6 +731,7 @@ class TestPlannerCalibrationIntegration:
 
     def test_planner_calibrated_confidence_different_from_raw(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         cc = _FakeCalibrator()
         planner = RetrievalPlanner(classifier=_FakeClassifier(), calibrator=cc)
         decision = planner.plan("test", use_calibrated_confidence=True)
@@ -704,6 +739,7 @@ class TestPlannerCalibrationIntegration:
 
     def test_planner_calibration_method_in_decision(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         cc = _FakeCalibrator()
         planner = RetrievalPlanner(classifier=_FakeClassifier(), calibrator=cc)
         decision = planner.plan("test", use_calibrated_confidence=True)
@@ -711,6 +747,7 @@ class TestPlannerCalibrationIntegration:
 
     def test_planner_disabled_calibration_uses_raw(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         cc = _FakeCalibrator()
         planner = RetrievalPlanner(classifier=_FakeClassifier(), calibrator=cc)
         decision = planner.plan("test", use_calibrated_confidence=False)
@@ -718,12 +755,14 @@ class TestPlannerCalibrationIntegration:
 
     def test_planner_no_calibrator_uses_raw(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         planner = RetrievalPlanner(classifier=_FakeClassifier())
         decision = planner.plan("test", use_calibrated_confidence=True)
         assert decision.calibrated_confidence == decision.confidence
 
     def test_planner_not_fitted_calibrator_uses_raw(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         cc = ConfidenceCalibrator()
         planner = RetrievalPlanner(classifier=_FakeClassifier(), calibrator=cc)
         decision = planner.plan("test", use_calibrated_confidence=True)
@@ -731,27 +770,37 @@ class TestPlannerCalibrationIntegration:
 
     def test_planner_with_evaluation_calibrated(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         cc = _FakeCalibrator()
         planner = RetrievalPlanner(classifier=_FakeClassifier(), calibrator=cc)
-        decision = planner.plan_with_evaluation("test", chunk_count=5, use_calibrated_confidence=True)
+        decision = planner.plan_with_evaluation(
+            "test", chunk_count=5, use_calibrated_confidence=True
+        )
         assert decision.fallback_decision is not None
         assert decision.calibrated_confidence is not None
 
     def test_planner_with_evaluation_calibrated_differs_from_raw(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         cc = _FakeCalibrator()
         planner = RetrievalPlanner(classifier=_FakeClassifier(), calibrator=cc)
-        decision = planner.plan_with_evaluation("test", chunk_count=5, use_calibrated_confidence=True)
+        decision = planner.plan_with_evaluation(
+            "test", chunk_count=5, use_calibrated_confidence=True
+        )
         assert decision.calibrated_confidence != decision.confidence
 
     def test_planner_with_evaluation_no_calibrator(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         planner = RetrievalPlanner(classifier=_FakeClassifier())
-        decision = planner.plan_with_evaluation("test", chunk_count=5, use_calibrated_confidence=True)
+        decision = planner.plan_with_evaluation(
+            "test", chunk_count=5, use_calibrated_confidence=True
+        )
         assert decision.calibrated_confidence == decision.confidence
 
     def test_planner_budget_uses_calibrated_confidence(self):
         from intelligence.planner.retrieval_planner import RetrievalPlanner
+
         cc = _FakeCalibrator()
         planner = RetrievalPlanner(classifier=_FakeClassifier(), calibrator=cc)
         raw_decision = planner.plan("test", use_calibrated_confidence=False)
@@ -760,6 +809,7 @@ class TestPlannerCalibrationIntegration:
         cal_conf = cal_decision.calibrated_confidence
 
         from intelligence.planner.budget_allocator import resolve_confidence_band
+
         raw_band = resolve_confidence_band(raw_conf)
         cal_band = resolve_confidence_band(cal_conf)
         assert raw_band is not None
@@ -783,12 +833,13 @@ class TestEdgeCases:
 
     def test_extreme_confidences(self):
         rng = np.random.RandomState(42)
-        conf = np.concatenate([
-            rng.uniform(0.0, 0.05, 10),
-            rng.uniform(0.95, 1.0, 10),
-        ])
-        success = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+        conf = np.concatenate(
+            [
+                rng.uniform(0.0, 0.05, 10),
+                rng.uniform(0.95, 1.0, 10),
+            ]
+        )
+        success = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
         cc = ConfidenceCalibrator()
         cc.fit(conf, success)
         for v in [0.0, 0.01, 0.5, 0.99, 1.0]:
@@ -865,7 +916,9 @@ class TestEdgeCases:
         assert mce >= 0.0
 
     def test_brier_score_single_element(self):
-        assert compute_brier_score(np.array([0.7]), np.array([1.0])) == pytest.approx(0.09)
+        assert compute_brier_score(np.array([0.7]), np.array([1.0])) == pytest.approx(
+            0.09
+        )
 
     def test_generate_report_single_element(self):
         conf = np.array([0.8])
@@ -881,11 +934,21 @@ class TestEdgeCases:
 
 class TestCalibrationResult:
     def test_default_metadata_is_empty(self):
-        r = CalibrationResult(calibrated_confidence=0.8, raw_confidence=0.9, method="p", confidence_delta=-0.1)
+        r = CalibrationResult(
+            calibrated_confidence=0.8,
+            raw_confidence=0.9,
+            method="p",
+            confidence_delta=-0.1,
+        )
         assert r.metadata == {}
 
     def test_repr(self):
-        r = CalibrationResult(calibrated_confidence=0.8, raw_confidence=0.9, method="p", confidence_delta=-0.1)
+        r = CalibrationResult(
+            calibrated_confidence=0.8,
+            raw_confidence=0.9,
+            method="p",
+            confidence_delta=-0.1,
+        )
         assert "calibrated_confidence" in repr(r)
 
     def test_fields(self):

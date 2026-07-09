@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Sequence, Set, Tuple
+from typing import List, Sequence, Set
 
 from intelligence.judging.judge import BaseJudge, JudgeResult, Judgment
 
@@ -8,7 +8,9 @@ from intelligence.judging.judge import BaseJudge, JudgeResult, Judgment
 class HallucinationJudge(BaseJudge):
     dimension: str = "hallucination"
 
-    def __init__(self, threshold_pass: float = 0.8, threshold_warn: float = 0.6) -> None:
+    def __init__(
+        self, threshold_pass: float = 0.8, threshold_warn: float = 0.6
+    ) -> None:
         self.threshold_pass = threshold_pass
         self.threshold_warn = threshold_warn
 
@@ -99,18 +101,15 @@ class HallucinationJudge(BaseJudge):
         words = text.lower().split()
         if len(words) < n:
             return {text.lower()}
-        return {" ".join(words[i:i + n]) for i in range(len(words) - n + 1)}
+        return {" ".join(words[i : i + n]) for i in range(len(words) - n + 1)}
 
     @staticmethod
     def _claim_is_supported(claim: str, context_ngrams: Set[str]) -> bool:
         claim_words = claim.split()
         if len(claim_words) < 4:
-            return claim in context_ngrams or any(
-                claim in ng for ng in context_ngrams
-            )
+            return claim in context_ngrams or any(claim in ng for ng in context_ngrams)
         claim_trigrams = {
-            " ".join(claim_words[i:i + 3])
-            for i in range(len(claim_words) - 2)
+            " ".join(claim_words[i : i + 3]) for i in range(len(claim_words) - 2)
         }
         if not claim_trigrams:
             return False

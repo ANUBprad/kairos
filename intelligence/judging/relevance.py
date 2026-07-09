@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Sequence, Set
+from typing import Sequence, Set
 
 from intelligence.judging.judge import BaseJudge, JudgeResult, Judgment
 
@@ -8,7 +8,9 @@ from intelligence.judging.judge import BaseJudge, JudgeResult, Judgment
 class RelevanceJudge(BaseJudge):
     dimension: str = "relevance"
 
-    def __init__(self, threshold_pass: float = 0.6, threshold_warn: float = 0.3) -> None:
+    def __init__(
+        self, threshold_pass: float = 0.6, threshold_warn: float = 0.3
+    ) -> None:
         self.threshold_pass = threshold_pass
         self.threshold_warn = threshold_warn
 
@@ -68,4 +70,5 @@ class RelevanceJudge(BaseJudge):
     @staticmethod
     def _tokenize(text: str) -> Set[str]:
         import re
+
         return set(re.findall(r"[a-zA-Z0-9_]+", text.lower()))

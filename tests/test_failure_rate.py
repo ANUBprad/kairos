@@ -25,8 +25,11 @@ class TestFailureRecord:
 
     def test_all_fields_set(self) -> None:
         record = FailureRecord(
-            empty_retrieval=2, timeout=1, planner_fallback=3,
-            generation_failure=0, total_queries=50,
+            empty_retrieval=2,
+            timeout=1,
+            planner_fallback=3,
+            generation_failure=0,
+            total_queries=50,
         )
         assert record.empty_retrieval == 2
         assert record.timeout == 1
@@ -40,8 +43,11 @@ class TestComputeFailureRates:
 
     def test_basic(self) -> None:
         record = FailureRecord(
-            empty_retrieval=2, timeout=0, planner_fallback=3,
-            generation_failure=1, total_queries=20,
+            empty_retrieval=2,
+            timeout=0,
+            planner_fallback=3,
+            generation_failure=1,
+            total_queries=20,
         )
         rates = compute_failure_rates(record)
         assert rates["empty_retrieval_rate"] == 0.1
@@ -57,8 +63,11 @@ class TestComputeFailureRates:
 
     def test_all_queries_fail(self) -> None:
         record = FailureRecord(
-            empty_retrieval=5, timeout=3, planner_fallback=2,
-            generation_failure=0, total_queries=10,
+            empty_retrieval=5,
+            timeout=3,
+            planner_fallback=2,
+            generation_failure=0,
+            total_queries=10,
         )
         rates = compute_failure_rates(record)
         assert rates["overall_failure_rate"] == 1.0

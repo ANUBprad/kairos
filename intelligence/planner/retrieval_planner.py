@@ -12,7 +12,7 @@ it, and then evaluating the outcome with :class:`FallbackManager`.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional
 
 from .budget_allocator import allocate_budget
 from .fallback_manager import FallbackDecision, FallbackManager
@@ -164,7 +164,11 @@ class RetrievalPlanner:
         calibrated_confidence: Optional[float] = None
         calibration_method: Optional[str] = None
 
-        if use_calibrated_confidence and self._calibrator is not None and self._calibrator.fitted:
+        if (
+            use_calibrated_confidence
+            and self._calibrator is not None
+            and self._calibrator.fitted
+        ):
             cal_result = self._calibrator.calibrate(raw_confidence)
             calibrated_confidence = cal_result.calibrated_confidence
             calibration_method = cal_result.method
@@ -172,7 +176,11 @@ class RetrievalPlanner:
         else:
             budget_confidence = raw_confidence
 
-        if use_learned_budget and self._optimizer is not None and self._optimizer.fitted:
+        if (
+            use_learned_budget
+            and self._optimizer is not None
+            and self._optimizer.fitted
+        ):
             rec = self._optimizer.recommend_budget(query_type_str, budget_confidence)
             budget = RetrievalBudget(
                 top_k=rec.recommended_top_k,
@@ -183,11 +191,24 @@ class RetrievalPlanner:
             budget = allocate_budget(QueryType(query_type_str), budget_confidence)
 
         # --- Feedback Adjustment Layer ---
-        if use_feedback_learning and self._feedback_adjuster is not None and self._feedback_adjuster.fitted:
-            adj_top_k, adj_rerank, adj_decompose = self._feedback_adjuster.adjust_config(
-                query_type_str, budget.top_k, budget.rerank, budget.decompose,
+        if (
+            use_feedback_learning
+            and self._feedback_adjuster is not None
+            and self._feedback_adjuster.fitted
+        ):
+            adj_top_k, adj_rerank, adj_decompose = (
+                self._feedback_adjuster.adjust_config(
+                    query_type_str,
+                    budget.top_k,
+                    budget.rerank,
+                    budget.decompose,
+                )
             )
-            if adj_top_k != budget.top_k or adj_rerank != budget.rerank or adj_decompose != budget.decompose:
+            if (
+                adj_top_k != budget.top_k
+                or adj_rerank != budget.rerank
+                or adj_decompose != budget.decompose
+            ):
                 budget = RetrievalBudget(
                     top_k=adj_top_k,
                     rerank=adj_rerank,
@@ -238,7 +259,9 @@ class RetrievalPlanner:
             use_feedback_learning=use_feedback_learning,
         )
         budget_confidence = (
-            decision.calibrated_confidence if use_calibrated_confidence else decision.confidence
+            decision.calibrated_confidence
+            if use_calibrated_confidence
+            else decision.confidence
         )
         fb = FallbackManager.evaluate(
             config=decision.config,

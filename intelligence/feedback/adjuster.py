@@ -141,7 +141,8 @@ class FeedbackAdjuster:
         if query_type not in self._config_rates:
             return 0.0
         matching = [
-            rate for cfg, rate in self._config_rates[query_type].items()
+            rate
+            for cfg, rate in self._config_rates[query_type].items()
             if cfg.startswith(f"{top_k}_")
         ]
         return sum(matching) / len(matching) if matching else 0.0

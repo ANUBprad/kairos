@@ -5,7 +5,7 @@ from typing import Callable, Optional
 
 import numpy as np
 
-from .calibration_model import CalibrationStrategy, IsotonicCalibrator, PlattScalingCalibrator
+from .calibration_model import CalibrationStrategy, PlattScalingCalibrator
 
 
 @dataclass
@@ -67,16 +67,17 @@ class ConfidenceCalibrator:
         self._accuracy = float(successes.mean())
 
         from .calibration_metrics import compute_ece
-        self._ece = compute_ece(
-            self._strategy.predict(confidences), successes
-        )
+
+        self._ece = compute_ece(self._strategy.predict(confidences), successes)
 
         if tracker is not None:
-            tracker.log_metrics({
-                "ece": self._ece,
-                "training_samples": float(self._n_training_samples),
-                "accuracy": self._accuracy,
-            })
+            tracker.log_metrics(
+                {
+                    "ece": self._ece,
+                    "training_samples": float(self._n_training_samples),
+                    "accuracy": self._accuracy,
+                }
+            )
             tracker.log_parameter("calibrator_type", self._strategy.name)
 
     def predict(self, confidence: float) -> float:

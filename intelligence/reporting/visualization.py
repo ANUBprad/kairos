@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import io
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple
 
 from intelligence.ablation.comparison import AblationComparison
 from intelligence.benchmarks.benchmark_result import BenchmarkResult
-from intelligence.experiments.models import ExperimentMetrics, ExperimentRun
+from intelligence.experiments.models import ExperimentRun
 
 
 def _import_plt():
     """Lazy import matplotlib.pyplot."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     return plt
 
 
@@ -43,9 +45,11 @@ def plot_metric_trend(
     ]
     labels = [r.name or r.run_id[:8] for r in sorted_runs]
 
-    valid = [(v, l) for v, l in zip(m_val, labels) if v is not None]
+    valid = [(v, lbl) for v, lbl in zip(m_val, labels) if v is not None]
     if not valid:
-        ax.text(0.5, 0.5, "No valid data", ha="center", va="center", transform=ax.transAxes)
+        ax.text(
+            0.5, 0.5, "No valid data", ha="center", va="center", transform=ax.transAxes
+        )
         return _fig_to_bytes(fig)
 
     values, lbls = zip(*valid)
@@ -103,7 +107,12 @@ def plot_experiment_comparison(
         )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([r.name or r.run_id[:8] for r in valid_runs], rotation=45, ha="right", fontsize=8)
+    ax.set_xticklabels(
+        [r.name or r.run_id[:8] for r in valid_runs],
+        rotation=45,
+        ha="right",
+        fontsize=8,
+    )
     ax.set_ylabel("Score")
     ax.set_title(title)
     ax.legend(fontsize=9)
@@ -142,9 +151,12 @@ def plot_benchmark_comparison(
 
     for bar, v in zip(bars, vals):
         ax.text(
-            bar.get_x() + bar.get_width() / 2, bar.get_height() + max(vals) * 0.01,
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + max(vals) * 0.01,
             f"{v:.2f}" if v < 1 else f"{v:.1f}",
-            ha="center", va="bottom", fontsize=8,
+            ha="center",
+            va="bottom",
+            fontsize=8,
         )
 
     fig.tight_layout()
@@ -181,7 +193,9 @@ def plot_ablation_impact(
                 rows.append((label, delta, metric_name))
 
     if not rows:
-        ax.text(0.5, 0.5, "No delta data", ha="center", va="center", transform=ax.transAxes)
+        ax.text(
+            0.5, 0.5, "No delta data", ha="center", va="center", transform=ax.transAxes
+        )
         return _fig_to_bytes(fig)
 
     y_labels = [f"{r[2]}: {r[0]}" for r in rows]
@@ -205,5 +219,6 @@ def _fig_to_bytes(fig) -> bytes:
     buf.seek(0)
     data = buf.read()
     import matplotlib.pyplot as plt
+
     plt.close(fig)
     return data

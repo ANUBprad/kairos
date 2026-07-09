@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import tempfile
 import threading
 from pathlib import Path
@@ -64,46 +63,86 @@ def temp_collector(temp_storage) -> TelemetryCollector:
 
 class TestRetrievalTelemetry:
     def test_default_timestamp(self) -> None:
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                               retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         assert e.timestamp > 0
 
     def test_frozen_by_convention(self) -> None:
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                               retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         assert e.query == "?"
 
     def test_default_success_true(self) -> None:
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                               retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         assert e.success
 
     def test_default_fallback_false(self) -> None:
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                                retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         assert not e.fallback_triggered
         assert e.fallback_reason is None
 
     def test_default_query_id_none(self) -> None:
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                                retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         assert e.query_id is None
 
     def test_default_event_type_retrieval(self) -> None:
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                                retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         assert e.event_type == "retrieval"
 
     def test_custom_query_id(self) -> None:
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                                retrieval_type="HYBRID", top_k=3,
-                                query_id="req-001")
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+            query_id="req-001",
+        )
         assert e.query_id == "req-001"
 
     def test_custom_event_type(self) -> None:
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                                retrieval_type="HYBRID", top_k=3,
-                                event_type="classification")
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+            event_type="classification",
+        )
         assert e.event_type == "classification"
 
 
@@ -114,8 +153,13 @@ class TestRetrievalTelemetry:
 
 class TestTelemetryStorage:
     def test_store_and_read_single(self, temp_storage) -> None:
-        e = RetrievalTelemetry(query="q1", query_type="SIMPLE", confidence=0.9,
-                               retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="q1",
+            query_type="SIMPLE",
+            confidence=0.9,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         temp_storage.store(e)
         dates = temp_storage.list_dates()
         assert len(dates) == 1
@@ -125,8 +169,13 @@ class TestTelemetryStorage:
 
     def test_store_batch(self, temp_storage) -> None:
         events = [
-            RetrievalTelemetry(query=f"q{i}", query_type="SIMPLE", confidence=0.5,
-                               retrieval_type="HYBRID", top_k=3)
+            RetrievalTelemetry(
+                query=f"q{i}",
+                query_type="SIMPLE",
+                confidence=0.5,
+                retrieval_type="HYBRID",
+                top_k=3,
+            )
             for i in range(5)
         ]
         temp_storage.store_batch(events)
@@ -139,9 +188,14 @@ class TestTelemetryStorage:
         assert temp_storage.event_count == 0
 
     def test_jsonl_format(self, temp_storage) -> None:
-        e = RetrievalTelemetry(query="test", query_type="SIMPLE", confidence=0.5,
-                               retrieval_type="HYBRID", top_k=3,
-                               retrieval_latency_ms=10.0)
+        e = RetrievalTelemetry(
+            query="test",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+            retrieval_latency_ms=10.0,
+        )
         temp_storage.store(e)
         path = list(Path(temp_storage._base).glob("*.jsonl"))[0]
         line = path.read_text(encoding="utf-8").strip()
@@ -151,10 +205,16 @@ class TestTelemetryStorage:
 
     def test_list_dates(self, temp_storage) -> None:
         from datetime import date
+
         before = temp_storage.list_dates()
         assert before == []  # empty dir
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                               retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         temp_storage.store(e)
         after = temp_storage.list_dates()
         assert len(after) == 1
@@ -162,8 +222,13 @@ class TestTelemetryStorage:
 
     def test_event_count(self, temp_storage) -> None:
         assert temp_storage.event_count == 0
-        e = RetrievalTelemetry(query="?", query_type="SIMPLE", confidence=0.5,
-                               retrieval_type="HYBRID", top_k=3)
+        e = RetrievalTelemetry(
+            query="?",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         temp_storage.store(e)
         assert temp_storage.event_count == 1
 
@@ -194,9 +259,15 @@ class TestSerializationRoundTrip:
         assert restored.timestamp == sample_event.timestamp
 
     def test_round_trip_query_id(self) -> None:
-        e = RetrievalTelemetry(query="q", query_type="SIMPLE", confidence=0.5,
-                                retrieval_type="HYBRID", top_k=3,
-                                query_id="req-001", event_type="classification")
+        e = RetrievalTelemetry(
+            query="q",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+            query_id="req-001",
+            event_type="classification",
+        )
         line = _event_to_jsonl(e)
         restored = _jsonl_to_event(line)
         assert restored.query_id == "req-001"
@@ -204,10 +275,17 @@ class TestSerializationRoundTrip:
 
     def test_round_trip_with_fallback(self) -> None:
         e = RetrievalTelemetry(
-            query="q", query_type="COMPLEX", confidence=0.4,
-            retrieval_type="MULTI_VECTOR", top_k=10, rerank=True, decompose=True,
-            retrieved_chunks=15, retrieval_latency_ms=200.0,
-            fallback_triggered=True, fallback_reason="low chunk count",
+            query="q",
+            query_type="COMPLEX",
+            confidence=0.4,
+            retrieval_type="MULTI_VECTOR",
+            top_k=10,
+            rerank=True,
+            decompose=True,
+            retrieved_chunks=15,
+            retrieval_latency_ms=200.0,
+            fallback_triggered=True,
+            fallback_reason="low chunk count",
             success=True,
         )
         line = _event_to_jsonl(e)
@@ -219,8 +297,12 @@ class TestSerializationRoundTrip:
 
     def test_round_trip_failure(self) -> None:
         e = RetrievalTelemetry(
-            query="q", query_type="UNKNOWN", confidence=0.0,
-            retrieval_type="UNKNOWN", top_k=0, success=False,
+            query="q",
+            query_type="UNKNOWN",
+            confidence=0.0,
+            retrieval_type="UNKNOWN",
+            top_k=0,
+            success=False,
             fallback_reason="timeout",
         )
         line = _event_to_jsonl(e)
@@ -237,8 +319,12 @@ class TestSerializationRoundTrip:
 class TestTelemetryCollector:
     def test_record_retrieval(self, temp_collector) -> None:
         temp_collector.record_retrieval(
-            query="test", query_type="SIMPLE", confidence=0.9,
-            retrieval_type="HYBRID", top_k=3, retrieved_chunks=2,
+            query="test",
+            query_type="SIMPLE",
+            confidence=0.9,
+            retrieval_type="HYBRID",
+            top_k=3,
+            retrieved_chunks=2,
             retrieval_latency_ms=10.0,
         )
         assert temp_collector.pending_count == 1
@@ -251,24 +337,43 @@ class TestTelemetryCollector:
 
     def test_record_fallback(self, temp_collector) -> None:
         temp_collector.record_fallback(
-            query="fb", query_type="COMPLEX", confidence=0.6,
-            retrieval_type="MULTI_VECTOR", top_k=5, reason="low chunk count",
+            query="fb",
+            query_type="COMPLEX",
+            confidence=0.6,
+            retrieval_type="MULTI_VECTOR",
+            top_k=5,
+            reason="low chunk count",
         )
         assert temp_collector.pending_count == 1
 
     def test_flush_writes_to_storage(self, temp_storage) -> None:
         col = TelemetryCollector(storage=temp_storage)
-        col.record_retrieval(query="q1", query_type="SIMPLE", confidence=0.5,
-                             retrieval_type="HYBRID", top_k=3)
-        col.record_retrieval(query="q2", query_type="COMPLEX", confidence=0.5,
-                             retrieval_type="MULTI_VECTOR", top_k=5)
+        col.record_retrieval(
+            query="q1",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
+        col.record_retrieval(
+            query="q2",
+            query_type="COMPLEX",
+            confidence=0.5,
+            retrieval_type="MULTI_VECTOR",
+            top_k=5,
+        )
         col.flush()
         assert temp_storage.event_count == 2
 
     def test_flush_no_storage(self) -> None:
         col = TelemetryCollector()  # no storage
-        col.record_retrieval(query="q", query_type="SIMPLE", confidence=0.5,
-                             retrieval_type="HYBRID", top_k=3)
+        col.record_retrieval(
+            query="q",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         col.flush()  # should not crash
 
     def test_thread_safety(self, temp_storage) -> None:
@@ -277,9 +382,13 @@ class TestTelemetryCollector:
 
         def worker():
             for i in range(n):
-                col.record_retrieval(query=f"q{i}", query_type="SIMPLE",
-                                     confidence=0.5, retrieval_type="HYBRID",
-                                     top_k=3)
+                col.record_retrieval(
+                    query=f"q{i}",
+                    query_type="SIMPLE",
+                    confidence=0.5,
+                    retrieval_type="HYBRID",
+                    top_k=3,
+                )
 
         threads = [threading.Thread(target=worker) for _ in range(4)]
         for t in threads:
@@ -296,8 +405,13 @@ class TestTelemetryCollector:
             received.append(event)
 
         col = TelemetryCollector(on_event=cb)
-        col.record_retrieval(query="q", query_type="SIMPLE", confidence=0.5,
-                             retrieval_type="HYBRID", top_k=3)
+        col.record_retrieval(
+            query="q",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         assert len(received) == 1
         assert received[0].query == "q"
 
@@ -306,14 +420,24 @@ class TestTelemetryCollector:
             raise RuntimeError("callback error")
 
         col = TelemetryCollector(on_event=failing_cb)
-        col.record_retrieval(query="q", query_type="SIMPLE", confidence=0.5,
-                             retrieval_type="HYBRID", top_k=3)
+        col.record_retrieval(
+            query="q",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         assert col.pending_count == 1  # event still buffered
 
     def test_close_flushes(self, temp_storage) -> None:
         col = TelemetryCollector(storage=temp_storage)
-        col.record_retrieval(query="q", query_type="SIMPLE", confidence=0.5,
-                             retrieval_type="HYBRID", top_k=3)
+        col.record_retrieval(
+            query="q",
+            query_type="SIMPLE",
+            confidence=0.5,
+            retrieval_type="HYBRID",
+            top_k=3,
+        )
         col.close()
         assert temp_storage.event_count == 1
 
@@ -356,7 +480,9 @@ class TestComputeStrategyDistribution:
         assert full == {"HYBRID": 1, "MULTI_VECTOR": 1, "SELF_QUERYING": 1}
         retrievals = compute_strategy_distribution(events, event_type="retrieval")
         assert retrievals == {"MULTI_VECTOR": 1, "SELF_QUERYING": 1}
-        classifications = compute_strategy_distribution(events, event_type="classification")
+        classifications = compute_strategy_distribution(
+            events, event_type="classification"
+        )
         assert classifications == {"HYBRID": 1}
 
 
@@ -371,7 +497,11 @@ class TestComputeConfidenceDistribution:
         assert dist == {"0.0-0.5": 1, "0.5-0.8": 1, "0.8-1.0": 1}
 
     def test_empty(self) -> None:
-        assert compute_confidence_distribution([]) == {"0.0-0.5": 0, "0.5-0.8": 0, "0.8-1.0": 0}
+        assert compute_confidence_distribution([]) == {
+            "0.0-0.5": 0,
+            "0.5-0.8": 0,
+            "0.8-1.0": 0,
+        }
 
     def test_custom_bins(self) -> None:
         events = [_make_event(confidence=0.2), _make_event(confidence=0.7)]

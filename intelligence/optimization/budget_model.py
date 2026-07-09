@@ -42,10 +42,14 @@ class BudgetScorer:
 class LearnedBudgetTable:
     mapping: Dict[str, Dict[str, BudgetRecommendation]] = field(default_factory=dict)
 
-    def get(self, query_type: str, confidence_band: str) -> Optional[BudgetRecommendation]:
+    def get(
+        self, query_type: str, confidence_band: str
+    ) -> Optional[BudgetRecommendation]:
         return self.mapping.get(query_type, {}).get(confidence_band)
 
-    def set(self, query_type: str, confidence_band: str, rec: BudgetRecommendation) -> None:
+    def set(
+        self, query_type: str, confidence_band: str, rec: BudgetRecommendation
+    ) -> None:
         if query_type not in self.mapping:
             self.mapping[query_type] = {}
         self.mapping[query_type][confidence_band] = rec

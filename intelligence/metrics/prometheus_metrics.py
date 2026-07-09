@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
 
 import grpc
 from prometheus_client import Counter, Gauge, Histogram, start_http_server
@@ -85,14 +84,10 @@ class MetricsInterceptor(grpc.ServerInterceptor):
                     with request_duration_seconds.labels(method=method).time():
                         try:
                             response = original(request, context)
-                            requests_total.labels(
-                                method=method, status="ok"
-                            ).inc()
+                            requests_total.labels(method=method, status="ok").inc()
                             return response
                         except Exception:
-                            requests_total.labels(
-                                method=method, status="error"
-                            ).inc()
+                            requests_total.labels(method=method, status="error").inc()
                             raise
 
                 return new_behavior

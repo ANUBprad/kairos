@@ -1,12 +1,7 @@
 from __future__ import annotations
 
 import html as html_mod
-from typing import Dict, List, Optional, Sequence
-
-from intelligence.ablation.comparison import AblationComparison
-from intelligence.benchmarks.benchmark_result import BenchmarkResult, aggregate_results
-from intelligence.experiments.models import ExperimentMetrics, ExperimentRun
-from intelligence.statistics.reporting import ValidationResult
+from typing import Dict, List, Optional
 
 
 def generate_html_report(
@@ -70,21 +65,21 @@ def _default_styles() -> Dict[str, str]:
 def _css(colors: Dict[str, str]) -> str:
     return f"""
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ background: {colors['bg']}; color: {colors['text']}; font-family: {colors['font-family']}; line-height: 1.6; padding: 2rem; }}
+body {{ background: {colors["bg"]}; color: {colors["text"]}; font-family: {colors["font-family"]}; line-height: 1.6; padding: 2rem; }}
 .container {{ max-width: 960px; margin: 0 auto; }}
-header {{ border-bottom: 3px solid {colors['accent']}; padding-bottom: 0.75rem; margin-bottom: 2rem; }}
-h1 {{ font-size: 1.8rem; color: {colors['accent']}; }}
-h2 {{ font-size: 1.4rem; margin: 1.5rem 0 0.75rem; color: {colors['text']}; }}
+header {{ border-bottom: 3px solid {colors["accent"]}; padding-bottom: 0.75rem; margin-bottom: 2rem; }}
+h1 {{ font-size: 1.8rem; color: {colors["accent"]}; }}
+h2 {{ font-size: 1.4rem; margin: 1.5rem 0 0.75rem; color: {colors["text"]}; }}
 h3 {{ font-size: 1.15rem; margin: 1.25rem 0 0.5rem; }}
 table {{ border-collapse: collapse; width: 100%; margin: 0.75rem 0 1.25rem; font-size: 0.9rem; }}
-th, td {{ border: 1px solid {colors['border']}; padding: 0.4rem 0.6rem; text-align: left; }}
-th {{ background: {colors['header-bg']}; font-weight: 600; }}
-tr:nth-child(even) {{ background: {colors['header-bg']}; }}
+th, td {{ border: 1px solid {colors["border"]}; padding: 0.4rem 0.6rem; text-align: left; }}
+th {{ background: {colors["header-bg"]}; font-weight: 600; }}
+tr:nth-child(even) {{ background: {colors["header-bg"]}; }}
 tr:hover {{ background: #eef1ff; }}
-footer {{ margin-top: 3rem; padding-top: 1rem; border-top: 1px solid {colors['border']}; font-size: 0.85rem; color: #666; }}
+footer {{ margin-top: 3rem; padding-top: 1rem; border-top: 1px solid {colors["border"]}; font-size: 0.85rem; color: #666; }}
 code {{ background: #f0f0f0; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85rem; }}
 pre {{ background: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; }}
-blockquote {{ border-left: 4px solid {colors['accent']}; padding-left: 1rem; margin: 1rem 0; color: #555; }}
+blockquote {{ border-left: 4px solid {colors["accent"]}; padding-left: 1rem; margin: 1rem 0; color: #555; }}
 """
 
 
@@ -93,7 +88,6 @@ def _markdown_to_html_blocks(md: str) -> str:
     html_parts: List[str] = []
     in_table = False
     table_rows: List[str] = []
-    in_list = False
 
     for line in md.splitlines():
         stripped = line.strip()
@@ -104,11 +98,12 @@ def _markdown_to_html_blocks(md: str) -> str:
                 in_table = True
                 table_rows = []
             # Skip separator lines
-            if set(stripped.replace("|", "").replace("-", "").replace(":", "").strip()) == set():
+            if (
+                set(stripped.replace("|", "").replace("-", "").replace(":", "").strip())
+                == set()
+            ):
                 continue
             cells = [c.strip() for c in stripped.strip("|").split("|")]
-            # Determine if it's header row (any cell has bold markers)
-            is_header = any(c.startswith("**") and c.endswith("**") for c in cells)
             # Also check for the actual header row detection: if this is the first row after separator, it's data
             tag = "th" if in_table and len(table_rows) == 0 else "td"
             row_html = f"<tr>{''.join(f'<{tag}>{_inline_html(c)}</{tag}>' for c in cells)}</tr>"
@@ -139,7 +134,9 @@ def _markdown_to_html_blocks(md: str) -> str:
 
         # Bold items (list-like)
         elif stripped.startswith("**") and stripped.endswith("**"):
-            html_parts.append(f"<p><strong>{_inline_html(stripped.strip('*'))}</strong></p>")
+            html_parts.append(
+                f"<p><strong>{_inline_html(stripped.strip('*'))}</strong></p>"
+            )
 
         # Unordered list items
         elif stripped.startswith("- "):

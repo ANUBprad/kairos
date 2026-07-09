@@ -28,20 +28,39 @@ class SemanticVersion:
         if not isinstance(other, SemanticVersion):
             return NotImplemented
         return (self.major, self.minor, self.patch, self.prerelease) == (
-            other.major, other.minor, other.patch, other.prerelease,
+            other.major,
+            other.minor,
+            other.patch,
+            other.prerelease,
         )
 
     def __lt__(self, other: SemanticVersion) -> bool:
-        return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) < (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __le__(self, other: SemanticVersion) -> bool:
-        return (self.major, self.minor, self.patch) <= (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) <= (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __gt__(self, other: SemanticVersion) -> bool:
-        return (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) > (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __ge__(self, other: SemanticVersion) -> bool:
-        return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) >= (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __hash__(self) -> int:
         return hash((self.major, self.minor, self.patch, self.prerelease))

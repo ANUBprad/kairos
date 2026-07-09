@@ -15,7 +15,6 @@ from intelligence.ablation import (
     PLANNER_CALIBRATION,
     PLANNER_ONLY,
     PLANNER_OPTIMIZATION,
-    AblationComparison,
     AblationConfig,
     AblationRunner,
     compare_multiple,
@@ -92,18 +91,26 @@ def sample_runner_result() -> RunnerResult:
     results = []
     for i, qtype in enumerate(["simple", "complex", "multi_hop"]):
         qid = f"q00{i + 1}"
-        results.append(QueryResult(
-            entry=QueryEntry(id=qid, text=f"query {i}", query_type=qtype),
-            planner_decision=PlannerDecision(
-                config={"retrieval_type": "HYBRID", "top_k": 3, "rerank": False, "decompose": False},
-                confidence=0.9, query_type=qtype,
-            ),
-            retrieved_chunks=("a", "b"),
-            latency=LatencyRecord(total=0.1),
-            failures=FailureRecord(total_queries=1),
-            recall=0.8,
-            precision=0.7,
-        ))
+        results.append(
+            QueryResult(
+                entry=QueryEntry(id=qid, text=f"query {i}", query_type=qtype),
+                planner_decision=PlannerDecision(
+                    config={
+                        "retrieval_type": "HYBRID",
+                        "top_k": 3,
+                        "rerank": False,
+                        "decompose": False,
+                    },
+                    confidence=0.9,
+                    query_type=qtype,
+                ),
+                retrieved_chunks=("a", "b"),
+                latency=LatencyRecord(total=0.1),
+                failures=FailureRecord(total_queries=1),
+                recall=0.8,
+                precision=0.7,
+            )
+        )
     return RunnerResult(results=tuple(results))
 
 
@@ -130,8 +137,10 @@ class TestAblationConfig:
 
     def test_auto_label_all(self) -> None:
         cfg = AblationConfig(
-            planner_enabled=True, calibration_enabled=True,
-            optimization_enabled=True, feedback_enabled=True,
+            planner_enabled=True,
+            calibration_enabled=True,
+            optimization_enabled=True,
+            feedback_enabled=True,
         )
         assert cfg.label == "P+C+O+F"
 
@@ -145,7 +154,12 @@ class TestAblationConfig:
 
     def test_enabled_components_all(self) -> None:
         cfg = FULL_TREATMENT
-        assert cfg.enabled_components == ["planner", "calibration", "optimization", "feedback"]
+        assert cfg.enabled_components == [
+            "planner",
+            "calibration",
+            "optimization",
+            "feedback",
+        ]
 
     def test_enabled_components_partial(self) -> None:
         cfg = PLANNER_CALIBRATION
@@ -181,77 +195,128 @@ class TestAblationConfig:
 
 
 class TestAblationRunner:
-    def test_creates_with_config(self, simple_config, mock_classifier, mock_retriever) -> None:
+    def test_creates_with_config(
+        self, simple_config, mock_classifier, mock_retriever
+    ) -> None:
         runner = AblationRunner(simple_config, mock_classifier, mock_retriever)
         assert runner.config == simple_config
 
-    def test_builds_static_planner(self, mock_classifier, mock_retriever, sample_entries) -> None:
+    def test_builds_static_planner(
+        self, mock_classifier, mock_retriever, sample_entries
+    ) -> None:
         cfg = AblationConfig(planner_enabled=False)
         runner = AblationRunner(cfg, mock_classifier, mock_retriever)
         result = runner.run(sample_entries)
         assert result.total_queries == 3
 
-    def test_builds_retrieval_planner(self, mock_classifier, mock_retriever, sample_entries) -> None:
+    def test_builds_retrieval_planner(
+        self, mock_classifier, mock_retriever, sample_entries
+    ) -> None:
         cfg = AblationConfig(planner_enabled=True)
         runner = AblationRunner(cfg, mock_classifier, mock_retriever)
         result = runner.run(sample_entries)
         assert result.total_queries == 3
 
-    def test_planner_with_calibrator(self, mock_classifier, mock_retriever, sample_entries) -> None:
+    def test_planner_with_calibrator(
+        self, mock_classifier, mock_retriever, sample_entries
+    ) -> None:
         calibrator = MagicMock()
         calibrator.fitted = True
-        calibrator.calibrate.return_value = type("R", (), {
-            "calibrated_confidence": 0.85, "method": "platt",
-            "delta": -0.05,
-        })()
+        calibrator.calibrate.return_value = type(
+            "R",
+            (),
+            {
+                "calibrated_confidence": 0.85,
+                "method": "platt",
+                "delta": -0.05,
+            },
+        )()
         cfg = PLANNER_CALIBRATION
-        runner = AblationRunner(cfg, mock_classifier, mock_retriever, calibrator=calibrator)
+        runner = AblationRunner(
+            cfg, mock_classifier, mock_retriever, calibrator=calibrator
+        )
         result = runner.run(sample_entries)
         assert result.total_queries == 3
 
-    def test_planner_with_optimizer(self, mock_classifier, mock_retriever, sample_entries) -> None:
+    def test_planner_with_optimizer(
+        self, mock_classifier, mock_retriever, sample_entries
+    ) -> None:
         optimizer = MagicMock()
         optimizer.fitted = True
-        optimizer.recommend_budget.return_value = type("R", (), {
-            "recommended_top_k": 8, "recommended_rerank": True,
-            "recommended_decompose": False,
-            "expected_success": 0.9, "expected_latency": 100.0,
-            "source": "optimizer",
-        })()
+        optimizer.recommend_budget.return_value = type(
+            "R",
+            (),
+            {
+                "recommended_top_k": 8,
+                "recommended_rerank": True,
+                "recommended_decompose": False,
+                "expected_success": 0.9,
+                "expected_latency": 100.0,
+                "source": "optimizer",
+            },
+        )()
         cfg = PLANNER_OPTIMIZATION
-        runner = AblationRunner(cfg, mock_classifier, mock_retriever, optimizer=optimizer)
+        runner = AblationRunner(
+            cfg, mock_classifier, mock_retriever, optimizer=optimizer
+        )
         result = runner.run(sample_entries)
         assert result.total_queries == 3
 
-    def test_planner_with_feedback(self, mock_classifier, mock_retriever, sample_entries) -> None:
+    def test_planner_with_feedback(
+        self, mock_classifier, mock_retriever, sample_entries
+    ) -> None:
         adjuster = MagicMock()
         adjuster.fitted = True
         adjuster.adjust_config.return_value = (5, True, False)
-        cfg = AblationConfig(planner_enabled=True, feedback_enabled=True, label="Feedback")
-        runner = AblationRunner(cfg, mock_classifier, mock_retriever, feedback_adjuster=adjuster)
+        cfg = AblationConfig(
+            planner_enabled=True, feedback_enabled=True, label="Feedback"
+        )
+        runner = AblationRunner(
+            cfg, mock_classifier, mock_retriever, feedback_adjuster=adjuster
+        )
         result = runner.run(sample_entries)
         assert result.total_queries == 3
 
-    def test_full_treatment(self, mock_classifier, mock_retriever, sample_entries) -> None:
+    def test_full_treatment(
+        self, mock_classifier, mock_retriever, sample_entries
+    ) -> None:
         calibrator = MagicMock()
         calibrator.fitted = True
-        calibrator.calibrate.return_value = type("R", (), {
-            "calibrated_confidence": 0.85, "method": "platt", "delta": -0.05,
-        })()
+        calibrator.calibrate.return_value = type(
+            "R",
+            (),
+            {
+                "calibrated_confidence": 0.85,
+                "method": "platt",
+                "delta": -0.05,
+            },
+        )()
         optimizer = MagicMock()
         optimizer.fitted = True
-        optimizer.recommend_budget.return_value = type("R", (), {
-            "recommended_top_k": 8, "recommended_rerank": True,
-            "recommended_decompose": False,
-            "expected_success": 0.9, "expected_latency": 100.0, "source": "optimizer",
-        })()
+        optimizer.recommend_budget.return_value = type(
+            "R",
+            (),
+            {
+                "recommended_top_k": 8,
+                "recommended_rerank": True,
+                "recommended_decompose": False,
+                "expected_success": 0.9,
+                "expected_latency": 100.0,
+                "source": "optimizer",
+            },
+        )()
         adjuster = MagicMock()
         adjuster.fitted = True
         adjuster.adjust_config.return_value = (5, True, False)
         cfg = FULL_TREATMENT
-        runner = AblationRunner(cfg, mock_classifier, mock_retriever,
-                                calibrator=calibrator, optimizer=optimizer,
-                                feedback_adjuster=adjuster)
+        runner = AblationRunner(
+            cfg,
+            mock_classifier,
+            mock_retriever,
+            calibrator=calibrator,
+            optimizer=optimizer,
+            feedback_adjuster=adjuster,
+        )
         result = runner.run(sample_entries)
         assert result.total_queries == 3
 
@@ -260,7 +325,9 @@ class TestAblationRunner:
         result = runner.run([])
         assert result.total_queries == 0
 
-    def test_returns_runner_result(self, mock_classifier, mock_retriever, sample_entries) -> None:
+    def test_returns_runner_result(
+        self, mock_classifier, mock_retriever, sample_entries
+    ) -> None:
         runner = AblationRunner(PLANNER_ONLY, mock_classifier, mock_retriever)
         result = runner.run(sample_entries)
         assert isinstance(result, RunnerResult)
@@ -315,8 +382,12 @@ class TestCompareRuns:
             compare_runs(r1, r2)
 
     def test_custom_labels(self, sample_runner_result) -> None:
-        comp = compare_runs(sample_runner_result, sample_runner_result,
-                            baseline_label="Base", treatment_label="Full")
+        comp = compare_runs(
+            sample_runner_result,
+            sample_runner_result,
+            baseline_label="Base",
+            treatment_label="Full",
+        )
         assert comp.baseline_label == "Base"
         assert comp.treatment_label == "Full"
 
@@ -420,18 +491,24 @@ def _make_result(
     for i in range(n):
         qt = pool[i % len(pool)]
         qid = f"q{i:03d}"
-        results.append(QueryResult(
-            entry=QueryEntry(
-                id=qid, text=f"query {i}", query_type=qt,
-                expected_chunks=["chunk_a"],
-            ),
-            planner_decision=PlannerDecision(
-                config={}, confidence=0.9, query_type=qt,
-            ),
-            retrieved_chunks=("a", "b"),
-            latency=LatencyRecord(total=latency_s),
-            failures=FailureRecord(total_queries=1),
-            recall=recall,
-            precision=precision,
-        ))
+        results.append(
+            QueryResult(
+                entry=QueryEntry(
+                    id=qid,
+                    text=f"query {i}",
+                    query_type=qt,
+                    expected_chunks=["chunk_a"],
+                ),
+                planner_decision=PlannerDecision(
+                    config={},
+                    confidence=0.9,
+                    query_type=qt,
+                ),
+                retrieved_chunks=("a", "b"),
+                latency=LatencyRecord(total=latency_s),
+                failures=FailureRecord(total_queries=1),
+                recall=recall,
+                precision=precision,
+            )
+        )
     return RunnerResult(results=tuple(results))

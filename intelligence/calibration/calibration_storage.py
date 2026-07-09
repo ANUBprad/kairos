@@ -5,7 +5,11 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
-from .calibration_model import CalibrationStrategy, IsotonicCalibrator, PlattScalingCalibrator
+from .calibration_model import (
+    CalibrationStrategy,
+    IsotonicCalibrator,
+    PlattScalingCalibrator,
+)
 from .confidence_calibrator import ConfidenceCalibrator
 
 

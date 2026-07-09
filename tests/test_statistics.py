@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import math
-import sys
-from pathlib import Path
-from typing import List
 
 import numpy as np
 import pytest
@@ -14,10 +10,12 @@ from intelligence.statistics.confidence_intervals import (
     bootstrap_confidence_interval,
     mean_confidence_interval,
 )
-from intelligence.statistics.effect_size import EffectSize, cliffs_delta, cohens_d
-from intelligence.statistics.reporting import ValidationResult, generate_validation_report
+from intelligence.statistics.effect_size import cliffs_delta, cohens_d
+from intelligence.statistics.reporting import (
+    ValidationResult,
+    generate_validation_report,
+)
 from intelligence.statistics.significance import (
-    SignificanceResult,
     paired_t_test,
     permutation_test,
     wilcoxon_signed_rank,
@@ -359,7 +357,8 @@ class TestValidationReport:
         baseline = [0.5, 0.52, 0.48, 0.51, 0.49, 0.5, 0.51, 0.49]
         treatment = [0.7, 0.72, 0.68, 0.71, 0.69, 0.7, 0.71, 0.69]
         vr = generate_validation_report(
-            baseline, treatment,
+            baseline,
+            treatment,
             metric_name="recall",
             baseline_label="vanilla",
             treatment_label="augmented",
@@ -377,7 +376,8 @@ class TestValidationReport:
         baseline = [0.5, 0.51, 0.49, 0.5, 0.52, 0.48, 0.5, 0.51]
         treatment = [0.51, 0.52, 0.5, 0.51, 0.53, 0.49, 0.51, 0.52]
         vr = generate_validation_report(
-            baseline, treatment,
+            baseline,
+            treatment,
             random_seed=42,
             include_permutation=True,
         )
@@ -412,7 +412,8 @@ class TestValidationReport:
         baseline = [0.5, 0.52, 0.48, 0.51, 0.49, 0.5, 0.51, 0.49]
         treatment = [0.7, 0.72, 0.68, 0.71, 0.69, 0.7, 0.71, 0.69]
         vr = generate_validation_report(
-            baseline, treatment,
+            baseline,
+            treatment,
             metric_name="recall",
             include_bootstrap=True,
             random_seed=42,
@@ -424,7 +425,8 @@ class TestValidationReport:
         baseline = [0.5, 0.52, 0.48, 0.51, 0.49, 0.5, 0.51, 0.49]
         treatment = [0.7, 0.72, 0.68, 0.71, 0.69, 0.7, 0.71, 0.69]
         vr = generate_validation_report(
-            baseline, treatment,
+            baseline,
+            treatment,
             include_permutation=False,
             random_seed=42,
         )
@@ -434,7 +436,8 @@ class TestValidationReport:
         baseline = [0.5, 0.52, 0.48, 0.51, 0.49, 0.5, 0.51, 0.49]
         treatment = [0.7, 0.72, 0.68, 0.71, 0.69, 0.7, 0.71, 0.69]
         vr = generate_validation_report(
-            baseline, treatment,
+            baseline,
+            treatment,
             include_bootstrap=False,
             random_seed=42,
         )
@@ -471,30 +474,34 @@ class TestAblationComparisonValidation:
         results = []
         for i in range(10):
             entry = QueryEntry(
-                id=f"q{i}", text=f"query {i}", query_type="SIMPLE",
+                id=f"q{i}",
+                text=f"query {i}",
+                query_type="SIMPLE",
             )
             decision = PlannerDecision(config={}, confidence=0.9, query_type="SIMPLE")
-            results.append(QueryResult(
-                entry=entry,
-                planner_decision=decision,
-                retrieved_chunks=("a", "b"),
-                latency=LatencyRecord(total=0.1 + i * 0.005),
-                failures=FailureRecord(),
-                recall=0.5 + i * 0.04,
-                precision=0.5 + i * 0.03,
-            ))
+            results.append(
+                QueryResult(
+                    entry=entry,
+                    planner_decision=decision,
+                    retrieved_chunks=("a", "b"),
+                    latency=LatencyRecord(total=0.1 + i * 0.005),
+                    failures=FailureRecord(),
+                    recall=0.5 + i * 0.04,
+                    precision=0.5 + i * 0.03,
+                )
+            )
 
         return RunnerResult(results=tuple(results))
 
     def test_validation_included_by_default(self, sample_runner_result):
         from intelligence.ablation.comparison import compare_runs
+
         comp = compare_runs(sample_runner_result, sample_runner_result)
         assert comp.validation is not None
         assert not comp.validation.is_significant
 
     def test_validation_detectable_effect(self, sample_runner_result):
         from benchmarks.dataset import QueryEntry
-        from benchmarks.metrics import FailureRecord, LatencyRecord
         from benchmarks.runner import QueryResult, RunnerResult
         from intelligence.ablation.comparison import compare_runs
         from intelligence.planner import PlannerDecision
@@ -502,38 +509,47 @@ class TestAblationComparisonValidation:
         treatment_results = []
         for qr in sample_runner_result.results:
             entry = QueryEntry(
-                id=qr.entry.id, text=qr.entry.text, query_type=qr.entry.query_type,
+                id=qr.entry.id,
+                text=qr.entry.text,
+                query_type=qr.entry.query_type,
             )
-            decision = PlannerDecision(config={}, confidence=0.9, query_type=qr.entry.query_type)
-            treatment_results.append(QueryResult(
-                entry=entry,
-                planner_decision=decision,
-                retrieved_chunks=qr.retrieved_chunks,
-                latency=qr.latency,
-                failures=qr.failures,
-                recall=(qr.recall or 0.0) + 0.2,
-                precision=(qr.precision or 0.0) + 0.1,
-            ))
+            decision = PlannerDecision(
+                config={}, confidence=0.9, query_type=qr.entry.query_type
+            )
+            treatment_results.append(
+                QueryResult(
+                    entry=entry,
+                    planner_decision=decision,
+                    retrieved_chunks=qr.retrieved_chunks,
+                    latency=qr.latency,
+                    failures=qr.failures,
+                    recall=(qr.recall or 0.0) + 0.2,
+                    precision=(qr.precision or 0.0) + 0.1,
+                )
+            )
 
         treatment = RunnerResult(results=tuple(treatment_results))
         comp = compare_runs(
-            sample_runner_result, treatment,
-            baseline_label="vanilla", treatment_label="augmented",
+            sample_runner_result,
+            treatment,
+            baseline_label="vanilla",
+            treatment_label="augmented",
         )
         assert comp.validation is not None
         assert comp.validation.is_significant
 
     def test_validation_skipped_when_disabled(self, sample_runner_result):
         from intelligence.ablation.comparison import compare_runs
+
         comp = compare_runs(
-            sample_runner_result, sample_runner_result,
+            sample_runner_result,
+            sample_runner_result,
             include_validation=False,
         )
         assert comp.validation is None
 
     def test_validation_uses_precision_metric(self, sample_runner_result):
         from benchmarks.dataset import QueryEntry
-        from benchmarks.metrics import FailureRecord, LatencyRecord
         from benchmarks.runner import QueryResult, RunnerResult
         from intelligence.ablation.comparison import compare_runs
         from intelligence.planner import PlannerDecision
@@ -541,29 +557,36 @@ class TestAblationComparisonValidation:
         treatment_results = []
         for qr in sample_runner_result.results:
             entry = QueryEntry(
-                id=qr.entry.id, text=qr.entry.text, query_type=qr.entry.query_type,
+                id=qr.entry.id,
+                text=qr.entry.text,
+                query_type=qr.entry.query_type,
             )
-            decision = PlannerDecision(config={}, confidence=0.9, query_type=qr.entry.query_type)
-            treatment_results.append(QueryResult(
-                entry=entry,
-                planner_decision=decision,
-                retrieved_chunks=qr.retrieved_chunks,
-                latency=qr.latency,
-                failures=qr.failures,
-                recall=qr.recall,
-                precision=(qr.precision or 0.0) + 0.2,
-            ))
+            decision = PlannerDecision(
+                config={}, confidence=0.9, query_type=qr.entry.query_type
+            )
+            treatment_results.append(
+                QueryResult(
+                    entry=entry,
+                    planner_decision=decision,
+                    retrieved_chunks=qr.retrieved_chunks,
+                    latency=qr.latency,
+                    failures=qr.failures,
+                    recall=qr.recall,
+                    precision=(qr.precision or 0.0) + 0.2,
+                )
+            )
 
         treatment = RunnerResult(results=tuple(treatment_results))
         comp = compare_runs(
-            sample_runner_result, treatment,
+            sample_runner_result,
+            treatment,
             metric_name="precision",
         )
         assert comp.validation is not None
         assert comp.validation.metric_name == "precision"
 
     def test_fallback_when_metric_missing(self, sample_runner_result):
-        from benchmarks.runner import QueryResult, RunnerResult
+        from benchmarks.runner import RunnerResult
         from intelligence.ablation.comparison import compare_runs
 
         tr = RunnerResult(results=sample_runner_result.results)
@@ -580,6 +603,7 @@ class TestRunComparisonValidation:
     @pytest.fixture
     def sample_runs(self):
         from intelligence.experiments.models import ExperimentMetrics, ExperimentRun
+
         baseline = ExperimentRun(
             run_id="bl-001",
             name="baseline",
@@ -640,7 +664,10 @@ class TestAblationReportValidation:
         from benchmarks.dataset import QueryEntry
         from benchmarks.metrics import FailureRecord, LatencyRecord
         from benchmarks.runner import QueryResult, RunnerResult
-        from intelligence.ablation.comparison import compare_runs, generate_ablation_report
+        from intelligence.ablation.comparison import (
+            compare_runs,
+            generate_ablation_report,
+        )
         from intelligence.planner import PlannerDecision
 
         results_b = []
@@ -648,21 +675,35 @@ class TestAblationReportValidation:
         for i in range(8):
             entry = QueryEntry(id=f"q{i}", text=f"q{i}", query_type="SIMPLE")
             decision = PlannerDecision(config={}, confidence=0.9, query_type="SIMPLE")
-            results_b.append(QueryResult(
-                entry=entry, planner_decision=decision,
-                retrieved_chunks=("a",), latency=LatencyRecord(total=0.1),
-                failures=FailureRecord(), recall=0.5, precision=0.5,
-            ))
-            results_t.append(QueryResult(
-                entry=entry, planner_decision=decision,
-                retrieved_chunks=("a",), latency=LatencyRecord(total=0.1),
-                failures=FailureRecord(), recall=0.8, precision=0.8,
-            ))
+            results_b.append(
+                QueryResult(
+                    entry=entry,
+                    planner_decision=decision,
+                    retrieved_chunks=("a",),
+                    latency=LatencyRecord(total=0.1),
+                    failures=FailureRecord(),
+                    recall=0.5,
+                    precision=0.5,
+                )
+            )
+            results_t.append(
+                QueryResult(
+                    entry=entry,
+                    planner_decision=decision,
+                    retrieved_chunks=("a",),
+                    latency=LatencyRecord(total=0.1),
+                    failures=FailureRecord(),
+                    recall=0.8,
+                    precision=0.8,
+                )
+            )
 
         base_res = RunnerResult(results=tuple(results_b))
         treat_res = RunnerResult(results=tuple(results_t))
 
-        comp = compare_runs(base_res, treat_res, baseline_label="Base", treatment_label="Treat")
+        comp = compare_runs(
+            base_res, treat_res, baseline_label="Base", treatment_label="Treat"
+        )
         report = generate_ablation_report([comp])
         assert "Statistical Validation" in report
         assert "Significance Tests" in report

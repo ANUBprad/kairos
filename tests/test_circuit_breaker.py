@@ -9,7 +9,6 @@ from intelligence.circuit_breaker.circuit_breaker import (
     CircuitBreaker,
     CircuitBreakerOpenError,
     CircuitState,
-    CircuitBreakerStats,
 )
 
 
@@ -20,7 +19,7 @@ def _wait_for_state(
     pause: float = 0.01,
 ) -> None:
     """Poll *cb.state* until it reaches *expected*.
-    
+
     Replaces a fixed ``sleep`` + single assertion pattern that is flaky
     on Windows where ``time.sleep`` granularity is ~15.6 ms.
     """
@@ -140,6 +139,7 @@ class TestCircuitBreakerCall:
 
     def test_concurrent_calls(self) -> None:
         import threading
+
         cb = CircuitBreaker(failure_threshold=2, recovery_timeout=60.0)
         errors: list[Exception] = []
 
@@ -161,6 +161,7 @@ class TestCircuitBreakerCall:
 class TestCircuitBreakerConfig:
     def test_timeout_config_default(self) -> None:
         from intelligence.server.config import ServerConfig
+
         cfg = ServerConfig.from_env()
         assert cfg.provider_timeout_seconds == 30.0
         assert cfg.circuit_breaker_failure_threshold == 5
@@ -171,6 +172,7 @@ class TestCircuitBreakerConfig:
         monkeypatch.setenv("KEIRO_CIRCUIT_BREAKER_FAILURE_THRESHOLD", "3")
         monkeypatch.setenv("KEIRO_CIRCUIT_BREAKER_RECOVERY_TIMEOUT", "10.0")
         from intelligence.server.config import ServerConfig
+
         cfg = ServerConfig.from_env()
         assert cfg.provider_timeout_seconds == 15.0
         assert cfg.circuit_breaker_failure_threshold == 3

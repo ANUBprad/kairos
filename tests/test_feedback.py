@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from intelligence.feedback.models import FeedbackRecord
 from intelligence.feedback.validator import FeedbackValidator
@@ -16,44 +15,81 @@ from intelligence.feedback.validator import FeedbackValidator
 class TestFeedbackRecord:
     def test_default_timestamp(self) -> None:
         r = FeedbackRecord(
-            query_id="q001", query="test", query_type="SIMPLE",
-            retrieval_type="HYBRID", confidence=0.9, calibrated_confidence=0.85,
-            top_k=3, rerank=False, decompose=False, answer_accepted=True,
+            query_id="q001",
+            query="test",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.85,
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            answer_accepted=True,
         )
         assert r.timestamp > 0
 
     def test_default_rating_none(self) -> None:
         r = FeedbackRecord(
-            query_id="q001", query="test", query_type="SIMPLE",
-            retrieval_type="HYBRID", confidence=0.9, calibrated_confidence=0.85,
-            top_k=3, rerank=False, decompose=False, answer_accepted=True,
+            query_id="q001",
+            query="test",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.85,
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            answer_accepted=True,
         )
         assert r.answer_rating is None
 
     def test_default_success_true(self) -> None:
         r = FeedbackRecord(
-            query_id="q001", query="test", query_type="SIMPLE",
-            retrieval_type="HYBRID", confidence=0.9, calibrated_confidence=0.85,
-            top_k=3, rerank=False, decompose=False, answer_accepted=True,
+            query_id="q001",
+            query="test",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.85,
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            answer_accepted=True,
         )
         assert r.retrieval_success
 
     def test_all_fields_set(self) -> None:
         r = FeedbackRecord(
-            query_id="q001", query="What is AI?", query_type="COMPLEX",
-            retrieval_type="MULTI_VECTOR", confidence=0.75,
-            calibrated_confidence=0.72, top_k=8, rerank=True,
-            decompose=False, answer_accepted=True, answer_rating=4,
-            fallback_triggered=False, retrieval_success=True, latency_ms=150.0,
+            query_id="q001",
+            query="What is AI?",
+            query_type="COMPLEX",
+            retrieval_type="MULTI_VECTOR",
+            confidence=0.75,
+            calibrated_confidence=0.72,
+            top_k=8,
+            rerank=True,
+            decompose=False,
+            answer_accepted=True,
+            answer_rating=4,
+            fallback_triggered=False,
+            retrieval_success=True,
+            latency_ms=150.0,
         )
         assert r.query_id == "q001"
         assert r.answer_rating == 4
 
     def test_rating_range(self) -> None:
         r = FeedbackRecord(
-            query_id="q001", query="test", query_type="SIMPLE",
-            retrieval_type="HYBRID", confidence=0.9, calibrated_confidence=0.85,
-            top_k=3, rerank=False, decompose=False, answer_accepted=True,
+            query_id="q001",
+            query="test",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.85,
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            answer_accepted=True,
             answer_rating=5,
         )
         assert 1 <= r.answer_rating <= 5

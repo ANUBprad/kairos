@@ -1,4 +1,5 @@
 """Tests for Phase 10: Open Source & Launch Readiness."""
+
 from __future__ import annotations
 from benchmarks.leaderboard.leaderboard import (
     Leaderboard,
@@ -6,11 +7,8 @@ from benchmarks.leaderboard.leaderboard import (
     build_leaderboard,
 )
 
-import os
 from pathlib import Path
-from typing import List
 
-import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -18,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # ======================================================================
 # Phase 10A — README Overhaul
 # ======================================================================
+
 
 class TestREADME:
     def test_readme_exists(self) -> None:
@@ -67,10 +66,6 @@ class TestREADME:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
         assert "docker" in content.lower()
 
-    def test_readme_has_benchmark_results(self) -> None:
-        content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "Benchmark Results" in content
-
     def test_readme_has_documentation_index(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
         assert "## Documentation" in content
@@ -79,6 +74,7 @@ class TestREADME:
 # ======================================================================
 # Phase 10B — Contributor Experience
 # ======================================================================
+
 
 class TestContributing:
     def test_contributing_exists(self) -> None:
@@ -152,17 +148,22 @@ class TestIssueTemplates:
         assert (ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").exists()
 
     def test_pr_template_has_checklist(self) -> None:
-        content = (ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+        content = (ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text(
+            encoding="utf-8"
+        )
         assert "Checklist" in content
 
     def test_pr_template_has_type_of_change(self) -> None:
-        content = (ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
+        content = (ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text(
+            encoding="utf-8"
+        )
         assert "Type of Change" in content
 
 
 # ======================================================================
 # Phase 10C — Architecture Visualization
 # ======================================================================
+
 
 class TestArchitectureDiagrams:
     def test_diagrams_dir_exists(self) -> None:
@@ -184,11 +185,15 @@ class TestArchitectureDiagrams:
         assert (ROOT / "docs" / "diagrams" / "deployment_architecture.md").exists()
 
     def test_retrieval_flow_has_mermaid(self) -> None:
-        content = (ROOT / "docs" / "diagrams" / "retrieval_flow.md").read_text(encoding="utf-8")
+        content = (ROOT / "docs" / "diagrams" / "retrieval_flow.md").read_text(
+            encoding="utf-8"
+        )
         assert "```mermaid" in content
 
     def test_planner_flow_has_mermaid(self) -> None:
-        content = (ROOT / "docs" / "diagrams" / "planner_flow.md").read_text(encoding="utf-8")
+        content = (ROOT / "docs" / "diagrams" / "planner_flow.md").read_text(
+            encoding="utf-8"
+        )
         assert "```mermaid" in content
 
     def test_all_diagrams_have_flowchart(self) -> None:
@@ -201,24 +206,33 @@ class TestArchitectureDiagrams:
         ]
         for d in diagrams:
             content = (ROOT / "docs" / "diagrams" / d).read_text(encoding="utf-8")
-            assert "flowchart" in content or "graph" in content, f"{d} missing flowchart"
+            assert "flowchart" in content or "graph" in content, (
+                f"{d} missing flowchart"
+            )
 
     def test_feedback_loop_has_mermaid(self) -> None:
-        content = (ROOT / "docs" / "diagrams" / "feedback_loop.md").read_text(encoding="utf-8")
+        content = (ROOT / "docs" / "diagrams" / "feedback_loop.md").read_text(
+            encoding="utf-8"
+        )
         assert "```mermaid" in content
 
     def test_evaluation_pipeline_has_mermaid(self) -> None:
-        content = (ROOT / "docs" / "diagrams" / "evaluation_pipeline.md").read_text(encoding="utf-8")
+        content = (ROOT / "docs" / "diagrams" / "evaluation_pipeline.md").read_text(
+            encoding="utf-8"
+        )
         assert "```mermaid" in content
 
     def test_deployment_has_mermaid(self) -> None:
-        content = (ROOT / "docs" / "diagrams" / "deployment_architecture.md").read_text(encoding="utf-8")
+        content = (ROOT / "docs" / "diagrams" / "deployment_architecture.md").read_text(
+            encoding="utf-8"
+        )
         assert "```mermaid" in content
 
 
 # ======================================================================
 # Phase 10D — Examples
 # ======================================================================
+
 
 class TestExamples:
     def test_simple_rag_dir_exists(self) -> None:
@@ -236,7 +250,9 @@ class TestExamples:
     def test_all_examples_have_readme(self) -> None:
         examples = ["simple_rag", "adaptive_rag", "enterprise_search", "multi_hop_qa"]
         for ex in examples:
-            assert (ROOT / "examples" / ex / "README.md").exists(), f"{ex} missing README.md"
+            assert (ROOT / "examples" / ex / "README.md").exists(), (
+                f"{ex} missing README.md"
+            )
 
     def test_all_examples_have_run_py(self) -> None:
         examples = ["simple_rag", "adaptive_rag", "enterprise_search", "multi_hop_qa"]
@@ -244,15 +260,20 @@ class TestExamples:
             assert (ROOT / "examples" / ex / "run.py").exists(), f"{ex} missing run.py"
 
     def test_simple_rag_readme_has_usage(self) -> None:
-        content = (ROOT / "examples" / "simple_rag" / "README.md").read_text(encoding="utf-8")
+        content = (ROOT / "examples" / "simple_rag" / "README.md").read_text(
+            encoding="utf-8"
+        )
         assert "Usage" in content
 
     def test_adaptive_rag_readme_has_usage(self) -> None:
-        content = (ROOT / "examples" / "adaptive_rag" / "README.md").read_text(encoding="utf-8")
+        content = (ROOT / "examples" / "adaptive_rag" / "README.md").read_text(
+            encoding="utf-8"
+        )
         assert "Usage" in content
 
     def test_simple_rag_run_imports(self) -> None:
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "simple_rag", str(ROOT / "examples" / "simple_rag" / "run.py")
         )
@@ -260,13 +281,16 @@ class TestExamples:
 
     def test_adaptive_rag_run_imports(self) -> None:
         import importlib.util
+
         spec = importlib.util.spec_from_file_location(
             "adaptive_rag", str(ROOT / "examples" / "adaptive_rag" / "run.py")
         )
         assert spec is not None
 
     def test_simple_rag_has_main_function(self) -> None:
-        import importlib.util, importlib.machinery
+        import importlib.util
+        import importlib.machinery
+
         loader = importlib.machinery.SourceFileLoader(
             "simple_rag_mod", str(ROOT / "examples" / "simple_rag" / "run.py")
         )
@@ -274,7 +298,9 @@ class TestExamples:
         assert hasattr(mod, "main")
 
     def test_adaptive_rag_has_main_function(self) -> None:
-        import importlib.util, importlib.machinery
+        import importlib.util
+        import importlib.machinery
+
         loader = importlib.machinery.SourceFileLoader(
             "adaptive_rag_mod", str(ROOT / "examples" / "adaptive_rag" / "run.py")
         )
@@ -282,7 +308,9 @@ class TestExamples:
         assert hasattr(mod, "main")
 
     def test_enterprise_search_has_main_function(self) -> None:
-        import importlib.util, importlib.machinery
+        import importlib.util
+        import importlib.machinery
+
         loader = importlib.machinery.SourceFileLoader(
             "enterprise_mod", str(ROOT / "examples" / "enterprise_search" / "run.py")
         )
@@ -290,7 +318,9 @@ class TestExamples:
         assert hasattr(mod, "main")
 
     def test_multi_hop_qa_has_main_function(self) -> None:
-        import importlib.util, importlib.machinery
+        import importlib.util
+        import importlib.machinery
+
         loader = importlib.machinery.SourceFileLoader(
             "multihop_mod", str(ROOT / "examples" / "multi_hop_qa" / "run.py")
         )
@@ -302,6 +332,7 @@ class TestExamples:
 # Phase 10E — Public Benchmark Leaderboard
 # ======================================================================
 
+
 class TestLeaderboard:
     def test_leaderboard_py_exists(self) -> None:
         assert (ROOT / "benchmarks" / "leaderboard" / "leaderboard.py").exists()
@@ -311,8 +342,11 @@ class TestLeaderboard:
 
     def test_leaderboard_imports(self) -> None:
         from benchmarks.leaderboard.leaderboard import (
-            Leaderboard, LeaderboardEntry, build_leaderboard,
+            Leaderboard,
+            LeaderboardEntry,
+            build_leaderboard,
         )
+
         assert Leaderboard is not None
         assert LeaderboardEntry is not None
         assert build_leaderboard is not None
@@ -370,17 +404,22 @@ class TestLeaderboard:
         assert "test" in md
 
     def test_leaderboard_md_has_kairos_adaptive(self) -> None:
-        content = (ROOT / "benchmarks" / "leaderboard" / "leaderboard.md").read_text(encoding="utf-8")
+        content = (ROOT / "benchmarks" / "leaderboard" / "leaderboard.md").read_text(
+            encoding="utf-8"
+        )
         assert "Kairos Adaptive" in content
 
     def test_leaderboard_md_has_comparison_table(self) -> None:
-        content = (ROOT / "benchmarks" / "leaderboard" / "leaderboard.md").read_text(encoding="utf-8")
+        content = (ROOT / "benchmarks" / "leaderboard" / "leaderboard.md").read_text(
+            encoding="utf-8"
+        )
         assert "| Rank | Mode |" in content
 
 
 # ======================================================================
 # Phase 10F — Demo Assets
 # ======================================================================
+
 
 class TestDemoAssets:
     def test_demo_script_exists(self) -> None:
@@ -417,12 +456,10 @@ class TestDemoAssets:
         assert "Architecture Explanation" in content
 
 
-
-
-
 # ======================================================================
 # Phase 10I — Release Preparation
 # ======================================================================
+
 
 class TestChangelog:
     def test_changelog_exists(self) -> None:
@@ -487,6 +524,7 @@ class TestReleaseNotes:
 # Cross-cutting — Documentation completeness
 # ======================================================================
 
+
 class TestDocumentationCompleteness:
     def test_all_docs_exist(self) -> None:
         required_docs = [
@@ -525,9 +563,14 @@ class TestDocumentationCompleteness:
 # Example execution smoke tests
 # ======================================================================
 
+
 class TestExampleExecution:
     def test_simple_rag_runs(self) -> None:
-        import importlib.util, importlib.machinery, io, sys
+        import importlib.util
+        import importlib.machinery
+        import io
+        import sys
+
         loader = importlib.machinery.SourceFileLoader(
             "simple_rag_exe", str(ROOT / "examples" / "simple_rag" / "run.py")
         )
@@ -542,7 +585,11 @@ class TestExampleExecution:
         assert "Kairos" in output
 
     def test_adaptive_rag_runs(self) -> None:
-        import importlib.util, importlib.machinery, io, sys
+        import importlib.util
+        import importlib.machinery
+        import io
+        import sys
+
         loader = importlib.machinery.SourceFileLoader(
             "adaptive_rag_exe", str(ROOT / "examples" / "adaptive_rag" / "run.py")
         )
@@ -557,7 +604,11 @@ class TestExampleExecution:
         assert "Adaptive" in output or "adaptive" in output
 
     def test_enterprise_search_runs(self) -> None:
-        import importlib.util, importlib.machinery, io, sys
+        import importlib.util
+        import importlib.machinery
+        import io
+        import sys
+
         loader = importlib.machinery.SourceFileLoader(
             "enterprise_exe", str(ROOT / "examples" / "enterprise_search" / "run.py")
         )
@@ -572,7 +623,11 @@ class TestExampleExecution:
         assert "Enterprise" in output or "Domain" in output
 
     def test_multi_hop_qa_runs(self) -> None:
-        import importlib.util, importlib.machinery, io, sys
+        import importlib.util
+        import importlib.machinery
+        import io
+        import sys
+
         loader = importlib.machinery.SourceFileLoader(
             "multihop_exe", str(ROOT / "examples" / "multi_hop_qa" / "run.py")
         )
@@ -587,9 +642,14 @@ class TestExampleExecution:
         assert "Multi-Hop" in output or "multi-hop" in output
 
     def test_leaderboard_main_runs(self) -> None:
-        import importlib.util, importlib.machinery, io, sys
+        import importlib.util
+        import importlib.machinery
+        import io
+        import sys
+
         loader = importlib.machinery.SourceFileLoader(
-            "leaderboard_exe", str(ROOT / "benchmarks" / "leaderboard" / "leaderboard.py")
+            "leaderboard_exe",
+            str(ROOT / "benchmarks" / "leaderboard" / "leaderboard.py"),
         )
         mod = loader.load_module()
         out = io.StringIO()
@@ -606,10 +666,13 @@ class TestExampleExecution:
 # Cross-cutting — Metadata
 # ======================================================================
 
+
 class TestMetadata:
     def test_init_files_exist_in_new_packages(self) -> None:
         init_dirs = [
             "benchmarks/leaderboard",
         ]
         for d in init_dirs:
-            assert (ROOT / d / "__init__.py").exists() or not list((ROOT / d).glob("*.py")), f"{d} needs __init__.py"
+            assert (ROOT / d / "__init__.py").exists() or not list(
+                (ROOT / d).glob("*.py")
+            ), f"{d} needs __init__.py"

@@ -87,9 +87,7 @@ class TestPlan:
         self, mock_classifier: MagicMock
     ) -> None:
         """Confidence=0.30 < 0.8 → budget override (top_k=8 for simple)."""
-        mock_classifier.classify_with_confidence.return_value.confidence_score = (
-            0.30
-        )
+        mock_classifier.classify_with_confidence.return_value.confidence_score = 0.30
         planner = RetrievalPlanner(classifier=mock_classifier)
         decision = planner.plan("uncertain query")
 
@@ -101,9 +99,7 @@ class TestPlan:
         self, mock_classifier: MagicMock, planner: RetrievalPlanner
     ) -> None:
         planner.plan("some query")
-        mock_classifier.classify_with_confidence.assert_called_once_with(
-            "some query"
-        )
+        mock_classifier.classify_with_confidence.assert_called_once_with("some query")
 
 
 # ======================================================================
@@ -114,45 +110,27 @@ class TestPlan:
 class TestPlanPerType:
     """plan() produces correct config for each query type."""
 
-    def test_complex_high_confidence(
-        self, mock_classifier: MagicMock
-    ) -> None:
-        mock_classifier.classify_with_confidence.return_value.query_type = (
-            "complex"
-        )
-        mock_classifier.classify_with_confidence.return_value.confidence_score = (
-            0.85
-        )
+    def test_complex_high_confidence(self, mock_classifier: MagicMock) -> None:
+        mock_classifier.classify_with_confidence.return_value.query_type = "complex"
+        mock_classifier.classify_with_confidence.return_value.confidence_score = 0.85
         planner = RetrievalPlanner(classifier=mock_classifier)
         decision = planner.plan("complex query")
 
         assert decision.config["retrieval_type"] == "MULTI_VECTOR"
         assert decision.config["top_k"] == 8
 
-    def test_complex_low_confidence(
-        self, mock_classifier: MagicMock
-    ) -> None:
-        mock_classifier.classify_with_confidence.return_value.query_type = (
-            "complex"
-        )
-        mock_classifier.classify_with_confidence.return_value.confidence_score = (
-            0.30
-        )
+    def test_complex_low_confidence(self, mock_classifier: MagicMock) -> None:
+        mock_classifier.classify_with_confidence.return_value.query_type = "complex"
+        mock_classifier.classify_with_confidence.return_value.confidence_score = 0.30
         planner = RetrievalPlanner(classifier=mock_classifier)
         decision = planner.plan("complex uncertain")
 
         assert decision.config["top_k"] == 12
         assert decision.config["decompose"] is True
 
-    def test_multihop_high_confidence(
-        self, mock_classifier: MagicMock
-    ) -> None:
-        mock_classifier.classify_with_confidence.return_value.query_type = (
-            "multi_hop"
-        )
-        mock_classifier.classify_with_confidence.return_value.confidence_score = (
-            0.95
-        )
+    def test_multihop_high_confidence(self, mock_classifier: MagicMock) -> None:
+        mock_classifier.classify_with_confidence.return_value.query_type = "multi_hop"
+        mock_classifier.classify_with_confidence.return_value.confidence_score = 0.95
         planner = RetrievalPlanner(classifier=mock_classifier)
         decision = planner.plan("multi_hop query")
 
@@ -160,15 +138,9 @@ class TestPlanPerType:
         assert decision.config["top_k"] == 3
         assert decision.config["decompose"] is True
 
-    def test_multihop_low_confidence(
-        self, mock_classifier: MagicMock
-    ) -> None:
-        mock_classifier.classify_with_confidence.return_value.query_type = (
-            "multi_hop"
-        )
-        mock_classifier.classify_with_confidence.return_value.confidence_score = (
-            0.20
-        )
+    def test_multihop_low_confidence(self, mock_classifier: MagicMock) -> None:
+        mock_classifier.classify_with_confidence.return_value.query_type = "multi_hop"
+        mock_classifier.classify_with_confidence.return_value.confidence_score = 0.20
         planner = RetrievalPlanner(classifier=mock_classifier)
         decision = planner.plan("multi_hop uncertain")
 
@@ -184,13 +156,9 @@ class TestPlanPerType:
 class TestPlanWithEvaluation:
     """plan_with_evaluation() chains plan() + FallbackManager.evaluate()."""
 
-    def test_enriches_with_fallback_decision(
-        self, planner: RetrievalPlanner
-    ) -> None:
+    def test_enriches_with_fallback_decision(self, planner: RetrievalPlanner) -> None:
         """Sufficient chunks (3, top_k=3, threshold=1) → no fallback."""
-        decision = planner.plan_with_evaluation(
-            query="test", chunk_count=3
-        )
+        decision = planner.plan_with_evaluation(query="test", chunk_count=3)
         assert decision.fallback_decision is not None
         assert decision.fallback_decision.should_fallback is False
 
@@ -208,46 +176,30 @@ class TestPlanWithEvaluation:
         # With 1 chunk: 1 >= 1, sufficient.
         # To trigger fallback, we need chunk_count < threshold.
         # With top_k=3, threshold=1, chunk_count=0 triggers fallback.
-        decision = planner.plan_with_evaluation(
-            query="test", chunk_count=0
-        )
+        decision = planner.plan_with_evaluation(query="test", chunk_count=0)
         assert decision.fallback_decision is not None
         assert decision.fallback_decision.should_fallback is True
 
-    def test_fallback_decision_escalated_tier(
-        self, planner: RetrievalPlanner
-    ) -> None:
+    def test_fallback_decision_escalated_tier(self, planner: RetrievalPlanner) -> None:
         """Simple with 0 chunks → should escalate to complex."""
-        decision = planner.plan_with_evaluation(
-            query="test", chunk_count=0
-        )
+        decision = planner.plan_with_evaluation(query="test", chunk_count=0)
         assert decision.fallback_decision.escalated_tier == "complex"
 
-    def test_preserves_config_and_confidence(
-        self, planner: RetrievalPlanner
-    ) -> None:
-        decision = planner.plan_with_evaluation(
-            query="test", chunk_count=3
-        )
+    def test_preserves_config_and_confidence(self, planner: RetrievalPlanner) -> None:
+        decision = planner.plan_with_evaluation(query="test", chunk_count=3)
         # Should be same as plan() output
         plan_decision = planner.plan("test")
         assert decision.config == plan_decision.config
         assert decision.confidence == plan_decision.confidence
         assert decision.query_type == plan_decision.query_type
 
-    def test_low_confidence_with_fallback(
-        self, mock_classifier: MagicMock
-    ) -> None:
+    def test_low_confidence_with_fallback(self, mock_classifier: MagicMock) -> None:
         """Low confidence → high top_k → fallback evaluation uses that top_k."""
-        mock_classifier.classify_with_confidence.return_value.confidence_score = (
-            0.30
-        )
+        mock_classifier.classify_with_confidence.return_value.confidence_score = 0.30
         planner = RetrievalPlanner(classifier=mock_classifier)
         # Low confidence for simple → top_k=8, threshold=4
         # With 1 chunk: 1 < 4 → fallback triggered
-        decision = planner.plan_with_evaluation(
-            query="uncertain", chunk_count=1
-        )
+        decision = planner.plan_with_evaluation(query="uncertain", chunk_count=1)
         assert decision.config["top_k"] == 8
         assert decision.fallback_decision.should_fallback is True
 
@@ -260,9 +212,7 @@ class TestPlanWithEvaluation:
 class TestErrorHandling:
     """Planner error paths."""
 
-    def test_classifier_error_propagates(
-        self, mock_classifier: MagicMock
-    ) -> None:
+    def test_classifier_error_propagates(self, mock_classifier: MagicMock) -> None:
         mock_classifier.classify_with_confidence.side_effect = RuntimeError(
             "LLM unavailable"
         )
@@ -271,16 +221,10 @@ class TestErrorHandling:
         with pytest.raises(RuntimeError, match="LLM unavailable"):
             planner.plan("query")
 
-    def test_unknown_query_type_error(
-        self, mock_classifier: MagicMock
-    ) -> None:
+    def test_unknown_query_type_error(self, mock_classifier: MagicMock) -> None:
         """An unrecognised query_type string propagates from QueryType()."""
-        mock_classifier.classify_with_confidence.return_value.query_type = (
-            "gibberish"
-        )
-        mock_classifier.classify_with_confidence.return_value.confidence_score = (
-            0.95
-        )
+        mock_classifier.classify_with_confidence.return_value.query_type = "gibberish"
+        mock_classifier.classify_with_confidence.return_value.confidence_score = 0.95
         planner = RetrievalPlanner(classifier=mock_classifier)
 
         with pytest.raises(ValueError):
@@ -305,15 +249,11 @@ class TestPlannerDecision:
             decision.config = {}  # type: ignore[misc]
 
     def test_fallback_defaults_to_none(self) -> None:
-        decision = PlannerDecision(
-            config={}, confidence=0.5, query_type="simple"
-        )
+        decision = PlannerDecision(config={}, confidence=0.5, query_type="simple")
         assert decision.fallback_decision is None
 
     def test_confidence_range(self) -> None:
-        decision = PlannerDecision(
-            config={}, confidence=0.0, query_type="simple"
-        )
+        decision = PlannerDecision(config={}, confidence=0.0, query_type="simple")
         assert 0.0 <= decision.confidence <= 1.0
 
     def test_config_is_dict(self) -> None:

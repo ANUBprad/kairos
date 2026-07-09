@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from intelligence.cache.embedding_cache import EmbeddingCache, CacheStats
+from intelligence.cache.embedding_cache import EmbeddingCache
 from intelligence.embeddings.cached_embedder import CachedEmbedder
 
 
@@ -113,6 +113,7 @@ class TestEmbeddingCache:
 
     def test_concurrent_access(self) -> None:
         import threading
+
         cache = EmbeddingCache(maxsize=100, ttl_seconds=0)
         errors: list[Exception] = []
 
@@ -125,7 +126,10 @@ class TestEmbeddingCache:
             except Exception as e:
                 errors.append(e)
 
-        threads = [threading.Thread(target=worker, args=(chr(ord("a") + i),)) for i in range(10)]
+        threads = [
+            threading.Thread(target=worker, args=(chr(ord("a") + i),))
+            for i in range(10)
+        ]
         for t in threads:
             t.start()
         for t in threads:
@@ -184,6 +188,7 @@ class TestCachedEmbedder:
 class TestCachedEmbedderConfig:
     def test_cache_config_in_server_config(self) -> None:
         from intelligence.server.config import ServerConfig
+
         cfg = ServerConfig.from_env()
         assert cfg.cache_maxsize == 4096
         assert cfg.cache_ttl_seconds == 300
@@ -192,6 +197,7 @@ class TestCachedEmbedderConfig:
         monkeypatch.setenv("KEIRO_CACHE_MAXSIZE", "512")
         monkeypatch.setenv("KEIRO_CACHE_TTL_SECONDS", "60")
         from intelligence.server.config import ServerConfig
+
         cfg = ServerConfig.from_env()
         assert cfg.cache_maxsize == 512
         assert cfg.cache_ttl_seconds == 60

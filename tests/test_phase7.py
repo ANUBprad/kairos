@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import json
-import math
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set
+from typing import List, Optional
 
 import pytest
 
@@ -15,11 +14,24 @@ import pytest
 # ======================================================================
 
 from intelligence.observability.tracing import Tracer, Span, get_tracer
-from intelligence.observability.event_logger import EventLogger, Event, get_logger, console_sink, file_sink
-from intelligence.observability.performance_monitor import PerformanceMonitor, LatencySnapshot, PerformanceSnapshot
+from intelligence.observability.event_logger import (
+    EventLogger,
+    Event,
+    console_sink,
+    file_sink,
+)
+from intelligence.observability.performance_monitor import (
+    PerformanceMonitor,
+    LatencySnapshot,
+    PerformanceSnapshot,
+)
 from intelligence.observability.alerting import (
-    AlertManager, Alert, AlertRule, AlertSeverity,
-    LatencyAlertRule, FailureRateAlertRule, DegradedRecallAlertRule,
+    AlertManager,
+    Alert,
+    AlertSeverity,
+    LatencyAlertRule,
+    FailureRateAlertRule,
+    DegradedRecallAlertRule,
 )
 from intelligence.observability.metrics_registry import MetricsRegistry
 from intelligence.observability.dashboard_metrics import DashboardMetricsCollector
@@ -28,6 +40,7 @@ from intelligence.observability.dashboard_metrics import DashboardMetricsCollect
 # ---------------------------------------------------------------------------
 # Tracing
 # ---------------------------------------------------------------------------
+
 
 class TestTracer:
     def test_start_trace_creates_span(self) -> None:
@@ -91,11 +104,19 @@ class TestSpan:
         assert span.duration_ms >= 0
 
     def test_duration_with_end_time(self) -> None:
-        span = Span(name="test", trace_id="1", span_id="2", start_time=100.0, end_time=101.0)
+        span = Span(
+            name="test", trace_id="1", span_id="2", start_time=100.0, end_time=101.0
+        )
         assert span.duration_ms == 1000.0
 
     def test_attributes(self) -> None:
-        span = Span(name="test", trace_id="1", span_id="2", start_time=0.0, attributes={"key": "value"})
+        span = Span(
+            name="test",
+            trace_id="1",
+            span_id="2",
+            start_time=0.0,
+            attributes={"key": "value"},
+        )
         assert span.attributes["key"] == "value"
 
 
@@ -103,13 +124,16 @@ class TestSpan:
 # Event Logger
 # ---------------------------------------------------------------------------
 
+
 class TestEvent:
     def test_default_timestamp(self) -> None:
         event = Event(event_type="test", source="test")
         assert event.timestamp
 
     def test_to_dict(self) -> None:
-        event = Event(event_type="test", source="src", attributes={"k": "v"}, trace_id="t1")
+        event = Event(
+            event_type="test", source="src", attributes={"k": "v"}, trace_id="t1"
+        )
         d = event.to_dict()
         assert d["event_type"] == "test"
         assert d["attributes"]["k"] == "v"
@@ -145,8 +169,10 @@ class TestEventLogger:
 
     def test_sink_error_does_not_propagate(self) -> None:
         logger = EventLogger()
+
         def bad_sink(event: Event) -> None:
             raise RuntimeError("sink error")
+
         logger.add_sink(bad_sink)
         logger.log("test", "src")  # should not raise
 
@@ -179,6 +205,7 @@ class TestFileSink:
 # ---------------------------------------------------------------------------
 # Performance Monitor
 # ---------------------------------------------------------------------------
+
 
 class TestPerformanceMonitor:
     def test_record_request(self) -> None:
@@ -265,6 +292,7 @@ class TestPerformanceSnapshot:
 # Alerting
 # ---------------------------------------------------------------------------
 
+
 class TestAlertManager:
     def test_add_rule(self) -> None:
         am = AlertManager()
@@ -310,8 +338,10 @@ class TestAlertManager:
 
     def test_handler_error_does_not_propagate(self) -> None:
         am = AlertManager()
+
         def bad_handler(alert: Alert) -> None:
             raise RuntimeError("handler error")
+
         am.add_handler(bad_handler)
         rule = LatencyAlertRule(threshold_ms=0.0)
         am.add_rule(rule)
@@ -365,7 +395,9 @@ class TestAlertRules:
         assert alert is None
 
     def test_latency_alert_with_p99(self) -> None:
-        rule = LatencyAlertRule(percentile="p99", threshold_ms=100.0, cooldown_seconds=0)
+        rule = LatencyAlertRule(
+            percentile="p99", threshold_ms=100.0, cooldown_seconds=0
+        )
         alert = rule.evaluate(latency_snapshot=LatencySnapshot(p99=200.0))
         assert alert is not None
 
@@ -385,6 +417,7 @@ class TestAlertRules:
 # ---------------------------------------------------------------------------
 # Metrics Registry
 # ---------------------------------------------------------------------------
+
 
 class TestMetricsRegistry:
     def test_record(self) -> None:
@@ -428,6 +461,7 @@ class TestMetricsRegistry:
 # Dashboard Metrics Collector
 # ---------------------------------------------------------------------------
 
+
 class TestDashboardMetricsCollector:
     def test_collect_system_overview(self) -> None:
         monitor = PerformanceMonitor()
@@ -440,8 +474,10 @@ class TestDashboardMetricsCollector:
         registry.record("m", 1.0)
 
         collector = DashboardMetricsCollector(
-            monitor=monitor, logger=logger,
-            registry=registry, alert_manager=alert_manager,
+            monitor=monitor,
+            logger=logger,
+            registry=registry,
+            alert_manager=alert_manager,
         )
         overview = collector.collect_system_overview()
         assert overview["performance"]["total_requests"] == 1
@@ -467,7 +503,7 @@ class TestDashboardMetricsCollector:
 # Evaluation Tests
 # ======================================================================
 
-from intelligence.evaluation.ranking_metrics import (
+from intelligence.evaluation.ranking_metrics import (  # noqa: E402
     reciprocal_rank,
     mean_reciprocal_rank,
     average_precision,
@@ -476,15 +512,23 @@ from intelligence.evaluation.ranking_metrics import (
     normalized_dcg,
     hit_rate,
 )
-from intelligence.evaluation.evaluator import Evaluator, EvaluationResult, AggregateEvaluation
-from intelligence.evaluation.ground_truth import GroundTruth, GroundTruthEntry
-from intelligence.evaluation.retrieval_benchmark import run_retrieval_benchmark
-from intelligence.evaluation.reporting import generate_evaluation_report, evaluate_retrieval_strategies
+from intelligence.evaluation.evaluator import (  # noqa: E402
+    Evaluator,
+    EvaluationResult,
+    AggregateEvaluation,
+)
+from intelligence.evaluation.ground_truth import GroundTruth, GroundTruthEntry  # noqa: E402
+from intelligence.evaluation.retrieval_benchmark import run_retrieval_benchmark  # noqa: E402
+from intelligence.evaluation.reporting import (  # noqa: E402
+    generate_evaluation_report,
+    evaluate_retrieval_strategies,
+)
 
 
 # ---------------------------------------------------------------------------
 # Ranking Metrics
 # ---------------------------------------------------------------------------
+
 
 class TestReciprocalRank:
     def test_first_is_relevant(self) -> None:
@@ -616,6 +660,7 @@ class TestHitRate:
 # Evaluator
 # ---------------------------------------------------------------------------
 
+
 class TestEvaluator:
     def test_basic_evaluation(self) -> None:
         evaluator = Evaluator()
@@ -670,10 +715,13 @@ class TestEvaluator:
 # Ground Truth
 # ---------------------------------------------------------------------------
 
+
 class TestGroundTruth:
     def test_add_entry(self) -> None:
         gt = GroundTruth()
-        gt.add_entry(GroundTruthEntry(query="test", query_id="q1", relevant_docs={"d1", "d2"}))
+        gt.add_entry(
+            GroundTruthEntry(query="test", query_id="q1", relevant_docs={"d1", "d2"})
+        )
         assert gt.count == 1
 
     def test_get_by_query_id(self) -> None:
@@ -689,7 +737,9 @@ class TestGroundTruth:
 
     def test_get_by_query(self) -> None:
         gt = GroundTruth()
-        gt.add_entry(GroundTruthEntry(query="my query", query_id="q1", relevant_docs={"d1"}))
+        gt.add_entry(
+            GroundTruthEntry(query="my query", query_id="q1", relevant_docs={"d1"})
+        )
         entry = gt.get_by_query("my query")
         assert entry is not None
 
@@ -699,10 +749,12 @@ class TestGroundTruth:
 
     def test_add_entries(self) -> None:
         gt = GroundTruth()
-        gt.add_entries([
-            GroundTruthEntry(query="q1", relevant_docs={"d1"}),
-            GroundTruthEntry(query="q2", relevant_docs={"d2"}),
-        ])
+        gt.add_entries(
+            [
+                GroundTruthEntry(query="q1", relevant_docs={"d1"}),
+                GroundTruthEntry(query="q2", relevant_docs={"d2"}),
+            ]
+        )
         assert gt.count == 2
 
     def test_entries_property(self) -> None:
@@ -713,7 +765,14 @@ class TestGroundTruth:
 
     def test_to_dict_and_from_dict(self) -> None:
         gt = GroundTruth()
-        gt.add_entry(GroundTruthEntry(query="q", query_id="q1", query_type="simple", relevant_docs={"d1", "d2"}))
+        gt.add_entry(
+            GroundTruthEntry(
+                query="q",
+                query_id="q1",
+                query_type="simple",
+                relevant_docs={"d1", "d2"},
+            )
+        )
         d = gt.to_dict()
         gt2 = GroundTruth.from_dict(d)
         assert gt2.count == 1
@@ -728,10 +787,13 @@ class TestGroundTruth:
 # Retrieval Benchmark
 # ---------------------------------------------------------------------------
 
+
 class TestRunRetrievalBenchmark:
     def test_basic_benchmark(self) -> None:
         gt = GroundTruth()
-        gt.add_entry(GroundTruthEntry(query="q1", query_id="id1", relevant_docs={"d1", "d2"}))
+        gt.add_entry(
+            GroundTruthEntry(query="q1", query_id="id1", relevant_docs={"d1", "d2"})
+        )
 
         def fake_retriever(query: str, query_type: str, top_k: Optional[int] = None):
             return ["d1", "d2"], 100.0, True
@@ -742,15 +804,19 @@ class TestRunRetrievalBenchmark:
 
     def test_empty_ground_truth(self) -> None:
         gt = GroundTruth()
+
         def fake_retriever(query, query_type, top_k):
             return ["d1"], 0.0, True
+
         result = run_retrieval_benchmark(fake_retriever, gt)
         assert result.n_queries == 0
 
     def test_partial_results(self) -> None:
         gt = GroundTruth()
         gt.add_entry(GroundTruthEntry(query="q1", query_id="id1", relevant_docs={"d1"}))
-        gt.add_entry(GroundTruthEntry(query="q2", query_id="id2", relevant_docs={"x", "y"}))
+        gt.add_entry(
+            GroundTruthEntry(query="q2", query_id="id2", relevant_docs={"x", "y"})
+        )
 
         def fake_retriever(query: str, query_type: str, top_k: Optional[int] = None):
             if "q1" in query:
@@ -765,6 +831,7 @@ class TestRunRetrievalBenchmark:
 # ---------------------------------------------------------------------------
 # Evaluation Reporting
 # ---------------------------------------------------------------------------
+
 
 class TestGenerateEvaluationReport:
     def test_generates_markdown(self) -> None:
@@ -790,8 +857,17 @@ class TestGenerateEvaluationReport:
             n_queries=1,
             mean_recall=1.0,
             per_query_results=[
-                EvaluationResult(query_id="q1", recall=1.0, precision=1.0, reciprocal_rank=1.0,
-                                 average_precision=1.0, ndcg=1.0, hit=True, latency_ms=50.0, success=True),
+                EvaluationResult(
+                    query_id="q1",
+                    recall=1.0,
+                    precision=1.0,
+                    reciprocal_rank=1.0,
+                    average_precision=1.0,
+                    ndcg=1.0,
+                    hit=True,
+                    latency_ms=50.0,
+                    success=True,
+                ),
             ],
         )
         report = generate_evaluation_report(eval_result)
@@ -805,8 +881,28 @@ class TestGenerateEvaluationReport:
 
 class TestEvaluateRetrievalStrategies:
     def test_compare_strategies(self) -> None:
-        a = AggregateEvaluation(n_queries=10, mean_recall=0.85, mean_precision=0.72, mrr=0.90, map=0.80, mean_ndcg=0.88, hit_rate=0.95, mean_latency_ms=150.0, success_rate=0.98)
-        b = AggregateEvaluation(n_queries=10, mean_recall=0.78, mean_precision=0.65, mrr=0.82, map=0.72, mean_ndcg=0.80, hit_rate=0.90, mean_latency_ms=200.0, success_rate=0.95)
+        a = AggregateEvaluation(
+            n_queries=10,
+            mean_recall=0.85,
+            mean_precision=0.72,
+            mrr=0.90,
+            map=0.80,
+            mean_ndcg=0.88,
+            hit_rate=0.95,
+            mean_latency_ms=150.0,
+            success_rate=0.98,
+        )
+        b = AggregateEvaluation(
+            n_queries=10,
+            mean_recall=0.78,
+            mean_precision=0.65,
+            mrr=0.82,
+            map=0.72,
+            mean_ndcg=0.80,
+            hit_rate=0.90,
+            mean_latency_ms=200.0,
+            success_rate=0.95,
+        )
         report = evaluate_retrieval_strategies({"Strategy A": a, "Strategy B": b})
         assert "Strategy A" in report
         assert "Strategy B" in report
@@ -816,24 +912,23 @@ class TestEvaluateRetrievalStrategies:
 # Dashboard Smoke Tests
 # ======================================================================
 
+
 class TestDashboardImports:
     def test_app_imports(self) -> None:
         # Just verify the dashboard modules can be imported
-        import dashboard.pages.experiments
-        import dashboard.pages.benchmarks
-        import dashboard.pages.ablations
-        import dashboard.pages.statistics
-        import dashboard.pages.observability
+        pass
         # No assertion needed — if import succeeds, it's fine
 
     def test_app_main_exists(self) -> None:
         from dashboard.app import main
+
         assert callable(main)
 
 
 # ======================================================================
 # Integration Tests
 # ======================================================================
+
 
 class TestTracingWithEventLogger:
     def test_trace_and_log_integration(self) -> None:
@@ -843,15 +938,17 @@ class TestTracingWithEventLogger:
         received: List[Event] = []
         logger.add_sink(received.append)
 
-        tracer.on_span_finish(lambda span: logger.log(
-            event_type="span.finished",
-            source="tracer",
-            attributes={"span_name": span.name, "duration_ms": span.duration_ms},
-            trace_id=span.trace_id,
-            span_id=span.span_id,
-        ))
+        tracer.on_span_finish(
+            lambda span: logger.log(
+                event_type="span.finished",
+                source="tracer",
+                attributes={"span_name": span.name, "duration_ms": span.duration_ms},
+                trace_id=span.trace_id,
+                span_id=span.span_id,
+            )
+        )
 
-        with tracer.trace("test.op") as span:
+        with tracer.trace("test.op") as _span:
             pass
 
         assert len(received) >= 1

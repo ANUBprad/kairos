@@ -9,8 +9,6 @@ from intelligence.server.health import (
     HealthServicer,
     add_health_servicer_to_server,
     SERVING,
-    NOT_SERVING,
-    UNKNOWN,
 )
 
 
@@ -18,11 +16,6 @@ class TestHealthServicer:
     def test_initial_global_is_serving(self) -> None:
         h = HealthServicer()
         assert h.is_serving() is True
-
-    def test_set_global_not_serving(self) -> None:
-        h = HealthServicer()
-        h.set_global_not_serving()
-        assert h.is_serving() is False
 
     def test_set_global_not_serving(self) -> None:
         h = HealthServicer()
@@ -74,6 +67,7 @@ class TestHealthServicer:
 class TestHealthServicerGRPC:
     def test_check_via_grpc_returns_serving(self) -> None:
         from grpc_health.v1 import health_pb2, health_pb2_grpc
+
         h = HealthServicer()
         h.set_serving("test.Keiro")
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
@@ -94,11 +88,15 @@ class TestHealthServicerGRPC:
 class TestHealthConfig:
     def test_health_check_enabled_default(self) -> None:
         from intelligence.server.config import ServerConfig
+
         cfg = ServerConfig.from_env()
         assert cfg.health_check_enabled is True
 
-    def test_health_check_disabled_via_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_health_check_disabled_via_env(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("KEIRO_HEALTH_CHECK_ENABLED", "False")
         from intelligence.server.config import ServerConfig
+
         cfg = ServerConfig.from_env()
         assert cfg.health_check_enabled is False

@@ -5,9 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from pathlib import Path
 
-import numpy as np
 import pytest
 
 from intelligence.optimization.budget_dataset import (
@@ -40,30 +38,64 @@ from intelligence.optimization.optimization_storage import (
 @pytest.fixture
 def sample_entries() -> list:
     return [
-        BudgetDatasetEntry("simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True),
-        BudgetDatasetEntry("simple", 0.95, "HYBRID", 5, False, False, 70.0, False, True),
-        BudgetDatasetEntry("simple", 0.95, "HYBRID", 8, True, False, 120.0, False, True),
-        BudgetDatasetEntry("simple", 0.60, "HYBRID", 5, True, False, 100.0, False, True),
-        BudgetDatasetEntry("simple", 0.60, "HYBRID", 8, True, False, 140.0, True, False),
+        BudgetDatasetEntry(
+            "simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "simple", 0.95, "HYBRID", 5, False, False, 70.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "simple", 0.95, "HYBRID", 8, True, False, 120.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "simple", 0.60, "HYBRID", 5, True, False, 100.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "simple", 0.60, "HYBRID", 8, True, False, 140.0, True, False
+        ),
         BudgetDatasetEntry("simple", 0.30, "HYBRID", 8, True, True, 160.0, True, False),
-        BudgetDatasetEntry("simple", 0.30, "HYBRID", 10, True, True, 180.0, False, True),
-        BudgetDatasetEntry("complex", 0.85, "MULTI_VECTOR", 8, True, False, 150.0, False, True),
-        BudgetDatasetEntry("complex", 0.85, "MULTI_VECTOR", 5, False, False, 90.0, False, True),
-        BudgetDatasetEntry("complex", 0.55, "MULTI_VECTOR", 10, True, False, 200.0, False, True),
-        BudgetDatasetEntry("complex", 0.55, "MULTI_VECTOR", 5, False, False, 95.0, False, True),
-        BudgetDatasetEntry("multi_hop", 0.90, "SELF_QUERYING", 3, False, True, 80.0, False, True),
-        BudgetDatasetEntry("multi_hop", 0.90, "SELF_QUERYING", 5, True, True, 120.0, False, True),
-        BudgetDatasetEntry("multi_hop", 0.40, "SELF_QUERYING", 8, True, True, 200.0, True, False),
-        BudgetDatasetEntry("multi_hop", 0.40, "SELF_QUERYING", 5, False, False, 100.0, False, True),
+        BudgetDatasetEntry(
+            "simple", 0.30, "HYBRID", 10, True, True, 180.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "complex", 0.85, "MULTI_VECTOR", 8, True, False, 150.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "complex", 0.85, "MULTI_VECTOR", 5, False, False, 90.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "complex", 0.55, "MULTI_VECTOR", 10, True, False, 200.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "complex", 0.55, "MULTI_VECTOR", 5, False, False, 95.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "multi_hop", 0.90, "SELF_QUERYING", 3, False, True, 80.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "multi_hop", 0.90, "SELF_QUERYING", 5, True, True, 120.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "multi_hop", 0.40, "SELF_QUERYING", 8, True, True, 200.0, True, False
+        ),
+        BudgetDatasetEntry(
+            "multi_hop", 0.40, "SELF_QUERYING", 5, False, False, 100.0, False, True
+        ),
     ]
 
 
 @pytest.fixture
 def min_entries() -> list:
     return [
-        BudgetDatasetEntry("simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True),
-        BudgetDatasetEntry("simple", 0.95, "HYBRID", 5, False, False, 70.0, False, True),
-        BudgetDatasetEntry("simple", 0.95, "HYBRID", 8, True, False, 120.0, False, True),
+        BudgetDatasetEntry(
+            "simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "simple", 0.95, "HYBRID", 5, False, False, 70.0, False, True
+        ),
+        BudgetDatasetEntry(
+            "simple", 0.95, "HYBRID", 8, True, False, 120.0, False, True
+        ),
     ]
 
 
@@ -100,7 +132,9 @@ class TestBudgetScorer:
     def test_top_k_inflation_penalty(self):
         s = BudgetScorer()
         low_k = s.score(success_rate=1.0, avg_latency_ms=50, fallback_rate=0.0, top_k=3)
-        high_k = s.score(success_rate=1.0, avg_latency_ms=50, fallback_rate=0.0, top_k=12)
+        high_k = s.score(
+            success_rate=1.0, avg_latency_ms=50, fallback_rate=0.0, top_k=12
+        )
         assert low_k > high_k
 
     def test_fallback_penalty(self):
@@ -112,11 +146,18 @@ class TestBudgetScorer:
     def test_latency_penalty(self):
         s = BudgetScorer()
         fast = s.score(success_rate=1.0, avg_latency_ms=10, fallback_rate=0.0, top_k=5)
-        slow = s.score(success_rate=1.0, avg_latency_ms=1000, fallback_rate=0.0, top_k=5)
+        slow = s.score(
+            success_rate=1.0, avg_latency_ms=1000, fallback_rate=0.0, top_k=5
+        )
         assert fast > slow
 
     def test_custom_weights(self):
-        s = BudgetScorer(success_weight=2.0, latency_weight=0.0, fallback_weight=0.0, top_k_penalty_weight=0.0)
+        s = BudgetScorer(
+            success_weight=2.0,
+            latency_weight=0.0,
+            fallback_weight=0.0,
+            top_k_penalty_weight=0.0,
+        )
         v = s.score(success_rate=0.5, avg_latency_ms=999, fallback_rate=0.9, top_k=99)
         assert v == 1.0
 
@@ -183,7 +224,9 @@ class TestBudgetDatasetGenerator:
             out = f.name
         try:
             gen = BudgetDatasetGenerator()
-            gen.generate("benchmarks/results/calibration_dataset.jsonl", output_path=out)
+            gen.generate(
+                "benchmarks/results/calibration_dataset.jsonl", output_path=out
+            )
             with open(out) as f2:
                 lines = f2.readlines()
             assert len(lines) > 0
@@ -195,7 +238,9 @@ class TestBudgetDatasetGenerator:
                 os.unlink(out)
 
     def test_entry_fields(self):
-        e = BudgetDatasetEntry("simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True)
+        e = BudgetDatasetEntry(
+            "simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True
+        )
         assert e.query_type == "simple"
         assert e.top_k == 3
         assert e.rerank is False
@@ -263,7 +308,9 @@ class TestBudgetOptimizer:
 
     def test_min_samples_respected(self):
         entries = [
-            BudgetDatasetEntry("simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True),
+            BudgetDatasetEntry(
+                "simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True
+            ),
         ]
         opt = BudgetOptimizer(min_samples_per_config=2)
         opt.fit(entries)
@@ -293,7 +340,9 @@ class TestOptimizationStorage:
             assert os.path.exists(path)
             loaded = load_optimizer(path)
             assert loaded.fitted
-            assert loaded.scorer.success_weight == fitted_optimizer.scorer.success_weight
+            assert (
+                loaded.scorer.success_weight == fitted_optimizer.scorer.success_weight
+            )
         finally:
             if os.path.exists(path):
                 os.unlink(path)
@@ -369,7 +418,9 @@ class TestOptimizationMetrics:
 
     def test_generate_report(self, fitted_optimizer, sample_entries):
         eval_results = fitted_optimizer.evaluate(sample_entries)
-        report = generate_optimization_report(fitted_optimizer, sample_entries, eval_results)
+        report = generate_optimization_report(
+            fitted_optimizer, sample_entries, eval_results
+        )
         assert "Learned Budget Table" in report
         assert "Comparison vs Static Budget" in report
         assert "Production Readiness" in report
@@ -392,6 +443,7 @@ class TestPlannerOptimizerIntegration:
             def classify_with_confidence(self, query):
                 class R:
                     pass
+
                 r = R()
                 r.query_type = "simple"
                 r.domain = None
@@ -407,14 +459,17 @@ class TestPlannerOptimizerIntegration:
 
         class _Opt:
             fitted = True
+
             def recommend_budget(self, qt, conf):
                 from intelligence.optimization.budget_model import BudgetRecommendation
+
                 return BudgetRecommendation(12, True, True, 0.9, 300.0)
 
         class _Clf:
             def classify_with_confidence(self, query):
                 class R:
                     pass
+
                 r = R()
                 r.query_type = "simple"
                 r.domain = None
@@ -435,6 +490,7 @@ class TestPlannerOptimizerIntegration:
             def classify_with_confidence(self, query):
                 class R:
                     pass
+
                 r = R()
                 r.query_type = "simple"
                 r.domain = None
@@ -456,6 +512,7 @@ class TestPlannerOptimizerIntegration:
             def classify_with_confidence(self, query):
                 class R:
                     pass
+
                 r = R()
                 r.query_type = "simple"
                 r.domain = None
@@ -471,14 +528,17 @@ class TestPlannerOptimizerIntegration:
 
         class _FullOptimizer:
             fitted = True
+
             def recommend_budget(self, qt, conf):
                 from intelligence.optimization.budget_model import BudgetRecommendation
+
                 return BudgetRecommendation(10, True, True, 0.8, 200.0)
 
         class _Clf:
             def classify_with_confidence(self, query):
                 class R:
                     pass
+
                 r = R()
                 r.query_type = "complex"
                 r.domain = None
@@ -486,7 +546,9 @@ class TestPlannerOptimizerIntegration:
                 return r
 
         planner = RetrievalPlanner(classifier=_Clf(), optimizer=_FullOptimizer())
-        decision = planner.plan_with_evaluation("test", chunk_count=3, use_learned_budget=True)
+        decision = planner.plan_with_evaluation(
+            "test", chunk_count=3, use_learned_budget=True
+        )
         assert decision.fallback_decision is not None
         assert decision.config["top_k"] == 10
 
@@ -499,7 +561,10 @@ class TestPlannerOptimizerIntegration:
 class TestEdgeCases:
     def test_all_successes(self):
         entries = [
-            BudgetDatasetEntry("simple", 0.8, "HYBRID", 3, False, False, 50.0, False, True) for _ in range(10)
+            BudgetDatasetEntry(
+                "simple", 0.8, "HYBRID", 3, False, False, 50.0, False, True
+            )
+            for _ in range(10)
         ]
         opt = BudgetOptimizer(min_samples_per_config=1)
         opt.fit(entries)
@@ -508,7 +573,10 @@ class TestEdgeCases:
 
     def test_all_failures(self):
         entries = [
-            BudgetDatasetEntry("simple", 0.8, "HYBRID", 3, False, False, 50.0, False, False) for _ in range(10)
+            BudgetDatasetEntry(
+                "simple", 0.8, "HYBRID", 3, False, False, 50.0, False, False
+            )
+            for _ in range(10)
         ]
         opt = BudgetOptimizer(min_samples_per_config=1)
         opt.fit(entries)
@@ -521,7 +589,11 @@ class TestEdgeCases:
         assert not opt.fitted  # no data to fit
 
     def test_single_entry(self):
-        entries = [BudgetDatasetEntry("simple", 0.8, "HYBRID", 3, False, False, 50.0, False, True)]
+        entries = [
+            BudgetDatasetEntry(
+                "simple", 0.8, "HYBRID", 3, False, False, 50.0, False, True
+            )
+        ]
         opt = BudgetOptimizer(min_samples_per_config=1)
         opt.fit(entries)
         assert opt.fitted
@@ -530,9 +602,15 @@ class TestEdgeCases:
 
     def test_multiple_configs_per_band(self):
         entries = [
-            BudgetDatasetEntry("simple", 0.8, "HYBRID", 3, False, False, 50.0, False, True),
-            BudgetDatasetEntry("simple", 0.8, "HYBRID", 5, False, False, 70.0, False, True),
-            BudgetDatasetEntry("simple", 0.8, "HYBRID", 8, False, False, 100.0, False, True),
+            BudgetDatasetEntry(
+                "simple", 0.8, "HYBRID", 3, False, False, 50.0, False, True
+            ),
+            BudgetDatasetEntry(
+                "simple", 0.8, "HYBRID", 5, False, False, 70.0, False, True
+            ),
+            BudgetDatasetEntry(
+                "simple", 0.8, "HYBRID", 8, False, False, 100.0, False, True
+            ),
         ]
         opt = BudgetOptimizer(min_samples_per_config=1)
         opt.fit(entries)
@@ -541,12 +619,20 @@ class TestEdgeCases:
 
     def test_high_vs_low_confidence(self):
         high_entries = [
-            BudgetDatasetEntry("simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True),
-            BudgetDatasetEntry("simple", 0.95, "HYBRID", 5, False, False, 70.0, False, True),
+            BudgetDatasetEntry(
+                "simple", 0.95, "HYBRID", 3, False, False, 50.0, False, True
+            ),
+            BudgetDatasetEntry(
+                "simple", 0.95, "HYBRID", 5, False, False, 70.0, False, True
+            ),
         ]
         low_entries = [
-            BudgetDatasetEntry("simple", 0.30, "HYBRID", 8, True, True, 200.0, True, False),
-            BudgetDatasetEntry("simple", 0.30, "HYBRID", 5, False, False, 90.0, False, True),
+            BudgetDatasetEntry(
+                "simple", 0.30, "HYBRID", 8, True, True, 200.0, True, False
+            ),
+            BudgetDatasetEntry(
+                "simple", 0.30, "HYBRID", 5, False, False, 90.0, False, True
+            ),
         ]
         opt = BudgetOptimizer(min_samples_per_config=1)
         opt.fit(high_entries + low_entries)
@@ -558,7 +644,9 @@ class TestEdgeCases:
     def test_scorer_penalizes_large_top_k(self):
         s = BudgetScorer(top_k_penalty_weight=0.1)
         small = s.score(success_rate=1.0, avg_latency_ms=50, fallback_rate=0.0, top_k=3)
-        large = s.score(success_rate=1.0, avg_latency_ms=50, fallback_rate=0.0, top_k=12)
+        large = s.score(
+            success_rate=1.0, avg_latency_ms=50, fallback_rate=0.0, top_k=12
+        )
         assert small > large
 
     def test_recommend_budget_unknown_type(self, fitted_optimizer):

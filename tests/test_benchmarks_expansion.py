@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock, patch
+from typing import List
+from unittest.mock import MagicMock
 
 import pytest
 
 from benchmarks.dataset.loader import QueryEntry
-from benchmarks.metrics import FailureRecord, LatencyRecord
-from benchmarks.runner import RunnerResult, QueryResult
 
 from intelligence.benchmarks import (
     BenchmarkResult,
@@ -113,17 +110,23 @@ class TestDatasetRegistry:
         assert "absent" not in registry
 
     def test_query_count_in_metadata(self, registry):
-        entries = [QueryEntry(id=str(i), text=f"q{i}", query_type="simple") for i in range(5)]
-        meta = DatasetMetadata(name="counted", source="test", task_type="qa", query_count=5)
+        entries = [
+            QueryEntry(id=str(i), text=f"q{i}", query_type="simple") for i in range(5)
+        ]
+        meta = DatasetMetadata(
+            name="counted", source="test", task_type="qa", query_count=5
+        )
         registry.register_dataset(meta, entries)
         assert registry.get_dataset("counted").query_count == 5
 
     def test_dataset_names_sorted(self, registry, sample_entries):
         registry.register_dataset(
-            DatasetMetadata(name="zebra", source="s", task_type="t"), sample_entries,
+            DatasetMetadata(name="zebra", source="s", task_type="t"),
+            sample_entries,
         )
         registry.register_dataset(
-            DatasetMetadata(name="alpha", source="s", task_type="t"), sample_entries,
+            DatasetMetadata(name="alpha", source="s", task_type="t"),
+            sample_entries,
         )
         assert registry.dataset_names() == ["alpha", "zebra"]
 
@@ -214,8 +217,13 @@ class TestHotpotQALoader:
 
     def test_missing_fields_skipped(self, tmp_path):
         items = [
-            {"_id": "ok", "question": "valid question", "answer": "ans",
-             "type": "simple", "level": "easy"},
+            {
+                "_id": "ok",
+                "question": "valid question",
+                "answer": "ans",
+                "type": "simple",
+                "level": "easy",
+            },
             {"_id": "", "question": "no id"},
             {"not_a_question": "missing all fields"},
         ]
@@ -355,7 +363,10 @@ NQ_SAMPLE_ARRAY = [
         "annotations": [
             {
                 "short_answers": [{"text": "South America", "start_byte": 10}],
-                "long_answer": {"text": "The Amazon River is in South America.", "start_byte": 0},
+                "long_answer": {
+                    "text": "The Amazon River is in South America.",
+                    "start_byte": 0,
+                },
             }
         ],
     },
@@ -533,7 +544,11 @@ class TestBenchmarkResult:
         res = BenchmarkResult(
             dataset_name="test",
             query_count=10,
-            metrics={"fallback_count": 2, "timeout_count": 1, "empty_retrieval_count": 0},
+            metrics={
+                "fallback_count": 2,
+                "timeout_count": 1,
+                "empty_retrieval_count": 0,
+            },
             per_query_recall=[0.5, 0.6, 0.7],
             per_query_precision=[0.4, 0.5, 0.6],
             per_query_latency_ms=[100.0, 200.0, 300.0],
@@ -556,7 +571,11 @@ class TestBenchmarkResult:
         res = BenchmarkResult(
             dataset_name="f",
             query_count=5,
-            metrics={"timeout_count": 3, "empty_retrieval_count": 2, "fallback_count": 0},
+            metrics={
+                "timeout_count": 3,
+                "empty_retrieval_count": 2,
+                "fallback_count": 0,
+            },
         )
         assert res.success_rate == 0.0
 
@@ -582,11 +601,16 @@ class TestAggregateResults:
     def test_single(self):
         results = [
             BenchmarkResult(
-                dataset_name="a", query_count=10,
+                dataset_name="a",
+                query_count=10,
                 per_query_recall=[0.5, 0.6],
                 per_query_precision=[0.4, 0.5],
                 per_query_latency_ms=[100.0, 200.0],
-                metrics={"timeout_count": 0, "empty_retrieval_count": 0, "fallback_count": 1},
+                metrics={
+                    "timeout_count": 0,
+                    "empty_retrieval_count": 0,
+                    "fallback_count": 1,
+                },
             ),
         ]
         agg = aggregate_results(results)
@@ -598,16 +622,28 @@ class TestAggregateResults:
     def test_multiple(self):
         results = [
             BenchmarkResult(
-                dataset_name="a", query_count=10,
-                per_query_recall=[0.5], per_query_precision=[0.4],
+                dataset_name="a",
+                query_count=10,
+                per_query_recall=[0.5],
+                per_query_precision=[0.4],
                 per_query_latency_ms=[100.0],
-                metrics={"timeout_count": 1, "empty_retrieval_count": 0, "fallback_count": 0},
+                metrics={
+                    "timeout_count": 1,
+                    "empty_retrieval_count": 0,
+                    "fallback_count": 0,
+                },
             ),
             BenchmarkResult(
-                dataset_name="b", query_count=20,
-                per_query_recall=[0.7], per_query_precision=[0.6],
+                dataset_name="b",
+                query_count=20,
+                per_query_recall=[0.7],
+                per_query_precision=[0.6],
                 per_query_latency_ms=[200.0],
-                metrics={"timeout_count": 0, "empty_retrieval_count": 0, "fallback_count": 2},
+                metrics={
+                    "timeout_count": 0,
+                    "empty_retrieval_count": 0,
+                    "fallback_count": 2,
+                },
             ),
         ]
         agg = aggregate_results(results)
@@ -700,10 +736,12 @@ class TestBenchmarkRunner:
     def test_run_multiple_subset(self, mock_classifier, mock_retriever, entries):
         registry = DatasetRegistry()
         registry.register_dataset(
-            DatasetMetadata(name="ds1", source="test", task_type="qa"), entries,
+            DatasetMetadata(name="ds1", source="test", task_type="qa"),
+            entries,
         )
         registry.register_dataset(
-            DatasetMetadata(name="ds2", source="test", task_type="qa"), entries,
+            DatasetMetadata(name="ds2", source="test", task_type="qa"),
+            entries,
         )
 
         runner = BenchmarkRunner(classifier=mock_classifier, retriever=mock_retriever)
@@ -730,24 +768,32 @@ class TestBenchmarkRunnerWithValidation:
     def entries_with_truth(self) -> List[QueryEntry]:
         return [
             QueryEntry(
-                id="e1", text="q1", query_type="simple",
+                id="e1",
+                text="q1",
+                query_type="simple",
                 expected_chunks=["chunk_a"],
             ),
             QueryEntry(
-                id="e2", text="q2", query_type="simple",
+                id="e2",
+                text="q2",
+                query_type="simple",
                 expected_chunks=["chunk_b"],
             ),
         ]
 
     def test_validation_with_ground_truth(
-        self, mock_classifier, entries_with_truth,
+        self,
+        mock_classifier,
+        entries_with_truth,
     ):
         retriever = MagicMock()
         retriever.retrieve.return_value = ["chunk_a"]
 
         runner = BenchmarkRunner(classifier=mock_classifier, retriever=retriever)
         result = runner.run_single_dataset(
-            entries_with_truth, dataset_name="val-ds", include_validation=True,
+            entries_with_truth,
+            dataset_name="val-ds",
+            include_validation=True,
         )
         # We have recall values now
         assert len(result.per_query_recall) > 0
@@ -785,12 +831,15 @@ class TestTrackedBenchmarkRunner:
     @pytest.fixture
     def entries(self) -> List[QueryEntry]:
         return [
-            QueryEntry(id="e1", text="q1", query_type="simple",
-                       expected_chunks=["c1"]),
+            QueryEntry(id="e1", text="q1", query_type="simple", expected_chunks=["c1"]),
         ]
 
     def test_tracker_receives_metrics(
-        self, mock_classifier, mock_retriever, tracker, entries,
+        self,
+        mock_classifier,
+        mock_retriever,
+        tracker,
+        entries,
     ):
         runner = BenchmarkRunner(
             classifier=mock_classifier,
@@ -827,11 +876,16 @@ class TestBenchmarkReportGeneration:
     def test_single_result(self):
         results = [
             BenchmarkResult(
-                dataset_name="test-ds", query_count=5,
+                dataset_name="test-ds",
+                query_count=5,
                 per_query_recall=[0.5, 0.6],
                 per_query_precision=[0.4, 0.5],
                 per_query_latency_ms=[100.0, 200.0],
-                metrics={"fallback_count": 1, "timeout_count": 0, "empty_retrieval_count": 0},
+                metrics={
+                    "fallback_count": 1,
+                    "timeout_count": 0,
+                    "empty_retrieval_count": 0,
+                },
             ),
         ]
         report = generate_benchmark_report(results)
@@ -843,16 +897,28 @@ class TestBenchmarkReportGeneration:
     def test_multiple_datasets_in_report(self):
         results = [
             BenchmarkResult(
-                dataset_name="alpha", query_count=10,
-                per_query_recall=[0.7], per_query_precision=[0.6],
+                dataset_name="alpha",
+                query_count=10,
+                per_query_recall=[0.7],
+                per_query_precision=[0.6],
                 per_query_latency_ms=[150.0],
-                metrics={"fallback_count": 0, "timeout_count": 0, "empty_retrieval_count": 0},
+                metrics={
+                    "fallback_count": 0,
+                    "timeout_count": 0,
+                    "empty_retrieval_count": 0,
+                },
             ),
             BenchmarkResult(
-                dataset_name="beta", query_count=20,
-                per_query_recall=[0.5], per_query_precision=[0.4],
+                dataset_name="beta",
+                query_count=20,
+                per_query_recall=[0.5],
+                per_query_precision=[0.4],
                 per_query_latency_ms=[250.0],
-                metrics={"fallback_count": 2, "timeout_count": 0, "empty_retrieval_count": 0},
+                metrics={
+                    "fallback_count": 2,
+                    "timeout_count": 0,
+                    "empty_retrieval_count": 0,
+                },
             ),
         ]
         report = generate_benchmark_report(results)
@@ -863,21 +929,24 @@ class TestBenchmarkReportGeneration:
     def test_ranking_order(self):
         results = [
             BenchmarkResult(
-                dataset_name="low", query_count=5,
+                dataset_name="low",
+                query_count=5,
                 per_query_recall=[0.3],
                 per_query_precision=[0.3],
                 per_query_latency_ms=[100.0],
                 metrics={},
             ),
             BenchmarkResult(
-                dataset_name="high", query_count=5,
+                dataset_name="high",
+                query_count=5,
                 per_query_recall=[0.9],
                 per_query_precision=[0.9],
                 per_query_latency_ms=[100.0],
                 metrics={},
             ),
             BenchmarkResult(
-                dataset_name="mid", query_count=5,
+                dataset_name="mid",
+                query_count=5,
                 per_query_recall=[0.6],
                 per_query_precision=[0.6],
                 per_query_latency_ms=[100.0],
@@ -892,7 +961,12 @@ class TestBenchmarkReportGeneration:
             if "Ranking by Recall" in line:
                 rank_section = True
                 continue
-            if rank_section and line.startswith("|") and "Rank" not in line and "---" not in line:
+            if (
+                rank_section
+                and line.startswith("|")
+                and "Rank" not in line
+                and "---" not in line
+            ):
                 parts = [p.strip() for p in line.split("|") if p.strip()]
                 if len(parts) >= 3:
                     try:
@@ -903,7 +977,10 @@ class TestBenchmarkReportGeneration:
                         continue
 
     def test_with_validation(self):
-        from intelligence.statistics.reporting import ValidationResult, SignificanceResult
+        from intelligence.statistics.reporting import (
+            ValidationResult,
+            SignificanceResult,
+        )
         from intelligence.statistics.confidence_intervals import ConfidenceInterval
         from intelligence.statistics.effect_size import EffectSize
 
@@ -913,8 +990,12 @@ class TestBenchmarkReportGeneration:
             metric_name="recall",
             significance={
                 "Paired t-test": SignificanceResult(
-                    statistic=5.0, p_value=0.001, significant=True,
-                    alpha=0.05, method="t", n=10,
+                    statistic=5.0,
+                    p_value=0.001,
+                    significant=True,
+                    alpha=0.05,
+                    method="t",
+                    n=10,
                 ),
             },
             confidence_intervals={
@@ -922,7 +1003,9 @@ class TestBenchmarkReportGeneration:
                 "val-ds": ConfidenceInterval(0.1, 0.9, 0.95, "t", 10, 0.5, 0.2),
             },
             effect_sizes={
-                "Cohen's d": EffectSize(1.5, "large", "treatment > baseline", "d", 10, 10),
+                "Cohen's d": EffectSize(
+                    1.5, "large", "treatment > baseline", "d", 10, 10
+                ),
             },
             bootstrap=None,
             n_observations=10,
@@ -931,11 +1014,16 @@ class TestBenchmarkReportGeneration:
         )
 
         result = BenchmarkResult(
-            dataset_name="val-ds", query_count=10,
+            dataset_name="val-ds",
+            query_count=10,
             per_query_recall=[0.5, 0.6, 0.7, 0.8, 0.9, 0.55, 0.65, 0.75, 0.85, 0.95],
             per_query_precision=[0.4, 0.5, 0.6, 0.7, 0.8, 0.45, 0.55, 0.65, 0.75, 0.85],
             per_query_latency_ms=[100.0] * 10,
-            metrics={"fallback_count": 0, "timeout_count": 0, "empty_retrieval_count": 0},
+            metrics={
+                "fallback_count": 0,
+                "timeout_count": 0,
+                "empty_retrieval_count": 0,
+            },
             validation=vr,
         )
 
@@ -946,7 +1034,8 @@ class TestBenchmarkReportGeneration:
 
     def test_validation_section_omitted_when_absent(self):
         result = BenchmarkResult(
-            dataset_name="no-val", query_count=5,
+            dataset_name="no-val",
+            query_count=5,
             per_query_recall=[0.5],
             metrics={},
         )
@@ -956,7 +1045,8 @@ class TestBenchmarkReportGeneration:
     def test_all_none_recall_ranking_omitted(self):
         results = [
             BenchmarkResult(
-                dataset_name="no-recall", query_count=5,
+                dataset_name="no-recall",
+                query_count=5,
                 per_query_recall=[],
                 per_query_precision=[],
                 per_query_latency_ms=[100.0],
@@ -1001,13 +1091,17 @@ class TestEndToEnd:
 
         clf = MagicMock()
         clf.classify_with_confidence.return_value = MagicMock(
-            query_type="simple", domain=None, confidence_score=0.95,
+            query_type="simple",
+            domain=None,
+            confidence_score=0.95,
         )
         ret = MagicMock()
         ret.retrieve.return_value = ["chunk_a"]
 
         runner = BenchmarkRunner(classifier=clf, retriever=ret)
-        results = runner.run_multiple_datasets(registry, dataset_names=["hotpotqa-test"])
+        results = runner.run_multiple_datasets(
+            registry, dataset_names=["hotpotqa-test"]
+        )
         assert len(results) == 1
         assert results[0].dataset_name == "hotpotqa-test"
 
@@ -1027,8 +1121,18 @@ class TestLoaderEdgeCases:
         return tmp_path
 
     def test_hotpotqa_non_dict_items_skipped(self, tmp_path):
-        items = [{"_id": "ok", "question": "q?", "answer": "a", "type": "simple", "level": "easy"},
-                  "not_a_dict", 42, None]
+        items = [
+            {
+                "_id": "ok",
+                "question": "q?",
+                "answer": "a",
+                "type": "simple",
+                "level": "easy",
+            },
+            "not_a_dict",
+            42,
+            None,
+        ]
         p = tmp_path / "mixed.json"
         with open(p, "w") as f:
             json.dump(items, f)
@@ -1036,7 +1140,10 @@ class TestLoaderEdgeCases:
         assert len(entries) == 1
 
     def test_squad_malformed_paragraphs_skipped(self, tmp_path):
-        data = {"version": "v2.0", "data": [{"title": "T", "paragraphs": [None, "bad", {}]}]}
+        data = {
+            "version": "v2.0",
+            "data": [{"title": "T", "paragraphs": [None, "bad", {}]}],
+        }
         p = tmp_path / "bad_squad.json"
         with open(p, "w") as f:
             json.dump(data, f)
@@ -1067,7 +1174,9 @@ class TestLoaderEdgeCases:
         assert entries[0].expected_chunks == ["a"]
 
     def test_msmarco_passages_not_list(self, tmp_path):
-        items = [{"query_id": "ms1", "query": "q?", "passages": "not_a_list", "answer": ""}]
+        items = [
+            {"query_id": "ms1", "query": "q?", "passages": "not_a_list", "answer": ""}
+        ]
         p = tmp_path / "bad_passages.json"
         with open(p, "w") as f:
             json.dump(items, f)
@@ -1076,9 +1185,17 @@ class TestLoaderEdgeCases:
         assert entries[0].expected_chunks is None
 
     def test_hotpotqa_long_answer_handling(self, tmp_path):
-        items = [{"_id": "h1", "question": "q?", "answer": "long answer here",
-                  "type": "bridge", "level": "hard",
-                  "supporting_facts": [], "context": []}]
+        items = [
+            {
+                "_id": "h1",
+                "question": "q?",
+                "answer": "long answer here",
+                "type": "bridge",
+                "level": "hard",
+                "supporting_facts": [],
+                "context": [],
+            }
+        ]
         p = tmp_path / "hp_long.json"
         with open(p, "w") as f:
             json.dump(items, f)
@@ -1119,7 +1236,9 @@ class TestBenchmarkRunnerEdgeCases:
     def mock_classifier(self) -> MagicMock:
         clf = MagicMock()
         clf.classify_with_confidence.return_value = MagicMock(
-            query_type="simple", domain=None, confidence_score=0.95,
+            query_type="simple",
+            domain=None,
+            confidence_score=0.95,
         )
         return clf
 
@@ -1139,14 +1258,19 @@ class TestBenchmarkRunnerEdgeCases:
     def test_runner_custom_name(self, mock_classifier, mock_retriever):
         runner = BenchmarkRunner(classifier=mock_classifier, retriever=mock_retriever)
         entries = [QueryEntry(id="e1", text="test", query_type="simple")]
-        result = runner.run_single_dataset(entries, dataset_name="custom", run_name="my-run")
+        result = runner.run_single_dataset(
+            entries, dataset_name="custom", run_name="my-run"
+        )
         assert result.dataset_name == "custom"
 
     def test_runner_with_planner(self, mock_classifier, mock_retriever):
         from intelligence.planner import RetrievalPlanner
+
         planner = RetrievalPlanner(classifier=mock_classifier)
         runner = BenchmarkRunner(
-            classifier=mock_classifier, retriever=mock_retriever, planner=planner,
+            classifier=mock_classifier,
+            retriever=mock_retriever,
+            planner=planner,
         )
         entries = [QueryEntry(id="e1", text="test", query_type="simple")]
         result = runner.run_single_dataset(entries)
@@ -1156,10 +1280,13 @@ class TestBenchmarkRunnerEdgeCases:
         registry = DatasetRegistry()
         entries = [QueryEntry(id="e1", text="test", query_type="simple")]
         registry.register_dataset(
-            DatasetMetadata(name="present", source="s", task_type="t"), entries,
+            DatasetMetadata(name="present", source="s", task_type="t"),
+            entries,
         )
         runner = BenchmarkRunner(classifier=mock_classifier, retriever=mock_retriever)
-        results = runner.run_multiple_datasets(registry, dataset_names=["present", "missing"])
+        results = runner.run_multiple_datasets(
+            registry, dataset_names=["present", "missing"]
+        )
         assert len(results) == 1
         assert results[0].dataset_name == "present"
 
@@ -1168,7 +1295,8 @@ class TestReportEdgeCases:
     def test_report_with_precision_only(self):
         results = [
             BenchmarkResult(
-                dataset_name="p-only", query_count=3,
+                dataset_name="p-only",
+                query_count=3,
                 per_query_recall=[],
                 per_query_precision=[0.5, 0.6, 0.7],
                 per_query_latency_ms=[100.0, 200.0, 300.0],
@@ -1182,7 +1310,8 @@ class TestReportEdgeCases:
     def test_report_large_numbers(self):
         results = [
             BenchmarkResult(
-                dataset_name="large", query_count=1000,
+                dataset_name="large",
+                query_count=1000,
                 per_query_recall=[0.85] * 1000,
                 per_query_latency_ms=[50.0] * 1000,
                 metrics={},
@@ -1193,20 +1322,34 @@ class TestReportEdgeCases:
         assert "1000" in report
 
     def test_report_mixed_validation_presence(self):
-        from intelligence.statistics.reporting import ValidationResult, SignificanceResult
-        from intelligence.statistics.confidence_intervals import ConfidenceInterval
-        from intelligence.statistics.effect_size import EffectSize
+        from intelligence.statistics.reporting import ValidationResult
 
         vr = ValidationResult(
-            baseline_label="zero", treatment_label="val-ds", metric_name="recall",
-            significance={}, confidence_intervals={}, effect_sizes={},
-            bootstrap=None, n_observations=2, is_significant=False, summary="no change",
+            baseline_label="zero",
+            treatment_label="val-ds",
+            metric_name="recall",
+            significance={},
+            confidence_intervals={},
+            effect_sizes={},
+            bootstrap=None,
+            n_observations=2,
+            is_significant=False,
+            summary="no change",
         )
         results = [
-            BenchmarkResult(dataset_name="with-val", query_count=2,
-                            per_query_recall=[0.5, 0.6], metrics={}, validation=vr),
-            BenchmarkResult(dataset_name="no-val", query_count=2,
-                            per_query_recall=[0.5, 0.6], metrics={}),
+            BenchmarkResult(
+                dataset_name="with-val",
+                query_count=2,
+                per_query_recall=[0.5, 0.6],
+                metrics={},
+                validation=vr,
+            ),
+            BenchmarkResult(
+                dataset_name="no-val",
+                query_count=2,
+                per_query_recall=[0.5, 0.6],
+                metrics={},
+            ),
         ]
         report = generate_benchmark_report(results)
         assert "Statistical Validation" in report
@@ -1214,7 +1357,9 @@ class TestReportEdgeCases:
         assert "no-val" in report
 
     def test_report_different_title(self):
-        result = BenchmarkResult(dataset_name="x", query_count=1, per_query_recall=[0.5], metrics={})
+        result = BenchmarkResult(
+            dataset_name="x", query_count=1, per_query_recall=[0.5], metrics={}
+        )
         report = generate_benchmark_report([result], title="Custom Title")
         assert "Custom Title" in report
 

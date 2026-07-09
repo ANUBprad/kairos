@@ -25,6 +25,7 @@ class EvaluationResult:
         success:            Whether the query succeeded.
         metadata:           Additional metadata.
     """
+
     query_id: str = ""
     query_type: str = ""
     recall: float = 0.0
@@ -41,6 +42,7 @@ class EvaluationResult:
 @dataclass
 class AggregateEvaluation:
     """Aggregated evaluation results across multiple queries."""
+
     n_queries: int = 0
     mean_recall: float = 0.0
     mean_precision: float = 0.0
@@ -90,8 +92,7 @@ class Evaluator:
         successes: Optional[Sequence[bool]] = None,
     ) -> AggregateEvaluation:
         from intelligence.evaluation.ranking_metrics import (
-            average_precision, hit_rate, mean_average_precision,
-            mean_reciprocal_rank, normalized_dcg, reciprocal_rank,
+            reciprocal_rank,
         )
         from benchmarks.metrics import precision_at_k, recall_at_k
 
@@ -112,7 +113,6 @@ class Evaluator:
         for i in range(n):
             ret = list(retrieved[i])
             rel = relevant[i]
-            k = len(ret)
 
             recall = recall_at_k(rel, ret)
             precision = precision_at_k(rel, ret)
@@ -135,18 +135,22 @@ class Evaluator:
             if success:
                 total_success += 1
 
-            per_query.append(EvaluationResult(
-                query_id=query_ids[i] if query_ids and i < len(query_ids) else "",
-                query_type=query_types[i] if query_types and i < len(query_types) else "",
-                recall=recall,
-                precision=precision,
-                reciprocal_rank=rr,
-                average_precision=ap,
-                ndcg=ndcg_val,
-                hit=hit,
-                latency_ms=latency,
-                success=success,
-            ))
+            per_query.append(
+                EvaluationResult(
+                    query_id=query_ids[i] if query_ids and i < len(query_ids) else "",
+                    query_type=query_types[i]
+                    if query_types and i < len(query_types)
+                    else "",
+                    recall=recall,
+                    precision=precision,
+                    reciprocal_rank=rr,
+                    average_precision=ap,
+                    ndcg=ndcg_val,
+                    hit=hit,
+                    latency_ms=latency,
+                    success=success,
+                )
+            )
 
         nf = float(n)
         return AggregateEvaluation(
@@ -169,6 +173,7 @@ def _ndcg_for_eval(
     relevances: Optional[Sequence[float]],
 ) -> float:
     from intelligence.evaluation.ranking_metrics import normalized_dcg
+
     if relevances is not None:
         return normalized_dcg(list(relevances))
     binary = [1.0 if d in relevant else 0.0 for d in retrieved]

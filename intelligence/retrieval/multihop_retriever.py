@@ -6,12 +6,22 @@ from .retriever import BaseRetriever
 from pydantic import BaseModel
 from google import genai
 
+
 class MultiHopResponseSchema(BaseModel):
     next_question: str
     is_enough: bool
 
+
 class MultiHopRetriever(BaseRetriever):
-    def __init__(self, embedder: BaseEmbedder, store: ChromaStore, client: Union[genai.Client, OpenAI], model_name: str, model_provider: Literal["openai", "ollama", "gemini"], num_hops: int = 3):
+    def __init__(
+        self,
+        embedder: BaseEmbedder,
+        store: ChromaStore,
+        client: Union[genai.Client, OpenAI],
+        model_name: str,
+        model_provider: Literal["openai", "ollama", "gemini"],
+        num_hops: int = 3,
+    ):
         super().__init__(embedder, store)
         self.llm_client = client
         self.model = model_name
@@ -45,23 +55,27 @@ class MultiHopRetriever(BaseRetriever):
             hop_count += 1
 
             hop_prompt = raw_prompt.format(
-                original_query = original_query,
-                current_query = curr_query,
-                hop_count = hop_count,
-                max_hops = self.num_hops,
-                data = "\n".join(all_chunks)
+                original_query=original_query,
+                current_query=curr_query,
+                hop_count=hop_count,
+                max_hops=self.num_hops,
+                data="\n".join(all_chunks),
             )
 
             try:
-                hop_data = self._llm_response(prompt = hop_prompt)
+                hop_data = self._llm_response(prompt=hop_prompt)
             except Exception as e:
-                raise ValueError(f"Unable to generate response in Multi Hop retriever. ERROR: {e}")
+                raise ValueError(
+                    f"Unable to generate response in Multi Hop retriever. ERROR: {e}"
+                )
 
             if hop_data.is_enough:
                 break
 
             hop_query_embed = self.embedder.embed(hop_data.next_question)
-            hop_retrieved_chunks = self.store.query(namespace, top_k, hop_query_embed)["documents"][0]
+            hop_retrieved_chunks = self.store.query(namespace, top_k, hop_query_embed)[
+                "documents"
+            ][0]
             all_chunks = all_chunks + hop_retrieved_chunks
             curr_query = hop_data.next_question
 
@@ -79,12 +93,12 @@ class MultiHopRetriever(BaseRetriever):
             try:
                 # noinspection PyTypeChecker
                 answer = self.llm_client.models.generate_content(
-                    model = self.model,
-                    config = {
+                    model=self.model,
+                    config={
                         "response_mime_type": "application/json",
-                        "response_schema": MultiHopResponseSchema
+                        "response_schema": MultiHopResponseSchema,
                     },
-                    contents = prompt
+                    contents=prompt,
                 )
 
                 try:
@@ -92,29 +106,37 @@ class MultiHopRetriever(BaseRetriever):
                     json_response: MultiHopResponseSchema = answer.parsed
                     return json_response
                 except Exception as e:
-                    raise ValueError(f"Unable to parse the data in Multi Hop Retriever. ERROR: {e}")
+                    raise ValueError(
+                        f"Unable to parse the data in Multi Hop Retriever. ERROR: {e}"
+                    )
 
             except Exception as e:
-                raise ValueError(f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}")
+                raise ValueError(
+                    f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}"
+                )
 
         elif self.llm_provider in ["openai", "ollama"]:
             try:
                 # noinspection PyTypeChecker
                 answer = self.llm_client.chat.completions.create(
-                    model = self.model,
-                    response_format = {"type": "json_object"},
-                    messages = [
-                        {"role": "user", "content": prompt}
-                    ]
+                    model=self.model,
+                    response_format={"type": "json_object"},
+                    messages=[{"role": "user", "content": prompt}],
                 )
 
                 try:
-                    json_response = MultiHopResponseSchema.model_validate_json(str(answer.choices[0].message.content))
+                    json_response = MultiHopResponseSchema.model_validate_json(
+                        str(answer.choices[0].message.content)
+                    )
                     return json_response
                 except Exception as e:
-                    raise ValueError(f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}")
+                    raise ValueError(
+                        f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}"
+                    )
 
             except Exception as e:
-                raise ValueError(f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}")
+                raise ValueError(
+                    f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}"
+                )
         else:
             raise ValueError("Unidentified model provider given")

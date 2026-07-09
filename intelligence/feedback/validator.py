@@ -75,6 +75,11 @@ class FeedbackValidator:
     def validate_batch(records: List[dict]) -> List[str]:
         """Validate multiple records, returning a list of error messages."""
         return [
-            err for r in records
-            for err in ([FeedbackValidator.validate_record(r)] if FeedbackValidator.validate_record(r) else [])
+            err
+            for r in records
+            for err in (
+                [FeedbackValidator.validate_record(r)]
+                if FeedbackValidator.validate_record(r)
+                else []
+            )
         ]

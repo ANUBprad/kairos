@@ -142,9 +142,7 @@ class TestRawToEntry:
 
     def test_rejects_invalid_query_type(self) -> None:
         with pytest.raises(ValueError, match="not in"):
-            _raw_to_entry(
-                {"id": "X", "text": "?", "query_type": "invalid_type"}
-            )
+            _raw_to_entry({"id": "X", "text": "?", "query_type": "invalid_type"})
 
     def test_rejects_wrong_domain_type(self) -> None:
         with pytest.raises(TypeError, match="domain.*must be str or null"):
@@ -198,9 +196,7 @@ class TestLoadDataset:
         assert type_counts == {"simple": 10, "complex": 10, "multi_hop": 10}
 
     def test_from_json_file(self, three_entries: list[dict]) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(three_entries, f)
             tmp_path = f.name
 
@@ -217,9 +213,7 @@ class TestLoadDataset:
             load_dataset(Path("nonexistent.json"))
 
     def test_invalid_json(self) -> None:
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write("not json")
             tmp_path = f.name
 
@@ -238,9 +232,7 @@ class TestLoadDataset:
                 "query_type": "not_a_valid_type",
             }
         ]
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(bad_entries, f)
             tmp_path = f.name
 
@@ -257,9 +249,7 @@ class TestLoadDataset:
             {"id": f"SIMPLE-{i:03d}", "text": f"q{i}", "query_type": "simple"}
             for i in range(5)
         ]
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(entries_data, f)
             tmp_path = f.name
 
@@ -389,7 +379,9 @@ class TestQueryEntryAliases:
 
     def test_confidence_band_alias(self) -> None:
         entry = QueryEntry(
-            id="X", text="?", query_type="simple",
+            id="X",
+            text="?",
+            query_type="simple",
             confidence_category="high",
         )
         assert entry.confidence_band == "high"
@@ -414,7 +406,9 @@ class TestRawToEntryAliases:
 
     def test_accepts_confidence_band_alias(self) -> None:
         item = {
-            "id": "X", "text": "?", "query_type": "simple",
+            "id": "X",
+            "text": "?",
+            "query_type": "simple",
             "confidence_band": "low",
         }
         entry = _raw_to_entry(item)
@@ -424,7 +418,9 @@ class TestRawToEntryAliases:
     def test_prefers_canonical_over_alias(self) -> None:
         """When both text and query are present, text wins."""
         item = {
-            "id": "X", "text": "canonical", "query": "alias",
+            "id": "X",
+            "text": "canonical",
+            "query": "alias",
             "query_type": "simple",
         }
         entry = _raw_to_entry(item)
@@ -432,16 +428,24 @@ class TestRawToEntryAliases:
 
     def test_confidence_band_validated(self) -> None:
         with pytest.raises(ValueError, match="not in"):
-            _raw_to_entry({
-                "id": "X", "text": "?", "query_type": "simple",
-                "confidence_band": "invalid",
-            })
+            _raw_to_entry(
+                {
+                    "id": "X",
+                    "text": "?",
+                    "query_type": "simple",
+                    "confidence_band": "invalid",
+                }
+            )
 
     def test_difficulty_validated(self) -> None:
         with pytest.raises(ValueError, match="not in"):
-            _raw_to_entry({
-                "id": "X", "text": "?", "difficulty": "invalid_type",
-            })
+            _raw_to_entry(
+                {
+                    "id": "X",
+                    "text": "?",
+                    "difficulty": "invalid_type",
+                }
+            )
 
 
 # ======================================================================
@@ -450,7 +454,9 @@ class TestRawToEntryAliases:
 
 _EU_AI_ACT_PATH = (
     Path(__file__).resolve().parent.parent
-    / "benchmarks" / "dataset" / "eu_ai_act_queries.json"
+    / "benchmarks"
+    / "dataset"
+    / "eu_ai_act_queries.json"
 )
 
 _EXPECTED_150_COUNTS = {
@@ -473,7 +479,8 @@ class TestEuAiActDataset:
 
     def test_validate_150_via_load_dataset(self) -> None:
         entries = load_dataset(
-            _EU_AI_ACT_PATH, expected_counts=_EXPECTED_150_COUNTS,
+            _EU_AI_ACT_PATH,
+            expected_counts=_EXPECTED_150_COUNTS,
         )
         assert len(entries) == 150
 
@@ -492,7 +499,9 @@ class TestEuAiActDataset:
     def test_all_have_confidence_band(self) -> None:
         entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
         for e in entries:
-            assert e.confidence_category is not None, f"{e.id} missing confidence_category"
+            assert e.confidence_category is not None, (
+                f"{e.id} missing confidence_category"
+            )
 
     def test_all_have_expected_articles(self) -> None:
         entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
@@ -513,7 +522,9 @@ class TestValidateDatasetExpectedCounts:
 
     def test_custom_counts_fails(self) -> None:
         entries = load_dataset(_EU_AI_ACT_PATH, validate=False)
-        report = validate_dataset(entries, expected_counts={"simple": 1, "complex": 1, "multi_hop": 1})
+        report = validate_dataset(
+            entries, expected_counts={"simple": 1, "complex": 1, "multi_hop": 1}
+        )
         assert not report.valid
         assert any("simple" in e for e in report.errors)
 

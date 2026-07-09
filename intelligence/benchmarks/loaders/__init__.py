@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from benchmarks.dataset.loader import QueryEntry
+from benchmarks.dataset.loader import QueryEntry as QueryEntry
 
 
 def _to_text(obj: object) -> str:

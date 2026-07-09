@@ -76,7 +76,9 @@ class ReportRegistry:
         self._save()
         return entry
 
-    def save_report_file(self, report_id: str, content: str, filename: str = "") -> Optional[Path]:
+    def save_report_file(
+        self, report_id: str, content: str, filename: str = ""
+    ) -> Optional[Path]:
         if report_id not in self._reports:
             return None
         name = filename or f"{report_id}.md"

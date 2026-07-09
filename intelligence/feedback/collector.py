@@ -154,8 +154,10 @@ class FeedbackCollector:
             "total_records": len(all_records),
             "acceptance_rate": compute_acceptance_rate(all_records),
             "avg_rating": compute_avg_rating(all_records),
-            "success_rate": sum(1 for r in all_records if r.retrieval_success) / len(all_records),
-            "fallback_rate": sum(1 for r in all_records if r.fallback_triggered) / len(all_records),
+            "success_rate": sum(1 for r in all_records if r.retrieval_success)
+            / len(all_records),
+            "fallback_rate": sum(1 for r in all_records if r.fallback_triggered)
+            / len(all_records),
         }
 
     # ------------------------------------------------------------------

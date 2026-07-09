@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Optional
+from typing import Dict
 
 
 class EnvironmentProfile(str, Enum):
@@ -99,10 +99,14 @@ def get_environment_profile(env_name: str) -> EnvironmentProfile:
 
 
 def get_profile_overrides(profile: EnvironmentProfile) -> ProfileOverrides:
-    return PROFILE_REGISTRY.get(profile, PROFILE_REGISTRY[EnvironmentProfile.DEVELOPMENT])
+    return PROFILE_REGISTRY.get(
+        profile, PROFILE_REGISTRY[EnvironmentProfile.DEVELOPMENT]
+    )
 
 
-def apply_profile_overrides(env_name: str, config_dict: Dict[str, object]) -> Dict[str, object]:
+def apply_profile_overrides(
+    env_name: str, config_dict: Dict[str, object]
+) -> Dict[str, object]:
     profile = get_environment_profile(env_name)
     overrides = get_profile_overrides(profile)
     result = dict(config_dict)

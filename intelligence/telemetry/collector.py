@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import time
 from threading import RLock
 from typing import Callable, Optional
 

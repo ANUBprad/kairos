@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import json
+import logging
 import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -56,7 +57,9 @@ class Tracer:
     def on_span_finish(self, callback: Callable[[Span], None]) -> None:
         self._on_span_finish.append(callback)
 
-    def start_trace(self, name: str, attributes: Optional[Dict[str, Any]] = None) -> Span:
+    def start_trace(
+        self, name: str, attributes: Optional[Dict[str, Any]] = None
+    ) -> Span:
         trace_id = uuid.uuid4().hex[:16]
         span = Span(
             name=name,
@@ -68,7 +71,9 @@ class Tracer:
         self._local.current_span = span
         return span
 
-    def start_span(self, name: str, attributes: Optional[Dict[str, Any]] = None) -> Span:
+    def start_span(
+        self, name: str, attributes: Optional[Dict[str, Any]] = None
+    ) -> Span:
         parent = getattr(self._local, "current_span", None)
         trace_id = parent.trace_id if parent else uuid.uuid4().hex[:16]
         span = Span(
@@ -89,11 +94,15 @@ class Tracer:
             try:
                 cb(span)
             except Exception as exc:
-                logger.warning("Span callback failed", extra={"callback": cb.__name__, "error": str(exc)})
+                logger.warning(
+                    "Span callback failed",
+                    extra={"callback": cb.__name__, "error": str(exc)},
+                )
         # Restore parent
         if span.parent_span_id is not None:
             self._local.current_span = Span(
-                name="parent", trace_id=span.trace_id,
+                name="parent",
+                trace_id=span.trace_id,
                 span_id=span.parent_span_id,
             )
 
@@ -102,7 +111,9 @@ class Tracer:
 
 
 class _SpanContext:
-    def __init__(self, tracer: Tracer, name: str, attributes: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, tracer: Tracer, name: str, attributes: Optional[Dict[str, Any]] = None
+    ):
         self._tracer = tracer
         self._name = name
         self._attributes = attributes

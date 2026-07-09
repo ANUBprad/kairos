@@ -13,7 +13,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from .planner_config import FALLBACK_THRESHOLD_FACTOR, STRATEGY_ESCALATION_MAP, QueryType
+from .planner_config import (
+    FALLBACK_THRESHOLD_FACTOR,
+    STRATEGY_ESCALATION_MAP,
+    QueryType,
+)
 
 # ---------------------------------------------------------------------------
 # Return type

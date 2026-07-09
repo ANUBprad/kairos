@@ -32,7 +32,12 @@ class ModelVersion:
             "created_at": self.created_at,
             "description": self.description,
             "artifacts": [
-                {"name": a.name, "path": a.path, "size_bytes": a.size_bytes, "checksum": a.checksum}
+                {
+                    "name": a.name,
+                    "path": a.path,
+                    "size_bytes": a.size_bytes,
+                    "checksum": a.checksum,
+                }
                 for a in self.artifacts
             ],
             "metadata": self.metadata,

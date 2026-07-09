@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from intelligence.observability.alerting import AlertManager
-from intelligence.observability.event_logger import Event, EventLogger
+from intelligence.observability.event_logger import EventLogger
 from intelligence.observability.metrics_registry import MetricsRegistry
-from intelligence.observability.performance_monitor import PerformanceMonitor, PerformanceSnapshot
+from intelligence.observability.performance_monitor import PerformanceMonitor
 
 
 class DashboardMetricsCollector:

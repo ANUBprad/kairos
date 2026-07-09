@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
-import os
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -123,8 +120,11 @@ class TestExperimentMetrics:
 
     def test_roundtrip(self) -> None:
         m = ExperimentMetrics(
-            recall=0.8, precision=0.7, latency_ms=150.0,
-            success_rate=0.9, fallback_rate=0.05,
+            recall=0.8,
+            precision=0.7,
+            latency_ms=150.0,
+            success_rate=0.9,
+            fallback_rate=0.05,
             extra={"bleu": 0.34},
         )
         d = m.to_dict()
@@ -158,7 +158,8 @@ class TestExperimentParameters:
 
     def test_to_dict(self) -> None:
         p = ExperimentParameters(
-            planner_enabled=True, dataset_name="test",
+            planner_enabled=True,
+            dataset_name="test",
         )
         d = p.to_dict()
         assert d["planner_enabled"] is True
@@ -171,7 +172,8 @@ class TestExperimentParameters:
 
     def test_roundtrip(self) -> None:
         p = ExperimentParameters(
-            planner_enabled=True, calibration_enabled=False,
+            planner_enabled=True,
+            calibration_enabled=False,
             dataset_name="eu_ai_act",
             extra={"embeddings": "text-embedding-3"},
         )
@@ -285,7 +287,7 @@ class TestExperimentStore:
 
     def test_directory_created(self, tmp_path: Path) -> None:
         d = tmp_path / "nested" / "experiments"
-        store = ExperimentStore(base_dir=str(d))
+        ExperimentStore(base_dir=str(d))
         assert d.is_dir()
 
     def test_isolation(self, tmp_path: Path) -> None:
@@ -314,7 +316,9 @@ class TestExperimentRegistry:
     def test_list_runs_empty(self, tmp_registry: ExperimentRegistry) -> None:
         assert tmp_registry.list_runs() == []
 
-    def test_list_runs_sorts_by_timestamp(self, tmp_registry: ExperimentRegistry) -> None:
+    def test_list_runs_sorts_by_timestamp(
+        self, tmp_registry: ExperimentRegistry
+    ) -> None:
         r1 = ExperimentRun(name="first", timestamp="2020-01-01T00:00:00")
         r2 = ExperimentRun(name="second", timestamp="2020-01-02T00:00:00")
         tmp_registry.register_run(r1)
@@ -348,7 +352,9 @@ class TestExperimentRegistry:
         assert best is not None
         assert best.name == "high"
 
-    def test_best_run_skips_non_completed(self, tmp_registry: ExperimentRegistry) -> None:
+    def test_best_run_skips_non_completed(
+        self, tmp_registry: ExperimentRegistry
+    ) -> None:
         running = ExperimentRun(
             name="running",
             status=ExperimentStatus.RUNNING,
@@ -367,12 +373,14 @@ class TestExperimentRegistry:
 
     def test_best_run_by_phase(self, tmp_registry: ExperimentRegistry) -> None:
         r1 = ExperimentRun(
-            name="a", phase="ablation",
+            name="a",
+            phase="ablation",
             status=ExperimentStatus.COMPLETED,
             metrics=ExperimentMetrics(recall=0.8),
         )
         r2 = ExperimentRun(
-            name="b", phase="calibration",
+            name="b",
+            phase="calibration",
             status=ExperimentStatus.COMPLETED,
             metrics=ExperimentMetrics(recall=0.9),
         )
@@ -384,11 +392,13 @@ class TestExperimentRegistry:
 
     def test_latest_run(self, tmp_registry: ExperimentRegistry) -> None:
         r1 = ExperimentRun(
-            name="old", timestamp="2020-01-01T00:00:00",
+            name="old",
+            timestamp="2020-01-01T00:00:00",
             status=ExperimentStatus.COMPLETED,
         )
         r2 = ExperimentRun(
-            name="new", timestamp="2020-01-02T00:00:00",
+            name="new",
+            timestamp="2020-01-02T00:00:00",
             status=ExperimentStatus.COMPLETED,
         )
         tmp_registry.register_run(r1)
@@ -399,12 +409,14 @@ class TestExperimentRegistry:
 
     def test_latest_run_by_phase(self, tmp_registry: ExperimentRegistry) -> None:
         r1 = ExperimentRun(
-            name="cal", phase="calibration",
+            name="cal",
+            phase="calibration",
             timestamp="2020-01-01T00:00:00",
             status=ExperimentStatus.COMPLETED,
         )
         r2 = ExperimentRun(
-            name="abl", phase="ablation",
+            name="abl",
+            phase="ablation",
             timestamp="2020-01-02T00:00:00",
             status=ExperimentStatus.COMPLETED,
         )
@@ -438,9 +450,12 @@ class TestExperimentRegistry:
     def test_latest_run_empty(self, tmp_registry: ExperimentRegistry) -> None:
         assert tmp_registry.latest_run() is None
 
-    def test_best_run_nonexistent_metric(self, tmp_registry: ExperimentRegistry) -> None:
+    def test_best_run_nonexistent_metric(
+        self, tmp_registry: ExperimentRegistry
+    ) -> None:
         run = ExperimentRun(
-            name="test", status=ExperimentStatus.COMPLETED,
+            name="test",
+            status=ExperimentStatus.COMPLETED,
             metrics=ExperimentMetrics(),
         )
         tmp_registry.register_run(run)
@@ -486,11 +501,13 @@ class TestExperimentTracker:
         rid = ""
         with tracker.start_run(name="batch") as run:
             rid = run.run_id
-            tracker.log_metrics({
-                "recall": 0.8,
-                "precision": 0.7,
-                "nonexistent": None,
-            })
+            tracker.log_metrics(
+                {
+                    "recall": 0.8,
+                    "precision": 0.7,
+                    "nonexistent": None,
+                }
+            )
 
         loaded = tmp_registry.get_run(rid)
         assert loaded is not None
@@ -513,11 +530,13 @@ class TestExperimentTracker:
         rid = ""
         with tracker.start_run(name="params-dict") as run:
             rid = run.run_id
-            tracker.log_parameters_from_dict({
-                "planner_enabled": True,
-                "dataset_name": "my_dataset",
-                "custom_param": "abc",
-            })
+            tracker.log_parameters_from_dict(
+                {
+                    "planner_enabled": True,
+                    "dataset_name": "my_dataset",
+                    "custom_param": "abc",
+                }
+            )
 
         loaded = tmp_registry.get_run(rid)
         assert loaded is not None
@@ -536,7 +555,9 @@ class TestExperimentTracker:
         assert loaded is not None
         assert "models/calibrator.json" in loaded.artifact_paths
 
-    def test_context_failed_on_exception(self, tmp_registry: ExperimentRegistry) -> None:
+    def test_context_failed_on_exception(
+        self, tmp_registry: ExperimentRegistry
+    ) -> None:
         tracker = ExperimentTracker(registry=tmp_registry)
         with pytest.raises(ValueError):
             with tracker.start_run(name="fail"):
@@ -547,7 +568,9 @@ class TestExperimentTracker:
         assert len(runs) == 1
         assert runs[0].status == ExperimentStatus.FAILED
 
-    def test_log_metrics_from_result(self, tmp_registry: ExperimentRegistry, sample_result) -> None:
+    def test_log_metrics_from_result(
+        self, tmp_registry: ExperimentRegistry, sample_result
+    ) -> None:
         tracker = ExperimentTracker(registry=tmp_registry)
         rid = ""
         with tracker.start_run(name="result") as run:
@@ -562,7 +585,9 @@ class TestExperimentTracker:
         assert loaded.metrics.success_rate == pytest.approx(0.9, rel=1e-3)
         assert loaded.metrics.fallback_rate == pytest.approx(0.1, rel=1e-3)
 
-    def test_log_metric_unknown_key_goes_to_extra(self, tmp_registry: ExperimentRegistry) -> None:
+    def test_log_metric_unknown_key_goes_to_extra(
+        self, tmp_registry: ExperimentRegistry
+    ) -> None:
         tracker = ExperimentTracker(registry=tmp_registry)
         rid = ""
         with tracker.start_run(name="extra") as run:
@@ -620,18 +645,32 @@ class TestCompareRuns:
         assert comp.precision_delta is None
 
     def test_all_deltas(self) -> None:
-        base = ExperimentRun(metrics=ExperimentMetrics(
-            recall=0.5, precision=0.4, latency_ms=200.0,
-            success_rate=0.8, fallback_rate=0.1,
-            ece=0.2, mce=0.3, brier_score=0.15,
-            score_lift=0.05,
-        ))
-        treat = ExperimentRun(metrics=ExperimentMetrics(
-            recall=0.7, precision=0.6, latency_ms=150.0,
-            success_rate=0.9, fallback_rate=0.05,
-            ece=0.1, mce=0.2, brier_score=0.08,
-            score_lift=0.12,
-        ))
+        base = ExperimentRun(
+            metrics=ExperimentMetrics(
+                recall=0.5,
+                precision=0.4,
+                latency_ms=200.0,
+                success_rate=0.8,
+                fallback_rate=0.1,
+                ece=0.2,
+                mce=0.3,
+                brier_score=0.15,
+                score_lift=0.05,
+            )
+        )
+        treat = ExperimentRun(
+            metrics=ExperimentMetrics(
+                recall=0.7,
+                precision=0.6,
+                latency_ms=150.0,
+                success_rate=0.9,
+                fallback_rate=0.05,
+                ece=0.1,
+                mce=0.2,
+                brier_score=0.08,
+                score_lift=0.12,
+            )
+        )
         comp = compare_runs(base, treat)
         assert comp.recall_delta == pytest.approx(0.2)
         assert comp.precision_delta == pytest.approx(0.2)
@@ -656,25 +695,31 @@ class TestCompareRuns:
 class TestGenerateComparisonReport:
     def test_generates_markdown(self) -> None:
         comp = RunComparison(
-            baseline_run_id="b1", treatment_run_id="t1",
-            baseline_name="Base", treatment_name="Treat",
+            baseline_run_id="b1",
+            treatment_run_id="t1",
+            baseline_name="Base",
+            treatment_name="Treat",
             recall_delta=0.3,
         )
         from intelligence.experiments.comparison import generate_comparison_report
+
         report = generate_comparison_report([comp])
         assert "Treat vs Base" in report
         assert "+0.3000" in report
 
     def test_empty_list(self) -> None:
         from intelligence.experiments.comparison import generate_comparison_report
+
         report = generate_comparison_report([], title="Empty")
         assert "# Empty" in report
 
     def test_none_formatted_as_na(self) -> None:
         comp = RunComparison(
-            baseline_run_id="b1", treatment_run_id="t1",
+            baseline_run_id="b1",
+            treatment_run_id="t1",
         )
         from intelligence.experiments.comparison import generate_comparison_report
+
         report = generate_comparison_report([comp])
         assert "N/A" in report
 
@@ -682,6 +727,7 @@ class TestGenerateComparisonReport:
 class TestRanking:
     def test_ranking_order(self) -> None:
         from intelligence.experiments.comparison import compute_ranking
+
         r1 = ExperimentRun(name="worst", metrics=ExperimentMetrics(recall=0.3))
         r2 = ExperimentRun(name="best", metrics=ExperimentMetrics(recall=0.9))
         r3 = ExperimentRun(name="mid", metrics=ExperimentMetrics(recall=0.6))
@@ -694,6 +740,7 @@ class TestRanking:
 
     def test_ranking_with_none(self) -> None:
         from intelligence.experiments.comparison import compute_ranking
+
         r1 = ExperimentRun(name="a", metrics=ExperimentMetrics(recall=0.5))
         r2 = ExperimentRun(name="b", metrics=ExperimentMetrics(recall=None))
         ranking = compute_ranking([r1, r2], metric="recall")
@@ -703,6 +750,7 @@ class TestRanking:
 
     def test_ranking_empty(self) -> None:
         from intelligence.experiments.comparison import compute_ranking
+
         assert compute_ranking([], metric="recall") == []
 
 
@@ -724,11 +772,13 @@ class TestAblationRunnerIntegration:
         runner = AblationRunner(config, classifier, retriever, tracker=tracker)
 
         from benchmarks.dataset.loader import QueryEntry
+
         entries = [
-            QueryEntry(id="q1", text="test", query_type="simple",
-                       expected_chunks=["a"]),
+            QueryEntry(
+                id="q1", text="test", query_type="simple", expected_chunks=["a"]
+            ),
         ]
-        result = runner.run(entries)
+        runner.run(entries)
 
         runs = tmp_registry.list_runs()
         assert len(runs) >= 1
@@ -738,7 +788,8 @@ class TestAblationRunnerIntegration:
         assert loaded.parameters.planner_enabled is False
 
     def test_tracker_on_dataset(
-        self, tmp_registry: ExperimentRegistry,
+        self,
+        tmp_registry: ExperimentRegistry,
     ) -> None:
         from intelligence.ablation import AblationRunner, BASELINE
 
@@ -748,7 +799,7 @@ class TestAblationRunnerIntegration:
 
         tracker = ExperimentTracker(registry=tmp_registry)
         runner = AblationRunner(BASELINE, classifier, retriever, tracker=tracker)
-        result = runner.run_on_dataset(query_types=["simple"])
+        runner.run_on_dataset(query_types=["simple"])
 
         runs = tmp_registry.list_runs()
         assert len(runs) >= 1
@@ -757,6 +808,7 @@ class TestAblationRunnerIntegration:
 
     def test_no_tracker_no_error(self) -> None:
         from intelligence.ablation import AblationRunner, AblationConfig
+
         config = AblationConfig(planner_enabled=False)
         classifier = MagicMock()
         retriever = MagicMock()
@@ -764,6 +816,7 @@ class TestAblationRunnerIntegration:
 
         runner = AblationRunner(config, classifier, retriever, tracker=None)
         from benchmarks.dataset.loader import QueryEntry
+
         entries = [QueryEntry(id="q1", text="test", query_type="simple")]
         result = runner.run(entries)
         assert result.total_queries == 1
@@ -776,7 +829,8 @@ class TestAblationRunnerIntegration:
 
 class TestCalibratorIntegration:
     def test_tracker_receives_calibration_metrics(
-        self, tmp_registry: ExperimentRegistry,
+        self,
+        tmp_registry: ExperimentRegistry,
     ) -> None:
         import numpy as np
         from intelligence.calibration import ConfidenceCalibrator
@@ -812,7 +866,8 @@ class TestCalibratorIntegration:
 
 class TestRetrainerIntegration:
     def test_tracker_receives_retraining_metrics(
-        self, tmp_registry: ExperimentRegistry,
+        self,
+        tmp_registry: ExperimentRegistry,
         tmp_path: Path,
     ) -> None:
         from intelligence.retraining import BudgetRetrainer
@@ -827,23 +882,31 @@ class TestRetrainerIntegration:
         tracker = ExperimentTracker(registry=tmp_registry)
         records = [
             {
-                "query_type": "simple", "confidence": 0.9,
-                "retrieval_type": "HYBRID", "top_k": 5,
-                "rerank": True, "decompose": False,
-                "latency_ms": 100.0, "fallback_triggered": False,
+                "query_type": "simple",
+                "confidence": 0.9,
+                "retrieval_type": "HYBRID",
+                "top_k": 5,
+                "rerank": True,
+                "decompose": False,
+                "latency_ms": 100.0,
+                "fallback_triggered": False,
                 "accepted": True,
             },
             {
-                "query_type": "simple", "confidence": 0.9,
-                "retrieval_type": "HYBRID", "top_k": 5,
-                "rerank": True, "decompose": False,
-                "latency_ms": 120.0, "fallback_triggered": False,
+                "query_type": "simple",
+                "confidence": 0.9,
+                "retrieval_type": "HYBRID",
+                "top_k": 5,
+                "rerank": True,
+                "decompose": False,
+                "latency_ms": 120.0,
+                "fallback_triggered": False,
                 "accepted": True,
             },
         ]
 
         with tracker.start_run(name="retrain-test") as run:
-            result = retrainer.train(records, version="v1", tracker=tracker)
+            retrainer.train(records, version="v1", tracker=tracker)
 
         loaded = tmp_registry.get_run(run.run_id)
         assert loaded is not None
@@ -860,18 +923,29 @@ class TestRetrainerIntegration:
             registry=registry,
         )
 
-        records = [{
-            "query_type": "simple", "confidence": 0.9,
-            "retrieval_type": "HYBRID", "top_k": 5,
-            "rerank": True, "decompose": False,
-            "latency_ms": 100.0, "fallback_triggered": False,
-            "accepted": True,
-        }, {
-            "query_type": "simple", "confidence": 0.9,
-            "retrieval_type": "HYBRID", "top_k": 5,
-            "rerank": True, "decompose": False,
-            "latency_ms": 100.0, "fallback_triggered": False,
-            "accepted": True,
-        }]
+        records = [
+            {
+                "query_type": "simple",
+                "confidence": 0.9,
+                "retrieval_type": "HYBRID",
+                "top_k": 5,
+                "rerank": True,
+                "decompose": False,
+                "latency_ms": 100.0,
+                "fallback_triggered": False,
+                "accepted": True,
+            },
+            {
+                "query_type": "simple",
+                "confidence": 0.9,
+                "retrieval_type": "HYBRID",
+                "top_k": 5,
+                "rerank": True,
+                "decompose": False,
+                "latency_ms": 100.0,
+                "fallback_triggered": False,
+                "accepted": True,
+            },
+        ]
         result = retrainer.train(records, version="v1")
         assert result["version"] == "v1"

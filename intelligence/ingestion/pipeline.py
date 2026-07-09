@@ -3,13 +3,16 @@ from .chunker import Chunker
 from .document_loader import load_document
 from intelligence.vectorstore.chroma_store import ChromaStore
 
+
 class IngestionPipeline:
     def __init__(self, embedder: BaseEmbedder, chunker: Chunker, store: ChromaStore):
         self.embedder = embedder
         self.chunker = chunker
         self.store = store
 
-    def compute(self, content: bytes, namespace: str, strat: int, mime_type: str, filename):
+    def compute(
+        self, content: bytes, namespace: str, strat: int, mime_type: str, filename
+    ):
         try:
             text_content = load_document(content, mime_type)
         except Exception as e:

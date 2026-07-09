@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Sequence, Set
+from typing import Sequence, Set
 
 from intelligence.judging.judge import BaseJudge, JudgeResult, Judgment
 
@@ -8,7 +8,9 @@ from intelligence.judging.judge import BaseJudge, JudgeResult, Judgment
 class FaithfulnessJudge(BaseJudge):
     dimension: str = "faithfulness"
 
-    def __init__(self, threshold_pass: float = 0.7, threshold_warn: float = 0.4) -> None:
+    def __init__(
+        self, threshold_pass: float = 0.7, threshold_warn: float = 0.4
+    ) -> None:
         self.threshold_pass = threshold_pass
         self.threshold_warn = threshold_warn
 
@@ -83,4 +85,4 @@ class FaithfulnessJudge(BaseJudge):
         words = text.lower().split()
         if len(words) < n:
             return set(text.lower().split())
-        return {" ".join(words[i:i + n]) for i in range(len(words) - n + 1)}
+        return {" ".join(words[i : i + n]) for i in range(len(words) - n + 1)}

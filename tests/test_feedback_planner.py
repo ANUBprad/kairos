@@ -7,7 +7,6 @@ import pytest
 from intelligence.feedback.adjuster import FeedbackAdjuster
 from intelligence.feedback.models import FeedbackRecord
 from intelligence.planner.retrieval_planner import RetrievalPlanner
-from intelligence.planner.planner_config import RetrievalBudget, BUDGET_TABLE, QueryType, ConfidenceBand
 
 
 # ======================================================================
@@ -18,26 +17,71 @@ from intelligence.planner.planner_config import RetrievalBudget, BUDGET_TABLE, Q
 @pytest.fixture
 def sample_feedback_records() -> list:
     return [
-        FeedbackRecord(query_id="q001", query="q1", query_type="SIMPLE",
-                       retrieval_type="HYBRID", confidence=0.9,
-                       calibrated_confidence=0.88, top_k=3, rerank=False,
-                       decompose=False, answer_accepted=True, answer_rating=5),
-        FeedbackRecord(query_id="q002", query="q2", query_type="SIMPLE",
-                       retrieval_type="HYBRID", confidence=0.9,
-                       calibrated_confidence=0.88, top_k=3, rerank=False,
-                       decompose=False, answer_accepted=True, answer_rating=4),
-        FeedbackRecord(query_id="q003", query="q3", query_type="SIMPLE",
-                       retrieval_type="HYBRID", confidence=0.9,
-                       calibrated_confidence=0.88, top_k=5, rerank=True,
-                       decompose=False, answer_accepted=False, answer_rating=2),
-        FeedbackRecord(query_id="q004", query="q4", query_type="SIMPLE",
-                       retrieval_type="HYBRID", confidence=0.9,
-                       calibrated_confidence=0.88, top_k=5, rerank=True,
-                       decompose=False, answer_accepted=False, answer_rating=1),
-        FeedbackRecord(query_id="q005", query="q5", query_type="COMPLEX",
-                       retrieval_type="MULTI_VECTOR", confidence=0.7,
-                       calibrated_confidence=0.68, top_k=8, rerank=True,
-                       decompose=False, answer_accepted=True, answer_rating=5),
+        FeedbackRecord(
+            query_id="q001",
+            query="q1",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.88,
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            answer_accepted=True,
+            answer_rating=5,
+        ),
+        FeedbackRecord(
+            query_id="q002",
+            query="q2",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.88,
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            answer_accepted=True,
+            answer_rating=4,
+        ),
+        FeedbackRecord(
+            query_id="q003",
+            query="q3",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.88,
+            top_k=5,
+            rerank=True,
+            decompose=False,
+            answer_accepted=False,
+            answer_rating=2,
+        ),
+        FeedbackRecord(
+            query_id="q004",
+            query="q4",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.88,
+            top_k=5,
+            rerank=True,
+            decompose=False,
+            answer_accepted=False,
+            answer_rating=1,
+        ),
+        FeedbackRecord(
+            query_id="q005",
+            query="q5",
+            query_type="COMPLEX",
+            retrieval_type="MULTI_VECTOR",
+            confidence=0.7,
+            calibrated_confidence=0.68,
+            top_k=8,
+            rerank=True,
+            decompose=False,
+            answer_accepted=True,
+            answer_rating=5,
+        ),
     ]
 
 
@@ -81,13 +125,17 @@ class TestFeedbackAdjuster:
         assert result == (5, True, False)
 
     def test_adjust_config_improves(self, fitted_adjuster) -> None:
-        top_k, rerank, decompose = fitted_adjuster.adjust_config("SIMPLE", 5, True, False)
+        top_k, rerank, decompose = fitted_adjuster.adjust_config(
+            "SIMPLE", 5, True, False
+        )
         assert top_k == 3
         assert rerank is False
         assert decompose is False
 
     def test_adjust_config_keeps_best(self, fitted_adjuster) -> None:
-        top_k, rerank, decompose = fitted_adjuster.adjust_config("SIMPLE", 3, False, False)
+        top_k, rerank, decompose = fitted_adjuster.adjust_config(
+            "SIMPLE", 3, False, False
+        )
         assert top_k == 3
 
     def test_get_acceptance_rate(self, fitted_adjuster) -> None:
@@ -109,10 +157,18 @@ class TestFeedbackAdjuster:
 
     def test_insufficient_samples(self) -> None:
         records = [
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
+            FeedbackRecord(
+                query_id="q1",
+                query="q1",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=True,
+            ),
         ]
         adj = FeedbackAdjuster(min_samples=5)
         adj.feed(records)
@@ -127,12 +183,14 @@ class TestFeedbackAdjuster:
 class TestFeedbackPlannerIntegration:
     def test_planner_accepts_feedback_adjuster(self) -> None:
         adj = FeedbackAdjuster()
-        planner = RetrievalPlanner(classifier=_SimpleClassifier(), feedback_adjuster=adj)
+        RetrievalPlanner(classifier=_SimpleClassifier(), feedback_adjuster=adj)
         # No error means acceptance
 
     def test_planner_disabled_feedback_learning(self) -> None:
         adj = FeedbackAdjuster()
-        planner = RetrievalPlanner(classifier=_SimpleClassifier(), feedback_adjuster=adj)
+        planner = RetrievalPlanner(
+            classifier=_SimpleClassifier(), feedback_adjuster=adj
+        )
         decision = planner.plan("test", use_feedback_learning=False)
         assert decision.config["top_k"] == 3
 
@@ -143,32 +201,68 @@ class TestFeedbackPlannerIntegration:
 
     def test_planner_enabled_unfitted_adjuster(self) -> None:
         adj = FeedbackAdjuster()
-        planner = RetrievalPlanner(classifier=_SimpleClassifier(), feedback_adjuster=adj)
+        planner = RetrievalPlanner(
+            classifier=_SimpleClassifier(), feedback_adjuster=adj
+        )
         decision = planner.plan("test", use_feedback_learning=True)
         assert decision.config["top_k"] == 3
 
     def test_planner_feedback_adjusts_config(self) -> None:
         records = [
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=5, rerank=True,
-                           decompose=False, answer_accepted=False),
-            FeedbackRecord(query_id="q2", query="q2", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=5, rerank=True,
-                           decompose=False, answer_accepted=False),
-            FeedbackRecord(query_id="q3", query="q3", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
-            FeedbackRecord(query_id="q4", query="q4", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
+            FeedbackRecord(
+                query_id="q1",
+                query="q1",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=5,
+                rerank=True,
+                decompose=False,
+                answer_accepted=False,
+            ),
+            FeedbackRecord(
+                query_id="q2",
+                query="q2",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=5,
+                rerank=True,
+                decompose=False,
+                answer_accepted=False,
+            ),
+            FeedbackRecord(
+                query_id="q3",
+                query="q3",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=True,
+            ),
+            FeedbackRecord(
+                query_id="q4",
+                query="q4",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=True,
+            ),
         ]
         adj = FeedbackAdjuster(min_samples=1)
         adj.feed(records)
-        planner = RetrievalPlanner(classifier=_SimpleClassifier(), feedback_adjuster=adj)
+        planner = RetrievalPlanner(
+            classifier=_SimpleClassifier(), feedback_adjuster=adj
+        )
         # Static budget for SIMPLE/HIGH is top_k=3, but the learned optimizer
         # might suggest something else. With feedback, it should prefer configs
         # with high acceptance.
@@ -177,27 +271,55 @@ class TestFeedbackPlannerIntegration:
 
     def test_planner_with_evaluation_feedback(self) -> None:
         adj = FeedbackAdjuster(min_samples=1)
-        adj.feed([
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
-        ])
-        planner = RetrievalPlanner(classifier=_SimpleClassifier(), feedback_adjuster=adj)
-        decision = planner.plan_with_evaluation("test", chunk_count=5, use_feedback_learning=True)
+        adj.feed(
+            [
+                FeedbackRecord(
+                    query_id="q1",
+                    query="q1",
+                    query_type="SIMPLE",
+                    retrieval_type="HYBRID",
+                    confidence=0.9,
+                    calibrated_confidence=0.9,
+                    top_k=3,
+                    rerank=False,
+                    decompose=False,
+                    answer_accepted=True,
+                ),
+            ]
+        )
+        planner = RetrievalPlanner(
+            classifier=_SimpleClassifier(), feedback_adjuster=adj
+        )
+        decision = planner.plan_with_evaluation(
+            "test", chunk_count=5, use_feedback_learning=True
+        )
         assert decision.fallback_decision is not None
         assert not decision.fallback_decision.should_fallback  # 5 >= 3
 
     def test_planner_with_evaluation_feedback_fallback(self) -> None:
         adj = FeedbackAdjuster(min_samples=1)
-        adj.feed([
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
-        ])
-        planner = RetrievalPlanner(classifier=_SimpleClassifier(), feedback_adjuster=adj)
-        decision = planner.plan_with_evaluation("test", chunk_count=0, use_feedback_learning=True)
+        adj.feed(
+            [
+                FeedbackRecord(
+                    query_id="q1",
+                    query="q1",
+                    query_type="SIMPLE",
+                    retrieval_type="HYBRID",
+                    confidence=0.9,
+                    calibrated_confidence=0.9,
+                    top_k=3,
+                    rerank=False,
+                    decompose=False,
+                    answer_accepted=True,
+                ),
+            ]
+        )
+        planner = RetrievalPlanner(
+            classifier=_SimpleClassifier(), feedback_adjuster=adj
+        )
+        decision = planner.plan_with_evaluation(
+            "test", chunk_count=0, use_feedback_learning=True
+        )
         assert decision.fallback_decision.should_fallback
 
 
@@ -208,6 +330,8 @@ class TestFeedbackPlannerIntegration:
 
 class _SimpleClassifier:
     """Minimal classifier returning SIMPLE / high confidence."""
+
     def classify_with_confidence(self, query: str):
         from intelligence.classifier.query_classifier import ResponseSchema
+
         return ResponseSchema(query_type="simple", domain=None, confidence_score=0.95)

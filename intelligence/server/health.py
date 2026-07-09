@@ -41,5 +41,7 @@ class HealthServicer(_GrpcHealthServicer):
         self._on_readiness_change.append(callback)
 
 
-def add_health_servicer_to_server(servicer: HealthServicer, server: grpc.Server) -> None:
+def add_health_servicer_to_server(
+    servicer: HealthServicer, server: grpc.Server
+) -> None:
     health_pb2_grpc.add_HealthServicer_to_server(servicer, server)

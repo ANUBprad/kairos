@@ -10,9 +10,8 @@ Covers:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 
 from intelligence.classifier.query_classifier import ClassifyQuery, ResponseSchema
 
@@ -41,8 +40,7 @@ class TestResponseSchema:
 
     def test_json_deserialisation_includes_confidence(self) -> None:
         payload = (
-            '{"query_type": "complex", "domain": "finance", '
-            '"confidence_score": 0.72}'
+            '{"query_type": "complex", "domain": "finance", "confidence_score": 0.72}'
         )
         schema = ResponseSchema.model_validate_json(payload)
         assert schema.query_type == "complex"
@@ -113,9 +111,7 @@ class TestClassifyQueryGemini:
     def test_api_failure_defaults_to_0_5(self) -> None:
         """When the LLM call itself raises, fall back to confidence=0.5."""
         mock_client = MagicMock()
-        mock_client.models.generate_content.side_effect = Exception(
-            "Gemini API error"
-        )
+        mock_client.models.generate_content.side_effect = Exception("Gemini API error")
 
         classifier = self._make_classifier(mock_client)
         result = classifier.classify_with_confidence("failing query")
@@ -132,6 +128,7 @@ class TestClassifyQueryGemini:
 
         class _RawResponse:
             """Simulates a Gemini response that was not parsed into JSON."""
+
             text = "I am not JSON"
 
         mock_client.models.generate_content.return_value = _RawResponse()
@@ -174,9 +171,7 @@ class TestClassifyQueryOpenAI:
             model_provider="openai",
         )
 
-    def _build_mock_response(
-        self, json_str: str
-    ) -> MagicMock:
+    def _build_mock_response(self, json_str: str) -> MagicMock:
         choice = MagicMock()
         choice.message.content = json_str
         response = MagicMock()
@@ -185,11 +180,8 @@ class TestClassifyQueryOpenAI:
 
     def test_confidence_extracted_from_llm_response(self) -> None:
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = (
-            self._build_mock_response(
-                '{"query_type": "simple", "domain": "tech", '
-                '"confidence_score": 0.89}'
-            )
+        mock_client.chat.completions.create.return_value = self._build_mock_response(
+            '{"query_type": "simple", "domain": "tech", "confidence_score": 0.89}'
         )
 
         classifier = self._make_classifier(mock_client)
@@ -201,9 +193,7 @@ class TestClassifyQueryOpenAI:
 
     def test_api_failure_defaults_to_0_5(self) -> None:
         mock_client = MagicMock()
-        mock_client.chat.completions.create.side_effect = Exception(
-            "OpenAI API error"
-        )
+        mock_client.chat.completions.create.side_effect = Exception("OpenAI API error")
 
         classifier = self._make_classifier(mock_client)
         result = classifier.classify_with_confidence("failing query")
@@ -214,8 +204,8 @@ class TestClassifyQueryOpenAI:
 
     def test_invalid_json_defaults_to_0_5(self) -> None:
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = (
-            self._build_mock_response("not valid json")
+        mock_client.chat.completions.create.return_value = self._build_mock_response(
+            "not valid json"
         )
 
         classifier = self._make_classifier(mock_client)
@@ -228,10 +218,8 @@ class TestClassifyQueryOpenAI:
     def test_missing_confidence_field_uses_default(self) -> None:
         """LLM returns JSON without confidence_score → default 0.5."""
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = (
-            self._build_mock_response(
-                '{"query_type": "complex", "domain": null}'
-            )
+        mock_client.chat.completions.create.return_value = self._build_mock_response(
+            '{"query_type": "complex", "domain": null}'
         )
 
         classifier = self._make_classifier(mock_client)
@@ -243,11 +231,9 @@ class TestClassifyQueryOpenAI:
     def test_ollama_provider_works_same_as_openai(self) -> None:
         """Ollama uses the exact same code path as OpenAI."""
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = (
-            self._build_mock_response(
-                '{"query_type": "multi_hop", "domain": "research", '
-                '"confidence_score": 0.41}'
-            )
+        mock_client.chat.completions.create.return_value = self._build_mock_response(
+            '{"query_type": "multi_hop", "domain": "research", '
+            '"confidence_score": 0.41}'
         )
 
         classifier = ClassifyQuery(
@@ -263,11 +249,8 @@ class TestClassifyQueryOpenAI:
     def test_classify_still_works(self) -> None:
         """Backward-compat: the original classify() method still returns."""
         mock_client = MagicMock()
-        mock_client.chat.completions.create.return_value = (
-            self._build_mock_response(
-                '{"query_type": "simple", "domain": null, '
-                '"confidence_score": 0.95}'
-            )
+        mock_client.chat.completions.create.return_value = self._build_mock_response(
+            '{"query_type": "simple", "domain": null, "confidence_score": 0.95}'
         )
 
         classifier = self._make_classifier(mock_client)

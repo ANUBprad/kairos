@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from intelligence.telemetry.models import RetrievalTelemetry
 
@@ -60,7 +60,7 @@ def compute_confidence_distribution(
     if bins is None:
         bins = [0.0, 0.5, 0.8, 1.0]
 
-    labels = [f"{bins[i]:.1f}-{bins[i+1]:.1f}" for i in range(len(bins) - 1)]
+    labels = [f"{bins[i]:.1f}-{bins[i + 1]:.1f}" for i in range(len(bins) - 1)]
     counts = [0] * (len(bins) - 1)
 
     for e in filtered:

@@ -147,7 +147,9 @@ class TestRunnerResult:
         assert result.total_queries == 0
 
     def test_aggregated_failures(self) -> None:
-        r1 = self.make_result(failures=FailureRecord(empty_retrieval=1, total_queries=1))
+        r1 = self.make_result(
+            failures=FailureRecord(empty_retrieval=1, total_queries=1)
+        )
         r2 = self.make_result(failures=FailureRecord(timeout=1, total_queries=1))
         agg = RunnerResult(results=(r1, r2)).aggregated_failures()
         assert agg.empty_retrieval == 1
@@ -234,36 +236,50 @@ class TestRunnerResult:
 class TestRunQuery:
     """BenchmarkRunner.run_query() single-query execution."""
 
-    def test_returns_query_result(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_returns_query_result(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert isinstance(result, QueryResult)
 
-    def test_planner_decision_present(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_planner_decision_present(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert isinstance(result.planner_decision, PlannerDecision)
         assert "top_k" in result.planner_decision.config
 
-    def test_retrieved_chunks(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_retrieved_chunks(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert len(result.retrieved_chunks) > 0
         assert result.retrieved_chunks[0] == "chunk_art3_1"
 
-    def test_retrieved_chunks_are_tuple(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_retrieved_chunks_are_tuple(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert isinstance(result.retrieved_chunks, tuple)
 
-    def test_latency_recorded(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_latency_recorded(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert result.latency.classify > 0
         assert result.latency.planning > 0
         assert result.latency.retrieval > 0
         assert result.latency.total > 0
 
-    def test_latency_classify_less_than_total(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_latency_classify_less_than_total(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert result.latency.total >= result.latency.classify
 
-    def test_failures_default_zero(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_failures_default_zero(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert result.failures.empty_retrieval == 0
         assert result.failures.timeout == 0
@@ -271,12 +287,18 @@ class TestRunQuery:
         assert result.failures.generation_failure == 0
         assert result.failures.total_queries == 1
 
-    def test_recall_computed_with_ground_truth(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_recall_computed_with_ground_truth(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert result.recall is not None
-        assert result.recall == 1.0  # expected_chunks=["chunk_art3_1"], retrieved=["chunk_art3_1", ...]
+        assert (
+            result.recall == 1.0
+        )  # expected_chunks=["chunk_art3_1"], retrieved=["chunk_art3_1", ...]
 
-    def test_precision_computed_with_ground_truth(self, runner: BenchmarkRunner, simple_entry: QueryEntry) -> None:
+    def test_precision_computed_with_ground_truth(
+        self, runner: BenchmarkRunner, simple_entry: QueryEntry
+    ) -> None:
         result = runner.run_query(simple_entry)
         assert result.precision is not None
         # 1 relevant out of 2 retrieved
@@ -362,31 +384,29 @@ class TestRunAll:
         result = runner.run_all([simple_entry, entry2])
         assert result.total_queries == 2
 
-    def test_empty_entries(
-        self, runner: BenchmarkRunner
-    ) -> None:
+    def test_empty_entries(self, runner: BenchmarkRunner) -> None:
         result = runner.run_all([])
         assert result.total_queries == 0
         assert len(result.results) == 0
 
-    def test_order_preserved(
-        self, runner: BenchmarkRunner
-    ) -> None:
+    def test_order_preserved(self, runner: BenchmarkRunner) -> None:
         e1 = QueryEntry(id="A", text="q1", query_type="simple")
         e2 = QueryEntry(id="B", text="q2", query_type="simple")
         result = runner.run_all([e1, e2])
         assert result.results[0].entry.id == "A"
         assert result.results[1].entry.id == "B"
 
-    def test_aggregated_metrics(
-        self, runner: BenchmarkRunner
-    ) -> None:
+    def test_aggregated_metrics(self, runner: BenchmarkRunner) -> None:
         e1 = QueryEntry(
-            id="SIMPLE-001", text="q1", query_type="simple",
+            id="SIMPLE-001",
+            text="q1",
+            query_type="simple",
             expected_chunks=["chunk_art3_1"],
         )
         e2 = QueryEntry(
-            id="SIMPLE-001", text="q2", query_type="simple",
+            id="SIMPLE-001",
+            text="q2",
+            query_type="simple",
             expected_chunks=["chunk_art3_1"],
         )
         result = runner.run_all([e1, e2])
@@ -424,6 +444,7 @@ class TestMockRetriever:
 
     def test_custom_retriever_class(self) -> None:
         """Any object matching the Retriever protocol is accepted."""
+
         class CustomRetriever:
             def retrieve(
                 self,
@@ -454,6 +475,7 @@ class TestCachedClassifier:
         inner.classify_with_confidence.return_value = schema
 
         from benchmarks.runner.runner import _CachedClassifier
+
         cached = _CachedClassifier(inner)
 
         # First call goes to inner
@@ -468,10 +490,13 @@ class TestCachedClassifier:
     def test_different_queries_not_cached(self) -> None:
         inner = MagicMock()
         inner.classify_with_confidence.side_effect = lambda q: MagicMock(
-            query_type="simple", domain=None, confidence_score=0.9,
+            query_type="simple",
+            domain=None,
+            confidence_score=0.9,
         )
 
         from benchmarks.runner.runner import _CachedClassifier
+
         cached = _CachedClassifier(inner)
 
         cached.classify_with_confidence("q1")
@@ -481,5 +506,6 @@ class TestCachedClassifier:
     def test_inner_exposed(self) -> None:
         inner = MagicMock()
         from benchmarks.runner.runner import _CachedClassifier
+
         cached = _CachedClassifier(inner)
         assert cached.inner is inner

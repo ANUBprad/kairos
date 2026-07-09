@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from intelligence.evaluation.evaluator import AggregateEvaluation
-from intelligence.evaluation.ground_truth import GroundTruth, GroundTruthEntry
+from intelligence.evaluation.ground_truth import GroundTruth
 
 
 def run_retrieval_benchmark(
@@ -44,7 +44,9 @@ def run_retrieval_benchmark(
 
     for entry in ground_truth.entries:
         doc_ids, lat_ms, ok = retriever_fn(
-            entry.query, entry.query_type, top_k,
+            entry.query,
+            entry.query_type,
+            top_k,
         )
         retrieved_batch.append(list(doc_ids) if doc_ids else [])
         relevant_batch.append(entry.relevant_docs)

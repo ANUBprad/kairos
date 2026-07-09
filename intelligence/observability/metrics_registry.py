@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -22,13 +22,19 @@ class MetricsRegistry:
     def __init__(self) -> None:
         self._points: List[MetricPoint] = []
 
-    def record(self, name: str, value: float, labels: Optional[Dict[str, str]] = None) -> None:
+    def record(
+        self, name: str, value: float, labels: Optional[Dict[str, str]] = None
+    ) -> None:
         import time
-        self._points.append(MetricPoint(
-            name=name, value=value,
-            labels=labels or {},
-            timestamp=time.time(),
-        ))
+
+        self._points.append(
+            MetricPoint(
+                name=name,
+                value=value,
+                labels=labels or {},
+                timestamp=time.time(),
+            )
+        )
 
     def increment(self, name: str, labels: Optional[Dict[str, str]] = None) -> None:
         self.record(name, 1.0, labels)

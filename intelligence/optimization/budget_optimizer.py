@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import json
-import os
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 from .budget_model import BudgetRecommendation, BudgetScorer, LearnedBudgetTable
@@ -89,7 +87,9 @@ class BudgetOptimizer:
             cfg_key = self._config_key(entry.top_k, entry.rerank, entry.decompose)
             stat_key = f"{group_key}|{band}|{cfg_key}"
             self._stats[stat_key][stat_key].record(
-                entry.success, entry.fallback_triggered, entry.latency_ms,
+                entry.success,
+                entry.fallback_triggered,
+                entry.latency_ms,
             )
 
         # Reorganize: group_key|band -> {config_key: stats}
@@ -116,21 +116,27 @@ class BudgetOptimizer:
                 decompose = parts[2] == "True"
 
                 s = self._scorer.score(
-                    stats.success_rate, stats.avg_latency,
-                    stats.fallback_rate, top_k,
+                    stats.success_rate,
+                    stats.avg_latency,
+                    stats.fallback_rate,
+                    top_k,
                 )
                 scores.append((s, stats, top_k, rerank, decompose))
 
             if scores:
                 best = max(scores, key=lambda x: x[0])
                 score, stats, top_k, rerank, decompose = best
-                self._table.set(qt, band, BudgetRecommendation(
-                    recommended_top_k=top_k,
-                    recommended_rerank=rerank,
-                    recommended_decompose=decompose,
-                    expected_success=stats.success_rate,
-                    expected_latency=stats.avg_latency,
-                ))
+                self._table.set(
+                    qt,
+                    band,
+                    BudgetRecommendation(
+                        recommended_top_k=top_k,
+                        recommended_rerank=rerank,
+                        recommended_decompose=decompose,
+                        expected_success=stats.success_rate,
+                        expected_latency=stats.avg_latency,
+                    ),
+                )
                 self._fitted = len(entries) > 0
 
         if tracker is not None:
@@ -142,17 +148,20 @@ class BudgetOptimizer:
                         parts = ck.split("_")
                         top_k_val = int(parts[0]) if len(parts) >= 1 else 3
                         learned_score_sum += self._scorer.score(
-                            s.success_rate, s.avg_latency,
-                            s.fallback_rate, top_k_val,
+                            s.success_rate,
+                            s.avg_latency,
+                            s.fallback_rate,
+                            top_k_val,
                         )
                         learned_score_count += 1
             avg_score = learned_score_sum / max(learned_score_count, 1)
-            tracker.log_metrics({
-                "training_samples": float(len(entries)),
-                "learned_avg_score": avg_score,
-            })
-            tracker.log_parameter("optimizer_min_samples",
-                                  str(self._min_samples))
+            tracker.log_metrics(
+                {
+                    "training_samples": float(len(entries)),
+                    "learned_avg_score": avg_score,
+                }
+            )
+            tracker.log_parameter("optimizer_min_samples", str(self._min_samples))
 
     def recommend_budget(
         self,
@@ -164,7 +173,13 @@ class BudgetOptimizer:
         if rec is not None:
             return rec
 
-        from intelligence.planner.planner_config import CONFIDENCE_HIGH, CONFIDENCE_MEDIUM, BUDGET_TABLE, QueryType, ConfidenceBand
+        from intelligence.planner.planner_config import (
+            CONFIDENCE_HIGH,
+            CONFIDENCE_MEDIUM,
+            BUDGET_TABLE,
+            QueryType,
+            ConfidenceBand,
+        )
 
         if confidence >= CONFIDENCE_HIGH:
             cb = ConfidenceBand.HIGH
@@ -193,7 +208,13 @@ class BudgetOptimizer:
         if not self._fitted:
             return {"error": "optimizer not fitted"}
 
-        from intelligence.planner.planner_config import BUDGET_TABLE, CONFIDENCE_HIGH, CONFIDENCE_MEDIUM, QueryType, ConfidenceBand
+        from intelligence.planner.planner_config import (
+            BUDGET_TABLE,
+            CONFIDENCE_HIGH,
+            CONFIDENCE_MEDIUM,
+            QueryType,
+            ConfidenceBand,
+        )
 
         static_scores: List[float] = []
         learned_scores: List[float] = []
@@ -211,10 +232,11 @@ class BudgetOptimizer:
                 continue
             processed.add(dedup_key)
 
-            rec = self.recommend_budget(entry.query_type, entry.confidence)
             score = self._scorer.score(
-                entry.success, entry.latency_ms,
-                entry.fallback_triggered, entry.top_k,
+                entry.success,
+                entry.latency_ms,
+                entry.fallback_triggered,
+                entry.top_k,
             )
             learned_scores.append(score)
             if entry.success:
@@ -231,8 +253,10 @@ class BudgetOptimizer:
                 cb = ConfidenceBand.LOW
             static_budget = BUDGET_TABLE[QueryType(entry.query_type)][cb]
             static_score = self._scorer.score(
-                entry.success, entry.latency_ms,
-                entry.fallback_triggered, static_budget.top_k,
+                entry.success,
+                entry.latency_ms,
+                entry.fallback_triggered,
+                static_budget.top_k,
             )
             static_scores.append(static_score)
             if entry.success:

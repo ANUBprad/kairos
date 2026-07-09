@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 from benchmarks.dataset.loader import QueryEntry, load_dataset
-from benchmarks.runner import BenchmarkRunner, MockRetriever, RunnerResult
+from benchmarks.runner import BenchmarkRunner, RunnerResult
 
 from intelligence.ablation.config import AblationConfig
 
@@ -81,9 +81,7 @@ class AblationRunner:
             optimization_enabled=cfg.optimization_enabled,
             feedback_enabled=cfg.feedback_enabled,
             dataset_name="benchmark",
-            query_types=",".join(
-                sorted({e.query_type for e in entries})
-            ),
+            query_types=",".join(sorted({e.query_type for e in entries})),
         )
         with self._tracker.start_run(
             name=f"ablation-{label}",
@@ -168,13 +166,12 @@ class _StaticPlanner:
             query_type="simple",
         )
 
-    def plan_with_evaluation(self, query: str, chunk_count: int, **kwargs: Any) -> object:
+    def plan_with_evaluation(
+        self, query: str, chunk_count: int, **kwargs: Any
+    ) -> object:
         decision = self.plan(query)
-        from intelligence.planner.planner_config import RetrievalBudget, QueryType  # noqa: PLC0415
-        from intelligence.planner.budget_allocator import allocate_budget  # noqa: PLC0415
         from intelligence.planner.fallback_manager import FallbackManager  # noqa: PLC0415
 
-        budget = allocate_budget(QueryType("simple"), 0.5)
         fb = FallbackManager.evaluate(decision.config, chunk_count, confidence=0.5)
         return type(decision)(
             config=decision.config,

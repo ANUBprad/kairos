@@ -15,6 +15,7 @@ class GroundTruthEntry:
         relevant_docs:  Set of relevant document IDs or texts.
         relevance_scores: Optional graded relevance scores.
     """
+
     query: str
     query_id: str = ""
     query_type: str = ""
@@ -88,10 +89,12 @@ class GroundTruth:
     def from_dict(cls, data: Dict[str, object]) -> "GroundTruth":
         gt = cls()
         for ed in data.get("entries", []):
-            gt.add_entry(GroundTruthEntry(
-                query=ed["query"],
-                query_id=ed.get("query_id", ""),
-                query_type=ed.get("query_type", ""),
-                relevant_docs=set(ed.get("relevant_docs", [])),
-            ))
+            gt.add_entry(
+                GroundTruthEntry(
+                    query=ed["query"],
+                    query_id=ed.get("query_id", ""),
+                    query_type=ed.get("query_type", ""),
+                    relevant_docs=set(ed.get("relevant_docs", [])),
+                )
+            )
         return gt

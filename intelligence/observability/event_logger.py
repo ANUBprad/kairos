@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 
@@ -66,7 +66,10 @@ class EventLogger:
             try:
                 sink(event)
             except Exception as exc:
-                logger.warning("Event sink failed", extra={"sink": sink.__name__, "error": str(exc)})
+                logger.warning(
+                    "Event sink failed",
+                    extra={"sink": sink.__name__, "error": str(exc)},
+                )
         return event
 
     def flush(self) -> List[Event]:
@@ -93,9 +96,12 @@ def console_sink(event: Event) -> None:
 
 def file_sink(path: str) -> Callable[[Event], None]:
     """Return a sink that appends events as JSON lines to a file."""
+
     def _sink(event: Event) -> None:
         import os
+
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(event.to_dict(), default=str) + "\n")
+
     return _sink

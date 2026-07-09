@@ -19,7 +19,10 @@ def process_ingestion_job(job_id: str, document_path: str) -> None:
         job_id: Unique identifier for the job.
         document_path: Path to the document to process.
     """
-    logger.info("Processing ingestion job", extra={"job_id": job_id, "document_path": document_path})
+    logger.info(
+        "Processing ingestion job",
+        extra={"job_id": job_id, "document_path": document_path},
+    )
     time.sleep(0.1)
     logger.info("Ingestion job completed", extra={"job_id": job_id})
 

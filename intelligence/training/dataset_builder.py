@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from intelligence.feedback.collector import FeedbackCollector
 from intelligence.training.training_dataset import TrainingDataset

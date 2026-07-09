@@ -3,7 +3,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional
+
+from intelligence.observability.performance_monitor import LatencySnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -74,11 +76,18 @@ class LatencyAlertRule(AlertRule):
         severity: str = AlertSeverity.WARNING,
         cooldown_seconds: float = 60.0,
     ):
-        super().__init__(name, f"Latency {percentile} exceeds {threshold_ms}ms", severity, cooldown_seconds)
+        super().__init__(
+            name,
+            f"Latency {percentile} exceeds {threshold_ms}ms",
+            severity,
+            cooldown_seconds,
+        )
         self.percentile = percentile
         self.threshold_ms = threshold_ms
 
-    def evaluate(self, latency_snapshot: "LatencySnapshot", **kwargs: Any) -> Optional[Alert]:
+    def evaluate(
+        self, latency_snapshot: "LatencySnapshot", **kwargs: Any
+    ) -> Optional[Alert]:
         val = getattr(latency_snapshot, self.percentile, None)
         if val is not None and val > self.threshold_ms and self._should_fire():
             return Alert(
@@ -100,7 +109,9 @@ class FailureRateAlertRule(AlertRule):
         severity: str = AlertSeverity.CRITICAL,
         cooldown_seconds: float = 120.0,
     ):
-        super().__init__(name, f"Failure rate exceeds {threshold:.0%}", severity, cooldown_seconds)
+        super().__init__(
+            name, f"Failure rate exceeds {threshold:.0%}", severity, cooldown_seconds
+        )
         self.threshold = threshold
 
     def evaluate(self, failure_rate: float, **kwargs: Any) -> Optional[Alert]:
@@ -123,7 +134,9 @@ class DegradedRecallAlertRule(AlertRule):
         severity: str = AlertSeverity.WARNING,
         cooldown_seconds: float = 300.0,
     ):
-        super().__init__(name, f"Recall dropped below {threshold:.0%}", severity, cooldown_seconds)
+        super().__init__(
+            name, f"Recall dropped below {threshold:.0%}", severity, cooldown_seconds
+        )
         self.threshold = threshold
 
     def evaluate(self, recall: float, **kwargs: Any) -> Optional[Alert]:
@@ -170,7 +183,10 @@ class AlertManager:
                         try:
                             h(alert)
                         except Exception as exc:
-                            logger.warning("Alert handler failed", extra={"handler": h.__name__, "error": str(exc)})
+                            logger.warning(
+                                "Alert handler failed",
+                                extra={"handler": h.__name__, "error": str(exc)},
+                            )
             except Exception as exc:
                 logger.warning("Alert evaluation failed", extra={"error": str(exc)})
         return fired

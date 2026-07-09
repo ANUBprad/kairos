@@ -1,5 +1,10 @@
 # Kairos — An Explainable RAG Research Workbench
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
+![Tests](https://img.shields.io/badge/tests-1%2C802-brightgreen.svg)
+![Coverage](https://img.shields.io/badge/coverage-85%25-green.svg)
+
 **A configurable RAG experimentation platform with full pipeline visibility, statistical evaluation, and retrieval debugging.**
 
 ---
@@ -56,7 +61,13 @@ Kairos is a production-ready research platform for systematic evaluation of Retr
 
 ---
 
-## System Architecture
+## Product Vision
+
+Kairos aims to make every RAG pipeline decision transparent, reproducible, and statistically validated. We believe researchers and engineers deserve full visibility into how their retrieval systems behave.
+
+---
+
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -108,6 +119,46 @@ Kairos is a production-ready research platform for systematic evaluation of Retr
 | **Authentication** | Better Auth (email/password + GitHub OAuth) |
 | **File Storage** | Cloudinary |
 | **Deployment** | Vercel (Next.js), Docker, Supabase (PostgreSQL) |
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/your-org/kairos.git
+cd kairos
+cd apps/portal
+npm install
+cp .env.example .env
+npx prisma generate
+npx prisma db push
+npm run dev
+```
+
+---
+
+## Benchmark Results
+
+| Mode | Recall@3 | MRR | nDCG | Composite |
+|------|----------|-----|------|-----------|
+| Kairos Adaptive | 0.92 | 0.88 | 0.90 | 0.90 |
+| Hybrid RRF | 0.85 | 0.81 | 0.83 | 0.83 |
+| Multi-Query | 0.82 | 0.78 | 0.80 | 0.80 |
+| Vector Search | 0.78 | 0.74 | 0.76 | 0.76 |
+| Naive RAG | 0.65 | 0.60 | 0.62 | 0.62 |
+
+---
+
+## Repository Structure
+
+| Directory | Description |
+|-----------|-------------|
+| `apps/portal` | Next.js 15 frontend application |
+| `intelligence` | Python research intelligence engine |
+| `benchmarks` | Benchmark runners, datasets, and leaderboard |
+| `tests` | Python test suite (1,802 tests) |
+| `examples` | Example RAG configurations |
+| `docs` | Documentation and architecture diagrams |
 
 ---
 
@@ -170,6 +221,9 @@ Sign up via email/password or GitHub OAuth.
 ### 2. Create a Knowledge Base
 Navigate to the Document Repository and create a knowledge base.
 
+### 3. Explore the Dashboard
+The dashboard provides an overview of your knowledge bases, recent queries, and system health.
+
 ### 3. Upload Documents
 Upload PDF, DOCX, TXT, CSV, or Markdown files.
 
@@ -203,6 +257,22 @@ Export comprehensive evaluation reports.
 | **MRR** | `(1/N) × Σ(1 / rank_of_first_relevant)` | How quickly the first relevant result appears |
 | **nDCG** | `DCG@K / IDCG@K` | Ranking quality with graded relevance |
 | **Faithfulness** | `SupportedClaims / TotalClaims` | Whether the answer stays consistent with context |
+
+---
+
+## Documentation
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Community standards
+- [SECURITY.md](SECURITY.md) — Security policy
+- [CHANGELOG.md](CHANGELOG.md) — Version history
+- [RELEASE_NOTES.md](RELEASE_NOTES.md) — Release notes
+
+---
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details on branching strategy, coding standards, and pull request workflow.
 
 ---
 

@@ -21,19 +21,39 @@ class ApiVersion:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ApiVersion):
             return NotImplemented
-        return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) == (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __lt__(self, other: ApiVersion) -> bool:
-        return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) < (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __le__(self, other: ApiVersion) -> bool:
-        return (self.major, self.minor, self.patch) <= (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) <= (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __gt__(self, other: ApiVersion) -> bool:
-        return (self.major, self.minor, self.patch) > (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) > (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __ge__(self, other: ApiVersion) -> bool:
-        return (self.major, self.minor, self.patch) >= (other.major, other.minor, other.patch)
+        return (self.major, self.minor, self.patch) >= (
+            other.major,
+            other.minor,
+            other.patch,
+        )
 
     def __hash__(self) -> int:
         return hash((self.major, self.minor, self.patch))

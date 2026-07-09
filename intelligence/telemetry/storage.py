@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from threading import RLock
-from typing import Iterator, List, Optional
+from typing import Iterator, List
 
 from intelligence.telemetry.models import RetrievalTelemetry
 

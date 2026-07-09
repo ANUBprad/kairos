@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import Optional, Sequence
 
 import numpy as np
 from scipy import stats as scipy_stats
@@ -177,6 +177,4 @@ def _validate_paired(baseline: Sequence[float], treatment: Sequence[float]) -> N
             f"must have the same number of observations"
         )
     if len(baseline) < 2:
-        raise ValueError(
-            f"Need at least 2 paired observations, got {len(baseline)}"
-        )
+        raise ValueError(f"Need at least 2 paired observations, got {len(baseline)}")

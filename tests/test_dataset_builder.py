@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -17,31 +16,66 @@ from intelligence.training.training_dataset import TrainingDataset
 @pytest.fixture
 def sample_telemetry_events() -> list:
     from intelligence.telemetry.models import RetrievalTelemetry
+
     return [
-        RetrievalTelemetry(query="q1", query_type="SIMPLE", confidence=0.9,
-                           retrieval_type="HYBRID", top_k=3, rerank=False,
-                           decompose=False, retrieval_latency_ms=50.0,
-                           fallback_triggered=False, success=True),
-        RetrievalTelemetry(query="q2", query_type="COMPLEX", confidence=0.7,
-                           retrieval_type="MULTI_VECTOR", top_k=8, rerank=True,
-                           decompose=False, retrieval_latency_ms=120.0,
-                           fallback_triggered=True, success=True),
+        RetrievalTelemetry(
+            query="q1",
+            query_type="SIMPLE",
+            confidence=0.9,
+            retrieval_type="HYBRID",
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            retrieval_latency_ms=50.0,
+            fallback_triggered=False,
+            success=True,
+        ),
+        RetrievalTelemetry(
+            query="q2",
+            query_type="COMPLEX",
+            confidence=0.7,
+            retrieval_type="MULTI_VECTOR",
+            top_k=8,
+            rerank=True,
+            decompose=False,
+            retrieval_latency_ms=120.0,
+            fallback_triggered=True,
+            success=True,
+        ),
     ]
 
 
 @pytest.fixture
 def sample_feedback_records() -> list:
     return [
-        FeedbackRecord(query_id="q001", query="q1", query_type="SIMPLE",
-                       retrieval_type="HYBRID", confidence=0.9,
-                       calibrated_confidence=0.88, top_k=3, rerank=False,
-                       decompose=False, answer_accepted=True, answer_rating=5,
-                       latency_ms=50.0),
-        FeedbackRecord(query_id="q002", query="q2", query_type="COMPLEX",
-                       retrieval_type="MULTI_VECTOR", confidence=0.7,
-                       calibrated_confidence=0.68, top_k=8, rerank=True,
-                       decompose=False, answer_accepted=False, answer_rating=2,
-                       latency_ms=120.0),
+        FeedbackRecord(
+            query_id="q001",
+            query="q1",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.88,
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            answer_accepted=True,
+            answer_rating=5,
+            latency_ms=50.0,
+        ),
+        FeedbackRecord(
+            query_id="q002",
+            query="q2",
+            query_type="COMPLEX",
+            retrieval_type="MULTI_VECTOR",
+            confidence=0.7,
+            calibrated_confidence=0.68,
+            top_k=8,
+            rerank=True,
+            decompose=False,
+            answer_accepted=False,
+            answer_rating=2,
+            latency_ms=120.0,
+        ),
     ]
 
 
@@ -64,14 +98,36 @@ class TestTrainingDataset:
 
     def test_add_from_benchmark(self) -> None:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
-            f.write(json.dumps({"query_type": "SIMPLE", "confidence": 0.9,
-                                "top_k": 3, "rerank": False, "decompose": False,
-                                "latency_ms": 50.0, "fallback_triggered": False,
-                                "accepted": True}) + "\n")
-            f.write(json.dumps({"query_type": "COMPLEX", "confidence": 0.7,
-                                "top_k": 8, "rerank": True, "decompose": False,
-                                "latency_ms": 120.0, "fallback_triggered": True,
-                                "accepted": False}) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "query_type": "SIMPLE",
+                        "confidence": 0.9,
+                        "top_k": 3,
+                        "rerank": False,
+                        "decompose": False,
+                        "latency_ms": 50.0,
+                        "fallback_triggered": False,
+                        "accepted": True,
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "query_type": "COMPLEX",
+                        "confidence": 0.7,
+                        "top_k": 8,
+                        "rerank": True,
+                        "decompose": False,
+                        "latency_ms": 120.0,
+                        "fallback_triggered": True,
+                        "accepted": False,
+                    }
+                )
+                + "\n"
+            )
             tmppath = f.name
         try:
             ds = TrainingDataset()

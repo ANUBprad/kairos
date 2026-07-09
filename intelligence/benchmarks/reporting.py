@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import List
 
 from intelligence.benchmarks.benchmark_result import BenchmarkResult, aggregate_results
 
@@ -41,28 +41,32 @@ def generate_benchmark_report(
 
     # -- Aggregate summary --
     agg = aggregate_results(results)
-    lines.extend([
-        "## Aggregate Summary",
-        "",
-        "| Metric | Value |",
-        "| ------ | ----- |",
-        f"| Dataset Count | {agg['dataset_count']} |",
-        f"| Total Queries | {agg['total_queries']} |",
-        f"| Avg Recall | {_fmt_opt(agg['average_recall'])} |",
-        f"| Avg Precision | {_fmt_opt(agg['average_precision'])} |",
-        f"| Avg Latency (ms) | {agg['average_latency_ms']:.1f} |",
-        f"| Avg Success Rate | {agg['average_success_rate']:.2%} |",
-        f"| Avg Fallback Rate | {agg['average_fallback_rate']:.2%} |",
-        "",
-    ])
+    lines.extend(
+        [
+            "## Aggregate Summary",
+            "",
+            "| Metric | Value |",
+            "| ------ | ----- |",
+            f"| Dataset Count | {agg['dataset_count']} |",
+            f"| Total Queries | {agg['total_queries']} |",
+            f"| Avg Recall | {_fmt_opt(agg['average_recall'])} |",
+            f"| Avg Precision | {_fmt_opt(agg['average_precision'])} |",
+            f"| Avg Latency (ms) | {agg['average_latency_ms']:.1f} |",
+            f"| Avg Success Rate | {agg['average_success_rate']:.2%} |",
+            f"| Avg Fallback Rate | {agg['average_fallback_rate']:.2%} |",
+            "",
+        ]
+    )
 
     # -- Per-dataset metrics --
-    lines.extend([
-        "## Per-Dataset Metrics",
-        "",
-        "| Dataset | Queries | Recall | Precision | Latency (ms) | Success | Fallback |",
-        "| ------- | ------- | ------ | --------- | ------------ | ------- | -------- |",
-    ])
+    lines.extend(
+        [
+            "## Per-Dataset Metrics",
+            "",
+            "| Dataset | Queries | Recall | Precision | Latency (ms) | Success | Fallback |",
+            "| ------- | ------- | ------ | --------- | ------------ | ------- | -------- |",
+        ]
+    )
     for r in results:
         lines.append(
             f"| {r.dataset_name:<20} "
@@ -78,33 +82,36 @@ def generate_benchmark_report(
     # -- Ranking table --
     sorted_by_recall = sorted(
         [r for r in results if r.average_recall is not None],
-        key=lambda x: (x.average_recall or 0.0),
+        key=lambda x: x.average_recall or 0.0,
         reverse=True,
     )
     if sorted_by_recall:
-        lines.extend([
-            "## Ranking by Recall",
-            "",
-            "| Rank | Dataset | Recall |",
-            "| ---- | ------- | ------ |",
-        ])
+        lines.extend(
+            [
+                "## Ranking by Recall",
+                "",
+                "| Rank | Dataset | Recall |",
+                "| ---- | ------- | ------ |",
+            ]
+        )
         for rank, r in enumerate(sorted_by_recall, start=1):
             lines.append(
-                f"| {rank:>4} | {r.dataset_name:<20} "
-                f"| {r.average_recall:.4f} |"
+                f"| {rank:>4} | {r.dataset_name:<20} | {r.average_recall:.4f} |"
             )
         lines.append("")
 
     # -- Statistical validation --
     has_validation = any(r.validation is not None for r in results)
     if has_validation:
-        lines.extend([
-            "## Statistical Validation",
-            "",
-            "The following significance tests compare each dataset's recall "
-            "against a zero baseline.",
-            "",
-        ])
+        lines.extend(
+            [
+                "## Statistical Validation",
+                "",
+                "The following significance tests compare each dataset's recall "
+                "against a zero baseline.",
+                "",
+            ]
+        )
         for r in results:
             if r.validation is None:
                 continue

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
+
+from benchmarks.dataset.loader import QueryEntry
 
 
 @dataclass(frozen=True)
@@ -59,9 +61,7 @@ class DatasetRegistry:
             ValueError: If the name is already registered.
         """
         if metadata.name in self._datasets:
-            raise ValueError(
-                f"Dataset {metadata.name!r} is already registered"
-            )
+            raise ValueError(f"Dataset {metadata.name!r} is already registered")
         self._datasets[metadata.name] = metadata
         self._entries[metadata.name] = list(entries)
 

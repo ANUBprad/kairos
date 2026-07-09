@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -27,7 +27,9 @@ class GroundTruthAddRequest(BaseModel):
 @router.post("/evaluate")
 async def run_evaluation(body: EvaluationRequest) -> Dict[str, object]:
     if len(body.retrieved) != len(body.relevant):
-        raise HTTPException(status_code=400, detail="retrieved and relevant must have the same length")
+        raise HTTPException(
+            status_code=400, detail="retrieved and relevant must have the same length"
+        )
     if not body.retrieved:
         raise HTTPException(status_code=400, detail="at least one query required")
 
@@ -53,7 +55,12 @@ async def add_ground_truth(body: GroundTruthAddRequest) -> Dict[str, object]:
         relevant_docs=set(body.relevant_docs),
     )
     gt.add_entry(entry)
-    return {"status": "added", "query": body.query, "query_type": body.query_type, "num_relevant": len(body.relevant_docs)}
+    return {
+        "status": "added",
+        "query": body.query,
+        "query_type": body.query_type,
+        "num_relevant": len(body.relevant_docs),
+    }
 
 
 @router.post("/report")

@@ -47,9 +47,7 @@ def resolve_confidence_band(confidence: float) -> ConfidenceBand:
         <ConfidenceBand.HIGH: 'high'>
     """
     if not 0.0 <= confidence <= 1.0:
-        raise ValueError(
-            f"Confidence must be in [0.0, 1.0], got {confidence}"
-        )
+        raise ValueError(f"Confidence must be in [0.0, 1.0], got {confidence}")
 
     if confidence >= CONFIDENCE_HIGH:
         return ConfidenceBand.HIGH

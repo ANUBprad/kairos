@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 import json
-import platform
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
 
 import pytest
 
 from intelligence.ablation.comparison import AblationComparison
 from intelligence.benchmarks.benchmark_result import BenchmarkResult, aggregate_results
-from intelligence.experiments.models import ExperimentMetrics, ExperimentRun, ExperimentStatus
+from intelligence.experiments.models import (
+    ExperimentMetrics,
+    ExperimentRun,
+    ExperimentStatus,
+)
 from intelligence.experiments.registry import ExperimentRegistry
 from intelligence.experiments.persistence import ExperimentStore
 from intelligence.reporting import (
@@ -41,6 +42,7 @@ from intelligence.statistics.effect_size import EffectSize
 # ======================================================================
 # Fixtures
 # ======================================================================
+
 
 @pytest.fixture
 def sample_metrics() -> ExperimentMetrics:
@@ -123,32 +125,58 @@ def validation_result() -> ValidationResult:
         metric_name="recall",
         significance={
             "Paired t-test": SignificanceResult(
-                statistic=-3.45, p_value=0.001, significant=True,
-                alpha=0.05, method="paired-t", n=100,
+                statistic=-3.45,
+                p_value=0.001,
+                significant=True,
+                alpha=0.05,
+                method="paired-t",
+                n=100,
             ),
             "Wilcoxon": SignificanceResult(
-                statistic=120.0, p_value=0.003, significant=True,
-                alpha=0.05, method="wilcoxon", n=100,
+                statistic=120.0,
+                p_value=0.003,
+                significant=True,
+                alpha=0.05,
+                method="wilcoxon",
+                n=100,
             ),
         },
         confidence_intervals={
             "baseline": ConfidenceInterval(
-                lower_bound=0.71, upper_bound=0.79, confidence=0.95,
-                method="t-distribution", n=100, mean=0.75, std_err=0.02,
+                lower_bound=0.71,
+                upper_bound=0.79,
+                confidence=0.95,
+                method="t-distribution",
+                n=100,
+                mean=0.75,
+                std_err=0.02,
             ),
             "treatment": ConfidenceInterval(
-                lower_bound=0.76, upper_bound=0.84, confidence=0.95,
-                method="t-distribution", n=100, mean=0.80, std_err=0.02,
+                lower_bound=0.76,
+                upper_bound=0.84,
+                confidence=0.95,
+                method="t-distribution",
+                n=100,
+                mean=0.80,
+                std_err=0.02,
             ),
         },
         effect_sizes={
             "Cohen's d": EffectSize(
-                value=0.65, magnitude="medium", direction="treatment > baseline",
-                method="cohens_d", n_baseline=100, n_treatment=100,
+                value=0.65,
+                magnitude="medium",
+                direction="treatment > baseline",
+                method="cohens_d",
+                n_baseline=100,
+                n_treatment=100,
             ),
             "Cliff's delta": EffectSize(
-                value=0.35, magnitude="medium", direction="treatment > baseline",
-                method="cliffs_delta", n_baseline=100, n_treatment=100,
+                value=0.35,
+                magnitude="medium",
+                direction="treatment > baseline",
+                method="cliffs_delta",
+                n_baseline=100,
+                n_treatment=100,
             ),
         },
         bootstrap=None,
@@ -183,6 +211,7 @@ def populated_registry(
 # Markdown Report Tests
 # ======================================================================
 
+
 class TestMarkdownBenchmarkReport:
     def test_empty_results(self):
         md = generate_markdown_benchmark_report([])
@@ -200,7 +229,9 @@ class TestMarkdownBenchmarkReport:
         assert "Precision" in md
 
     def test_custom_title(self, benchmark_result: BenchmarkResult):
-        md = generate_markdown_benchmark_report([benchmark_result], title="Custom Title")
+        md = generate_markdown_benchmark_report(
+            [benchmark_result], title="Custom Title"
+        )
         assert "Custom Title" in md
 
     def test_multiple_results(self, benchmark_result: BenchmarkResult):
@@ -232,13 +263,18 @@ class TestMarkdownAblationReport:
 
     def test_negative_delta_direction(self):
         comp = AblationComparison(
-            baseline_label="base", treatment_label="treat",
+            baseline_label="base",
+            treatment_label="treat",
             recall_delta=-0.05,
         )
         md = generate_markdown_ablation_report([comp])
         assert "Worse" in md
 
-    def test_validation_included(self, ablation_comparison: AblationComparison, validation_result: ValidationResult):
+    def test_validation_included(
+        self,
+        ablation_comparison: AblationComparison,
+        validation_result: ValidationResult,
+    ):
         comp = AblationComparison(
             baseline_label=ablation_comparison.baseline_label,
             treatment_label=ablation_comparison.treatment_label,
@@ -248,7 +284,9 @@ class TestMarkdownAblationReport:
         assert "Statistical Validation" in md
 
     def test_custom_title(self, ablation_comparison: AblationComparison):
-        md = generate_markdown_ablation_report([ablation_comparison], title="Custom Ablation")
+        md = generate_markdown_ablation_report(
+            [ablation_comparison], title="Custom Ablation"
+        )
         assert "Custom Ablation" in md
 
     def test_latency_delta_shown(self, ablation_comparison: AblationComparison):
@@ -267,10 +305,16 @@ class TestMarkdownStatisticalReport:
 
     def test_bootstrap_section(self, validation_result: ValidationResult):
         from intelligence.statistics.bootstrap import BootstrapResult
+
         validation_result.bootstrap = BootstrapResult(
-            metric_name="recall", point_estimate=0.05, bias=0.001,
-            std_error=0.015, ci_lower=0.02, ci_upper=0.08,
-            resampled_values=[0.04, 0.06, 0.05], n_resamples=9999,
+            metric_name="recall",
+            point_estimate=0.05,
+            bias=0.001,
+            std_error=0.015,
+            ci_lower=0.02,
+            ci_upper=0.08,
+            resampled_values=[0.04, 0.06, 0.05],
+            n_resamples=9999,
         )
         md = generate_markdown_statistical_report(validation_result)
         assert "Bootstrap" in md
@@ -285,7 +329,9 @@ class TestMarkdownLeaderboardReport:
         md = generate_markdown_leaderboard_report([])
         assert "Leaderboard" in md
 
-    def test_rankings_displayed(self, sample_run: ExperimentRun, another_run: ExperimentRun):
+    def test_rankings_displayed(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
         rankings = rank_experiments([sample_run, another_run])
         md = generate_markdown_leaderboard_report(rankings)
         assert "Rank" in md
@@ -300,6 +346,7 @@ class TestMarkdownLeaderboardReport:
 # ======================================================================
 # HTML Report Tests
 # ======================================================================
+
 
 class TestHtmlReport:
     def test_generates_html(self):
@@ -332,13 +379,20 @@ class TestHtmlReport:
 # Leaderboard Tests
 # ======================================================================
 
+
 class TestRankExperiments:
-    def test_orders_by_recall_desc(self, sample_run: ExperimentRun, another_run: ExperimentRun):
+    def test_orders_by_recall_desc(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
         rankings = rank_experiments([another_run, sample_run], metric="recall")
         assert rankings[0][1].run_id == "run-001"
 
-    def test_orders_by_latency_asc(self, sample_run: ExperimentRun, another_run: ExperimentRun):
-        rankings = rank_experiments([sample_run, another_run], metric="latency_ms", ascending=True)
+    def test_orders_by_latency_asc(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
+        rankings = rank_experiments(
+            [sample_run, another_run], metric="latency_ms", ascending=True
+        )
         assert rankings[0][1].run_id == "run-002"
 
     def test_empty_runs(self):
@@ -346,22 +400,34 @@ class TestRankExperiments:
         assert rankings == []
 
     def test_handles_none_metrics(self):
-        run = ExperimentRun(run_id="bad", name="bad", phase="test", status=ExperimentStatus.COMPLETED, metrics=None)
+        run = ExperimentRun(
+            run_id="bad",
+            name="bad",
+            phase="test",
+            status=ExperimentStatus.COMPLETED,
+            metrics=None,
+        )
         rankings = rank_experiments([run])
         assert len(rankings) == 1
 
-    def test_composite_metric(self, sample_run: ExperimentRun, another_run: ExperimentRun):
+    def test_composite_metric(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
         rankings = rank_experiments([another_run, sample_run], metric="composite")
         assert len(rankings) == 2
         for rank, run, score in rankings:
             assert score is not None
 
-    def test_all_ranks_sequential(self, sample_run: ExperimentRun, another_run: ExperimentRun):
+    def test_all_ranks_sequential(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
         rankings = rank_experiments([another_run, sample_run])
         ranks = [r[0] for r in rankings]
         assert ranks == [1, 2]
 
-    def test_custom_metric_name(self, sample_run: ExperimentRun, another_run: ExperimentRun):
+    def test_custom_metric_name(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
         rankings = rank_experiments([another_run, sample_run], metric="latency_ms")
         assert len(rankings) == 2
 
@@ -398,6 +464,7 @@ class TestComputeCompositeScore:
 class TestLeaderboardToDict:
     def test_returns_dict(self, sample_run: ExperimentRun, another_run: ExperimentRun):
         from intelligence.reporting.leaderboard import leaderboard_to_dict
+
         rankings = rank_experiments([sample_run, another_run])
         d = leaderboard_to_dict(rankings)
         assert "leaderboard" in d
@@ -406,6 +473,7 @@ class TestLeaderboardToDict:
 
     def test_entries_have_expected_keys(self, sample_run: ExperimentRun):
         from intelligence.reporting.leaderboard import leaderboard_to_dict
+
         rankings = rank_experiments([sample_run])
         d = leaderboard_to_dict(rankings)
         entry = d["leaderboard"][0]
@@ -416,6 +484,7 @@ class TestLeaderboardToDict:
 # ======================================================================
 # Visualization Tests
 # ======================================================================
+
 
 class TestPlotMetricTrend:
     def test_returns_bytes(self, sample_run: ExperimentRun, another_run: ExperimentRun):
@@ -459,7 +528,9 @@ class TestPlotExperimentComparison:
         assert isinstance(data, bytes)
 
     def test_custom_metrics(self, sample_run: ExperimentRun):
-        data = plot_experiment_comparison([sample_run], metrics=["recall", "precision", "latency_ms"])
+        data = plot_experiment_comparison(
+            [sample_run], metrics=["recall", "precision", "latency_ms"]
+        )
         assert len(data) > 100
 
     def test_png_format(self, sample_run: ExperimentRun, another_run: ExperimentRun):
@@ -507,16 +578,20 @@ class TestPlotAblationImpact:
 
     def test_negative_delta(self):
         comp = AblationComparison(
-            baseline_label="base", treatment_label="treat",
-            recall_delta=-0.1, precision_delta=0.0,
+            baseline_label="base",
+            treatment_label="treat",
+            recall_delta=-0.1,
+            precision_delta=0.0,
         )
         data = plot_ablation_impact([comp])
         assert len(data) > 100
 
     def test_multiple_comparisons(self, ablation_comparison: AblationComparison):
         c2 = AblationComparison(
-            baseline_label="base", treatment_label="treat2",
-            recall_delta=0.02, precision_delta=0.01,
+            baseline_label="base",
+            treatment_label="treat2",
+            recall_delta=0.02,
+            precision_delta=0.01,
         )
         data = plot_ablation_impact([ablation_comparison, c2])
         assert len(data) > 100
@@ -530,14 +605,21 @@ class TestPlotAblationImpact:
 # Reproducibility Tests
 # ======================================================================
 
+
 class TestExperimentManifest:
-    def test_generates_file(self, populated_registry: ExperimentRegistry, tmp_path: Path):
-        path = generate_experiment_manifest(populated_registry, output_dir=str(tmp_path))
+    def test_generates_file(
+        self, populated_registry: ExperimentRegistry, tmp_path: Path
+    ):
+        path = generate_experiment_manifest(
+            populated_registry, output_dir=str(tmp_path)
+        )
         assert path is not None
         assert Path(path).exists()
 
     def test_json_content(self, populated_registry: ExperimentRegistry, tmp_path: Path):
-        path = generate_experiment_manifest(populated_registry, output_dir=str(tmp_path))
+        path = generate_experiment_manifest(
+            populated_registry, output_dir=str(tmp_path)
+        )
         with open(path, "r") as f:
             data = json.load(f)
         assert data["type"] == "experiment_manifest"
@@ -548,12 +630,20 @@ class TestExperimentManifest:
         path = generate_experiment_manifest(tmp_registry, output_dir=str(tmp_path))
         assert path is None
 
-    def test_custom_filename(self, populated_registry: ExperimentRegistry, tmp_path: Path):
-        path = generate_experiment_manifest(populated_registry, output_dir=str(tmp_path), filename="custom.json")
+    def test_custom_filename(
+        self, populated_registry: ExperimentRegistry, tmp_path: Path
+    ):
+        path = generate_experiment_manifest(
+            populated_registry, output_dir=str(tmp_path), filename="custom.json"
+        )
         assert "custom.json" in path
 
-    def test_entries_have_required_fields(self, populated_registry: ExperimentRegistry, tmp_path: Path):
-        path = generate_experiment_manifest(populated_registry, output_dir=str(tmp_path))
+    def test_entries_have_required_fields(
+        self, populated_registry: ExperimentRegistry, tmp_path: Path
+    ):
+        path = generate_experiment_manifest(
+            populated_registry, output_dir=str(tmp_path)
+        )
         with open(path, "r") as f:
             data = json.load(f)
         for entry in data["experiments"]:
@@ -581,12 +671,19 @@ class TestBenchmarkManifest:
         assert path is None
 
     def test_multiple_datasets(self, benchmark_result: BenchmarkResult, tmp_path: Path):
-        path = generate_benchmark_manifest([benchmark_result, benchmark_result], output_dir=str(tmp_path))
+        path = generate_benchmark_manifest(
+            [benchmark_result, benchmark_result], output_dir=str(tmp_path)
+        )
         with open(path, "r") as f:
             data = json.load(f)
         assert data["dataset_count"] == 2
 
-    def test_includes_validation_summary(self, benchmark_result: BenchmarkResult, validation_result: ValidationResult, tmp_path: Path):
+    def test_includes_validation_summary(
+        self,
+        benchmark_result: BenchmarkResult,
+        validation_result: ValidationResult,
+        tmp_path: Path,
+    ):
         benchmark_result.validation = validation_result
         path = generate_benchmark_manifest([benchmark_result], output_dir=str(tmp_path))
         with open(path, "r") as f:
@@ -610,7 +707,9 @@ class TestEnvironmentSnapshot:
         assert "platform" in data
 
     def test_includes_extra_info(self, tmp_path: Path):
-        path = generate_environment_snapshot(output_dir=str(tmp_path), extra_info={"foo": "bar"})
+        path = generate_environment_snapshot(
+            output_dir=str(tmp_path), extra_info={"foo": "bar"}
+        )
         with open(path, "r") as f:
             data = json.load(f)
         assert data["extra"]["foo"] == "bar"
@@ -628,13 +727,16 @@ class TestEnvironmentSnapshot:
         assert len(data["platform"]["system"]) > 0
 
     def test_custom_filename(self, tmp_path: Path):
-        path = generate_environment_snapshot(output_dir=str(tmp_path), filename="env.json")
+        path = generate_environment_snapshot(
+            output_dir=str(tmp_path), filename="env.json"
+        )
         assert "env.json" in path
 
 
 # ======================================================================
 # Report Generator Tests
 # ======================================================================
+
 
 class TestGenerateFullReport:
     def test_markdown_output(self, tmp_path: Path):
@@ -665,14 +767,18 @@ class TestGenerateFullReport:
         )
         assert "md" in result
 
-    def test_with_ablation(self, ablation_comparison: AblationComparison, tmp_path: Path):
+    def test_with_ablation(
+        self, ablation_comparison: AblationComparison, tmp_path: Path
+    ):
         result = generate_full_report(
             output_dir=str(tmp_path),
             ablation_comparisons=[ablation_comparison],
         )
         assert "md" in result
 
-    def test_with_registry(self, populated_registry: ExperimentRegistry, tmp_path: Path):
+    def test_with_registry(
+        self, populated_registry: ExperimentRegistry, tmp_path: Path
+    ):
         result = generate_full_report(
             output_dir=str(tmp_path),
             experiment_registry=populated_registry,
@@ -680,7 +786,12 @@ class TestGenerateFullReport:
         assert "experiment_manifest" in result
         assert "environment_snapshot" in result
 
-    def test_with_validation(self, benchmark_result: BenchmarkResult, validation_result: ValidationResult, tmp_path: Path):
+    def test_with_validation(
+        self,
+        benchmark_result: BenchmarkResult,
+        validation_result: ValidationResult,
+        tmp_path: Path,
+    ):
         benchmark_result.validation = validation_result
         result = generate_full_report(
             output_dir=str(tmp_path),
@@ -688,7 +799,12 @@ class TestGenerateFullReport:
         )
         assert "md" in result
 
-    def test_with_ablation_validation(self, ablation_comparison: AblationComparison, validation_result: ValidationResult, tmp_path: Path):
+    def test_with_ablation_validation(
+        self,
+        ablation_comparison: AblationComparison,
+        validation_result: ValidationResult,
+        tmp_path: Path,
+    ):
         comp = AblationComparison(
             baseline_label=ablation_comparison.baseline_label,
             treatment_label=ablation_comparison.treatment_label,
@@ -713,10 +829,12 @@ class TestGenerateFullReport:
 
     def test_creates_output_dir(self, tmp_path: Path):
         subdir = tmp_path / "custom_reports"
-        result = generate_full_report(output_dir=str(subdir))
+        generate_full_report(output_dir=str(subdir))
         assert subdir.exists()
 
-    def test_benchmark_manifest_generated(self, benchmark_result: BenchmarkResult, tmp_path: Path):
+    def test_benchmark_manifest_generated(
+        self, benchmark_result: BenchmarkResult, tmp_path: Path
+    ):
         result = generate_full_report(
             output_dir=str(tmp_path),
             benchmark_results=[benchmark_result],
@@ -749,6 +867,7 @@ class TestGenerateFullReport:
 # Edge Cases and Error Handling
 # ======================================================================
 
+
 class TestEdgeCases:
     def test_benchmark_with_empty_per_query(self):
         br = BenchmarkResult(dataset_name="empty", query_count=0)
@@ -770,7 +889,9 @@ class TestEdgeCases:
 
     def test_leaderboard_none_score(self):
         run = ExperimentRun(
-            run_id="none", name="no-metrics", phase="test",
+            run_id="none",
+            name="no-metrics",
+            phase="test",
             status=ExperimentStatus.COMPLETED,
         )
         rankings = rank_experiments([run])
@@ -782,6 +903,7 @@ class TestEdgeCases:
 
     def test_full_report_no_output(self):
         import tempfile
+
         with tempfile.TemporaryDirectory() as d:
             result = generate_full_report(output_dir=d)
             assert "md" in result
@@ -810,10 +932,14 @@ class TestEdgeCases:
         html = generate_html_report("Test", "---")
         assert "<hr>" in html
 
-    def test_ablation_comparison_validation_none(self, ablation_comparison: AblationComparison):
+    def test_ablation_comparison_validation_none(
+        self, ablation_comparison: AblationComparison
+    ):
         assert ablation_comparison.validation is None
 
-    def test_ablation_comparison_recall_delta(self, ablation_comparison: AblationComparison):
+    def test_ablation_comparison_recall_delta(
+        self, ablation_comparison: AblationComparison
+    ):
         assert ablation_comparison.recall_delta == 0.05
 
     def test_compute_composite_zeros(self):
@@ -823,18 +949,30 @@ class TestEdgeCases:
         # all zeros: should be 0 - penalty
         assert score <= 0
 
-    def test_ranking_custom_ascending_latency(self, sample_run: ExperimentRun, another_run: ExperimentRun):
-        rankings = rank_experiments([sample_run, another_run], metric="latency_ms", ascending=True)
+    def test_ranking_custom_ascending_latency(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
+        rankings = rank_experiments(
+            [sample_run, another_run], metric="latency_ms", ascending=True
+        )
         assert rankings[0][1].run_id == "run-002"
 
-    def test_visualization_custom_titles(self, sample_run: ExperimentRun, another_run: ExperimentRun):
+    def test_visualization_custom_titles(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
         data = plot_metric_trend([sample_run, another_run], title="Custom Trend")
         assert len(data) > 100
-        data2 = plot_experiment_comparison([sample_run, another_run], title="Custom Comparison")
+        data2 = plot_experiment_comparison(
+            [sample_run, another_run], title="Custom Comparison"
+        )
         assert len(data2) > 100
 
-    def test_benchmark_manifest_custom_filename(self, benchmark_result: BenchmarkResult, tmp_path: Path):
-        path = generate_benchmark_manifest([benchmark_result], output_dir=str(tmp_path), filename="my_bench.json")
+    def test_benchmark_manifest_custom_filename(
+        self, benchmark_result: BenchmarkResult, tmp_path: Path
+    ):
+        path = generate_benchmark_manifest(
+            [benchmark_result], output_dir=str(tmp_path), filename="my_bench.json"
+        )
         assert "my_bench.json" in path
 
     def test_reproducibility_git_commit_not_required(self, tmp_path: Path):
@@ -852,8 +990,10 @@ class TestEdgeCases:
 
     def test_ablation_impact_no_deltas(self):
         comp = AblationComparison(
-            baseline_label="a", treatment_label="b",
-            recall_delta=None, precision_delta=None,
+            baseline_label="a",
+            treatment_label="b",
+            recall_delta=None,
+            precision_delta=None,
         )
         data = plot_ablation_impact([comp])
         assert len(data) > 100
@@ -867,19 +1007,30 @@ class TestEdgeCases:
         agg = aggregate_results([])
         assert agg["dataset_count"] == 0
 
-    def test_markdown_section_with_validation_and_bootstrap(self, validation_result: ValidationResult):
+    def test_markdown_section_with_validation_and_bootstrap(
+        self, validation_result: ValidationResult
+    ):
         from intelligence.statistics.bootstrap import BootstrapResult
+
         validation_result.bootstrap = BootstrapResult(
-            metric_name="recall", point_estimate=0.05, bias=0.001,
-            std_error=0.015, ci_lower=0.02, ci_upper=0.08,
-            resampled_values=[0.04, 0.06, 0.05], n_resamples=9999,
+            metric_name="recall",
+            point_estimate=0.05,
+            bias=0.001,
+            std_error=0.015,
+            ci_lower=0.02,
+            ci_upper=0.08,
+            resampled_values=[0.04, 0.06, 0.05],
+            n_resamples=9999,
         )
         md = generate_markdown_statistical_report(validation_result)
         assert "Point Estimate" in md
 
-    def test_leaderboard_composite_ordering(self, sample_run: ExperimentRun, another_run: ExperimentRun):
-        rankings = rank_experiments([another_run, sample_run], metric="composite",
-                                     secondary_weight=0.3)
+    def test_leaderboard_composite_ordering(
+        self, sample_run: ExperimentRun, another_run: ExperimentRun
+    ):
+        rankings = rank_experiments(
+            [another_run, sample_run], metric="composite", secondary_weight=0.3
+        )
         assert rankings[0][1].run_id == "run-001"
 
     def test_html_includes_title_in_body(self):
@@ -888,13 +1039,18 @@ class TestEdgeCases:
 
     def test_manifest_output_dir_created(self, populated_registry: ExperimentRegistry):
         import tempfile
+
         with tempfile.TemporaryDirectory() as d:
             sub = Path(d) / "deep" / "nested"
             path = generate_experiment_manifest(populated_registry, output_dir=str(sub))
             assert path is not None
             assert Path(path).exists()
 
-    def test_markdown_ablation_with_validation_summary(self, ablation_comparison: AblationComparison, validation_result: ValidationResult):
+    def test_markdown_ablation_with_validation_summary(
+        self,
+        ablation_comparison: AblationComparison,
+        validation_result: ValidationResult,
+    ):
         comp = AblationComparison(
             baseline_label=ablation_comparison.baseline_label,
             treatment_label=ablation_comparison.treatment_label,
@@ -910,9 +1066,13 @@ class TestAggregateResults:
         assert agg["dataset_count"] == 1
 
     def test_multiple_results(self, benchmark_result: BenchmarkResult):
-        b2 = BenchmarkResult(dataset_name="d2", query_count=50,
-                             per_query_recall=[0.9], per_query_precision=[0.8],
-                             per_query_latency_ms=[100])
+        b2 = BenchmarkResult(
+            dataset_name="d2",
+            query_count=50,
+            per_query_recall=[0.9],
+            per_query_precision=[0.8],
+            per_query_latency_ms=[100],
+        )
         agg = aggregate_results([benchmark_result, b2])
         assert agg["dataset_count"] == 2
         assert agg["total_queries"] == 150
@@ -925,9 +1085,12 @@ class TestAggregateResults:
     def test_all_keys_present(self, benchmark_result: BenchmarkResult):
         agg = aggregate_results([benchmark_result])
         expected_keys = [
-            "dataset_count", "total_queries",
-            "average_recall", "average_precision",
-            "average_latency_ms", "average_success_rate",
+            "dataset_count",
+            "total_queries",
+            "average_recall",
+            "average_precision",
+            "average_latency_ms",
+            "average_success_rate",
             "average_fallback_rate",
         ]
         for k in expected_keys:

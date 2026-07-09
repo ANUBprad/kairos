@@ -1,8 +1,9 @@
 """Tests for server startup configuration and environment validation."""
+
 from __future__ import annotations
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -13,7 +14,7 @@ for p in [_root, _intelligence, _generated]:
     if p not in os.sys.path:
         os.sys.path.insert(0, p)
 
-from intelligence.server.config import ServerConfig, validate_env
+from intelligence.server.config import ServerConfig, validate_env  # noqa: E402
 
 
 # ======================================================================
@@ -41,11 +42,16 @@ class TestServerConfigFromEnv:
 
     def test_provider_specific_vars_default_to_none(self) -> None:
         _keys = [
-            "OPENAI_API_KEY", "KEIRO_OPENAI_MODEL_NAME",
-            "GEMINI_API_KEY", "KEIRO_GEMINI_MODEL_NAME",
-            "KEIRO_OLLAMA_MODEL_NAME", "KEIRO_OLLAMA_URL",
-            "GROQ_API_KEY", "GROQ_BASE_URL",
-            "KEIRO_LARGE_GROQ_MODEL", "KEIRO_SMALL_GROQ_MODEL",
+            "OPENAI_API_KEY",
+            "KEIRO_OPENAI_MODEL_NAME",
+            "GEMINI_API_KEY",
+            "KEIRO_GEMINI_MODEL_NAME",
+            "KEIRO_OLLAMA_MODEL_NAME",
+            "KEIRO_OLLAMA_URL",
+            "GROQ_API_KEY",
+            "GROQ_BASE_URL",
+            "KEIRO_LARGE_GROQ_MODEL",
+            "KEIRO_SMALL_GROQ_MODEL",
         ]
         _removed = {k: os.environ.pop(k) for k in _keys if k in os.environ}
         try:
@@ -69,10 +75,13 @@ class TestServerConfigFromEnv:
             assert config.intelligence_port == 9090
 
     def test_reads_chroma_settings(self) -> None:
-        with patch.dict(os.environ, {
-            "CHROMA_STORE_HOST": "10.0.0.1",
-            "CHROMA_STORE_PORT": "9001",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "CHROMA_STORE_HOST": "10.0.0.1",
+                "CHROMA_STORE_PORT": "9001",
+            },
+        ):
             config = ServerConfig.from_env()
             assert config.chroma_store_host == "10.0.0.1"
             assert config.chroma_store_port == 9001
@@ -336,16 +345,20 @@ class TestServeValidation:
 
     def test_raises_on_missing_provider(self) -> None:
         _provider_keys = [
-            "KEIRO_LLM_PROVIDER", "KEIRO_DEPLOYMENT",
-            "KEIRO_LARGE_GROQ_MODEL", "KEIRO_SMALL_GROQ_MODEL",
+            "KEIRO_LLM_PROVIDER",
+            "KEIRO_DEPLOYMENT",
+            "KEIRO_LARGE_GROQ_MODEL",
+            "KEIRO_SMALL_GROQ_MODEL",
         ]
         with patch.dict(os.environ, {k: "" for k in _provider_keys}):
             from intelligence.server.grpc_server import serve
+
             with pytest.raises(ValueError, match="No LLM provider configured"):
                 serve()
 
     def test_raises_on_missing_deployment_vars(self) -> None:
         with patch.dict(os.environ, {"KEIRO_DEPLOYMENT": "True"}, clear=False):
             from intelligence.server.grpc_server import serve
+
             with pytest.raises(ValueError, match="missing or invalid configuration"):
                 serve()

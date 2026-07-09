@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from benchmarks.runner import RunnerResult
-
-from intelligence.ablation.config import AblationConfig
+from intelligence.statistics.reporting import ValidationResult
 
 
 @dataclass(frozen=True)
@@ -84,7 +83,9 @@ def compare_runs(
     total = baseline.total_queries
 
     recall_delta = _opt_sub(treatment.average_recall(), baseline.average_recall())
-    precision_delta = _opt_sub(treatment.average_precision(), baseline.average_precision())
+    precision_delta = _opt_sub(
+        treatment.average_precision(), baseline.average_precision()
+    )
     latency_delta_ms = (
         treatment.average_latency().total - baseline.average_latency().total
     ) * 1000.0
@@ -93,8 +94,12 @@ def compare_runs(
     t_fails = treatment.aggregated_failures()
     b_total = b_fails.total_queries or total
     t_total = t_fails.total_queries or total
-    b_success = 1.0 - (b_fails.timeout + b_fails.empty_retrieval) / b_total if b_total else 1.0
-    t_success = 1.0 - (t_fails.timeout + t_fails.empty_retrieval) / t_total if t_total else 1.0
+    b_success = (
+        1.0 - (b_fails.timeout + b_fails.empty_retrieval) / b_total if b_total else 1.0
+    )
+    t_success = (
+        1.0 - (t_fails.timeout + t_fails.empty_retrieval) / t_total if t_total else 1.0
+    )
     success_rate_delta = t_success - b_success
 
     b_fallback_rate = b_fails.planner_fallback / b_total if b_total else 0.0
@@ -113,7 +118,8 @@ def compare_runs(
             treatment.per_type_recall().get(qt), baseline.per_type_recall().get(qt)
         )
         per_type_precision_delta[qt] = _opt_sub(
-            treatment.per_type_precision().get(qt), baseline.per_type_precision().get(qt)
+            treatment.per_type_precision().get(qt),
+            baseline.per_type_precision().get(qt),
         )
 
         bl = baseline.per_type_latency().get(qt)
@@ -127,14 +133,8 @@ def compare_runs(
         try:
             from intelligence.statistics.reporting import generate_validation_report
 
-            bl_vals = [
-                getattr(r, metric_name, 0.0) or 0.0
-                for r in baseline.results
-            ]
-            tr_vals = [
-                getattr(r, metric_name, 0.0) or 0.0
-                for r in treatment.results
-            ]
+            bl_vals = [getattr(r, metric_name, 0.0) or 0.0 for r in baseline.results]
+            tr_vals = [getattr(r, metric_name, 0.0) or 0.0 for r in treatment.results]
             if len(bl_vals) == total and len(tr_vals) == total:
                 validation_result = generate_validation_report(
                     baseline=bl_vals,
@@ -215,23 +215,45 @@ def generate_ablation_report(
     ]
 
     for i, comp in enumerate(comparisons):
-        lines.extend([
-            f"## {i + 1}. {comp.treatment_label} vs {comp.baseline_label}",
-            "",
-            f"- **Total Queries:** {comp.total_queries}",
-            "",
-            "### Aggregate Metrics",
-            "",
-            "| Metric | Delta | Direction |",
-            "| ------ | ----- | --------- |",
-        ])
+        lines.extend(
+            [
+                f"## {i + 1}. {comp.treatment_label} vs {comp.baseline_label}",
+                "",
+                f"- **Total Queries:** {comp.total_queries}",
+                "",
+                "### Aggregate Metrics",
+                "",
+                "| Metric | Delta | Direction |",
+                "| ------ | ----- | --------- |",
+            ]
+        )
 
         metrics: List[Tuple[str, str, str]] = [
-            ("Recall", _fmt_opt_float(comp.recall_delta, "%+.2f%%"), _direction(comp.recall_delta)),
-            ("Precision", _fmt_opt_float(comp.precision_delta, "%+.2f%%"), _direction(comp.precision_delta)),
-            ("Latency (ms)", f"{comp.latency_delta_ms:+.1f}", _direction(comp.latency_delta_ms, lower_is_better=True)),
-            ("Success Rate", f"{comp.success_rate_delta:+.2%}", _direction(comp.success_rate_delta)),
-            ("Fallback Rate", f"{comp.fallback_rate_delta:+.2%}", _direction(comp.fallback_rate_delta, lower_is_better=True)),
+            (
+                "Recall",
+                _fmt_opt_float(comp.recall_delta, "%+.2f%%"),
+                _direction(comp.recall_delta),
+            ),
+            (
+                "Precision",
+                _fmt_opt_float(comp.precision_delta, "%+.2f%%"),
+                _direction(comp.precision_delta),
+            ),
+            (
+                "Latency (ms)",
+                f"{comp.latency_delta_ms:+.1f}",
+                _direction(comp.latency_delta_ms, lower_is_better=True),
+            ),
+            (
+                "Success Rate",
+                f"{comp.success_rate_delta:+.2%}",
+                _direction(comp.success_rate_delta),
+            ),
+            (
+                "Fallback Rate",
+                f"{comp.fallback_rate_delta:+.2%}",
+                _direction(comp.fallback_rate_delta, lower_is_better=True),
+            ),
         ]
         for name, value, direction in metrics:
             lines.append(f"| {name:<18} | {value:<18} | {direction:<9} |")
@@ -264,9 +286,7 @@ def generate_ablation_report(
         if comp.validation:
             lines.append("### Statistical Validation")
             lines.append("")
-            lines.append(
-                f"**{comp.validation.summary}**"
-            )
+            lines.append(f"**{comp.validation.summary}**")
             lines.append("")
             lines.append("#### Significance Tests")
             lines.append("")

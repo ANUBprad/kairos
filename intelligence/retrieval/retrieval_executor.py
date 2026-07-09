@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from intelligence.retrieval.real_retriever import RealRetriever
 from intelligence.retrieval.retrieval_result import RetrievalResult

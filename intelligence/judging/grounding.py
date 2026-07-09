@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Sequence, Set
+from typing import Sequence
 
 from intelligence.judging.judge import BaseJudge, JudgeResult, Judgment
 
@@ -9,7 +9,9 @@ from intelligence.judging.judge import BaseJudge, JudgeResult, Judgment
 class GroundingJudge(BaseJudge):
     dimension: str = "grounding"
 
-    def __init__(self, threshold_pass: float = 0.7, threshold_warn: float = 0.4) -> None:
+    def __init__(
+        self, threshold_pass: float = 0.7, threshold_warn: float = 0.4
+    ) -> None:
         self.threshold_pass = threshold_pass
         self.threshold_warn = threshold_warn
 
@@ -47,7 +49,9 @@ class GroundingJudge(BaseJudge):
             )
             quote_support = supported_quotes / len(direct_quotes)
 
-        score = 0.4 * avg_overlap + 0.6 * quote_support if direct_quotes else avg_overlap
+        score = (
+            0.4 * avg_overlap + 0.6 * quote_support if direct_quotes else avg_overlap
+        )
         score = max(0.0, min(1.0, score))
 
         judgment = self._score_to_judgment(score)
@@ -87,17 +91,90 @@ class GroundingJudge(BaseJudge):
         if not answer_words:
             return 0.0
         stop_words = {
-            "the", "a", "an", "is", "are", "was", "were", "be", "been",
-            "being", "have", "has", "had", "do", "does", "did", "will",
-            "would", "could", "should", "may", "might", "shall", "can",
-            "to", "of", "in", "for", "on", "with", "at", "by", "from",
-            "as", "into", "through", "during", "before", "after", "and",
-            "but", "or", "nor", "not", "so", "yet", "both", "either",
-            "neither", "each", "every", "all", "any", "few", "more",
-            "most", "other", "some", "such", "no", "only", "own",
-            "same", "than", "too", "very", "just", "also", "if", "then",
-            "else", "when", "where", "why", "how", "which", "who",
-            "whom", "this", "that", "these", "those", "it", "its",
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "shall",
+            "can",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
+            "as",
+            "into",
+            "through",
+            "during",
+            "before",
+            "after",
+            "and",
+            "but",
+            "or",
+            "nor",
+            "not",
+            "so",
+            "yet",
+            "both",
+            "either",
+            "neither",
+            "each",
+            "every",
+            "all",
+            "any",
+            "few",
+            "more",
+            "most",
+            "other",
+            "some",
+            "such",
+            "no",
+            "only",
+            "own",
+            "same",
+            "than",
+            "too",
+            "very",
+            "just",
+            "also",
+            "if",
+            "then",
+            "else",
+            "when",
+            "where",
+            "why",
+            "how",
+            "which",
+            "who",
+            "whom",
+            "this",
+            "that",
+            "these",
+            "those",
+            "it",
+            "its",
         }
         content_words = answer_words - stop_words
         if not content_words:

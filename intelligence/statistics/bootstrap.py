@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Sequence
+from dataclasses import dataclass
+from typing import Callable, List, Optional, Sequence
 
 import numpy as np
 

@@ -1,6 +1,7 @@
 from pypdf import PdfReader
 import io
 
+
 def load_document(content: bytes, mime_type: str) -> str:
 
     if mime_type == "application/pdf":
@@ -11,7 +12,7 @@ def load_document(content: bytes, mime_type: str) -> str:
 
         num_pages = len(pdf_reader.pages)
         text_content = ""
-        for i in range(num_pages) :
+        for i in range(num_pages):
             try:
                 page = pdf_reader.pages[i]
                 text_content += page.extract_text()
@@ -26,5 +27,5 @@ def load_document(content: bytes, mime_type: str) -> str:
             raise ValueError(f"Couldn't convert the text file content. ERROR : {e} ")
 
         return text
-    else :
+    else:
         raise ValueError("Unsupported File")

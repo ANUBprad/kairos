@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from threading import RLock
 from typing import Callable, Optional
@@ -61,7 +61,9 @@ class CircuitBreaker:
         if old_state != new_state:
             logger.info(
                 "Circuit breaker '%s' state: %s -> %s",
-                self._name, old_state.value, new_state.value,
+                self._name,
+                old_state.value,
+                new_state.value,
             )
             self._state = new_state
             if self._on_state_change is not None:
@@ -92,7 +94,7 @@ class CircuitBreaker:
             result = fn(*args, **kwargs)
             self._on_success()
             return result
-        except Exception as e:
+        except Exception:
             self._on_failure()
             raise
 

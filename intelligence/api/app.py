@@ -32,8 +32,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     app.include_router(health_router, prefix="/health", tags=["Health"])
     app.include_router(config_router, prefix="/api/v1/config", tags=["Configuration"])
-    app.include_router(observability_router, prefix="/api/v1/observability", tags=["Observability"])
-    app.include_router(evaluation_router, prefix="/api/v1/evaluation", tags=["Evaluation"])
+    app.include_router(
+        observability_router, prefix="/api/v1/observability", tags=["Observability"]
+    )
+    app.include_router(
+        evaluation_router, prefix="/api/v1/evaluation", tags=["Evaluation"]
+    )
     app.include_router(artifacts_router, prefix="/api/v1/artifacts", tags=["Artifacts"])
 
     _app_instance = app

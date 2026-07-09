@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 from intelligence.experiments.models import ExperimentMetrics, ExperimentRun
 
@@ -39,7 +39,9 @@ def rank_experiments(
         raw_score: Optional[float] = None
         if metric == "composite":
             raw_score = compute_composite_score(
-                run.metrics, primary="recall", secondary="precision",
+                run.metrics,
+                primary="recall",
+                secondary="precision",
                 primary_weight=1.0 - secondary_weight,
             )
         elif metric == "recall":
@@ -59,7 +61,9 @@ def rank_experiments(
     scored.sort(
         key=lambda x: (
             0 if x[0] is not None else 1,
-            x[0] if x[0] is not None else (float("-inf") if ascending else float("inf")),
+            x[0]
+            if x[0] is not None
+            else (float("-inf") if ascending else float("inf")),
         ),
         reverse=not ascending,
     )
@@ -67,11 +71,16 @@ def rank_experiments(
     result: List[Tuple[int, ExperimentRun, Optional[float]]] = []
     for rank, (score, run) in enumerate(scored, start=1):
         display_score: Optional[float] = score
-        if score is not None and include_secondary and metric != "composite" and run.metrics is not None:
+        if (
+            score is not None
+            and include_secondary
+            and metric != "composite"
+            and run.metrics is not None
+        ):
             display_score = compute_composite_score(
-                run.metrics, primary=metric, secondary=(
-                    "precision" if metric != "precision" else "recall"
-                ),
+                run.metrics,
+                primary=metric,
+                secondary=("precision" if metric != "precision" else "recall"),
                 primary_weight=1.0 - secondary_weight,
             )
         result.append((rank, run, display_score))
@@ -105,6 +114,7 @@ def compute_composite_score(
         s_val = 0.0
 
     import math
+
     latency_ms = metrics.latency_ms if metrics.latency_ms is not None else 0.0
     penalty = penalty_weight * math.log1p(latency_ms / 1000.0)
 
@@ -118,15 +128,17 @@ def leaderboard_to_dict(
     entries: List[Dict[str, object]] = []
     for rank, run, score in rankings:
         m = run.metrics
-        entries.append({
-            "rank": rank,
-            "run_id": run.run_id,
-            "name": run.name,
-            "phase": run.phase,
-            "recall": m.recall,
-            "precision": m.precision,
-            "latency_ms": m.latency_ms,
-            "score": score,
-            "timestamp": str(run.timestamp),
-        })
+        entries.append(
+            {
+                "rank": rank,
+                "run_id": run.run_id,
+                "name": run.name,
+                "phase": run.phase,
+                "recall": m.recall,
+                "precision": m.precision,
+                "latency_ms": m.latency_ms,
+                "score": score,
+                "timestamp": str(run.timestamp),
+            }
+        )
     return {"leaderboard": entries, "count": len(entries)}

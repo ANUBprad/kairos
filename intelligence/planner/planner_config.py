@@ -68,37 +68,19 @@ CONFIDENCE_MEDIUM: Final[float] = 0.5
 
 BUDGET_TABLE: Final[Dict[QueryType, Dict[ConfidenceBand, RetrievalBudget]]] = {
     QueryType.SIMPLE: {
-        ConfidenceBand.HIGH: RetrievalBudget(
-            top_k=3, rerank=False, decompose=False
-        ),
-        ConfidenceBand.MEDIUM: RetrievalBudget(
-            top_k=5, rerank=True, decompose=False
-        ),
-        ConfidenceBand.LOW: RetrievalBudget(
-            top_k=8, rerank=True, decompose=False
-        ),
+        ConfidenceBand.HIGH: RetrievalBudget(top_k=3, rerank=False, decompose=False),
+        ConfidenceBand.MEDIUM: RetrievalBudget(top_k=5, rerank=True, decompose=False),
+        ConfidenceBand.LOW: RetrievalBudget(top_k=8, rerank=True, decompose=False),
     },
     QueryType.COMPLEX: {
-        ConfidenceBand.HIGH: RetrievalBudget(
-            top_k=8, rerank=True, decompose=False
-        ),
-        ConfidenceBand.MEDIUM: RetrievalBudget(
-            top_k=10, rerank=True, decompose=False
-        ),
-        ConfidenceBand.LOW: RetrievalBudget(
-            top_k=12, rerank=True, decompose=True
-        ),
+        ConfidenceBand.HIGH: RetrievalBudget(top_k=8, rerank=True, decompose=False),
+        ConfidenceBand.MEDIUM: RetrievalBudget(top_k=10, rerank=True, decompose=False),
+        ConfidenceBand.LOW: RetrievalBudget(top_k=12, rerank=True, decompose=True),
     },
     QueryType.MULTI_HOP: {
-        ConfidenceBand.HIGH: RetrievalBudget(
-            top_k=3, rerank=False, decompose=True
-        ),
-        ConfidenceBand.MEDIUM: RetrievalBudget(
-            top_k=5, rerank=True, decompose=True
-        ),
-        ConfidenceBand.LOW: RetrievalBudget(
-            top_k=8, rerank=True, decompose=True
-        ),
+        ConfidenceBand.HIGH: RetrievalBudget(top_k=3, rerank=False, decompose=True),
+        ConfidenceBand.MEDIUM: RetrievalBudget(top_k=5, rerank=True, decompose=True),
+        ConfidenceBand.LOW: RetrievalBudget(top_k=8, rerank=True, decompose=True),
     },
 }
 

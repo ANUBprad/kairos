@@ -1,5 +1,5 @@
 grpcio>=1.62.0
-protobuf>=4.25.0
+protobuf>=6.33.0
 python-dotenv>=1.0.0
 pypdf>=4.0.0
 chromadb>=1.0.0

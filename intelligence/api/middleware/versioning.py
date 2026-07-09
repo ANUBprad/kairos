@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Tuple
+from typing import Callable
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -26,7 +26,9 @@ class VersioningMiddleware(BaseHTTPMiddleware):
         if version is None:
             return JSONResponse(
                 status_code=400,
-                content={"detail": f"Invalid X-API-Version header: '{version_str}'. Expected semver (e.g. '1.0.0')."},
+                content={
+                    "detail": f"Invalid X-API-Version header: '{version_str}'. Expected semver (e.g. '1.0.0')."
+                },
             )
         if version < self._min or version > self._max:
             return JSONResponse(

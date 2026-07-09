@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,12 +24,12 @@ for p in [_root, _intelligence, _generated]:
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-import rag_pb2
-import grpc
+import rag_pb2  # noqa: E402
+import grpc  # noqa: E402
 
-from intelligence.classifier.query_classifier import ResponseSchema
-from intelligence.server.engine import RetrievalEngine
-from intelligence.server.grpc_server import IntelligenceServiceServicer
+from intelligence.classifier.query_classifier import ResponseSchema  # noqa: E402
+from intelligence.server.engine import RetrievalEngine  # noqa: E402
+from intelligence.server.grpc_server import IntelligenceServiceServicer  # noqa: E402
 
 
 # ======================================================================
@@ -135,15 +134,16 @@ class TestPlannerIntegration:
         assert response.config.rerank is True
         assert response.config.decompose is False
 
-    def test_simple_query_config(
-        self, servicer, mock_classifier, mock_context
-    ) -> None:
+    def test_simple_query_config(self, servicer, mock_classifier, mock_context) -> None:
         mock_classifier.classify_with_confidence.return_value = ResponseSchema(
             query_type="simple", domain=None, confidence_score=0.92
         )
         request = rag_pb2.ClassifyQueryRequest(user_query="simple q", namespace="ns")
         response = servicer.ClassifyQueryType(request, mock_context)
-        assert response.config.retrieval_type == rag_pb2.RetrievalType.RETRIEVAL_TYPE_UNSPECIFIED
+        assert (
+            response.config.retrieval_type
+            == rag_pb2.RetrievalType.RETRIEVAL_TYPE_UNSPECIFIED
+        )
         assert response.config.top_k == 3
         assert response.config.rerank is False
         assert response.config.decompose is False
@@ -199,10 +199,10 @@ class TestConfidenceBudgetOverrides:
 class TestErrorHandling:
     """Planner errors result in INTERNAL status and empty response."""
 
-    def test_planner_error_returns_empty_response(
-        self, servicer, mock_context
-    ) -> None:
-        servicer._engine.planner.plan = MagicMock(side_effect=ValueError("planner failed"))
+    def test_planner_error_returns_empty_response(self, servicer, mock_context) -> None:
+        servicer._engine.planner.plan = MagicMock(
+            side_effect=ValueError("planner failed")
+        )
         request = rag_pb2.ClassifyQueryRequest(user_query="fail", namespace="ns")
         response = servicer.ClassifyQueryType(request, mock_context)
         mock_context.set_code.assert_called_once_with(grpc.StatusCode.INTERNAL)
@@ -217,9 +217,7 @@ class TestErrorHandling:
 class TestBackwardCompatibility:
     """The response shape is unchanged for existing consumers."""
 
-    def test_response_has_query_type_and_config(
-        self, servicer, mock_context
-    ) -> None:
+    def test_response_has_query_type_and_config(self, servicer, mock_context) -> None:
         request = rag_pb2.ClassifyQueryRequest(user_query="hello", namespace="ns")
         response = servicer.ClassifyQueryType(request, mock_context)
         assert response.HasField("config")
@@ -236,9 +234,15 @@ class TestBackwardCompatibility:
 # ======================================================================
 
 
-def _make_engine(simple=None, complex=None, multi_hop=None,
-                 classifier=None, embedder=None, llm_client=None,
-                 pipeline=None) -> RetrievalEngine:
+def _make_engine(
+    simple=None,
+    complex=None,
+    multi_hop=None,
+    classifier=None,
+    embedder=None,
+    llm_client=None,
+    pipeline=None,
+) -> RetrievalEngine:
     return RetrievalEngine(
         pipeline=pipeline or MagicMock(),
         classifier=classifier or MagicMock(),
@@ -250,23 +254,38 @@ def _make_engine(simple=None, complex=None, multi_hop=None,
     )
 
 
-def _make_servicer(simple=None, complex=None, multi_hop=None,
-                   classifier=None, embedder=None, llm_client=None,
-                   pipeline=None) -> IntelligenceServiceServicer:
+def _make_servicer(
+    simple=None,
+    complex=None,
+    multi_hop=None,
+    classifier=None,
+    embedder=None,
+    llm_client=None,
+    pipeline=None,
+) -> IntelligenceServiceServicer:
     engine = _make_engine(
-        simple=simple, complex=complex, multi_hop=multi_hop,
-        classifier=classifier, embedder=embedder,
-        llm_client=llm_client, pipeline=pipeline,
+        simple=simple,
+        complex=complex,
+        multi_hop=multi_hop,
+        classifier=classifier,
+        embedder=embedder,
+        llm_client=llm_client,
+        pipeline=pipeline,
     )
     return IntelligenceServiceServicer(engine=engine)
 
 
 def _make_retrieval_config(
-    retrieval_type: int, top_k: int = 3, rerank: bool = False, decompose: bool = False,
+    retrieval_type: int,
+    top_k: int = 3,
+    rerank: bool = False,
+    decompose: bool = False,
 ) -> rag_pb2.RetrievalConfig:
     return rag_pb2.RetrievalConfig(
-        retrieval_type=retrieval_type, top_k=top_k,
-        rerank=rerank, decompose=decompose,
+        retrieval_type=retrieval_type,
+        top_k=top_k,
+        rerank=rerank,
+        decompose=decompose,
     )
 
 
@@ -280,7 +299,8 @@ class TestExecuteRetrieval:
         request = rag_pb2.ExecuteRetrievalRequest(
             user_query="test",
             received_config=_make_retrieval_config(
-                rag_pb2.RetrievalType.HYBRID, top_k=7,
+                rag_pb2.RetrievalType.HYBRID,
+                top_k=7,
             ),
             namespace="ns",
         )
@@ -331,10 +351,14 @@ class TestExecuteRetrieval:
         simple.retrieve_top_k.return_value = ["x"]
         servicer = _make_servicer(simple=simple)
         cfg = _make_retrieval_config(
-            rag_pb2.RetrievalType.HYBRID, rerank=True, decompose=True,
+            rag_pb2.RetrievalType.HYBRID,
+            rerank=True,
+            decompose=True,
         )
         request = rag_pb2.ExecuteRetrievalRequest(
-            user_query="q", received_config=cfg, namespace="ns",
+            user_query="q",
+            received_config=cfg,
+            namespace="ns",
         )
         response = servicer.ExecuteRetrieval(request, MagicMock())
         assert cfg.rerank is True
@@ -358,7 +382,8 @@ class TestExecuteRetrievalFallback:
         request = rag_pb2.ExecuteRetrievalRequest(
             user_query="q",
             received_config=_make_retrieval_config(
-                rag_pb2.RetrievalType.HYBRID, top_k=4,
+                rag_pb2.RetrievalType.HYBRID,
+                top_k=4,
             ),
             namespace="ns",
         )
@@ -376,7 +401,8 @@ class TestExecuteRetrievalFallback:
         request = rag_pb2.ExecuteRetrievalRequest(
             user_query="q",
             received_config=_make_retrieval_config(
-                rag_pb2.RetrievalType.HYBRID, top_k=4,
+                rag_pb2.RetrievalType.HYBRID,
+                top_k=4,
             ),
             namespace="ns",
         )
@@ -394,7 +420,8 @@ class TestExecuteRetrievalFallback:
         request = rag_pb2.ExecuteRetrievalRequest(
             user_query="q",
             received_config=_make_retrieval_config(
-                rag_pb2.RetrievalType.HYBRID, top_k=4,
+                rag_pb2.RetrievalType.HYBRID,
+                top_k=4,
             ),
             namespace="ns",
         )
@@ -409,7 +436,8 @@ class TestExecuteRetrievalFallback:
         request = rag_pb2.ExecuteRetrievalRequest(
             user_query="q",
             received_config=_make_retrieval_config(
-                rag_pb2.RetrievalType.SELF_QUERYING, top_k=4,
+                rag_pb2.RetrievalType.SELF_QUERYING,
+                top_k=4,
             ),
             namespace="ns",
         )
@@ -421,7 +449,9 @@ class TestExecuteRetrievalFallback:
         servicer = _make_servicer()
         cfg = _make_retrieval_config(99)
         request = rag_pb2.ExecuteRetrievalRequest(
-            user_query="q", received_config=cfg, namespace="ns",
+            user_query="q",
+            received_config=cfg,
+            namespace="ns",
         )
         ctx = MagicMock()
         response = servicer.ExecuteRetrieval(request, ctx)
@@ -441,10 +471,14 @@ class TestExecuteRetrievalActivation:
         complex.retrieve_top_k.return_value = ["x"]
         servicer = _make_servicer(complex=complex)
         cfg = _make_retrieval_config(
-            rag_pb2.RetrievalType.MULTI_VECTOR, rerank=True, decompose=False,
+            rag_pb2.RetrievalType.MULTI_VECTOR,
+            rerank=True,
+            decompose=False,
         )
         request = rag_pb2.ExecuteRetrievalRequest(
-            user_query="q", received_config=cfg, namespace="ns",
+            user_query="q",
+            received_config=cfg,
+            namespace="ns",
         )
         servicer.ExecuteRetrieval(request, MagicMock())
         _, kwargs = complex.retrieve_top_k.call_args
@@ -456,10 +490,14 @@ class TestExecuteRetrievalActivation:
         complex.retrieve_top_k.return_value = ["x"]
         servicer = _make_servicer(complex=complex)
         cfg = _make_retrieval_config(
-            rag_pb2.RetrievalType.MULTI_VECTOR, rerank=False, decompose=False,
+            rag_pb2.RetrievalType.MULTI_VECTOR,
+            rerank=False,
+            decompose=False,
         )
         request = rag_pb2.ExecuteRetrievalRequest(
-            user_query="q", received_config=cfg, namespace="ns",
+            user_query="q",
+            received_config=cfg,
+            namespace="ns",
         )
         servicer.ExecuteRetrieval(request, MagicMock())
         _, kwargs = complex.retrieve_top_k.call_args
@@ -470,10 +508,14 @@ class TestExecuteRetrievalActivation:
         complex.retrieve_top_k.return_value = ["x"]
         servicer = _make_servicer(complex=complex)
         cfg = _make_retrieval_config(
-            rag_pb2.RetrievalType.MULTI_VECTOR, rerank=True, decompose=True,
+            rag_pb2.RetrievalType.MULTI_VECTOR,
+            rerank=True,
+            decompose=True,
         )
         request = rag_pb2.ExecuteRetrievalRequest(
-            user_query="q", received_config=cfg, namespace="ns",
+            user_query="q",
+            received_config=cfg,
+            namespace="ns",
         )
         servicer.ExecuteRetrieval(request, MagicMock())
         _, kwargs = complex.retrieve_top_k.call_args
@@ -484,10 +526,14 @@ class TestExecuteRetrievalActivation:
         complex.retrieve_top_k.return_value = ["x"]
         servicer = _make_servicer(complex=complex)
         cfg = _make_retrieval_config(
-            rag_pb2.RetrievalType.MULTI_VECTOR, rerank=True, decompose=False,
+            rag_pb2.RetrievalType.MULTI_VECTOR,
+            rerank=True,
+            decompose=False,
         )
         request = rag_pb2.ExecuteRetrievalRequest(
-            user_query="q", received_config=cfg, namespace="ns",
+            user_query="q",
+            received_config=cfg,
+            namespace="ns",
         )
         servicer.ExecuteRetrieval(request, MagicMock())
         _, kwargs = complex.retrieve_top_k.call_args
@@ -498,10 +544,14 @@ class TestExecuteRetrievalActivation:
         simple.retrieve_top_k.return_value = ["x"]
         servicer = _make_servicer(simple=simple)
         cfg = _make_retrieval_config(
-            rag_pb2.RetrievalType.HYBRID, rerank=False, decompose=False,
+            rag_pb2.RetrievalType.HYBRID,
+            rerank=False,
+            decompose=False,
         )
         request = rag_pb2.ExecuteRetrievalRequest(
-            user_query="q", received_config=cfg, namespace="ns",
+            user_query="q",
+            received_config=cfg,
+            namespace="ns",
         )
         servicer.ExecuteRetrieval(request, MagicMock())
         _, kwargs = simple.retrieve_top_k.call_args
@@ -513,10 +563,14 @@ class TestExecuteRetrievalActivation:
         mh.retrieve_top_k.return_value = ["x"]
         servicer = _make_servicer(multi_hop=mh)
         cfg = _make_retrieval_config(
-            rag_pb2.RetrievalType.SELF_QUERYING, rerank=True, decompose=True,
+            rag_pb2.RetrievalType.SELF_QUERYING,
+            rerank=True,
+            decompose=True,
         )
         request = rag_pb2.ExecuteRetrievalRequest(
-            user_query="q", received_config=cfg, namespace="ns",
+            user_query="q",
+            received_config=cfg,
+            namespace="ns",
         )
         servicer.ExecuteRetrieval(request, MagicMock())
         _, kwargs = mh.retrieve_top_k.call_args
@@ -533,8 +587,9 @@ class TestComplexRetrieverFlags:
     """ComplexRetriever uses rerank and decompose to control execution."""
 
     @pytest.fixture
-    def complex_retriever(self) -> "ComplexRetriever":
+    def complex_retriever(self) -> "ComplexRetriever":  # noqa: F821
         from intelligence.retrieval.complex_retriever import ComplexRetriever
+
         retriever = ComplexRetriever(
             embedder=MagicMock(),
             store=MagicMock(),
@@ -556,30 +611,44 @@ class TestComplexRetrieverFlags:
         return retriever
 
     def test_rerank_false_skips_cross_encoder(self, complex_retriever) -> None:
-        result = complex_retriever.retrieve_top_k("ns", 2, "test query", rerank=False, decompose=False)
+        result = complex_retriever.retrieve_top_k(
+            "ns", 2, "test query", rerank=False, decompose=False
+        )
         complex_retriever.cross_encoder.rerank.assert_not_called()
         assert result == ["r1", "r2"]
 
     def test_rerank_true_calls_cross_encoder(self, complex_retriever) -> None:
-        result = complex_retriever.retrieve_top_k("ns", 2, "test query", rerank=True, decompose=False)
+        result = complex_retriever.retrieve_top_k(
+            "ns", 2, "test query", rerank=True, decompose=False
+        )
         complex_retriever.cross_encoder.rerank.assert_called_once()
         assert result == ["reranked1", "reranked2"]
 
-    def test_decompose_false_skips_hypothesis_expansion(self, complex_retriever) -> None:
-        complex_retriever.retrieve_top_k("ns", 2, "test query", rerank=False, decompose=False)
+    def test_decompose_false_skips_hypothesis_expansion(
+        self, complex_retriever
+    ) -> None:
+        complex_retriever.retrieve_top_k(
+            "ns", 2, "test query", rerank=False, decompose=False
+        )
         complex_retriever._compute_hypothesis_embedding.assert_not_called()
         complex_retriever._compute_sub_query_embedding.assert_not_called()
 
     def test_decompose_true_calls_hypothesis_expansion(self, complex_retriever) -> None:
-        complex_retriever.retrieve_top_k("ns", 2, "test query", rerank=False, decompose=True)
+        complex_retriever.retrieve_top_k(
+            "ns", 2, "test query", rerank=False, decompose=True
+        )
         complex_retriever._compute_hypothesis_embedding.assert_called_once()
         complex_retriever._compute_sub_query_embedding.assert_called_once()
 
     def test_decompose_false_uses_fewer_queries(self, complex_retriever) -> None:
-        complex_retriever.retrieve_top_k("ns", 2, "test query", rerank=False, decompose=False)
+        complex_retriever.retrieve_top_k(
+            "ns", 2, "test query", rerank=False, decompose=False
+        )
         expected_store_calls = 1
         assert complex_retriever.store.query.call_count == expected_store_calls
 
     def test_decompose_true_uses_three_queries(self, complex_retriever) -> None:
-        complex_retriever.retrieve_top_k("ns", 2, "test query", rerank=False, decompose=True)
+        complex_retriever.retrieve_top_k(
+            "ns", 2, "test query", rerank=False, decompose=True
+        )
         assert complex_retriever.store.query.call_count == 3

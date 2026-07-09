@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Dict
 
-from .budget_model import BudgetRecommendation, BudgetScorer, LearnedBudgetTable
+from .budget_model import BudgetRecommendation, BudgetScorer
 from .budget_optimizer import BudgetOptimizer
 
 

@@ -1,4 +1,8 @@
-from .calibration_model import CalibrationStrategy, PlattScalingCalibrator, IsotonicCalibrator
+from .calibration_model import (
+    CalibrationStrategy,
+    PlattScalingCalibrator,
+    IsotonicCalibrator,
+)
 from .calibration_metrics import (
     compute_brier_score,
     compute_ece,

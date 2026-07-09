@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-from pathlib import Path
+from typing import Dict, List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from intelligence.config.settings import get_settings
 
@@ -30,9 +29,18 @@ async def list_models() -> List[Dict[str, object]]:
     results: List[Dict[str, object]] = []
     for entry in sorted(models_dir.iterdir()):
         if entry.is_dir():
-            results.append({"name": entry.name, "path": str(entry), "type": "directory"})
+            results.append(
+                {"name": entry.name, "path": str(entry), "type": "directory"}
+            )
         elif entry.suffix in (".bin", ".pt", ".pth", ".onnx", ".gguf"):
-            results.append({"name": entry.name, "path": str(entry), "size_bytes": entry.stat().st_size, "type": "file"})
+            results.append(
+                {
+                    "name": entry.name,
+                    "path": str(entry),
+                    "size_bytes": entry.stat().st_size,
+                    "type": "file",
+                }
+            )
     return results
 
 
@@ -45,7 +53,13 @@ async def list_experiments() -> List[Dict[str, object]]:
     results: List[Dict[str, object]] = []
     for entry in sorted(exp_dir.iterdir()):
         if entry.suffix == ".json":
-            results.append({"name": entry.stem, "path": str(entry), "size_bytes": entry.stat().st_size})
+            results.append(
+                {
+                    "name": entry.stem,
+                    "path": str(entry),
+                    "size_bytes": entry.stat().st_size,
+                }
+            )
     return results
 
 
@@ -58,5 +72,11 @@ async def list_reports() -> List[Dict[str, object]]:
     results: List[Dict[str, object]] = []
     for entry in sorted(reports_dir.iterdir()):
         if entry.suffix in (".md", ".html", ".json", ".csv"):
-            results.append({"name": entry.name, "path": str(entry), "size_bytes": entry.stat().st_size})
+            results.append(
+                {
+                    "name": entry.name,
+                    "path": str(entry),
+                    "size_bytes": entry.stat().st_size,
+                }
+            )
     return results

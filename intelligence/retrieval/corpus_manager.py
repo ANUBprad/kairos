@@ -40,7 +40,9 @@ class CorpusManager:
     def get_document(self, doc_id: str) -> Optional[CorpusDocument]:
         return self._documents.get(doc_id)
 
-    def get_documents(self, doc_ids: Optional[List[str]] = None) -> List[CorpusDocument]:
+    def get_documents(
+        self, doc_ids: Optional[List[str]] = None
+    ) -> List[CorpusDocument]:
         if doc_ids is None:
             return list(self._documents.values())
         return [self._documents[did] for did in doc_ids if did in self._documents]

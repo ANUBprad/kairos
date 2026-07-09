@@ -21,11 +21,15 @@ def validate_config(settings: Settings) -> List[str]:
         if not settings.api_secret:
             errors.append("api_secret is required in production")
         if settings.embedding_model == "local":
-            errors.append("local embedding model is not recommended in production; set KEIRO_EMBEDDING_MODEL to 'openai' or 'gemini'")
+            errors.append(
+                "local embedding model is not recommended in production; set KEIRO_EMBEDDING_MODEL to 'openai' or 'gemini'"
+            )
         if settings.llm_provider is None:
             errors.append("llm_provider is required in production")
         if settings.circuit_breaker_failure_threshold < 1:
-            errors.append("circuit_breaker_failure_threshold must be >= 1 in production")
+            errors.append(
+                "circuit_breaker_failure_threshold must be >= 1 in production"
+            )
 
     if settings.deployment:
         if not settings.groq_api_key:
@@ -42,19 +46,25 @@ def validate_config(settings: Settings) -> List[str]:
         if not settings.gemini_api_key:
             errors.append("GEMINI_API_KEY is required when KEIRO_LLM_PROVIDER=gemini")
         if not settings.gemini_model_name:
-            errors.append("KEIRO_GEMINI_MODEL_NAME is required when KEIRO_LLM_PROVIDER=gemini")
+            errors.append(
+                "KEIRO_GEMINI_MODEL_NAME is required when KEIRO_LLM_PROVIDER=gemini"
+            )
         return errors
 
     if settings.llm_provider == "openai":
         if not settings.openai_api_key:
             errors.append("OPENAI_API_KEY is required when KEIRO_LLM_PROVIDER=openai")
         if not settings.openai_model_name:
-            errors.append("KEIRO_OPENAI_MODEL_NAME is required when KEIRO_LLM_PROVIDER=openai")
+            errors.append(
+                "KEIRO_OPENAI_MODEL_NAME is required when KEIRO_LLM_PROVIDER=openai"
+            )
         return errors
 
     if settings.llm_provider == "ollama":
         if not settings.ollama_model_name:
-            errors.append("KEIRO_OLLAMA_MODEL_NAME is required when KEIRO_LLM_PROVIDER=ollama")
+            errors.append(
+                "KEIRO_OLLAMA_MODEL_NAME is required when KEIRO_LLM_PROVIDER=ollama"
+            )
         if not settings.ollama_url:
             errors.append("KEIRO_OLLAMA_URL is required when KEIRO_LLM_PROVIDER=ollama")
         return errors
@@ -80,6 +90,7 @@ def validate_config(settings: Settings) -> List[str]:
 def validate_config_or_raise(settings: Optional[Settings] = None) -> None:
     if settings is None:
         from intelligence.config.settings import get_settings
+
         settings = get_settings()
     errors = validate_config(settings)
     if errors:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import List, Optional, Set, Sequence
+from typing import Optional, Set, Sequence
 
 
 def reciprocal_rank(relevant: Set[str], retrieved: Sequence[str]) -> float:
@@ -30,10 +30,7 @@ def mean_reciprocal_rank(
     """
     if not queries or not relevants:
         return 0.0
-    total = sum(
-        reciprocal_rank(rel, ret)
-        for ret, rel in zip(queries, relevants)
-    )
+    total = sum(reciprocal_rank(rel, ret) for ret, rel in zip(queries, relevants))
     return total / len(queries)
 
 
@@ -62,8 +59,7 @@ def mean_average_precision(
     if not queries or not relevants:
         return 0.0
     return sum(
-        average_precision(rel, ret)
-        for ret, rel in zip(queries, relevants)
+        average_precision(rel, ret) for ret, rel in zip(queries, relevants)
     ) / len(queries)
 
 
@@ -103,7 +99,8 @@ def normalized_dcg(
     """
     dcg = discounted_cumulative_gain(relevances, k)
     ideal = discounted_cumulative_gain(
-        sorted(relevances, reverse=True), k,
+        sorted(relevances, reverse=True),
+        k,
     )
     if ideal == 0.0:
         return 0.0

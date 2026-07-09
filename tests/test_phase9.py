@@ -1,11 +1,10 @@
 """Tests for Phase 9: Research Validation Pipeline."""
+
 from __future__ import annotations
 
-import json
 import os
 import tempfile
-from typing import Any, Dict, List, Optional, Sequence
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -14,21 +13,29 @@ import pytest
 # ======================================================================
 
 from intelligence.judging.judge import (
-    BaseJudge, CompositeJudge, JudgeResult, Judgment,
+    BaseJudge,
+    CompositeJudge,
+    JudgeResult,
+    Judgment,
 )
 from intelligence.judging.faithfulness import FaithfulnessJudge
 from intelligence.judging.relevance import RelevanceJudge
 from intelligence.judging.hallucination import HallucinationJudge
 from intelligence.judging.grounding import GroundingJudge
 from intelligence.judging.scoring import (
-    JudgingReport, aggregate_scores, default_weights,
-    rating_to_score, score_to_rating, weight_scores,
+    JudgingReport,
+    aggregate_scores,
+    default_weights,
+    rating_to_score,
+    score_to_rating,
+    weight_scores,
 )
 
 
 # ---------------------------------------------------------------------------
 # JudgeResult
 # ---------------------------------------------------------------------------
+
 
 class TestJudgeResult:
     def test_defaults(self) -> None:
@@ -39,7 +46,9 @@ class TestJudgeResult:
         assert r.explanation == ""
 
     def test_to_dict(self) -> None:
-        r = JudgeResult(dimension="d", score=0.8, judgment=Judgment.PASS, explanation="ok")
+        r = JudgeResult(
+            dimension="d", score=0.8, judgment=Judgment.PASS, explanation="ok"
+        )
         d = r.to_dict()
         assert d["dimension"] == "d"
         assert d["score"] == 0.8
@@ -67,6 +76,7 @@ class TestJudgeResult:
 # Judgment Enum
 # ---------------------------------------------------------------------------
 
+
 class TestJudgment:
     def test_values(self) -> None:
         assert Judgment.PASS.value == "pass"
@@ -80,6 +90,7 @@ class TestJudgment:
 # ---------------------------------------------------------------------------
 # BaseJudge
 # ---------------------------------------------------------------------------
+
 
 class TestBaseJudge:
     def test_raises_not_implemented(self) -> None:
@@ -99,6 +110,7 @@ class TestBaseJudge:
 # ---------------------------------------------------------------------------
 # FaithfulnessJudge
 # ---------------------------------------------------------------------------
+
 
 class TestFaithfulnessJudge:
     def test_empty_answer_fails(self) -> None:
@@ -175,6 +187,7 @@ class TestFaithfulnessJudge:
 # RelevanceJudge
 # ---------------------------------------------------------------------------
 
+
 class TestRelevanceJudge:
     def test_empty_answer_fails(self) -> None:
         judge = RelevanceJudge()
@@ -184,7 +197,9 @@ class TestRelevanceJudge:
 
     def test_high_relevance(self) -> None:
         judge = RelevanceJudge()
-        result = judge.evaluate("what is machine learning", "machine learning is a field of ai", ["ctx"])
+        result = judge.evaluate(
+            "what is machine learning", "machine learning is a field of ai", ["ctx"]
+        )
         assert result.judgment == Judgment.PASS
 
     def test_no_overlap(self) -> None:
@@ -194,7 +209,9 @@ class TestRelevanceJudge:
 
     def test_partial_relevance(self) -> None:
         judge = RelevanceJudge()
-        result = judge.evaluate("what is deep learning in ai", "deep learning is a subset", ["ctx"])
+        result = judge.evaluate(
+            "what is deep learning in ai", "deep learning is a subset", ["ctx"]
+        )
         assert result.judgment in (Judgment.WARN, Judgment.PASS)
 
     def test_score_bounds(self) -> None:
@@ -223,6 +240,7 @@ class TestRelevanceJudge:
 # ---------------------------------------------------------------------------
 # HallucinationJudge
 # ---------------------------------------------------------------------------
+
 
 class TestHallucinationJudge:
     def test_empty_answer_passes(self) -> None:
@@ -259,12 +277,16 @@ class TestHallucinationJudge:
         assert result.score > 0
 
     def test_extract_claims(self) -> None:
-        claims = HallucinationJudge._extract_claims("Hello world. This is a test. Short.")
+        claims = HallucinationJudge._extract_claims(
+            "Hello world. This is a test. Short."
+        )
         assert len(claims) >= 2
 
     def test_claim_is_supported_not(self) -> None:
         ngrams = {"one two three", "four five six"}
-        assert not HallucinationJudge._claim_is_supported("the sky is blue today", ngrams)
+        assert not HallucinationJudge._claim_is_supported(
+            "the sky is blue today", ngrams
+        )
 
     def test_claim_is_supported_short(self) -> None:
         ngrams = {"hello world"}
@@ -290,6 +312,7 @@ class TestHallucinationJudge:
 # GroundingJudge
 # ---------------------------------------------------------------------------
 
+
 class TestGroundingJudge:
     def test_empty_answer_fails(self) -> None:
         judge = GroundingJudge()
@@ -305,16 +328,22 @@ class TestGroundingJudge:
 
     def test_high_word_overlap(self) -> None:
         judge = GroundingJudge(threshold_pass=0.7, threshold_warn=0.4)
-        result = judge.evaluate("q", "hello world test context extra", ["hello world test context extra"])
+        result = judge.evaluate(
+            "q", "hello world test context extra", ["hello world test context extra"]
+        )
         assert result.score > 0.7
 
     def test_low_word_overlap(self) -> None:
         judge = GroundingJudge()
-        result = judge.evaluate("q", "quantum physics theory", ["the cat sat on the mat"])
+        result = judge.evaluate(
+            "q", "quantum physics theory", ["the cat sat on the mat"]
+        )
         assert result.judgment == Judgment.FAIL
 
     def test_direct_quotes_found(self) -> None:
-        quotes = GroundingJudge._find_direct_quotes('He said "hello world" and "goodbye"')
+        quotes = GroundingJudge._find_direct_quotes(
+            'He said "hello world" and "goodbye"'
+        )
         assert len(quotes) == 2
         assert "hello world" in quotes
 
@@ -323,7 +352,9 @@ class TestGroundingJudge:
         assert len(quotes) == 0
 
     def test_word_overlap_with_stop_words(self) -> None:
-        ratio = GroundingJudge._compute_word_overlap("the cat sat", "the cat sat on mat")
+        ratio = GroundingJudge._compute_word_overlap(
+            "the cat sat", "the cat sat on mat"
+        )
         assert ratio > 0.5
 
     def test_word_overlap_empty_answer(self) -> None:
@@ -350,6 +381,7 @@ class TestGroundingJudge:
 # ---------------------------------------------------------------------------
 # CompositeJudge
 # ---------------------------------------------------------------------------
+
 
 class TestCompositeJudge:
     def test_empty_judges(self) -> None:
@@ -400,6 +432,7 @@ class TestCompositeJudge:
 # ---------------------------------------------------------------------------
 # Scoring Utilities
 # ---------------------------------------------------------------------------
+
 
 class TestScoring:
     def test_aggregate_scores_empty(self) -> None:
@@ -466,6 +499,7 @@ class TestScoring:
 # JudgingReport
 # ---------------------------------------------------------------------------
 
+
 class TestJudgingReport:
     def test_defaults(self) -> None:
         report = JudgingReport()
@@ -500,7 +534,7 @@ class TestJudgingReport:
 # Phase 9D — E2E Benchmark Pipeline
 # ======================================================================
 
-from benchmarks.e2e import (
+from benchmarks.e2e import (  # noqa: E402
     AblationComponentImpact,
     AblationReport,
     AblationValidationResult,
@@ -530,6 +564,7 @@ from benchmarks.e2e import (
 # ---------------------------------------------------------------------------
 # BenchmarkConfig
 # ---------------------------------------------------------------------------
+
 
 class TestBenchmarkConfig:
     def test_default_domains(self) -> None:
@@ -582,6 +617,7 @@ class TestBenchmarkConfig:
 # ExecutionMode / RunMode
 # ---------------------------------------------------------------------------
 
+
 class TestExecutionMode:
     def test_all_modes(self) -> None:
         assert ExecutionMode.NAIVE_RAG.value == "naive_rag"
@@ -608,6 +644,7 @@ class TestRunMode:
 # E2EDimensionScores
 # ---------------------------------------------------------------------------
 
+
 class TestE2EDimensionScores:
     def test_defaults(self) -> None:
         d = E2EDimensionScores()
@@ -617,13 +654,17 @@ class TestE2EDimensionScores:
         assert d.grounding == 0.0
 
     def test_to_dict(self) -> None:
-        d = E2EDimensionScores(faithfulness=0.9, relevance=0.8, hallucination=0.95, grounding=0.85)
+        d = E2EDimensionScores(
+            faithfulness=0.9, relevance=0.8, hallucination=0.95, grounding=0.85
+        )
         d2 = d.to_dict()
         assert d2["faithfulness"] == 0.9
         assert d2["relevance"] == 0.8
 
     def test_average(self) -> None:
-        d = E2EDimensionScores(faithfulness=1.0, relevance=0.5, hallucination=0.5, grounding=0.0)
+        d = E2EDimensionScores(
+            faithfulness=1.0, relevance=0.5, hallucination=0.5, grounding=0.0
+        )
         assert d.average == 0.5
 
 
@@ -631,27 +672,59 @@ class TestE2EDimensionScores:
 # E2EQueryResult
 # ---------------------------------------------------------------------------
 
+
 class TestE2EQueryResult:
     def test_defaults(self) -> None:
-        r = E2EQueryResult(query_id="q1", query="test", domain="finance", query_type="simple", execution_mode="naive_rag")
+        r = E2EQueryResult(
+            query_id="q1",
+            query="test",
+            domain="finance",
+            query_type="simple",
+            execution_mode="naive_rag",
+        )
         assert r.latency_ms == 0.0
         assert r.success is True
         assert r.composite_judgment == "fail"
 
     def test_to_dict(self) -> None:
-        r = E2EQueryResult(query_id="q1", query="hello", domain="finance", query_type="simple", execution_mode="naive_rag", composite_score=0.85, composite_judgment="pass")
+        r = E2EQueryResult(
+            query_id="q1",
+            query="hello",
+            domain="finance",
+            query_type="simple",
+            execution_mode="naive_rag",
+            composite_score=0.85,
+            composite_judgment="pass",
+        )
         d = r.to_dict()
         assert d["query_id"] == "q1"
         assert d["composite_score"] == 0.85
 
     def test_to_dict_with_dimensions(self) -> None:
-        dims = E2EDimensionScores(faithfulness=0.9, relevance=0.8, hallucination=0.95, grounding=0.85)
-        r = E2EQueryResult(query_id="q1", query="test", domain="f", query_type="s", execution_mode="m", dimension_scores=dims)
+        dims = E2EDimensionScores(
+            faithfulness=0.9, relevance=0.8, hallucination=0.95, grounding=0.85
+        )
+        r = E2EQueryResult(
+            query_id="q1",
+            query="test",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            dimension_scores=dims,
+        )
         d = r.to_dict()
         assert d["dimension_scores"]["faithfulness"] == 0.9
 
     def test_error_recording(self) -> None:
-        r = E2EQueryResult(query_id="q1", query="test", domain="f", query_type="s", execution_mode="m", success=False, error="timeout")
+        r = E2EQueryResult(
+            query_id="q1",
+            query="test",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            success=False,
+            error="timeout",
+        )
         assert r.success is False
         assert r.error == "timeout"
 
@@ -660,19 +733,32 @@ class TestE2EQueryResult:
 # E2EAggregatedResult
 # ---------------------------------------------------------------------------
 
+
 class TestE2EAggregatedResult:
     def test_defaults(self) -> None:
         r = E2EAggregatedResult(execution_mode="test", domain="finance")
         assert r.num_queries == 0
 
     def test_to_dict(self) -> None:
-        r = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", num_queries=100, avg_composite_score=0.89)
+        r = E2EAggregatedResult(
+            execution_mode="kairos_adaptive",
+            domain="finance",
+            num_queries=100,
+            avg_composite_score=0.89,
+        )
         d = r.to_dict()
         assert d["execution_mode"] == "kairos_adaptive"
         assert d["avg_composite_score"] == 0.89
 
     def test_pass_fail_warn_rates(self) -> None:
-        r = E2EAggregatedResult(execution_mode="test", domain="d", num_queries=100, pass_rate=0.8, fail_rate=0.1, warn_rate=0.1)
+        r = E2EAggregatedResult(
+            execution_mode="test",
+            domain="d",
+            num_queries=100,
+            pass_rate=0.8,
+            fail_rate=0.1,
+            warn_rate=0.1,
+        )
         assert r.pass_rate == 0.8
         assert r.fail_rate == 0.1
         assert r.warn_rate == 0.1
@@ -682,6 +768,7 @@ class TestE2EAggregatedResult:
 # E2EBenchmarkResult
 # ---------------------------------------------------------------------------
 
+
 class TestE2EBenchmarkResult:
     def test_defaults(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
@@ -690,7 +777,9 @@ class TestE2EBenchmarkResult:
 
     def test_to_dict(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance")
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag", domain="finance"
+        )
         d = br.to_dict()
         assert d["domain"] == "finance"
         assert "naive_rag" in d["mode_results"]
@@ -701,27 +790,38 @@ class TestE2EBenchmarkResult:
 
     def test_best_mode_with_results(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", avg_composite_score=0.72)
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag", domain="finance", avg_composite_score=0.72
+        )
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89
+        )
         assert br.best_mode() == "kairos_adaptive"
 
     def test_improvement_vs_baseline(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", avg_composite_score=0.72)
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag", domain="finance", avg_composite_score=0.72
+        )
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89
+        )
         imp = br.improvement_vs_baseline()
         assert "kairos_adaptive" in imp
         assert abs(imp["kairos_adaptive"] - 23.611) < 0.1
 
     def test_improvement_no_baseline(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89)
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89
+        )
         assert br.improvement_vs_baseline() == {}
 
 
 # ---------------------------------------------------------------------------
 # E2EBenchmarkRunner
 # ---------------------------------------------------------------------------
+
 
 class TestE2EBenchmarkRunner:
     def test_default_config(self) -> None:
@@ -744,7 +844,17 @@ class TestE2EBenchmarkRunner:
 
     def test_aggregate_single(self) -> None:
         runner = E2EBenchmarkRunner()
-        qr = E2EQueryResult(query_id="q1", query="test", domain="finance", query_type="simple", execution_mode="test", latency_ms=100.0, success=True, composite_score=0.8, composite_judgment="pass")
+        qr = E2EQueryResult(
+            query_id="q1",
+            query="test",
+            domain="finance",
+            query_type="simple",
+            execution_mode="test",
+            latency_ms=100.0,
+            success=True,
+            composite_score=0.8,
+            composite_judgment="pass",
+        )
         result = runner._aggregate([qr], "test_mode", "finance")
         assert result.num_queries == 1
         assert result.success_rate == 1.0
@@ -752,9 +862,30 @@ class TestE2EBenchmarkRunner:
 
     def test_aggregate_mixed_judgments(self) -> None:
         runner = E2EBenchmarkRunner()
-        qr1 = E2EQueryResult(query_id="q1", query="test", domain="f", query_type="s", execution_mode="m", composite_judgment="pass")
-        qr2 = E2EQueryResult(query_id="q2", query="test", domain="f", query_type="s", execution_mode="m", composite_judgment="fail")
-        qr3 = E2EQueryResult(query_id="q3", query="test", domain="f", query_type="s", execution_mode="m", composite_judgment="warn")
+        qr1 = E2EQueryResult(
+            query_id="q1",
+            query="test",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            composite_judgment="pass",
+        )
+        qr2 = E2EQueryResult(
+            query_id="q2",
+            query="test",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            composite_judgment="fail",
+        )
+        qr3 = E2EQueryResult(
+            query_id="q3",
+            query="test",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            composite_judgment="warn",
+        )
         result = runner._aggregate([qr1, qr2, qr3], "mode", "d")
         assert result.num_queries == 3
         assert result.pass_rate == 1.0 / 3.0
@@ -763,8 +894,19 @@ class TestE2EBenchmarkRunner:
 
     def test_aggregate_with_dimension_scores(self) -> None:
         runner = E2EBenchmarkRunner()
-        dims = E2EDimensionScores(faithfulness=0.9, relevance=0.8, hallucination=0.95, grounding=0.85)
-        qr = E2EQueryResult(query_id="q1", query="test", domain="f", query_type="s", execution_mode="m", composite_score=0.9, composite_judgment="pass", dimension_scores=dims)
+        dims = E2EDimensionScores(
+            faithfulness=0.9, relevance=0.8, hallucination=0.95, grounding=0.85
+        )
+        qr = E2EQueryResult(
+            query_id="q1",
+            query="test",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            composite_score=0.9,
+            composite_judgment="pass",
+            dimension_scores=dims,
+        )
         result = runner._aggregate([qr], "mode", "d")
         assert result.dimension_averages is not None
         assert result.dimension_averages.faithfulness == 0.9
@@ -772,21 +914,44 @@ class TestE2EBenchmarkRunner:
 
     def test_aggregate_success_rate(self) -> None:
         runner = E2EBenchmarkRunner()
-        qr1 = E2EQueryResult(query_id="q1", query="t", domain="f", query_type="s", execution_mode="m", success=True)
-        qr2 = E2EQueryResult(query_id="q2", query="t", domain="f", query_type="s", execution_mode="m", success=False)
+        qr1 = E2EQueryResult(
+            query_id="q1",
+            query="t",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            success=True,
+        )
+        qr2 = E2EQueryResult(
+            query_id="q2",
+            query="t",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            success=False,
+        )
         result = runner._aggregate([qr1, qr2], "mode", "d")
         assert result.success_rate == 0.5
 
     def test_aggregate_avg_confidence(self) -> None:
         runner = E2EBenchmarkRunner()
-        qr = E2EQueryResult(query_id="q1", query="t", domain="f", query_type="s", execution_mode="m", confidence=0.8)
+        qr = E2EQueryResult(
+            query_id="q1",
+            query="t",
+            domain="f",
+            query_type="s",
+            execution_mode="m",
+            confidence=0.8,
+        )
         result = runner._aggregate([qr], "mode", "d")
         assert result.avg_confidence == 0.8
 
     def test_save_results_temp_dir(self) -> None:
         runner = E2EBenchmarkRunner()
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["test"] = E2EAggregatedResult(execution_mode="test", domain="finance", num_queries=5)
+        br.mode_results["test"] = E2EAggregatedResult(
+            execution_mode="test", domain="finance", num_queries=5
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             path = runner.save_results({"finance": br}, output_dir=tmpdir)
             assert os.path.isdir(path)
@@ -798,13 +963,31 @@ class TestE2EBenchmarkRunner:
 # E2EBenchmarkReport
 # ---------------------------------------------------------------------------
 
+
 class TestE2EBenchmarkReport:
     def test_generate_report(self) -> None:
         config = BenchmarkConfig(domains=["finance"])
         report = E2EBenchmarkReport(config)
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", num_queries=100, avg_composite_score=0.72, avg_latency_ms=145.0, success_rate=0.95, pass_rate=0.68)
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", num_queries=100, avg_composite_score=0.89, avg_latency_ms=163.0, success_rate=0.97, pass_rate=0.85, dimension_averages=E2EDimensionScores(0.91, 0.88, 0.92, 0.85))
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag",
+            domain="finance",
+            num_queries=100,
+            avg_composite_score=0.72,
+            avg_latency_ms=145.0,
+            success_rate=0.95,
+            pass_rate=0.68,
+        )
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive",
+            domain="finance",
+            num_queries=100,
+            avg_composite_score=0.89,
+            avg_latency_ms=163.0,
+            success_rate=0.97,
+            pass_rate=0.85,
+            dimension_averages=E2EDimensionScores(0.91, 0.88, 0.92, 0.85),
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             path = report.generate({"finance": br}, output_dir=tmpdir)
             assert os.path.exists(path)
@@ -818,17 +1001,43 @@ class TestE2EBenchmarkReport:
 
     def test_cross_domain_summary_single(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["test"] = E2EAggregatedResult(execution_mode="test", domain="finance", num_queries=10, avg_composite_score=0.8, avg_latency_ms=100.0, success_rate=0.9, pass_rate=0.7)
+        br.mode_results["test"] = E2EAggregatedResult(
+            execution_mode="test",
+            domain="finance",
+            num_queries=10,
+            avg_composite_score=0.8,
+            avg_latency_ms=100.0,
+            success_rate=0.9,
+            pass_rate=0.7,
+        )
         summary = E2EBenchmarkReport._cross_domain_summary({"finance": br})
         assert "test" in summary
         assert abs(summary["test"]["avg_composite"] - 0.8) < 0.01
 
     def test_cross_domain_summary_multi(self) -> None:
         br1 = E2EBenchmarkResult(domain="finance")
-        br1.mode_results["test"] = E2EAggregatedResult(execution_mode="test", domain="finance", num_queries=10, avg_composite_score=0.8, avg_latency_ms=100.0, success_rate=0.9, pass_rate=0.7)
+        br1.mode_results["test"] = E2EAggregatedResult(
+            execution_mode="test",
+            domain="finance",
+            num_queries=10,
+            avg_composite_score=0.8,
+            avg_latency_ms=100.0,
+            success_rate=0.9,
+            pass_rate=0.7,
+        )
         br2 = E2EBenchmarkResult(domain="legal")
-        br2.mode_results["test"] = E2EAggregatedResult(execution_mode="test", domain="legal", num_queries=10, avg_composite_score=0.7, avg_latency_ms=150.0, success_rate=0.8, pass_rate=0.6)
-        summary = E2EBenchmarkReport._cross_domain_summary({"finance": br1, "legal": br2})
+        br2.mode_results["test"] = E2EAggregatedResult(
+            execution_mode="test",
+            domain="legal",
+            num_queries=10,
+            avg_composite_score=0.7,
+            avg_latency_ms=150.0,
+            success_rate=0.8,
+            pass_rate=0.6,
+        )
+        summary = E2EBenchmarkReport._cross_domain_summary(
+            {"finance": br1, "legal": br2}
+        )
         assert abs(summary["test"]["avg_composite"] - 0.75) < 0.01
         assert abs(summary["test"]["avg_latency"] - 125.0) < 0.01
 
@@ -837,19 +1046,45 @@ class TestE2EBenchmarkReport:
 # Phase 9E — Baseline Comparison
 # ======================================================================
 
+
 class TestModeComparison:
     def test_defaults(self) -> None:
-        mc = ModeComparison(mode="test", domain="finance", composite_score=0.8, latency_ms=100.0, pass_rate=0.7, fail_rate=0.1, success_rate=0.95)
+        mc = ModeComparison(
+            mode="test",
+            domain="finance",
+            composite_score=0.8,
+            latency_ms=100.0,
+            pass_rate=0.7,
+            fail_rate=0.1,
+            success_rate=0.95,
+        )
         assert mc.mode == "test"
         assert mc.composite_score == 0.8
 
     def test_to_dict(self) -> None:
-        mc = ModeComparison(mode="test", domain="finance", composite_score=0.8, latency_ms=100.0, pass_rate=0.7, fail_rate=0.1, success_rate=0.95, improvement_vs_baseline_pct=10.5)
+        mc = ModeComparison(
+            mode="test",
+            domain="finance",
+            composite_score=0.8,
+            latency_ms=100.0,
+            pass_rate=0.7,
+            fail_rate=0.1,
+            success_rate=0.95,
+            improvement_vs_baseline_pct=10.5,
+        )
         d = mc.to_dict()
         assert d["improvement_vs_baseline_pct"] == 10.5
 
     def test_without_improvement(self) -> None:
-        mc = ModeComparison(mode="test", domain="f", composite_score=0.8, latency_ms=100.0, pass_rate=0.7, fail_rate=0.1, success_rate=0.95)
+        mc = ModeComparison(
+            mode="test",
+            domain="f",
+            composite_score=0.8,
+            latency_ms=100.0,
+            pass_rate=0.7,
+            fail_rate=0.1,
+            success_rate=0.95,
+        )
         assert mc.improvement_vs_baseline_pct is None
 
 
@@ -860,46 +1095,56 @@ class TestCrossDomainComparison:
         assert cdc.best_performing_mode() == ""
 
     def test_by_mode(self) -> None:
-        cdc = CrossDomainComparison([
-            ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
-            ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
-            ModeComparison("naive_rag", "l", 0.68, 110, 0.55, 0.12, 0.88),
-        ])
+        cdc = CrossDomainComparison(
+            [
+                ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
+                ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
+                ModeComparison("naive_rag", "l", 0.68, 110, 0.55, 0.12, 0.88),
+            ]
+        )
         assert len(cdc.by_mode("naive_rag")) == 2
         assert len(cdc.by_mode("kairos")) == 1
 
     def test_by_domain(self) -> None:
-        cdc = CrossDomainComparison([
-            ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
-            ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
-        ])
+        cdc = CrossDomainComparison(
+            [
+                ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
+                ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
+            ]
+        )
         assert len(cdc.by_domain("f")) == 2
         assert len(cdc.by_domain("nonexistent")) == 0
 
     def test_best_performing_mode(self) -> None:
-        cdc = CrossDomainComparison([
-            ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
-            ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
-            ModeComparison("naive_rag", "l", 0.68, 110, 0.55, 0.12, 0.88),
-            ModeComparison("kairos", "l", 0.85, 130, 0.75, 0.06, 0.93),
-        ])
+        cdc = CrossDomainComparison(
+            [
+                ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
+                ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
+                ModeComparison("naive_rag", "l", 0.68, 110, 0.55, 0.12, 0.88),
+                ModeComparison("kairos", "l", 0.85, 130, 0.75, 0.06, 0.93),
+            ]
+        )
         assert cdc.best_performing_mode() == "kairos"
 
     def test_improvement_summary(self) -> None:
-        cdc = CrossDomainComparison([
-            ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
-            ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
-            ModeComparison("naive_rag", "l", 0.68, 110, 0.55, 0.12, 0.88),
-            ModeComparison("kairos", "l", 0.85, 130, 0.75, 0.06, 0.93),
-        ])
+        cdc = CrossDomainComparison(
+            [
+                ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
+                ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
+                ModeComparison("naive_rag", "l", 0.68, 110, 0.55, 0.12, 0.88),
+                ModeComparison("kairos", "l", 0.85, 130, 0.75, 0.06, 0.93),
+            ]
+        )
         imp = cdc.improvement_summary()
         assert "kairos" in imp
         assert imp["kairos"] > 0
 
     def test_improvement_summary_no_baseline(self) -> None:
-        cdc = CrossDomainComparison([
-            ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
-        ])
+        cdc = CrossDomainComparison(
+            [
+                ModeComparison("kairos", "f", 0.89, 120, 0.8, 0.05, 0.95),
+            ]
+        )
         assert cdc.improvement_summary() == {}
 
 
@@ -910,8 +1155,24 @@ class TestCompareModes:
 
     def test_single_domain(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", avg_composite_score=0.72, avg_latency_ms=145.0, pass_rate=0.68, fail_rate=0.12, success_rate=0.95)
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89, avg_latency_ms=163.0, pass_rate=0.85, fail_rate=0.05, success_rate=0.97)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag",
+            domain="finance",
+            avg_composite_score=0.72,
+            avg_latency_ms=145.0,
+            pass_rate=0.68,
+            fail_rate=0.12,
+            success_rate=0.95,
+        )
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive",
+            domain="finance",
+            avg_composite_score=0.89,
+            avg_latency_ms=163.0,
+            pass_rate=0.85,
+            fail_rate=0.05,
+            success_rate=0.97,
+        )
         cdc = compare_modes({"finance": br})
         assert len(cdc.comparisons) == 2
         kairos = [c for c in cdc.comparisons if c.mode == "kairos_adaptive"][0]
@@ -920,7 +1181,9 @@ class TestCompareModes:
 
     def test_improvement_null_baseline(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89)
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89
+        )
         cdc = compare_modes({"finance": br})
         kairos = [c for c in cdc.comparisons if c.mode == "kairos_adaptive"][0]
         assert kairos.improvement_vs_baseline_pct is None
@@ -933,10 +1196,14 @@ class TestGenerateComparisonReport:
         assert "Baseline Comparison" in report
 
     def test_with_data(self) -> None:
-        cdc = CrossDomainComparison([
-            ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
-            ModeComparison("kairos_adaptive", "f", 0.89, 120, 0.8, 0.05, 0.95, 23.6),
-        ])
+        cdc = CrossDomainComparison(
+            [
+                ModeComparison("naive_rag", "f", 0.72, 100, 0.6, 0.1, 0.9),
+                ModeComparison(
+                    "kairos_adaptive", "f", 0.89, 120, 0.8, 0.05, 0.95, 23.6
+                ),
+            ]
+        )
         report = generate_comparison_report(cdc)
         assert "23.6%" in report or "23.6" in report
         assert "Best overall mode" in report
@@ -946,14 +1213,28 @@ class TestGenerateComparisonReport:
 # Phase 9F — Ablation Validation
 # ======================================================================
 
+
 class TestAblationComponentImpact:
     def test_defaults(self) -> None:
-        aci = AblationComponentImpact(component="planner", composite_delta=0.1, latency_delta_ms=20.0, pass_rate_delta=0.05, fail_rate_delta=-0.02)
+        aci = AblationComponentImpact(
+            component="planner",
+            composite_delta=0.1,
+            latency_delta_ms=20.0,
+            pass_rate_delta=0.05,
+            fail_rate_delta=-0.02,
+        )
         assert aci.direction == "neutral"
         assert aci.composite_delta == 0.1
 
     def test_to_dict(self) -> None:
-        aci = AblationComponentImpact(component="planner", composite_delta=0.1, latency_delta_ms=20.0, pass_rate_delta=0.05, fail_rate_delta=-0.02, direction="improvement")
+        aci = AblationComponentImpact(
+            component="planner",
+            composite_delta=0.1,
+            latency_delta_ms=20.0,
+            pass_rate_delta=0.05,
+            fail_rate_delta=-0.02,
+            direction="improvement",
+        )
         d = aci.to_dict()
         assert d["direction"] == "improvement"
         assert d["component"] == "planner"
@@ -961,11 +1242,22 @@ class TestAblationComponentImpact:
 
 class TestAblationValidationResult:
     def test_defaults(self) -> None:
-        avr = AblationValidationResult(domain="finance", full_system_score=0.89, naive_baseline_score=0.72, overall_improvement_pct=23.6)
+        avr = AblationValidationResult(
+            domain="finance",
+            full_system_score=0.89,
+            naive_baseline_score=0.72,
+            overall_improvement_pct=23.6,
+        )
         assert avr.is_significant is False
 
     def test_to_dict(self) -> None:
-        avr = AblationValidationResult(domain="finance", full_system_score=0.89, naive_baseline_score=0.72, overall_improvement_pct=23.6, is_significant=True)
+        avr = AblationValidationResult(
+            domain="finance",
+            full_system_score=0.89,
+            naive_baseline_score=0.72,
+            overall_improvement_pct=23.6,
+            is_significant=True,
+        )
         d = avr.to_dict()
         assert d["overall_improvement_pct"] == 23.6
         assert d["is_significant"] is True
@@ -978,16 +1270,31 @@ class TestAblationReport:
         assert ar.all_significant is False
 
     def test_with_results(self) -> None:
-        ar = AblationReport(domain_results={
-            "finance": AblationValidationResult(domain="finance", full_system_score=0.89, naive_baseline_score=0.72, overall_improvement_pct=23.6, is_significant=True),
-        })
+        ar = AblationReport(
+            domain_results={
+                "finance": AblationValidationResult(
+                    domain="finance",
+                    full_system_score=0.89,
+                    naive_baseline_score=0.72,
+                    overall_improvement_pct=23.6,
+                    is_significant=True,
+                ),
+            }
+        )
         assert ar.average_improvement == 23.6
         assert ar.all_significant is True
 
     def test_to_dict(self) -> None:
-        ar = AblationReport(domain_results={
-            "f": AblationValidationResult(domain="f", full_system_score=0.89, naive_baseline_score=0.72, overall_improvement_pct=23.6),
-        })
+        ar = AblationReport(
+            domain_results={
+                "f": AblationValidationResult(
+                    domain="f",
+                    full_system_score=0.89,
+                    naive_baseline_score=0.72,
+                    overall_improvement_pct=23.6,
+                ),
+            }
+        )
         d = ar.to_dict()
         assert "f" in d["results"]
 
@@ -995,11 +1302,23 @@ class TestAblationReport:
 class TestComputeAblation:
     def test_normal_case(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", avg_composite_score=0.72)
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89)
-        br.mode_results["always_simple"] = E2EAggregatedResult(execution_mode="always_simple", domain="finance", avg_composite_score=0.75)
-        br.mode_results["always_complex"] = E2EAggregatedResult(execution_mode="always_complex", domain="finance", avg_composite_score=0.78)
-        br.mode_results["always_multi_hop"] = E2EAggregatedResult(execution_mode="always_multi_hop", domain="finance", avg_composite_score=0.80)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag", domain="finance", avg_composite_score=0.72
+        )
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89
+        )
+        br.mode_results["always_simple"] = E2EAggregatedResult(
+            execution_mode="always_simple", domain="finance", avg_composite_score=0.75
+        )
+        br.mode_results["always_complex"] = E2EAggregatedResult(
+            execution_mode="always_complex", domain="finance", avg_composite_score=0.78
+        )
+        br.mode_results["always_multi_hop"] = E2EAggregatedResult(
+            execution_mode="always_multi_hop",
+            domain="finance",
+            avg_composite_score=0.80,
+        )
         result = compute_ablation(br)
         assert result is not None
         assert result.overall_improvement_pct > 0
@@ -1007,18 +1326,26 @@ class TestComputeAblation:
 
     def test_missing_baseline(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89)
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89
+        )
         assert compute_ablation(br) is None
 
     def test_missing_kairos(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", avg_composite_score=0.72)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag", domain="finance", avg_composite_score=0.72
+        )
         assert compute_ablation(br) is None
 
     def test_zero_baseline_score(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", avg_composite_score=0.0)
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag", domain="finance", avg_composite_score=0.0
+        )
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89
+        )
         assert compute_ablation(br) is None
 
 
@@ -1029,11 +1356,23 @@ class TestComputeAblations:
 
     def test_single_domain(self) -> None:
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", avg_composite_score=0.72)
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89)
-        br.mode_results["always_simple"] = E2EAggregatedResult(execution_mode="always_simple", domain="finance", avg_composite_score=0.75)
-        br.mode_results["always_complex"] = E2EAggregatedResult(execution_mode="always_complex", domain="finance", avg_composite_score=0.78)
-        br.mode_results["always_multi_hop"] = E2EAggregatedResult(execution_mode="always_multi_hop", domain="finance", avg_composite_score=0.80)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag", domain="finance", avg_composite_score=0.72
+        )
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive", domain="finance", avg_composite_score=0.89
+        )
+        br.mode_results["always_simple"] = E2EAggregatedResult(
+            execution_mode="always_simple", domain="finance", avg_composite_score=0.75
+        )
+        br.mode_results["always_complex"] = E2EAggregatedResult(
+            execution_mode="always_complex", domain="finance", avg_composite_score=0.78
+        )
+        br.mode_results["always_multi_hop"] = E2EAggregatedResult(
+            execution_mode="always_multi_hop",
+            domain="finance",
+            avg_composite_score=0.80,
+        )
         report = compute_ablations({"finance": br})
         assert len(report.domain_results) == 1
         assert "finance" in report.domain_results
@@ -1045,11 +1384,22 @@ class TestGenerateAblationReport:
         assert "Ablation Validation Report" in report
 
     def test_with_data(self) -> None:
-        ar = AblationReport(domain_results={
-            "finance": AblationValidationResult(domain="finance", full_system_score=0.89, naive_baseline_score=0.72, overall_improvement_pct=23.6, is_significant=True, component_impacts=[
-                AblationComponentImpact("planner", 0.17, 18.0, 0.17, -0.07, "improvement"),
-            ]),
-        })
+        ar = AblationReport(
+            domain_results={
+                "finance": AblationValidationResult(
+                    domain="finance",
+                    full_system_score=0.89,
+                    naive_baseline_score=0.72,
+                    overall_improvement_pct=23.6,
+                    is_significant=True,
+                    component_impacts=[
+                        AblationComponentImpact(
+                            "planner", 0.17, 18.0, 0.17, -0.07, "improvement"
+                        ),
+                    ],
+                ),
+            }
+        )
         report = generate_ablation_report(ar)
         assert "Finance" in report
         assert "23.6" in report
@@ -1059,17 +1409,42 @@ class TestGenerateAblationReport:
 # Phase 9G — Cost Analysis
 # ======================================================================
 
+
 class TestCostBreakdown:
     def test_defaults(self) -> None:
-        cb = CostBreakdown(mode="test", domain="f", estimated_cost_usd=10.0, num_queries=100, avg_cost_per_query_usd=0.1, total_latency_ms=1000.0, num_docs_retrieved=500)
+        cb = CostBreakdown(
+            mode="test",
+            domain="f",
+            estimated_cost_usd=10.0,
+            num_queries=100,
+            avg_cost_per_query_usd=0.1,
+            total_latency_ms=1000.0,
+            num_docs_retrieved=500,
+        )
         assert cb.cost_per_doc_usd == 0.02
 
     def test_zero_docs(self) -> None:
-        cb = CostBreakdown(mode="test", domain="f", estimated_cost_usd=10.0, num_queries=100, avg_cost_per_query_usd=0.1, total_latency_ms=1000.0, num_docs_retrieved=0)
+        cb = CostBreakdown(
+            mode="test",
+            domain="f",
+            estimated_cost_usd=10.0,
+            num_queries=100,
+            avg_cost_per_query_usd=0.1,
+            total_latency_ms=1000.0,
+            num_docs_retrieved=0,
+        )
         assert cb.cost_per_doc_usd == 0.0
 
     def test_to_dict(self) -> None:
-        cb = CostBreakdown(mode="test", domain="f", estimated_cost_usd=10.0, num_queries=100, avg_cost_per_query_usd=0.1, total_latency_ms=1000.0, num_docs_retrieved=500)
+        cb = CostBreakdown(
+            mode="test",
+            domain="f",
+            estimated_cost_usd=10.0,
+            num_queries=100,
+            avg_cost_per_query_usd=0.1,
+            total_latency_ms=1000.0,
+            num_docs_retrieved=500,
+        )
         d = cb.to_dict()
         assert d["avg_cost_per_query_usd"] == 0.1
 
@@ -1080,38 +1455,54 @@ class TestCostAnalysisReport:
         assert car.total_cost() == 0.0
 
     def test_single_breakdown(self) -> None:
-        cb = CostBreakdown(mode="test", domain="f", estimated_cost_usd=10.0, num_queries=100, avg_cost_per_query_usd=0.1, total_latency_ms=1000.0, num_docs_retrieved=500)
+        cb = CostBreakdown(
+            mode="test",
+            domain="f",
+            estimated_cost_usd=10.0,
+            num_queries=100,
+            avg_cost_per_query_usd=0.1,
+            total_latency_ms=1000.0,
+            num_docs_retrieved=500,
+        )
         car = CostAnalysisReport(breakdowns=[cb])
         assert car.total_cost() == 10.0
         assert car.avg_cost_per_query("test") == 0.1
 
     def test_by_mode(self) -> None:
-        car = CostAnalysisReport([
-            CostBreakdown("mode1", "f", 10.0, 100, 0.1, 1000, 500),
-            CostBreakdown("mode2", "f", 20.0, 100, 0.2, 2000, 1000),
-        ])
+        car = CostAnalysisReport(
+            [
+                CostBreakdown("mode1", "f", 10.0, 100, 0.1, 1000, 500),
+                CostBreakdown("mode2", "f", 20.0, 100, 0.2, 2000, 1000),
+            ]
+        )
         assert len(car.by_mode("mode1")) == 1
         assert len(car.by_mode("nonexistent")) == 0
 
     def test_by_domain(self) -> None:
-        car = CostAnalysisReport([
-            CostBreakdown("m1", "f", 10.0, 100, 0.1, 1000, 500),
-            CostBreakdown("m1", "l", 20.0, 100, 0.2, 2000, 1000),
-        ])
+        car = CostAnalysisReport(
+            [
+                CostBreakdown("m1", "f", 10.0, 100, 0.1, 1000, 500),
+                CostBreakdown("m1", "l", 20.0, 100, 0.2, 2000, 1000),
+            ]
+        )
         assert len(car.by_domain("f")) == 1
 
     def test_cost_ratio(self) -> None:
-        car = CostAnalysisReport([
-            CostBreakdown("naive_rag", "f", 10.0, 100, 0.1, 1000, 500),
-            CostBreakdown("kairos", "f", 15.0, 100, 0.15, 1500, 750),
-        ])
+        car = CostAnalysisReport(
+            [
+                CostBreakdown("naive_rag", "f", 10.0, 100, 0.1, 1000, 500),
+                CostBreakdown("kairos", "f", 15.0, 100, 0.15, 1500, 750),
+            ]
+        )
         ratio = car.cost_ratio_vs_baseline("kairos")
         assert abs(ratio - 1.5) < 0.01
 
     def test_to_dict(self) -> None:
-        car = CostAnalysisReport([
-            CostBreakdown("test", "f", 10.0, 100, 0.1, 1000, 500),
-        ])
+        car = CostAnalysisReport(
+            [
+                CostBreakdown("test", "f", 10.0, 100, 0.1, 1000, 500),
+            ]
+        )
         d = car.to_dict()
         assert d["total_cost_usd"] == 10.0
         assert d["num_modes"] == 1
@@ -1124,7 +1515,12 @@ class TestCostAnalyzer:
         assert ca.llm_call_cost == 0.002
 
     def test_custom_rates(self) -> None:
-        ca = CostAnalyzer(embedding_cost=0.001, llm_call_cost=0.01, storage_cost=0.0001, latency_cost=0.00001)
+        ca = CostAnalyzer(
+            embedding_cost=0.001,
+            llm_call_cost=0.01,
+            storage_cost=0.0001,
+            latency_cost=0.00001,
+        )
         assert ca.embedding_cost == 0.001
 
     def test_analyze_empty(self) -> None:
@@ -1135,7 +1531,13 @@ class TestCostAnalyzer:
     def test_analyze_single_domain(self) -> None:
         ca = CostAnalyzer()
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", num_queries=100, avg_latency_ms=145.0, avg_docs=4.2)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag",
+            domain="finance",
+            num_queries=100,
+            avg_latency_ms=145.0,
+            avg_docs=4.2,
+        )
         report = ca.analyze({"finance": br})
         assert len(report.breakdowns) == 1
         assert report.breakdowns[0].estimated_cost_usd > 0
@@ -1143,8 +1545,20 @@ class TestCostAnalyzer:
     def test_analyze_multi_mode(self) -> None:
         ca = CostAnalyzer()
         br = E2EBenchmarkResult(domain="finance")
-        br.mode_results["naive_rag"] = E2EAggregatedResult(execution_mode="naive_rag", domain="finance", num_queries=100, avg_latency_ms=145.0, avg_docs=4.2)
-        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(execution_mode="kairos_adaptive", domain="finance", num_queries=100, avg_latency_ms=163.0, avg_docs=4.6)
+        br.mode_results["naive_rag"] = E2EAggregatedResult(
+            execution_mode="naive_rag",
+            domain="finance",
+            num_queries=100,
+            avg_latency_ms=145.0,
+            avg_docs=4.2,
+        )
+        br.mode_results["kairos_adaptive"] = E2EAggregatedResult(
+            execution_mode="kairos_adaptive",
+            domain="finance",
+            num_queries=100,
+            avg_latency_ms=163.0,
+            avg_docs=4.6,
+        )
         report = ca.analyze({"finance": br})
         assert len(report.breakdowns) == 2
 
@@ -1155,10 +1569,12 @@ class TestGenerateCostReport:
         assert "Cost Analysis" in report
 
     def test_with_data(self) -> None:
-        car = CostAnalysisReport([
-            CostBreakdown("naive_rag", "f", 12.5, 100, 0.0123, 14500, 420),
-            CostBreakdown("kairos_adaptive", "f", 14.8, 100, 0.0145, 16300, 460),
-        ])
+        car = CostAnalysisReport(
+            [
+                CostBreakdown("naive_rag", "f", 12.5, 100, 0.0123, 14500, 420),
+                CostBreakdown("kairos_adaptive", "f", 14.8, 100, 0.0145, 16300, 460),
+            ]
+        )
         report = generate_cost_report(car)
         assert "12.5" in report or "$12.5" in report
         assert "1.18" in report or "1.18x" in report
@@ -1168,8 +1584,8 @@ class TestGenerateCostReport:
 # Phase 9A — RealRetriever (additional tests)
 # ======================================================================
 
-from intelligence.retrieval.real_retriever import RealRetriever
-from intelligence.retrieval.retrieval_result import RetrievedDocument, RetrievalResult
+from intelligence.retrieval.real_retriever import RealRetriever  # noqa: E402
+from intelligence.retrieval.retrieval_result import RetrievedDocument, RetrievalResult  # noqa: E402
 
 
 class TestRealRetrieverAdditional:
@@ -1195,7 +1611,9 @@ class TestRealRetrieverAdditional:
         assert docs[0].score == 0.9
 
     def test_normalize_documents_dicts(self) -> None:
-        docs = RealRetriever._normalize_documents([{"text": "hello", "score": 0.95, "source_id": "src1"}])
+        docs = RealRetriever._normalize_documents(
+            [{"text": "hello", "score": 0.95, "source_id": "src1"}]
+        )
         assert docs[0].text == "hello"
         assert docs[0].score == 0.95
         assert docs[0].source_id == "src1"
@@ -1207,12 +1625,16 @@ class TestRealRetrieverAdditional:
 
     def test_normalize_documents_mixed(self) -> None:
         rd = RetrievedDocument(text="doc_obj", score=0.5)
-        docs = RealRetriever._normalize_documents([rd, "string_doc", ("tuple_doc", 0.8)])
+        docs = RealRetriever._normalize_documents(
+            [rd, "string_doc", ("tuple_doc", 0.8)]
+        )
         assert len(docs) == 3
 
     def test_plan_and_retrieve_no_planner(self) -> None:
         simple = MagicMock()
-        simple.retrieve.return_value = RetrievalResult(query="test", documents=[RetrievedDocument(text="doc")])
+        simple.retrieve.return_value = RetrievalResult(
+            query="test", documents=[RetrievedDocument(text="doc")]
+        )
         rr = RealRetriever(simple, MagicMock(), MagicMock())
         result = rr.plan_and_retrieve("test")
         assert result.query == "test"
@@ -1230,13 +1652,17 @@ class TestRealRetrieverAdditional:
 # Phase 9A — RetrievalResult (additional tests)
 # ======================================================================
 
+
 class TestRetrievalResultAdditional:
     def test_num_documents_empty(self) -> None:
         rr = RetrievalResult(query="test")
         assert rr.num_documents == 0
 
     def test_num_documents_with_docs(self) -> None:
-        rr = RetrievalResult(query="test", documents=[RetrievedDocument(text="doc1"), RetrievedDocument(text="doc2")])
+        rr = RetrievalResult(
+            query="test",
+            documents=[RetrievedDocument(text="doc1"), RetrievedDocument(text="doc2")],
+        )
         assert rr.num_documents == 2
 
     def test_top_score_empty(self) -> None:
@@ -1244,7 +1670,13 @@ class TestRetrievalResultAdditional:
         assert rr.top_score == 0.0
 
     def test_top_score_with_docs(self) -> None:
-        rr = RetrievalResult(query="test", documents=[RetrievedDocument(text="a", score=0.5), RetrievedDocument(text="b", score=0.9)])
+        rr = RetrievalResult(
+            query="test",
+            documents=[
+                RetrievedDocument(text="a", score=0.5),
+                RetrievedDocument(text="b", score=0.9),
+            ],
+        )
         assert rr.top_score == 0.9
 
     def test_mean_score_empty(self) -> None:
@@ -1252,7 +1684,13 @@ class TestRetrievalResultAdditional:
         assert rr.mean_score == 0.0
 
     def test_mean_score_with_docs(self) -> None:
-        rr = RetrievalResult(query="test", documents=[RetrievedDocument(text="a", score=0.5), RetrievedDocument(text="b", score=0.9)])
+        rr = RetrievalResult(
+            query="test",
+            documents=[
+                RetrievedDocument(text="a", score=0.5),
+                RetrievedDocument(text="b", score=0.9),
+            ],
+        )
         assert rr.mean_score == 0.7
 
 
@@ -1260,9 +1698,14 @@ class TestRetrievalResultAdditional:
 # Phase 9B — Dataset generator
 # ======================================================================
 
-from benchmarks.datasets.generator import (
-    DOMAIN_CONFIGS, GoldDatasetEntry,
-    generate_all_datasets, generate_dataset, get_dataset, list_datasets, total_queries,
+from benchmarks.datasets.generator import (  # noqa: E402
+    DOMAIN_CONFIGS,
+    GoldDatasetEntry,
+    generate_all_datasets,
+    generate_dataset,
+    get_dataset,
+    list_datasets,
+    total_queries,
 )
 
 
@@ -1273,7 +1716,14 @@ class TestGoldDatasetEntry:
         assert entry.domain == ""
 
     def test_to_dict(self) -> None:
-        entry = GoldDatasetEntry(query_id="test-001", question="What?", answer="Answer", relevant_docs=["doc1"], difficulty="complex", domain="tech")
+        entry = GoldDatasetEntry(
+            query_id="test-001",
+            question="What?",
+            answer="Answer",
+            relevant_docs=["doc1"],
+            difficulty="complex",
+            domain="tech",
+        )
         d = entry.to_dict()
         assert d["id"] == "test-001"
         assert d["difficulty"] == "complex"
@@ -1376,6 +1826,7 @@ class TestDatasetGenerator:
 # Phase 9 — Dataset loader (from generator)
 # ======================================================================
 
+
 class TestDatasetFromGenerator:
     def test_all_datasets_have_entries(self) -> None:
         for domain in list_datasets():
@@ -1396,8 +1847,11 @@ class TestDatasetFromGenerator:
 # Dashboard Pages — smoke tests (import verification)
 # ======================================================================
 
-import sys
-_DASHBOARD_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "apps", "internal-dashboard")
+import sys  # noqa: E402
+
+_DASHBOARD_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "apps", "internal-dashboard"
+)
 if _DASHBOARD_PATH not in sys.path:
     sys.path.insert(0, _DASHBOARD_PATH)
 
@@ -1405,31 +1859,37 @@ if _DASHBOARD_PATH not in sys.path:
 class TestDashboardPagesImport:
     def test_leaderboard_page_imports(self) -> None:
         import importlib
+
         spec = importlib.util.find_spec("dashboard.pages.leaderboard")
         assert spec is not None, "leaderboard.py should be importable"
 
     def test_domain_analysis_page_imports(self) -> None:
         import importlib
+
         spec = importlib.util.find_spec("dashboard.pages.domain_analysis")
         assert spec is not None
 
     def test_planner_analysis_page_imports(self) -> None:
         import importlib
+
         spec = importlib.util.find_spec("dashboard.pages.planner_analysis")
         assert spec is not None
 
     def test_cost_analysis_page_imports(self) -> None:
         import importlib
+
         spec = importlib.util.find_spec("dashboard.pages.cost_analysis")
         assert spec is not None
 
     def test_judge_dashboard_page_imports(self) -> None:
         import importlib
+
         spec = importlib.util.find_spec("dashboard.pages.judge_dashboard")
         assert spec is not None
 
     def test_comparisons_page_imports(self) -> None:
         import importlib
+
         spec = importlib.util.find_spec("dashboard.pages.comparisons")
         assert spec is not None
 
@@ -1438,7 +1898,7 @@ class TestDashboardPagesImport:
 # CorpusManager
 # ======================================================================
 
-from intelligence.retrieval.corpus_manager import CorpusDocument, CorpusManager
+from intelligence.retrieval.corpus_manager import CorpusDocument, CorpusManager  # noqa: E402
 
 
 class TestCorpusDocument:
@@ -1531,7 +1991,7 @@ class TestCorpusManager:
 # RetrievalExecutor
 # ======================================================================
 
-from intelligence.retrieval.retrieval_executor import RetrievalExecutor
+from intelligence.retrieval.retrieval_executor import RetrievalExecutor  # noqa: E402
 
 
 class TestRetrievalExecutor:
@@ -1547,7 +2007,7 @@ class TestRetrievalExecutor:
         mock_r = MagicMock()
         mock_r.plan_and_retrieve.return_value = RetrievalResult(query="test")
         re = RetrievalExecutor(retriever=mock_r, enable_planning=True)
-        result = re.execute("test")
+        re.execute("test")
         mock_r.plan_and_retrieve.assert_called_once()
 
     def test_execute_batch(self) -> None:
@@ -1577,12 +2037,15 @@ class TestRetrievalExecutor:
 # E2EBenchmarkRunner — error handling
 # ======================================================================
 
+
 class TestE2ERunnerErrorHandling:
     def test_retrieve_throws_exception(self) -> None:
         runner = E2EBenchmarkRunner()
         bad_retriever = MagicMock()
         bad_retriever.retrieve.side_effect = RuntimeError("fail")
-        entry = GoldDatasetEntry(query_id="q1", question="test?", difficulty="simple", domain="f")
+        entry = GoldDatasetEntry(
+            query_id="q1", question="test?", difficulty="simple", domain="f"
+        )
         qr = runner._run_query(entry, bad_retriever, ExecutionMode.NAIVE_RAG)
         assert qr.success is False
         assert "fail" in qr.error
@@ -1590,18 +2053,24 @@ class TestE2ERunnerErrorHandling:
     def test_no_retrieve_method(self) -> None:
         runner = E2EBenchmarkRunner()
         bad_retriever = object()
-        entry = GoldDatasetEntry(query_id="q1", question="test?", difficulty="simple", domain="f")
+        entry = GoldDatasetEntry(
+            query_id="q1", question="test?", difficulty="simple", domain="f"
+        )
         qr = runner._run_query(entry, bad_retriever, ExecutionMode.NAIVE_RAG)
         assert qr.success is not False  # should not crash
 
     def test_retrieve_returns_list(self) -> None:
         runner = E2EBenchmarkRunner()
+
         # Mock an object with retrieve_top_k but not retrieve
         class MockRet:
             def retrieve_top_k(self, **kwargs):
                 return ["chunk1", "chunk2"]
+
         qr = runner._run_query(
-            GoldDatasetEntry(query_id="q1", question="test?", difficulty="simple", domain="f"),
+            GoldDatasetEntry(
+                query_id="q1", question="test?", difficulty="simple", domain="f"
+            ),
             MockRet(),
             ExecutionMode.ALWAYS_SIMPLE,
         )
@@ -1612,6 +2081,7 @@ class TestE2ERunnerErrorHandling:
 # ======================================================================
 # BenchmarkConfig — edge cases
 # ======================================================================
+
 
 class TestBenchmarkConfigEdgeCases:
     def test_empty_domains(self) -> None:
@@ -1642,6 +2112,7 @@ class TestBenchmarkConfigEdgeCases:
 # Scoring edge cases
 # ======================================================================
 
+
 class TestScoringEdgeCases:
     def test_weight_scores_empty_results(self) -> None:
         assert weight_scores([], {"d": 1.0}) == 0.0
@@ -1668,6 +2139,7 @@ class TestScoringEdgeCases:
 # E2EBenchmarkRunner — save_results edge cases
 # ======================================================================
 
+
 class TestE2ERunnerSaveResults:
     def test_save_results_empty(self) -> None:
         runner = E2EBenchmarkRunner()
@@ -1679,9 +2151,13 @@ class TestE2ERunnerSaveResults:
     def test_save_results_multi_domain(self) -> None:
         runner = E2EBenchmarkRunner()
         br1 = E2EBenchmarkResult(domain="finance")
-        br1.mode_results["test"] = E2EAggregatedResult(execution_mode="test", domain="finance", num_queries=5)
+        br1.mode_results["test"] = E2EAggregatedResult(
+            execution_mode="test", domain="finance", num_queries=5
+        )
         br2 = E2EBenchmarkResult(domain="legal")
-        br2.mode_results["test"] = E2EAggregatedResult(execution_mode="test", domain="legal", num_queries=5)
+        br2.mode_results["test"] = E2EAggregatedResult(
+            execution_mode="test", domain="legal", num_queries=5
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             runner.save_results({"finance": br1, "legal": br2}, output_dir=tmpdir)
             assert os.path.exists(os.path.join(tmpdir, "finance_benchmark.json"))
@@ -1693,27 +2169,42 @@ class TestE2ERunnerSaveResults:
 # E2EBenchmarkResult — edge cases
 # ======================================================================
 
+
 class TestE2EBenchmarkResultEdgeCases:
     def test_improvement_vs_baseline_all_modes(self) -> None:
         br = E2EBenchmarkResult(domain="f")
-        modes = ["naive_rag", "always_simple", "always_complex", "always_multi_hop", "kairos_adaptive"]
+        modes = [
+            "naive_rag",
+            "always_simple",
+            "always_complex",
+            "always_multi_hop",
+            "kairos_adaptive",
+        ]
         scores = [0.72, 0.75, 0.78, 0.80, 0.89]
         for mode, score in zip(modes, scores):
-            br.mode_results[mode] = E2EAggregatedResult(execution_mode=mode, domain="f", avg_composite_score=score)
+            br.mode_results[mode] = E2EAggregatedResult(
+                execution_mode=mode, domain="f", avg_composite_score=score
+            )
         imp = br.improvement_vs_baseline()
         assert len(imp) == 4
         assert imp["kairos_adaptive"] > imp["always_multi_hop"]
 
     def test_best_mode_tie(self) -> None:
         br = E2EBenchmarkResult(domain="f")
-        br.mode_results["a"] = E2EAggregatedResult(execution_mode="a", domain="f", avg_composite_score=0.8)
-        br.mode_results["b"] = E2EAggregatedResult(execution_mode="b", domain="f", avg_composite_score=0.8)
+        br.mode_results["a"] = E2EAggregatedResult(
+            execution_mode="a", domain="f", avg_composite_score=0.8
+        )
+        br.mode_results["b"] = E2EAggregatedResult(
+            execution_mode="b", domain="f", avg_composite_score=0.8
+        )
         best = br.best_mode()
         assert best in ("a", "b")
 
     def test_improvement_vs_baseline_nonexistent(self) -> None:
         br = E2EBenchmarkResult(domain="f")
-        br.mode_results["kairos"] = E2EAggregatedResult(execution_mode="kairos", domain="f", avg_composite_score=0.8)
+        br.mode_results["kairos"] = E2EAggregatedResult(
+            execution_mode="kairos", domain="f", avg_composite_score=0.8
+        )
         assert br.improvement_vs_baseline("nonexistent") == {}
 
 
@@ -1721,44 +2212,57 @@ class TestE2EBenchmarkResultEdgeCases:
 # Debug dashboard pages load (import-level only, no streamlit runtime)
 # ======================================================================
 
+
 class TestDashboardPageContent:
     def test_leaderboard_functions_exist(self) -> None:
         from dashboard.pages import leaderboard
+
         assert leaderboard is not None
         # Verify main function exists
         assert hasattr(leaderboard, "main")
 
     def test_domain_analysis_functions_exist(self) -> None:
         from dashboard.pages import domain_analysis
+
         assert hasattr(domain_analysis, "main")
 
     def test_planner_analysis_functions_exist(self) -> None:
         from dashboard.pages import planner_analysis
+
         assert hasattr(planner_analysis, "main")
 
     def test_cost_analysis_functions_exist(self) -> None:
         from dashboard.pages import cost_analysis
+
         assert hasattr(cost_analysis, "main")
 
     def test_judge_dashboard_functions_exist(self) -> None:
         from dashboard.pages import judge_dashboard
+
         assert hasattr(judge_dashboard, "main")
 
     def test_comparisons_functions_exist(self) -> None:
         from dashboard.pages import comparisons
+
         assert hasattr(comparisons, "main")
 
     def test_dashboard_app_functions_exist(self) -> None:
         from dashboard import app
+
         assert hasattr(app, "main")
 
     def test_all_pages_have_set_page_config(self) -> None:
         pages = [
-            "leaderboard", "domain_analysis", "planner_analysis",
-            "cost_analysis", "judge_dashboard", "comparisons",
+            "leaderboard",
+            "domain_analysis",
+            "planner_analysis",
+            "cost_analysis",
+            "judge_dashboard",
+            "comparisons",
         ]
         for page_name in pages:
             import importlib
+
             module = importlib.import_module(f"dashboard.pages.{page_name}")
             assert hasattr(module, "main"), f"{page_name}.py missing main()"
 
@@ -1766,6 +2270,7 @@ class TestDashboardPageContent:
 # ======================================================================
 # Integration: GoldDatasetEntry -> E2EQueryResult conversion
 # ======================================================================
+
 
 class TestGoldToE2EIntegration:
     def test_entry_conversion_preserves_fields(self) -> None:
@@ -1793,6 +2298,7 @@ class TestGoldToE2EIntegration:
 # ======================================================================
 # Config label verification
 # ======================================================================
+
 
 class TestModeLabels:
     def test_all_labels_present(self) -> None:

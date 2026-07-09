@@ -20,36 +20,88 @@ from intelligence.feedback.models import FeedbackRecord
 @pytest.fixture
 def records() -> list:
     return [
-        FeedbackRecord(query_id="q001", query="q1", query_type="SIMPLE",
-                        retrieval_type="HYBRID", confidence=0.9,
-                        calibrated_confidence=0.88, top_k=3, rerank=False,
-                        decompose=False, answer_accepted=True, answer_rating=5),
-        FeedbackRecord(query_id="q002", query="q2", query_type="SIMPLE",
-                        retrieval_type="HYBRID", confidence=0.8,
-                        calibrated_confidence=0.78, top_k=5, rerank=True,
-                        decompose=False, answer_accepted=True, answer_rating=4),
-        FeedbackRecord(query_id="q003", query="q3", query_type="COMPLEX",
-                        retrieval_type="MULTI_VECTOR", confidence=0.7,
-                        calibrated_confidence=0.68, top_k=8, rerank=True,
-                        decompose=False, answer_accepted=False, answer_rating=2),
-        FeedbackRecord(query_id="q004", query="q4", query_type="MULTI_HOP",
-                        retrieval_type="SELF_QUERYING", confidence=0.6,
-                        calibrated_confidence=0.55, top_k=5, rerank=True,
-                        decompose=True, answer_accepted=False, answer_rating=1),
+        FeedbackRecord(
+            query_id="q001",
+            query="q1",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.9,
+            calibrated_confidence=0.88,
+            top_k=3,
+            rerank=False,
+            decompose=False,
+            answer_accepted=True,
+            answer_rating=5,
+        ),
+        FeedbackRecord(
+            query_id="q002",
+            query="q2",
+            query_type="SIMPLE",
+            retrieval_type="HYBRID",
+            confidence=0.8,
+            calibrated_confidence=0.78,
+            top_k=5,
+            rerank=True,
+            decompose=False,
+            answer_accepted=True,
+            answer_rating=4,
+        ),
+        FeedbackRecord(
+            query_id="q003",
+            query="q3",
+            query_type="COMPLEX",
+            retrieval_type="MULTI_VECTOR",
+            confidence=0.7,
+            calibrated_confidence=0.68,
+            top_k=8,
+            rerank=True,
+            decompose=False,
+            answer_accepted=False,
+            answer_rating=2,
+        ),
+        FeedbackRecord(
+            query_id="q004",
+            query="q4",
+            query_type="MULTI_HOP",
+            retrieval_type="SELF_QUERYING",
+            confidence=0.6,
+            calibrated_confidence=0.55,
+            top_k=5,
+            rerank=True,
+            decompose=True,
+            answer_accepted=False,
+            answer_rating=1,
+        ),
     ]
 
 
 class TestAcceptanceRate:
     def test_all_accepted(self) -> None:
         rs = [
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
-            FeedbackRecord(query_id="q2", query="q2", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
+            FeedbackRecord(
+                query_id="q1",
+                query="q1",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=True,
+            ),
+            FeedbackRecord(
+                query_id="q2",
+                query="q2",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=True,
+            ),
         ]
         assert compute_acceptance_rate(rs) == 1.0
 
@@ -66,10 +118,18 @@ class TestAvgRating:
 
     def test_no_ratings(self) -> None:
         rs = [
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
+            FeedbackRecord(
+                query_id="q1",
+                query="q1",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=True,
+            ),
         ]
         assert compute_avg_rating(rs) == 0.0
 
@@ -120,41 +180,87 @@ class TestBudgetImprovement:
 class TestLearningGain:
     def test_positive_gain(self) -> None:
         old = [
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=False),
+            FeedbackRecord(
+                query_id="q1",
+                query="q1",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=False,
+            ),
         ]
         new = [
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
+            FeedbackRecord(
+                query_id="q1",
+                query="q1",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=True,
+            ),
         ]
         assert compute_learning_gain(old, new) == 1.0
 
     def test_negative_gain(self) -> None:
         old = [
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=True),
+            FeedbackRecord(
+                query_id="q1",
+                query="q1",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=True,
+            ),
         ]
         new = [
-            FeedbackRecord(query_id="q1", query="q1", query_type="SIMPLE",
-                           retrieval_type="HYBRID", confidence=0.9,
-                           calibrated_confidence=0.9, top_k=3, rerank=False,
-                           decompose=False, answer_accepted=False),
+            FeedbackRecord(
+                query_id="q1",
+                query="q1",
+                query_type="SIMPLE",
+                retrieval_type="HYBRID",
+                confidence=0.9,
+                calibrated_confidence=0.9,
+                top_k=3,
+                rerank=False,
+                decompose=False,
+                answer_accepted=False,
+            ),
         ]
         assert compute_learning_gain(old, new) == -1.0
 
     def test_empty_old(self) -> None:
-        assert compute_learning_gain([], [FeedbackRecord(
-            query_id="q1", query="q1", query_type="SIMPLE",
-            retrieval_type="HYBRID", confidence=0.9,
-            calibrated_confidence=0.9, top_k=3, rerank=False,
-            decompose=False, answer_accepted=True,
-        )]) == 1.0
+        assert (
+            compute_learning_gain(
+                [],
+                [
+                    FeedbackRecord(
+                        query_id="q1",
+                        query="q1",
+                        query_type="SIMPLE",
+                        retrieval_type="HYBRID",
+                        confidence=0.9,
+                        calibrated_confidence=0.9,
+                        top_k=3,
+                        rerank=False,
+                        decompose=False,
+                        answer_accepted=True,
+                    )
+                ],
+            )
+            == 1.0
+        )
 
 
 class TestFeedbackReport:

@@ -26,8 +26,12 @@ class EmbeddingCache:
     _lock: RLock = field(default_factory=RLock, repr=False)
     _hits: int = 0
     _misses: int = 0
-    on_hit: Optional[Callable[[], None]] = field(default=None, compare=False, repr=False)
-    on_miss: Optional[Callable[[], None]] = field(default=None, compare=False, repr=False)
+    on_hit: Optional[Callable[[], None]] = field(
+        default=None, compare=False, repr=False
+    )
+    on_miss: Optional[Callable[[], None]] = field(
+        default=None, compare=False, repr=False
+    )
 
     def get(self, key: str) -> list[float] | None:
         with self._lock:

@@ -96,7 +96,9 @@ def aggregate_results(
         }
 
     recalls = [r.average_recall for r in results if r.average_recall is not None]
-    precisions = [r.average_precision for r in results if r.average_precision is not None]
+    precisions = [
+        r.average_precision for r in results if r.average_precision is not None
+    ]
 
     return {
         "dataset_count": n,

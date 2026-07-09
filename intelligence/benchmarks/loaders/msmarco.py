@@ -17,11 +17,11 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from benchmarks.dataset.loader import QueryEntry
 
-from intelligence.benchmarks.loaders import _to_str_list, _to_text
+from intelligence.benchmarks.loaders import _to_text
 
 
 def load_msmarco(

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from fastapi import APIRouter, HTTPException
 
 from intelligence.observability.metrics_registry import MetricsRegistry
-from intelligence.observability.performance_monitor import PerformanceMonitor, LatencySnapshot
+from intelligence.observability.performance_monitor import PerformanceMonitor
 from intelligence.observability.alerting import AlertManager
 from intelligence.observability.dashboard_metrics import DashboardMetricsCollector
 

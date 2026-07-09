@@ -7,8 +7,7 @@ from typing import Dict, List, Optional
 
 class SecretProvider(ABC):
     @abstractmethod
-    def get(self, key: str) -> Optional[str]:
-        ...
+    def get(self, key: str) -> Optional[str]: ...
 
     def get_or_raise(self, key: str) -> str:
         value = self.get(key)

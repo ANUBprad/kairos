@@ -17,7 +17,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
         validator: APIKeyValidator | None = None,
     ) -> None:
         super().__init__(app)
-        self._exclude_paths = exclude_paths or {"/health", "/docs", "/redoc", "/openapi.json"}
+        self._exclude_paths = exclude_paths or {
+            "/health",
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+        }
         self._validator = validator or get_api_key_validator()
 
     async def dispatch(self, request: Request, call_next: Callable) -> JSONResponse:

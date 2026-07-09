@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Sequence, Tuple
 
 import numpy as np
 
@@ -93,28 +92,32 @@ def compute_reliability_diagram(
         mask = bin_indices == i
         count = int(mask.sum())
         if count == 0:
-            bins.append({
-                "bin_center": (bin_boundaries[i] + bin_boundaries[i + 1]) / 2,
-                "bin_lower": float(bin_boundaries[i]),
-                "bin_upper": float(bin_boundaries[i + 1]),
-                "count": 0,
-                "accuracy": 0.0,
-                "avg_confidence": 0.0,
-                "gap": 0.0,
-            })
+            bins.append(
+                {
+                    "bin_center": (bin_boundaries[i] + bin_boundaries[i + 1]) / 2,
+                    "bin_lower": float(bin_boundaries[i]),
+                    "bin_upper": float(bin_boundaries[i + 1]),
+                    "count": 0,
+                    "accuracy": 0.0,
+                    "avg_confidence": 0.0,
+                    "gap": 0.0,
+                }
+            )
             continue
 
         bin_acc = float(successes[mask].mean())
         bin_conf = float(confidences[mask].mean())
-        bins.append({
-            "bin_center": (bin_boundaries[i] + bin_boundaries[i + 1]) / 2,
-            "bin_lower": float(bin_boundaries[i]),
-            "bin_upper": float(bin_boundaries[i + 1]),
-            "count": count,
-            "accuracy": bin_acc,
-            "avg_confidence": bin_conf,
-            "gap": bin_acc - bin_conf,
-        })
+        bins.append(
+            {
+                "bin_center": (bin_boundaries[i] + bin_boundaries[i + 1]) / 2,
+                "bin_lower": float(bin_boundaries[i]),
+                "bin_upper": float(bin_boundaries[i + 1]),
+                "count": count,
+                "accuracy": bin_acc,
+                "avg_confidence": bin_conf,
+                "gap": bin_acc - bin_conf,
+            }
+        )
 
     return {
         "bins": bins,
@@ -140,23 +143,27 @@ def compute_confidence_histogram(
         mask = bin_indices == i
         count = int(mask.sum())
         if count == 0:
-            bins.append({
-                "bin_center": (bin_boundaries[i] + bin_boundaries[i + 1]) / 2,
-                "count": 0,
-                "successes": 0,
-                "failures": 0,
-                "success_rate": 0.0,
-            })
+            bins.append(
+                {
+                    "bin_center": (bin_boundaries[i] + bin_boundaries[i + 1]) / 2,
+                    "count": 0,
+                    "successes": 0,
+                    "failures": 0,
+                    "success_rate": 0.0,
+                }
+            )
             continue
 
         success_count = int(successes[mask].sum())
-        bins.append({
-            "bin_center": (bin_boundaries[i] + bin_boundaries[i + 1]) / 2,
-            "count": count,
-            "successes": success_count,
-            "failures": count - success_count,
-            "success_rate": float(successes[mask].mean()),
-        })
+        bins.append(
+            {
+                "bin_center": (bin_boundaries[i] + bin_boundaries[i + 1]) / 2,
+                "count": count,
+                "successes": success_count,
+                "failures": count - success_count,
+                "success_rate": float(successes[mask].mean()),
+            }
+        )
 
     return {
         "bins": bins,
@@ -188,19 +195,19 @@ def generate_calibration_report(
         "",
         "Summary Metrics",
         "-" * 40,
-        f"  {"Metric":<30} {"Before":>10} {"After":>10} {"Delta":>10}",
-        f"  {"-"*30} {"-"*10} {"-"*10} {"-"*10}",
-        f"  {"ECE":<30} {raw_ece:>10.4f} {cal_ece:>10.4f} {raw_ece - cal_ece:>+10.4f}",
-        f"  {"MCE":<30} {raw_mce:>10.4f} {cal_mce:>10.4f} {raw_mce - cal_mce:>+10.4f}",
-        f"  {"Brier Score":<30} {raw_brier:>10.4f} {cal_brier:>10.4f} {raw_brier - cal_brier:>+10.4f}",
+        f"  {'Metric':<30} {'Before':>10} {'After':>10} {'Delta':>10}",
+        f"  {'-' * 30} {'-' * 10} {'-' * 10} {'-' * 10}",
+        f"  {'ECE':<30} {raw_ece:>10.4f} {cal_ece:>10.4f} {raw_ece - cal_ece:>+10.4f}",
+        f"  {'MCE':<30} {raw_mce:>10.4f} {cal_mce:>10.4f} {raw_mce - cal_mce:>+10.4f}",
+        f"  {'Brier Score':<30} {raw_brier:>10.4f} {cal_brier:>10.4f} {raw_brier - cal_brier:>+10.4f}",
         "",
         f"  Total samples: {len(confidences)}",
         f"  Base accuracy: {float(successes.mean()):.4f}",
         "",
         "Reliability Diagram (Before Calibration)",
         "-" * 40,
-        f"  {"Bin":>5} {"Range":>12} {"Count":>7} {"Acc":>8} {"Conf":>8} {"Gap":>8}",
-        f"  {"-"*5} {"-"*12} {"-"*7} {"-"*8} {"-"*8} {"-"*8}",
+        f"  {'Bin':>5} {'Range':>12} {'Count':>7} {'Acc':>8} {'Conf':>8} {'Gap':>8}",
+        f"  {'-' * 5} {'-' * 12} {'-' * 7} {'-' * 8} {'-' * 8} {'-' * 8}",
     ]
 
     for i, b in enumerate(raw_rd["bins"]):
@@ -210,13 +217,15 @@ def generate_calibration_report(
             f"{b['accuracy']:>8.4f} {b['avg_confidence']:>8.4f} {b['gap']:>+8.4f}"
         )
 
-    lines.extend([
-        "",
-        "Reliability Diagram (After Calibration)",
-        "-" * 40,
-        f"  {"Bin":>5} {"Range":>12} {"Count":>7} {"Acc":>8} {"Conf":>8} {"Gap":>8}",
-        f"  {"-"*5} {"-"*12} {"-"*7} {"-"*8} {"-"*8} {"-"*8}",
-    ])
+    lines.extend(
+        [
+            "",
+            "Reliability Diagram (After Calibration)",
+            "-" * 40,
+            f"  {'Bin':>5} {'Range':>12} {'Count':>7} {'Acc':>8} {'Conf':>8} {'Gap':>8}",
+            f"  {'-' * 5} {'-' * 12} {'-' * 7} {'-' * 8} {'-' * 8} {'-' * 8}",
+        ]
+    )
 
     for i, b in enumerate(cal_rd["bins"]):
         r = f"{b['bin_lower']:.2f}-{b['bin_upper']:.2f}"

@@ -5,7 +5,7 @@ import platform
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from intelligence.benchmarks.benchmark_result import BenchmarkResult
 from intelligence.experiments.registry import ExperimentRegistry
@@ -141,9 +141,12 @@ def generate_environment_snapshot(
 def _get_git_commit() -> Optional[str]:
     try:
         import subprocess
+
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -154,6 +157,11 @@ def _get_git_commit() -> Optional[str]:
 def _get_installed_packages() -> Dict[str, str]:
     try:
         import importlib.metadata as md
-        return {dist.metadata["Name"]: dist.version for dist in md.distributions() if dist.metadata.get("Name")}
+
+        return {
+            dist.metadata["Name"]: dist.version
+            for dist in md.distributions()
+            if dist.metadata.get("Name")
+        }
     except Exception:
         return {}

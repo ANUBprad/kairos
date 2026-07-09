@@ -33,11 +33,21 @@ def _static_simple(domain: str | None = None) -> dict:
 
 
 def _static_complex() -> dict:
-    return {"retrieval_type": "MULTI_VECTOR", "top_k": 8, "rerank": True, "decompose": False}
+    return {
+        "retrieval_type": "MULTI_VECTOR",
+        "top_k": 8,
+        "rerank": True,
+        "decompose": False,
+    }
 
 
 def _static_multihop() -> dict:
-    return {"retrieval_type": "SELF_QUERYING", "top_k": 3, "rerank": False, "decompose": True}
+    return {
+        "retrieval_type": "SELF_QUERYING",
+        "top_k": 3,
+        "rerank": False,
+        "decompose": True,
+    }
 
 
 # ======================================================================
@@ -76,11 +86,31 @@ class TestHighConfidence:
         [
             (ResponseSchema(query_type="simple", domain=None), 0.8, _static_simple()),
             (ResponseSchema(query_type="simple", domain=None), 0.95, _static_simple()),
-            (ResponseSchema(query_type="simple", domain="hr"), 1.0, _static_simple("hr")),
-            (ResponseSchema(query_type="complex", domain=None), 0.80, _static_complex()),
-            (ResponseSchema(query_type="complex", domain=None), 0.99, _static_complex()),
-            (ResponseSchema(query_type="multi_hop", domain=None), 0.85, _static_multihop()),
-            (ResponseSchema(query_type="multi_hop", domain=None), 0.80, _static_multihop()),
+            (
+                ResponseSchema(query_type="simple", domain="hr"),
+                1.0,
+                _static_simple("hr"),
+            ),
+            (
+                ResponseSchema(query_type="complex", domain=None),
+                0.80,
+                _static_complex(),
+            ),
+            (
+                ResponseSchema(query_type="complex", domain=None),
+                0.99,
+                _static_complex(),
+            ),
+            (
+                ResponseSchema(query_type="multi_hop", domain=None),
+                0.85,
+                _static_multihop(),
+            ),
+            (
+                ResponseSchema(query_type="multi_hop", domain=None),
+                0.80,
+                _static_multihop(),
+            ),
         ],
     )
     def test_static_config_returned(
@@ -98,9 +128,7 @@ class TestBudgetOverridesSimple:
     """SIMPLE queries with confidence < 0.8 use budget overrides."""
 
     def test_medium_confidence(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="simple", domain=None), 0.60
-        )
+        cfg = get_config(ResponseSchema(query_type="simple", domain=None), 0.60)
         # retrieval_type is static; top_k, rerank come from budget
         assert cfg["retrieval_type"] == "RETRIEVAL_TYPE_UNSPECIFIED"
         assert cfg["top_k"] == 5
@@ -108,9 +136,7 @@ class TestBudgetOverridesSimple:
         assert cfg["decompose"] is False
 
     def test_low_confidence(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="simple", domain=None), 0.30
-        )
+        cfg = get_config(ResponseSchema(query_type="simple", domain=None), 0.30)
         assert cfg["retrieval_type"] == "RETRIEVAL_TYPE_UNSPECIFIED"
         assert cfg["top_k"] == 8
         assert cfg["rerank"] is True
@@ -118,9 +144,7 @@ class TestBudgetOverridesSimple:
 
     def test_medium_confidence_with_domain(self) -> None:
         """Domain-based HYBRID selection must survive budget override."""
-        cfg = get_config(
-            ResponseSchema(query_type="simple", domain="law"), 0.60
-        )
+        cfg = get_config(ResponseSchema(query_type="simple", domain="law"), 0.60)
         assert cfg["retrieval_type"] == "HYBRID"  # preserved from static
         assert cfg["top_k"] == 5
 
@@ -129,18 +153,14 @@ class TestBudgetOverridesComplex:
     """COMPLEX queries with confidence < 0.8 use budget overrides."""
 
     def test_medium_confidence(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="complex", domain=None), 0.55
-        )
+        cfg = get_config(ResponseSchema(query_type="complex", domain=None), 0.55)
         assert cfg["retrieval_type"] == "MULTI_VECTOR"
         assert cfg["top_k"] == 10
         assert cfg["rerank"] is True
         assert cfg["decompose"] is False
 
     def test_low_confidence(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="complex", domain=None), 0.20
-        )
+        cfg = get_config(ResponseSchema(query_type="complex", domain=None), 0.20)
         assert cfg["retrieval_type"] == "MULTI_VECTOR"
         assert cfg["top_k"] == 12
         assert cfg["rerank"] is True
@@ -151,18 +171,14 @@ class TestBudgetOverridesMultiHop:
     """MULTI_HOP queries with confidence < 0.8 use budget overrides."""
 
     def test_medium_confidence(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="multi_hop", domain=None), 0.72
-        )
+        cfg = get_config(ResponseSchema(query_type="multi_hop", domain=None), 0.72)
         assert cfg["retrieval_type"] == "SELF_QUERYING"
         assert cfg["top_k"] == 5
         assert cfg["rerank"] is True
         assert cfg["decompose"] is True
 
     def test_low_confidence(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="multi_hop", domain=None), 0.10
-        )
+        cfg = get_config(ResponseSchema(query_type="multi_hop", domain=None), 0.10)
         assert cfg["retrieval_type"] == "SELF_QUERYING"
         assert cfg["top_k"] == 8
         assert cfg["rerank"] is True
@@ -178,27 +194,19 @@ class TestRetrievalTypeInvariant:
     """The retrieval_type must never be altered by budget overrides."""
 
     def test_no_override_for_simple(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="simple", domain=None), 0.10
-        )
+        cfg = get_config(ResponseSchema(query_type="simple", domain=None), 0.10)
         assert cfg["retrieval_type"] == "RETRIEVAL_TYPE_UNSPECIFIED"
 
     def test_no_override_for_complex(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="complex", domain=None), 0.10
-        )
+        cfg = get_config(ResponseSchema(query_type="complex", domain=None), 0.10)
         assert cfg["retrieval_type"] == "MULTI_VECTOR"
 
     def test_no_override_for_multihop(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="multi_hop", domain=None), 0.10
-        )
+        cfg = get_config(ResponseSchema(query_type="multi_hop", domain=None), 0.10)
         assert cfg["retrieval_type"] == "SELF_QUERYING"
 
     def test_no_override_for_simple_with_domain(self) -> None:
-        cfg = get_config(
-            ResponseSchema(query_type="simple", domain="tech"), 0.10
-        )
+        cfg = get_config(ResponseSchema(query_type="simple", domain="tech"), 0.10)
         assert cfg["retrieval_type"] == "HYBRID"
 
 
@@ -226,7 +234,9 @@ class TestExplicitBudget:
         custom_budget = RetrievalBudget(top_k=99, rerank=False, decompose=False)
         cfg = get_config(details, confidence=0.99, budget=custom_budget)
 
-        assert cfg["top_k"] == 99  # explicit budget is honoured at all confidence levels
+        assert (
+            cfg["top_k"] == 99
+        )  # explicit budget is honoured at all confidence levels
 
 
 # ======================================================================
@@ -239,9 +249,7 @@ class TestEdgeCases:
 
     def test_confidence_just_below_high(self) -> None:
         """0.79 < 0.8 → budget overrides should apply."""
-        cfg = get_config(
-            ResponseSchema(query_type="simple", domain=None), 0.79
-        )
+        cfg = get_config(ResponseSchema(query_type="simple", domain=None), 0.79)
         assert cfg["top_k"] == 5  # medium budget, not static 3
 
     def test_unknown_query_type_defaults(self) -> None:
