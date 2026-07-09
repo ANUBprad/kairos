@@ -39,6 +39,10 @@
   --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 30px rgba(255, 90, 10, 0.15);
   --shadow-glow-strong: 0 0 60px rgba(255, 90, 10, 0.25);
+
+  --spacing-dialog: 24px;
+  --spacing-card: 24px;
+  --spacing-section: 48px;
 }
 
 .light {
@@ -79,7 +83,7 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 300ms ease, color 200ms ease;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 
   ::selection {
@@ -88,29 +92,9 @@
   }
 
   :focus-visible {
-    outline: 2px solid #FF5A0A;
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
-  }
-
-  :root {
-    --primary: 255 90 10;
-    --border: 42 42 42;
-    --foreground: 240 240 240;
-    --muted-foreground: 139 139 139;
-    --background: 11 15 20;
-    --accent: 26 36 51;
-    --card: 20 24 29;
-  }
-
-  .light {
-    --primary: 255 90 10;
-    --border: 233 236 239;
-    --foreground: 33 37 41;
-    --muted-foreground: 73 80 87;
-    --background: 250 251 252;
-    --accent: 241 243 245;
-    --card: 255 255 255;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -171,12 +155,21 @@
   to { height: 0; }
 }
 
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
 @utility animate-accordion-down {
   animation: accordion-down 200ms ease-out;
 }
 
 @utility animate-accordion-up {
   animation: accordion-up 200ms ease-out;
+}
+
+@utility animate-skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
 }
 
 .light * {

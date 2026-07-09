@@ -14,6 +14,8 @@ import {
   Bot,
   BarChart3,
   Database,
+  Eye,
+  GitBranch,
 } from "lucide-react";
 
 const STAGES = [
@@ -24,27 +26,30 @@ const STAGES = [
   { id: "retrieve", label: "Retrieval", icon: Search, color: "bg-green-500" },
   { id: "rerank", label: "Reranking", icon: ListOrdered, color: "bg-yellow-500" },
   { id: "llm", label: "LLM", icon: Bot, color: "bg-purple-500" },
+  { id: "debug", label: "Debugger", icon: Eye, color: "bg-rose-500" },
   { id: "eval", label: "Evaluation", icon: BarChart3, color: "bg-violet-500" },
 ];
 
 const STATS = [
-  { icon: FileText, label: "Multi-format Documents", value: "PDF, DOCX, MD" },
+  { icon: Eye, label: "Full Pipeline Visibility", value: "Every Stage" },
+  { icon: GitBranch, label: "Retrieval Strategies", value: "8+" },
+  { icon: BarChart3, label: "Evaluation Metrics", value: "12+" },
   { icon: Scissors, label: "Chunking Strategies", value: "5" },
   { icon: TableProperties, label: "Embedding Models", value: "3+" },
-  { icon: Search, label: "Retrieval Strategies", value: "8" },
-  { icon: BarChart3, label: "Evaluation Metrics", value: "12" },
   { icon: Database, label: "Benchmark Reports", value: "Export" },
 ];
 
 const CODE_LINES = [
   { type: "request", text: 'POST /api/chat' },
-  { type: "question", text: 'Question: "What are the key findings?"' },
-  { type: "step", text: 'Searching...' },
-  { type: "result", text: 'Retrieved: 5 relevant chunks' },
-  { type: "step", text: 'Building prompt...' },
-  { type: "result", text: 'Generating response...' },
-  { type: "answer", text: 'The study found that hybrid retrieval' },
-  { type: "answer2", text: 'outperforms pure vector search by 12%.' },
+  { type: "question", text: 'Query: "What are the key findings?"' },
+  { type: "step", text: '> Embedding query...' },
+  { type: "result", text: '# Retrieved 5 chunks (sim: 0.89, 0.87, 0.85, 0.82, 0.80)' },
+  { type: "step", text: '> Reranking with cross-encoder...' },
+  { type: "result", text: '# Reordered: chunk_12 (0.94) > chunk_7 (0.91) > ...' },
+  { type: "step", text: '> Building prompt with citations...' },
+  { type: "answer", text: 'The study found that hybrid retrieval outperforms' },
+  { type: "answer2", text: 'pure vector search by 12% on Recall@10 (p=0.003).' },
+  { type: "debug", text: 'Sources: [1] chunk_12 [2] chunk_7 [3] chunk_23' },
 ];
 
 function AnimatedKairos() {
@@ -98,9 +103,9 @@ function CodePanel() {
         <div className="w-2.5 h-2.5 rounded-full bg-error/60" />
         <div className="w-2.5 h-2.5 rounded-full bg-warning/60" />
         <div className="w-2.5 h-2.5 rounded-full bg-success/60" />
-        <span className="ml-2 text-[11px] text-text-tertiary font-mono">RAG Query</span>
+        <span className="ml-2 text-[11px] text-text-tertiary font-mono">Explainable RAG Trace</span>
       </div>
-      <div className="p-4 font-mono text-[13px] leading-relaxed min-h-[220px]">
+      <div className="p-4 font-mono text-[13px] leading-relaxed min-h-[240px]">
         <AnimatePresence>
           {CODE_LINES.slice(0, visibleLines).map((line, i) => (
             <motion.div
@@ -139,6 +144,9 @@ function CodePanel() {
               )}
               {line.type === "answer2" && (
                 <span className="text-success">{line.text}</span>
+              )}
+              {line.type === "debug" && (
+                <span className="text-rose-400">{line.text}</span>
               )}
             </motion.div>
           ))}
@@ -200,7 +208,8 @@ function PipelineVisualization() {
                     {i === 4 && "Hybrid + BM25"}
                     {i === 5 && "Cross-encoder"}
                     {i === 6 && "GPT-4o, Gemini"}
-                    {i === 7 && "Recall, nDCG, MRR"}
+                    {i === 7 && "Full trace"}
+                    {i === 8 && "Recall, nDCG, MRR"}
                   </motion.span>
                 )}
               </motion.div>
@@ -223,20 +232,32 @@ function PipelineVisualization() {
 export function Hero() {
   return (
     <section className="relative overflow-hidden pt-32 pb-24 md:pb-32 min-h-[90vh] flex items-center">
-      {/* Background grid */}
+      {/* Animated grid background */}
       <div
         className="absolute inset-0 pointer-events-none dark:bg-[image:radial-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[image:radial-gradient(rgba(0,0,0,0.04)_1px,transparent_1px)]"
         style={{ backgroundSize: "32px 32px" }}
       />
 
-      {/* Ambient glows */}
-      <div className="absolute top-1/3 -left-40 w-[600px] h-[600px] rounded-full opacity-15 pointer-events-none"
+      {/* Cinematic gradient orbs */}
+      <motion.div
+        animate={{
+          scale: [1, 1.1, 1],
+          opacity: [0.15, 0.2, 0.15],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/3 -left-40 w-[600px] h-[600px] rounded-full pointer-events-none"
         style={{
           background: "radial-gradient(circle, rgba(255, 90, 10, 0.25) 0%, transparent 70%)",
           filter: "blur(100px)",
         }}
       />
-      <div className="absolute bottom-1/3 -right-40 w-[500px] h-[500px] rounded-full opacity-10 pointer-events-none"
+      <motion.div
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [0.1, 0.15, 0.1],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        className="absolute bottom-1/3 -right-40 w-[500px] h-[500px] rounded-full pointer-events-none"
         style={{
           background: "radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%)",
           filter: "blur(80px)",
@@ -246,20 +267,17 @@ export function Hero() {
       <div className="relative mx-auto w-full max-w-[1280px] px-6 sm:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
-          {/* Left column: Hero text */}
           <div className="max-w-[560px] space-y-6">
-            {/* Introducing label */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1, duration: 0.5 }}
             >
               <span className="text-[13px] font-medium text-text-tertiary tracking-widest uppercase">
-                Introducing
+                An Explainable RAG Research Workbench
               </span>
             </motion.div>
 
-            {/* KAIROS heading */}
             <motion.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -271,7 +289,6 @@ export function Hero() {
               </span>
             </motion.h1>
 
-            {/* Subtitle */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -279,12 +296,11 @@ export function Hero() {
             >
               <p className="text-[15px] sm:text-[17px] text-text-secondary leading-relaxed max-w-[440px]">
                 Upload documents. Experiment with retrieval strategies.
-                Evaluate every stage of the RAG pipeline through explainable
-                visualizations and reproducible benchmarks.
+                Inspect every stage of the pipeline. Evaluate with statistical rigor.
+                Understand <em>why</em> your RAG system works — or why it doesn&apos;t.
               </p>
             </motion.div>
 
-            {/* CTA buttons */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -298,11 +314,10 @@ export function Hero() {
                 </Link>
               </Button>
               <Button variant="secondary" size="lg" asChild>
-                <Link href="/app/architecture">Explore Architecture</Link>
+                <Link href="/app/retrieval-lab">Try Retrieval Lab</Link>
               </Button>
             </motion.div>
 
-            {/* Stats */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -334,7 +349,6 @@ export function Hero() {
             </motion.div>
           </div>
 
-          {/* Right column: Code panel + Pipeline */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -342,12 +356,10 @@ export function Hero() {
             className="relative"
           >
             <div className="flex flex-col lg:flex-row gap-4">
-              {/* Code panel */}
               <div className="flex-1">
                 <CodePanel />
               </div>
 
-              {/* Pipeline visualization */}
               <div className="lg:w-[200px] shrink-0">
                 <motion.div
                   initial={{ opacity: 0 }}

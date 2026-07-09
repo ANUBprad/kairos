@@ -12,6 +12,7 @@ const PIPELINE_STAGES = [
   { id: "retrieval", label: "Retrieval", icon: "FlaskConical", color: "bg-yellow-500" },
   { id: "prompt", label: "Prompt", icon: "FileSearch", color: "bg-orange-500" },
   { id: "llm", label: "LLM", icon: "Cpu", color: "bg-purple-500" },
+  { id: "debugger", label: "Debugger", icon: "Eye", color: "bg-rose-500" },
   { id: "evaluation", label: "Evaluation", icon: "BarChart3", color: "bg-violet-500" },
 ];
 
@@ -19,9 +20,9 @@ export function HowItWorks() {
   return (
     <SectionWrapper id="how-it-works">
       <ScrollReveal>
-        <SectionHeading>RAG Pipeline Architecture</SectionHeading>
+        <SectionHeading>Every Stage. Observable. Measurable.</SectionHeading>
         <SectionSubheading>
-          Every stage of the retrieval-augmented generation pipeline is observable, configurable, and measurable.
+          The RAG pipeline is not a black box. Kairos instruments every stage — from ingestion to evaluation — so you can see exactly what happens to your data.
         </SectionSubheading>
       </ScrollReveal>
 
@@ -32,11 +33,10 @@ export function HowItWorks() {
       </div>
 
       <div className="mt-8 max-w-2xl mx-auto">
-        <ResearchNote title="How RAG Works">
-          Documents are parsed and split into chunks. Each chunk is converted to a vector embedding and stored in a
-          vector database. When a query arrives, the system retrieves the most relevant chunks via similarity search,
-          assembles them into a prompt with the original query, and sends it to an LLM for generation. Each stage
-          produces measurable outputs for evaluation.
+        <ResearchNote title="Why the Debugger Matters">
+          Most RAG tools show you the answer. Kairos shows you the journey: which chunks were retrieved, their similarity
+          scores, how the prompt was constructed, and why specific documents were or were not included. The retrieval
+          debugger makes every decision inspectable — so you can diagnose failures, validate quality, and trust the output.
         </ResearchNote>
       </div>
     </SectionWrapper>

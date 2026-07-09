@@ -22,7 +22,7 @@ import {
   startBenchmark,
   getReport,
   compareRuns,
-  getLeaderboard,
+  getScientificLeaderboard,
 } from "@/lib/actions/evaluation";
 import { listKbsForLab } from "@/lib/actions/retrieval-lab";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
@@ -1095,7 +1095,17 @@ function LeaderboardTab({ runs }: { runs: BenchmarkRunSummary[] }) {
   const [leaderboard, setLeaderboard] = useState<Array<{
     rank: number; label: string; overallScore: number; isBest: boolean;
     recallAtK: number; precisionAtK: number; hitRate: number; mrr: number; ndcg: number; latencyMs: number;
+    tier: number;
+    adjacentComparison?: {
+      significant: boolean;
+      pValue: number;
+      ciLower: number;
+      ciUpper: number;
+      effectSize: number;
+      effectMagnitude: string;
+    };
   }> | null>(null);
+  const [tiers, setTiers] = useState<Array<{ tier: number; labels: string[] }> | null>(null);
   const [loading, setLoading] = useState(false);
 
   const completedRuns = runs.filter((r) => r.status === "completed");
@@ -1104,8 +1114,9 @@ function LeaderboardTab({ runs }: { runs: BenchmarkRunSummary[] }) {
     if (completedRuns.length === 0) return;
     setLoading(true);
     try {
-      const lb = await getLeaderboard(completedRuns.map((r) => r.id));
-      setLeaderboard(lb);
+      const result = await getScientificLeaderboard(completedRuns.map((r) => r.id));
+      setLeaderboard(result.entries);
+      setTiers(result.tiers);
     } catch (e) {
       console.error("Failed to load leaderboard", e);
     } finally {
@@ -1144,6 +1155,8 @@ function LeaderboardTab({ runs }: { runs: BenchmarkRunSummary[] }) {
                 <th className="px-4 py-3 text-right font-medium text-text-secondary">MRR</th>
                 <th className="px-4 py-3 text-right font-medium text-text-secondary">NDCG</th>
                 <th className="px-4 py-3 text-right font-medium text-text-secondary">Latency</th>
+                <th className="px-4 py-3 text-center font-medium text-text-secondary">Tier</th>
+                <th className="px-4 py-3 text-center font-medium text-text-secondary">Significance</th>
               </tr>
             </thead>
             <tbody>
@@ -1160,10 +1173,40 @@ function LeaderboardTab({ runs }: { runs: BenchmarkRunSummary[] }) {
                   <td className="px-4 py-3 text-right font-mono">{formatMetric(entry.mrr)}</td>
                   <td className="px-4 py-3 text-right font-mono">{formatMetric(entry.ndcg)}</td>
                   <td className="px-4 py-3 text-right font-mono">{entry.latencyMs.toFixed(0)}ms</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-bg-secondary text-text-secondary">
+                      T{entry.tier}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {entry.adjacentComparison ? (
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        entry.adjacentComparison.significant
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          : "bg-bg-secondary text-text-secondary"
+                      }`}>
+                        {entry.adjacentComparison.significant
+                          ? `p=${entry.adjacentComparison.pValue.toFixed(3)}`
+                          : "Not Significant"}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-text-tertiary">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {tiers && tiers.length > 0 && (
+            <div className="px-4 py-3 border-t border-border text-xs text-text-secondary">
+              <span className="font-medium">Tiers:</span>{" "}
+              {tiers.map((t) => (
+                <span key={t.tier} className="mr-3">
+                  <span className="font-mono">T{t.tier}</span>: {t.labels.join(", ")}
+                </span>
+              ))}
+            </div>
+          )}
         </Card>
       ) : (
         <Card className="!p-6 text-center">

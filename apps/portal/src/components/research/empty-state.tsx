@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { getIcon } from "./icon-registry";
 import { Button } from "@/components/ui/button";
 
@@ -23,9 +24,6 @@ export function EmptyState({
   className = "",
 }: EmptyStateProps) {
   const Icon = getIcon(icon);
-  const actionProps = actionHref
-    ? { asChild: true as const, onClick: undefined as (() => void) | undefined }
-    : { asChild: false as const, onClick: onAction };
 
   return (
     <div className={`flex flex-col items-center justify-center py-20 text-center ${className}`}>
@@ -34,8 +32,13 @@ export function EmptyState({
       </div>
       <h2 className="mt-5 text-lg font-semibold text-text-primary">{title}</h2>
       <p className="mt-2 max-w-sm text-sm text-text-secondary leading-relaxed">{description}</p>
-      {actionLabel && (
-        <Button variant="primary" className="mt-6" {...actionProps}>
+      {actionLabel && actionHref && (
+        <Button variant="primary" className="mt-6" asChild>
+          <Link href={actionHref}>{actionLabel}</Link>
+        </Button>
+      )}
+      {actionLabel && !actionHref && (
+        <Button variant="primary" className="mt-6" onClick={onAction}>
           {actionLabel}
         </Button>
       )}

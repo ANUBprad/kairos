@@ -3,16 +3,23 @@ import { requireSession } from "@/lib/server/auth-utils";
 import Link from "next/link";
 import {
   ArrowRight,
-  Cpu,
-  Layers,
+  Microscope,
+  Sparkles,
+  GitBranch,
   BarChart3,
+  BookOpen,
+  FolderOpen,
+  FlaskConical,
+  Zap,
 } from "lucide-react";
 import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
-import { MetricCard } from "@/components/research/metric-card";
 import { ResearchNote } from "@/components/research/research-note";
-import { EmptyState } from "@/components/research/empty-state";
 import { Pipeline } from "@/components/research/pipeline";
 import { Button } from "@/components/ui/button";
+import { PremiumCard, CardHeader, CardTitle, CardDescription } from "@/components/ui/premium-card";
+import { MetricCard } from "@/components/ui/metric-display";
+import { ProgressRing, ProgressBar } from "@/components/ui/progress";
+import { Timeline, type TimelineStep } from "@/components/ui/timeline";
 
 const PIPELINE_STAGES = [
   { id: "documents", label: "Documents", icon: "FileText", color: "bg-blue-500" },
@@ -22,13 +29,6 @@ const PIPELINE_STAGES = [
   { id: "prompt", label: "Prompt", icon: "FileSearch", color: "bg-orange-500" },
   { id: "llm", label: "LLM", icon: "Cpu", color: "bg-purple-500" },
   { id: "evaluation", label: "Evaluation", icon: "BarChart3", color: "bg-violet-500" },
-];
-
-const quickActions = [
-  { label: "Upload Documents", href: "/app/knowledge-bases", icon: "Upload" },
-  { label: "Open Retrieval Lab", href: "/app/retrieval-lab", icon: "FlaskConical" },
-  { label: "Run Evaluation", href: "/app/evaluation", icon: "BarChart3" },
-  { label: "View Architecture", href: "/app/architecture", icon: "BookOpen" },
 ];
 
 export default async function AppPage() {
@@ -60,129 +60,302 @@ export default async function AppPage() {
     ? (currentKb.retrievalConfig as Record<string, unknown> | null)
     : null;
 
+  // Calculate research health score
+  const hasKb = knowledgeBases.length > 0;
+  const hasDocs = docCount > 0;
+  const hasChunks = chunkCount > 0;
+  const hasExperiments = experimentCount > 0;
+  const hasBenchmark = latestBenchmark !== null;
+
+  const healthScore = Math.round(
+    ((hasKb ? 20 : 0) + (hasDocs ? 20 : 0) + (hasChunks ? 20 : 0) + (hasExperiments ? 20 : 0) + (hasBenchmark ? 20 : 0))
+  );
+
+  // Build timeline steps
+  const timelineSteps: TimelineStep[] = [
+    { id: "kb", label: "Knowledge Base", status: hasKb ? "completed" : "current", description: hasKb ? `${knowledgeBases.length} created` : "Create your first KB" },
+    { id: "docs", label: "Documents", status: hasDocs ? "completed" : hasKb ? "current" : "upcoming", description: hasDocs ? `${docCount} uploaded` : "Upload documents" },
+    { id: "chunks", label: "Chunking", status: hasChunks ? "completed" : hasDocs ? "current" : "upcoming", description: hasChunks ? `${chunkCount} chunks` : "Configure chunking" },
+    { id: "experiments", label: "Experiments", status: hasExperiments ? "completed" : hasChunks ? "current" : "upcoming", description: hasExperiments ? `${experimentCount} runs` : "Run experiments" },
+    { id: "benchmark", label: "Benchmark", status: hasBenchmark ? "completed" : hasExperiments ? "current" : "upcoming", description: hasBenchmark ? "Completed" : "Run benchmark" },
+  ];
+
+  // Extract benchmark metrics
+  const benchmarkMetrics = latestBenchmark?.aggregatedMetrics as Record<string, number> | null;
+  const avgRecall = benchmarkMetrics?.avgRecallAtK ?? null;
+  const avgPrecision = benchmarkMetrics?.avgPrecisionAtK ?? null;
+  const avgMrr = benchmarkMetrics?.avgMrr ?? null;
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Kairos</h1>
-          <p className="mt-1 text-sm text-text-secondary max-w-2xl">
-            Adaptive Retrieval-Augmented Generation Research Platform
-          </p>
+    <div className="space-y-6">
+      {/* Hero Greeting */}
+      <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-border bg-gradient-to-br from-surface via-surface to-brand/5 p-8">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-brand/10">
+              <Microscope size={20} className="text-brand" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-text-primary tracking-tight">Research Dashboard</h1>
+              <p className="text-sm text-text-secondary">Your RAG research command center</p>
+            </div>
+          </div>
+
+          {/* Today's Research Brief */}
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-[var(--radius-lg)] bg-surface/50 border border-border/50 p-4">
+              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Knowledge Bases</p>
+              <p className="text-2xl font-bold text-text-primary tabular-nums">{knowledgeBases.length}</p>
+            </div>
+            <div className="rounded-[var(--radius-lg)] bg-surface/50 border border-border/50 p-4">
+              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Documents</p>
+              <p className="text-2xl font-bold text-text-primary tabular-nums">{docCount}</p>
+            </div>
+            <div className="rounded-[var(--radius-lg)] bg-surface/50 border border-border/50 p-4">
+              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Chunks</p>
+              <p className="text-2xl font-bold text-text-primary tabular-nums">{chunkCount.toLocaleString()}</p>
+            </div>
+            <div className="rounded-[var(--radius-lg)] bg-surface/50 border border-border/50 p-4">
+              <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Experiments</p>
+              <p className="text-2xl font-bold text-text-primary tabular-nums">{experimentCount}</p>
+            </div>
+          </div>
         </div>
-        <div className="hidden sm:flex items-center gap-2 shrink-0">
-          {quickActions.map((action) => (
-            <Button key={action.href} variant="secondary" size="sm" asChild>
-              <Link href={action.href}>
-                {action.label}
+      </div>
+
+      {/* Research Health & Timeline Row */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Research Health */}
+        <PremiumCard variant="elevated">
+          <CardHeader icon={<Zap size={16} />}>
+            <CardTitle>Research Health</CardTitle>
+          </CardHeader>
+          <div className="flex items-center justify-around py-4">
+            <ProgressRing value={healthScore} label="Overall" color={healthScore >= 80 ? "success" : healthScore >= 50 ? "warning" : "error"} />
+            <div className="space-y-3">
+              <ProgressBar value={hasKb ? 100 : 0} label="Knowledge Base" color={hasKb ? "success" : "error"} />
+              <ProgressBar value={hasDocs ? 100 : 0} label="Documents" color={hasDocs ? "success" : "error"} />
+              <ProgressBar value={hasExperiments ? 100 : 0} label="Experiments" color={hasExperiments ? "success" : "error"} />
+              <ProgressBar value={hasBenchmark ? 100 : 0} label="Benchmarks" color={hasBenchmark ? "success" : "error"} />
+            </div>
+          </div>
+        </PremiumCard>
+
+        {/* Research Timeline */}
+        <PremiumCard variant="elevated" className="lg:col-span-2">
+          <CardHeader icon={<GitBranch size={16} />}>
+            <CardTitle>Research Progress</CardTitle>
+            <CardDescription>Track your RAG research journey</CardDescription>
+          </CardHeader>
+          <div className="py-4">
+            <Timeline steps={timelineSteps} />
+          </div>
+        </PremiumCard>
+      </div>
+
+      {/* Current Configuration & Latest Benchmark */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Current Configuration */}
+        {currentKb && (
+          <PremiumCard variant="elevated">
+            <CardHeader icon={<FolderOpen size={16} />}>
+              <CardTitle>Current Configuration</CardTitle>
+              <Link href="/app/settings" className="text-xs text-brand hover:text-brand-hover transition-colors">
+                Configure
               </Link>
-            </Button>
-          ))}
-        </div>
+            </CardHeader>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b border-border/50">
+                <span className="text-xs text-text-tertiary">Knowledge Base</span>
+                <span className="text-sm font-medium text-text-primary">{currentKb.name}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border/50">
+                <span className="text-xs text-text-tertiary">Retrieval</span>
+                <span className="text-sm font-medium text-text-primary capitalize">
+                  {String(currentConfig?.retrievalMode ?? currentConfig?.retrievalStrategy ?? "vector")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-border/50">
+                <span className="text-xs text-text-tertiary">Embedding</span>
+                <span className="text-sm font-medium text-text-primary">
+                  {String(currentConfig?.embeddingModel ?? "—")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-xs text-text-tertiary">Chunking</span>
+                <span className="text-sm font-medium text-text-primary capitalize">
+                  {String(currentConfig?.chunkStrategy ?? "—")}
+                </span>
+              </div>
+            </div>
+          </PremiumCard>
+        )}
+
+        {/* Latest Benchmark */}
+        <PremiumCard variant="elevated">
+          <CardHeader icon={<BarChart3 size={16} />}>
+            <CardTitle>Latest Benchmark</CardTitle>
+            {latestBenchmark && (
+              <span className="text-xs text-text-tertiary">
+                {new Date(latestBenchmark.createdAt).toLocaleDateString()}
+              </span>
+            )}
+          </CardHeader>
+          {benchmarkMetrics ? (
+            <div className="space-y-4">
+              {avgRecall !== null && (
+                <MetricCard
+                  label="Recall@K"
+                  value={(avgRecall * 100).toFixed(1)}
+                  unit="%"
+                  status={avgRecall >= 0.8 ? "excellent" : avgRecall >= 0.6 ? "good" : "warning"}
+                />
+              )}
+              {avgPrecision !== null && (
+                <MetricCard
+                  label="Precision@K"
+                  value={(avgPrecision * 100).toFixed(1)}
+                  unit="%"
+                  status={avgPrecision >= 0.7 ? "excellent" : avgPrecision >= 0.5 ? "good" : "warning"}
+                />
+              )}
+              {avgMrr !== null && (
+                <MetricCard
+                  label="MRR"
+                  value={(avgMrr * 100).toFixed(1)}
+                  unit="%"
+                  status={avgMrr >= 0.7 ? "excellent" : avgMrr >= 0.5 ? "good" : "warning"}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="text-sm text-text-tertiary">No benchmark data yet</p>
+              <Button variant="secondary" size="sm" className="mt-3" asChild>
+                <Link href="/app/evaluation">Run Evaluation</Link>
+              </Button>
+            </div>
+          )}
+        </PremiumCard>
       </div>
 
-      {/* Current Configuration */}
-      {currentKb && (
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-4">
-            <Cpu size={14} />
-            Current Configuration
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            <div className="space-y-1">
-              <span className="text-xs text-text-tertiary">Knowledge Base</span>
-              <p className="text-sm font-medium text-text-primary truncate">{currentKb.name}</p>
-              <p className="text-xs text-text-tertiary">{currentKb._count.documents} documents</p>
+      {/* Quick Actions */}
+      <PremiumCard variant="glass">
+        <CardHeader icon={<Sparkles size={16} />}>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/app/knowledge-bases"
+            className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface/50 p-4 transition-all hover:border-brand/30 hover:bg-brand/5"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-brand/10 group-hover:bg-brand/20 transition-colors">
+              <FolderOpen size={18} className="text-brand" />
             </div>
-            <div className="space-y-1">
-              <span className="text-xs text-text-tertiary">Retrieval Strategy</span>
-              <p className="text-sm font-medium text-text-primary capitalize">
-                {String(currentConfig?.retrievalMode ?? currentConfig?.retrievalStrategy ?? "vector")}
-              </p>
+            <div>
+              <p className="text-sm font-medium text-text-primary">Upload Documents</p>
+              <p className="text-xs text-text-tertiary">Add to knowledge base</p>
             </div>
-            <div className="space-y-1">
-              <span className="text-xs text-text-tertiary">Embedding Model</span>
-              <p className="text-sm font-medium text-text-primary">
-                {String(currentConfig?.embeddingModel ?? "—")}
-              </p>
+          </Link>
+          <Link
+            href="/app/retrieval-lab"
+            className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface/50 p-4 transition-all hover:border-brand/30 hover:bg-brand/5"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-brand/10 group-hover:bg-brand/20 transition-colors">
+              <FlaskConical size={18} className="text-brand" />
             </div>
-            <div className="space-y-1">
-              <span className="text-xs text-text-tertiary">Chunking Strategy</span>
-              <p className="text-sm font-medium text-text-primary capitalize">
-                {String(currentConfig?.chunkStrategy ?? "—")}
-              </p>
+            <div>
+              <p className="text-sm font-medium text-text-primary">Retrieval Lab</p>
+              <p className="text-xs text-text-tertiary">Test configurations</p>
             </div>
-            <div className="space-y-1">
-              <span className="text-xs text-text-tertiary">Last Benchmark</span>
-              <p className="text-sm font-medium text-text-primary">
-                {latestBenchmark ? new Date(latestBenchmark.createdAt).toLocaleDateString() : "—"}
-              </p>
+          </Link>
+          <Link
+            href="/app/evaluation"
+            className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface/50 p-4 transition-all hover:border-brand/30 hover:bg-brand/5"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-brand/10 group-hover:bg-brand/20 transition-colors">
+              <BarChart3 size={18} className="text-brand" />
             </div>
-          </div>
+            <div>
+              <p className="text-sm font-medium text-text-primary">Run Evaluation</p>
+              <p className="text-xs text-text-tertiary">Benchmark performance</p>
+            </div>
+          </Link>
+          <Link
+            href="/app/copilot"
+            className="group flex items-center gap-3 rounded-[var(--radius-lg)] border border-border bg-surface/50 p-4 transition-all hover:border-brand/30 hover:bg-brand/5"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-brand/10 group-hover:bg-brand/20 transition-colors">
+              <Sparkles size={18} className="text-brand" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-text-primary">AI Copilot</p>
+              <p className="text-xs text-text-tertiary">Get research insights</p>
+            </div>
+          </Link>
         </div>
-      )}
+      </PremiumCard>
 
-      {/* Pipeline */}
-      <div className="rounded-xl border border-border bg-surface p-5">
-        <div className="flex items-center gap-2 text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-4">
-          <Layers size={14} />
-          RAG Pipeline
-        </div>
+      {/* RAG Pipeline */}
+      <PremiumCard variant="elevated">
+        <CardHeader icon={<Zap size={16} />}>
+          <CardTitle>RAG Pipeline</CardTitle>
+          <Link href="/app/architecture" className="text-xs text-brand hover:text-brand-hover transition-colors">
+            View Details
+          </Link>
+        </CardHeader>
         <Pipeline stages={PIPELINE_STAGES} size="md" />
-      </div>
+      </PremiumCard>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          label="Knowledge Bases"
-          value={String(knowledgeBases.length)}
-          icon="BookOpen"
-          description="Total knowledge bases"
-        />
-        <MetricCard
-          label="Documents"
-          value={String(docCount)}
-          icon="FileText"
-          description="Uploaded documents"
-        />
-        <MetricCard
-          label="Chunks"
-          value={String(chunkCount)}
-          icon="Layers"
-          description="Document segments"
-        />
-        <MetricCard
-          label="Experiments"
-          value={String(experimentCount)}
-          icon="BarChart3"
-          description="Total experiment runs"
-        />
-      </div>
-
-      {/* Latest Benchmark */}
-      {latestBenchmark && latestBenchmark.aggregatedMetrics && (
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-4">
-            <BarChart3 size={14} />
-            Latest Benchmark — {latestBenchmark.name ?? "Unnamed"}
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {Object.entries(latestBenchmark.aggregatedMetrics as Record<string, number>)
-              .filter(([k]) => k.startsWith("avg") && k !== "avgLatencyMs")
-              .slice(0, 10)
-              .map(([key, val]) => (
-                <div key={key} className="space-y-1">
-                  <span className="text-xs text-text-tertiary">{key.replace("avg", "Avg ")}</span>
-                  <p className="text-lg font-semibold text-text-primary font-mono">
-                    {(val as number).toFixed(4)}
+      {/* Knowledge Bases */}
+      {knowledgeBases.length > 0 && (
+        <PremiumCard variant="elevated">
+          <CardHeader icon={<BookOpen size={16} />}>
+            <CardTitle>Knowledge Bases</CardTitle>
+            <Link href="/app/knowledge-bases" className="text-xs text-brand hover:text-brand-hover transition-colors">
+              View all
+            </Link>
+          </CardHeader>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {knowledgeBases.slice(0, 6).map((kb) => (
+              <Link
+                key={kb.id}
+                href={`/app/knowledge-bases/${kb.id}`}
+                className="group flex items-center justify-between rounded-[var(--radius-lg)] border border-border bg-surface/50 p-4 transition-all hover:border-border-hover hover:bg-surface-hover"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text-primary truncate">{kb.name}</p>
+                  <p className="text-xs text-text-tertiary">
+                    {kb._count.documents} document{kb._count.documents !== 1 ? "s" : ""}
                   </p>
                 </div>
-              ))}
+                <ArrowRight size={14} className="text-text-tertiary opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 shrink-0 ml-2" />
+              </Link>
+            ))}
           </div>
-        </div>
+        </PremiumCard>
       )}
 
-      {/* What is RAG? */}
+      {/* Empty State */}
+      {knowledgeBases.length === 0 && (
+        <PremiumCard variant="elevated" padding="lg">
+          <div className="text-center py-8">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-2xl)] bg-brand/10 mx-auto mb-4">
+              <BookOpen size={32} className="text-brand" />
+            </div>
+            <h3 className="text-lg font-semibold text-text-primary">Welcome to Kairos</h3>
+            <p className="mt-2 text-sm text-text-secondary max-w-md mx-auto">
+              Start your RAG research journey by creating a knowledge base and uploading documents.
+            </p>
+            <Button variant="primary" className="mt-6" asChild>
+              <Link href="/app/knowledge-bases">Create Knowledge Base</Link>
+            </Button>
+          </div>
+        </PremiumCard>
+      )}
+
+      {/* About RAG */}
       <ResearchNote title="About RAG">
         <strong className="text-text-primary">Retrieval-Augmented Generation (RAG)</strong> is an AI architecture
         that combines information retrieval with text generation. Instead of relying solely on a model&apos;s
@@ -190,49 +363,6 @@ export default async function AppPage() {
         to the language model. This addresses key limitations of LLMs: hallucination, stale knowledge, and lack of
         source transparency.
       </ResearchNote>
-
-      {/* Knowledge Bases Quick List */}
-      {knowledgeBases.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-text-primary">Knowledge Bases</h2>
-            <Link
-              href="/app/knowledge-bases"
-              className="text-xs font-medium text-brand hover:text-brand-hover transition-colors"
-            >
-              View all
-            </Link>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {knowledgeBases.slice(0, 6).map((kb) => (
-              <Link
-                key={kb.id}
-                href={`/app/knowledge-bases/${kb.id}`}
-                className="group rounded-lg border border-border bg-surface/50 p-4 transition-all duration-200 hover:border-border-hover hover:bg-surface-hover"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-text-primary truncate">{kb.name}</p>
-                  <ArrowRight size={14} className="text-text-tertiary opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
-                </div>
-                <p className="mt-1 text-xs text-text-tertiary">
-                  {kb._count.documents} document{kb._count.documents !== 1 ? "s" : ""}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {knowledgeBases.length === 0 && (
-        <EmptyState
-          icon="BookOpen"
-          title="No knowledge bases yet"
-          description="Create your first knowledge base to start uploading documents and building retrieval systems."
-          actionHref="/app/knowledge-bases"
-          actionLabel="Create knowledge base"
-        />
-      )}
     </div>
   );
 }

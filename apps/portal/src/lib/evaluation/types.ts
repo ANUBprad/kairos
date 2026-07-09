@@ -49,6 +49,53 @@ export interface ComparisonResult {
   differences: Record<string, { a: number; b: number; diff: number; better: "A" | "B" | "tie" }>;
 }
 
+export interface StatisticalComparison {
+  metricName: string;
+  labelA: string;
+  labelB: string;
+  meanA: number;
+  meanB: number;
+  meanDifference: number;
+  testUsed: string;
+  statistic: number;
+  pValue: number;
+  significant: boolean;
+  effectSize: number;
+  effectMagnitude: "negligible" | "small" | "medium" | "large";
+  effectMethod: string;
+  ciLower: number;
+  ciUpper: number;
+  interpretation: string;
+}
+
+export interface LeaderboardTier {
+  tier: number;
+  labels: string[];
+}
+
+export interface ScientificLeaderboardEntry {
+  rank: number;
+  label: string;
+  overallScore: number;
+  isBest: boolean;
+  recallAtK: number;
+  precisionAtK: number;
+  hitRate: number;
+  mrr: number;
+  ndcg: number;
+  faithfulness?: number;
+  latencyMs: number;
+  tier: number;
+  adjacentComparison?: {
+    significant: boolean;
+    pValue: number;
+    ciLower: number;
+    ciUpper: number;
+    effectSize: number;
+    effectMagnitude: string;
+  };
+}
+
 export interface EvaluationMetrics {
   retrieval: RetrievalMetrics;
   generation?: GenerationMetrics;

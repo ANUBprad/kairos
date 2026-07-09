@@ -44,10 +44,26 @@ export default async function EvaluationPage() {
   ]);
 
   return (
-    <EvaluationDashboard
-      runs={runs}
-      datasets={datasets}
-      benchmarkRuns={benchmarks}
-    />
+    <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-surface p-5">
+        <h1 className="text-lg font-semibold text-text-primary">Evaluation</h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          <strong className="text-text-primary">Purpose:</strong> Measure retrieval quality with statistical rigor using 12+ IR metrics.
+        </p>
+        <p className="mt-1 text-sm text-text-tertiary">
+          <strong className="text-text-secondary">Why it matters:</strong> Single metrics are misleading. Statistical rigor requires confidence intervals,
+          distribution analysis, and proper comparison methodology. Without this, you cannot know if improvements are real or noise.
+        </p>
+        <p className="mt-1 text-sm text-text-tertiary">
+          <strong className="text-text-secondary">What you can learn:</strong> What each metric actually measures. Why Recall@K matters more than accuracy for retrieval.
+          How to interpret nDCG scores. How to compare configurations with p-values and effect sizes.
+        </p>
+      </div>
+      <EvaluationDashboard
+        runs={runs}
+        datasets={datasets}
+        benchmarkRuns={benchmarks}
+      />
+    </div>
   );
 }

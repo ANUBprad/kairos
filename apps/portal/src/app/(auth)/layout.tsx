@@ -29,12 +29,12 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen">
       {/* Left: Branding Panel - hidden on mobile */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#0B0F14]">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-bg">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              "radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px)",
+              "radial-gradient(var(--color-border) 1px, transparent 1px)",
             backgroundSize: "32px 32px",
           }}
         />
@@ -42,7 +42,7 @@ export default function AuthLayout({
           className="absolute top-1/4 -left-32 w-[500px] h-[500px] rounded-full opacity-20 pointer-events-none"
           style={{
             background:
-              "radial-gradient(circle, rgba(255, 90, 10, 0.3) 0%, transparent 70%)",
+              "radial-gradient(circle, var(--color-brand-muted) 0%, transparent 70%)",
             filter: "blur(80px)",
           }}
         />
@@ -69,10 +69,10 @@ export default function AuthLayout({
 
           <div className="space-y-8 max-w-md">
             <div>
-              <h2 className="text-[28px] font-semibold text-white tracking-tight leading-[1.15]">
+              <h2 className="text-[28px] font-semibold text-text-primary tracking-tight leading-[1.15]">
                 RAG research platform for AI/ML engineers.
               </h2>
-              <p className="mt-3 text-[15px] text-white/60 leading-relaxed">
+              <p className="mt-3 text-[15px] text-text-secondary leading-relaxed">
                 Kairos provides production-grade retrieval-augmented generation with document intelligence, embeddings, semantic search, and explainable AI evaluation.
               </p>
             </div>
@@ -82,17 +82,17 @@ export default function AuthLayout({
                 const Icon = h.icon;
                 return (
                   <div key={h.text} className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-[8px] bg-white/5">
-                      <Icon size={15} className="text-[#FF5A0A]" />
+                    <div className="flex items-center justify-center w-8 h-8 rounded-[8px] bg-brand/10">
+                      <Icon size={15} className="text-brand" />
                     </div>
-                    <span className="text-sm text-white/70">{h.text}</span>
+                    <span className="text-sm text-text-secondary">{h.text}</span>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <p className="text-xs text-white/30">
+          <p className="text-xs text-text-tertiary">
             &copy; 2026 Kairos. MIT License.
           </p>
         </div>

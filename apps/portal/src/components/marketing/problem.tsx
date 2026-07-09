@@ -10,7 +10,7 @@ export function Problem() {
     <SectionWrapper id="problem">
       <ScrollReveal>
         <SectionHeading>
-          One retriever for every query? That&apos;s the problem.
+          Black-box RAG systems cannot be trusted. Kairos makes them explainable.
         </SectionHeading>
       </ScrollReveal>
 
@@ -21,28 +21,36 @@ export function Problem() {
               <div className="flex items-center justify-center w-7 h-7 rounded-full bg-error/10">
                 <X size={14} className="text-error" />
               </div>
-              <span className="text-sm font-semibold text-text-primary">Static RAG</span>
+              <span className="text-sm font-semibold text-text-primary">Black-Box RAG</span>
             </div>
             <div className="space-y-6">
               <div>
                 <p className="text-sm font-medium text-text-primary mb-2">
-                  &ldquo;What&apos;s our refund policy?&rdquo;
+                  &ldquo;Why did the system return this answer?&rdquo;
                 </p>
                 <div className="text-xs text-text-tertiary space-y-1">
-                  <p className="text-error/60 line-through">Full dense search (slow, expensive)</p>
+                  <p className="text-error/60">No visibility into which chunks were retrieved</p>
                 </div>
               </div>
               <div>
                 <p className="text-sm font-medium text-text-primary mb-2">
-                  &ldquo;Compare Q1 vs Q3 revenue&rdquo;
+                  &ldquo;Is this configuration actually better?&rdquo;
                 </p>
                 <div className="text-xs text-text-tertiary space-y-1">
-                  <p className="text-error/60 line-through">Same dense search (misses connections)</p>
+                  <p className="text-error/60">Single metrics without confidence intervals</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-primary mb-2">
+                  &ldquo;Why was this chunk not retrieved?&rdquo;
+                </p>
+                <div className="text-xs text-text-tertiary space-y-1">
+                  <p className="text-error/60">No debugging tools for retrieval failures</p>
                 </div>
               </div>
               <div className="pt-3 border-t border-border/50">
                 <p className="text-xs text-error font-medium">
-                  Wastes money on simple queries. Fails on complex ones.
+                  You cannot improve what you cannot see.
                 </p>
               </div>
             </div>
@@ -55,28 +63,36 @@ export function Problem() {
               <div className="flex items-center justify-center w-7 h-7 rounded-full bg-success/10">
                 <Check size={14} className="text-success" />
               </div>
-              <span className="text-sm font-semibold text-text-primary">Kairos Adaptive</span>
+              <span className="text-sm font-semibold text-text-primary">Kairos Explainable</span>
             </div>
             <div className="space-y-6">
               <div>
                 <p className="text-sm font-medium text-text-primary mb-2">
-                  &ldquo;What&apos;s our refund policy?&rdquo;
+                  Full pipeline trace per query
                 </p>
                 <div className="text-xs space-y-1">
-                  <p className="text-success">Simple keyword search (2ms, $0.002)</p>
+                  <p className="text-success">Every chunk, similarity score, and latency visible</p>
                 </div>
               </div>
               <div>
                 <p className="text-sm font-medium text-text-primary mb-2">
-                  &ldquo;Compare Q1 vs Q3 revenue&rdquo;
+                  Statistical comparison with p-values
                 </p>
                 <div className="text-xs space-y-1">
-                  <p className="text-success">Multi-hop reasoning (3 hops, 1.2s, $0.021)</p>
+                  <p className="text-success">Confidence intervals, effect sizes, significance tests</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-text-primary mb-2">
+                  Retrieval debugger with why-not-retrieved analysis
+                </p>
+                <div className="text-xs space-y-1">
+                  <p className="text-success">Inspect why specific chunks were missed</p>
                 </div>
               </div>
               <div className="pt-3 border-t border-border/50">
                 <p className="text-xs text-success font-medium">
-                  Right strategy every time. 24% better recall. 18% less cost.
+                  See every decision. Understand every result. Trust the system.
                 </p>
               </div>
             </div>
@@ -86,7 +102,7 @@ export function Problem() {
 
       <ScrollReveal className="mt-12 text-center">
         <p className="text-xl font-semibold text-text-primary">
-          Static retrieval doesn&apos;t understand the query. Kairos does.
+          A RAG system that cannot explain itself is not a research tool. It is a guess.
         </p>
       </ScrollReveal>
     </SectionWrapper>

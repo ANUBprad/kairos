@@ -17,8 +17,9 @@ import {
   runStrategyBenchmark,
 } from "@/lib/evaluation/benchmark";
 import { runBenchmarkCampaign, type CampaignConfig, type CampaignResult } from "@/lib/evaluation/campaign";
-import { generateLeaderboard, type LeaderboardEntry } from "@/lib/evaluation/leaderboard";
+import { generateLeaderboard, type LeaderboardEntry, generateScientificLeaderboard } from "@/lib/evaluation/leaderboard";
 import { generateRecommendations, type StrategyConfig, type Recommendation } from "@/lib/evaluation/recommendations";
+import type { ScientificLeaderboardEntry, LeaderboardTier } from "@/lib/evaluation/types";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 
 async function assertKbAccess(kbId: string, userId: string) {
@@ -299,6 +300,90 @@ export async function getLeaderboard(runIds: string[]): Promise<LeaderboardEntry
       aggregatedMetrics: r.aggregatedMetrics as Record<string, number> | null,
     })),
   );
+}
+
+export async function getScientificLeaderboard(runIds: string[]): Promise<{
+  entries: ScientificLeaderboardEntry[];
+  tiers: LeaderboardTier[];
+}> {
+  const session = await getServerSession();
+  if (!session) return { entries: [], tiers: [] };
+
+  const runs = await prisma.benchmarkRun.findMany({
+    where: { id: { in: runIds } },
+    select: {
+      name: true,
+      aggregatedMetrics: true,
+      results: {
+        select: {
+          retrievalMetrics: true,
+          generationMetrics: true,
+          latencySearchMs: true,
+        },
+      },
+    },
+  });
+
+  return generateScientificLeaderboard(
+    runs.map((r) => {
+      const perQueryMetrics: Record<string, number[]> = {};
+      for (const result of r.results) {
+        const rm = result.retrievalMetrics as Record<string, number> | null;
+        const gm = result.generationMetrics as Record<string, number> | null;
+        if (rm) {
+          for (const [key, val] of Object.entries(rm)) {
+            if (typeof val === "number") {
+              if (!perQueryMetrics[key]) perQueryMetrics[key] = [];
+              perQueryMetrics[key].push(val);
+            }
+          }
+        }
+        if (gm) {
+          for (const [key, val] of Object.entries(gm)) {
+            if (typeof val === "number") {
+              if (!perQueryMetrics[key]) perQueryMetrics[key] = [];
+              perQueryMetrics[key].push(val);
+            }
+          }
+        }
+        if (result.latencySearchMs != null) {
+          if (!perQueryMetrics.latencyMs) perQueryMetrics.latencyMs = [];
+          perQueryMetrics.latencyMs.push(result.latencySearchMs);
+        }
+      }
+      if (r.results.length > 0) {
+        const allScores: number[] = [];
+        for (let i = 0; i < r.results.length; i++) {
+          const rm = r.results[i].retrievalMetrics as Record<string, number> | null;
+          if (rm) {
+            const recall = rm.recallAtK ?? 0;
+            const precision = rm.precisionAtK ?? 0;
+            const hitRate = rm.hitRate ?? 0;
+            const mrr = rm.meanReciprocalRank ?? 0;
+            const ndcg = rm.ndcg ?? 0;
+            const score = (recall + precision + hitRate + mrr + ndcg) / 5;
+            allScores.push(score);
+          }
+        }
+        if (allScores.length > 0) {
+          perQueryMetrics.overallScore = allScores;
+        }
+      }
+
+      return {
+        label: r.name || "Unnamed",
+        aggregatedMetrics: r.aggregatedMetrics as Record<string, number> | null,
+        perQueryMetrics,
+      };
+    }),
+  );
+}
+
+export async function getScientificRecommendations(strategyConfigs: StrategyConfig[]): Promise<Recommendation[]> {
+  const session = await getServerSession();
+  if (!session) return [];
+
+  return generateRecommendations(strategyConfigs);
 }
 
 export async function getRecommendations(strategyConfigs: StrategyConfig[]): Promise<Recommendation[]> {

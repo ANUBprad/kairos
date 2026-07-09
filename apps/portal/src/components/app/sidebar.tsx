@@ -7,15 +7,17 @@ import {
   LayoutDashboard,
   FolderOpen,
   Code2,
-  FlaskConical,
   Bot,
-  History,
   BarChart3,
   SlidersHorizontal,
   GitBranch,
   BookOpen,
   Microscope,
   GraduationCap,
+  Eye,
+  Search,
+  Lightbulb,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -51,32 +53,35 @@ const navSections: NavSection[] = [
     items: [
       { label: "Overview", href: "/app", icon: LayoutDashboard },
       { label: "Research Dashboard", href: "/app/research", icon: Microscope },
+      { label: "AI Copilot", href: "/app/copilot", icon: Sparkles },
+      { label: "Experiment Lineage", href: "/app/lineage", icon: GitBranch },
+      { label: "Experiment Planner", href: "/app/planner", icon: Lightbulb },
     ],
   },
   {
-    label: "Knowledge",
+    label: "Build",
     items: [
       { label: "Document Repository", href: "/app/knowledge-bases", icon: FolderOpen },
       { label: "Chunking Studio", href: "/app/chunking-studio", icon: Code2 },
     ],
   },
   {
-    label: "Retrieval",
+    label: "Evaluate",
     items: [
-      { label: "Retrieval Lab", href: "/app/retrieval-lab", icon: FlaskConical },
+      { label: "Retrieval Lab", href: "/app/retrieval-lab", icon: Search },
       { label: "Advanced Retrieval", href: "/app/advanced-retrieval", icon: GitBranch },
-      { label: "RAG Chat", href: "/app/rag-chat", icon: Bot },
-    ],
-  },
-  {
-    label: "Analysis",
-    items: [
       { label: "Evaluation", href: "/app/evaluation", icon: BarChart3 },
-      { label: "Experiment History", href: "/app/experiments", icon: History },
     ],
   },
   {
-    label: "Learning",
+    label: "Explain",
+    items: [
+      { label: "RAG Chat", href: "/app/rag-chat", icon: Bot },
+      { label: "Retrieval Debugger", href: "/app/rag-chat#debug", icon: Eye },
+    ],
+  },
+  {
+    label: "Learn",
     items: [
       { label: "Architecture", href: "/app/architecture", icon: BookOpen },
       { label: "Project Guide", href: "/app/project-guide", icon: GraduationCap },
@@ -124,7 +129,7 @@ export function AppSidebar({ organization }: SidebarProps) {
         <nav className="space-y-5">
           {navSections.map((section) => (
             <div key={section.label}>
-              <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary/60">
+              <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary/60">
                 {section.label}
               </p>
               <div className="space-y-0.5">
@@ -136,16 +141,22 @@ export function AppSidebar({ organization }: SidebarProps) {
                       : pathname.startsWith(item.href);
                   return (
                     <Link
-                      key={item.href}
+                      key={item.label}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
                         isActive
                           ? "bg-brand/10 text-brand"
                           : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
                       )}
                     >
-                      <Icon size={18} className={isActive ? "text-brand" : ""} />
+                      <Icon
+                        size={18}
+                        className={cn(
+                          "transition-colors duration-150",
+                          isActive ? "text-brand" : "text-text-tertiary group-hover:text-text-secondary"
+                        )}
+                      />
                       {item.label}
                     </Link>
                   );

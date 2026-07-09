@@ -44,10 +44,26 @@ export default async function AdvancedRetrievalPage() {
   ]);
 
   return (
-    <AdvancedRetrievalDashboard
-      kbs={kbs}
-      benchmarkRuns={benchmarkRuns}
-      experimentRuns={experimentRuns}
-    />
+    <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-surface p-5">
+        <h1 className="text-lg font-semibold text-text-primary">Advanced Retrieval</h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          <strong className="text-text-primary">Purpose:</strong> Compare advanced retrieval strategies and their impact on retrieval quality.
+        </p>
+        <p className="mt-1 text-sm text-text-tertiary">
+          <strong className="text-text-secondary">Why it matters:</strong> Hybrid search, query expansion, multi-query, and reranking each address different failure modes.
+          Understanding when to use each strategy is key to building effective RAG systems.
+        </p>
+        <p className="mt-1 text-sm text-text-tertiary">
+          <strong className="text-text-secondary">What you can learn:</strong> How Reciprocal Rank Fusion combines results.
+          Why multi-query retrieval improves recall for complex questions. How cross-encoder reranking reorders results by deeper relevance.
+        </p>
+      </div>
+      <AdvancedRetrievalDashboard
+        kbs={kbs}
+        benchmarkRuns={benchmarkRuns}
+        experimentRuns={experimentRuns}
+      />
+    </div>
   );
 }

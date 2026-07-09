@@ -3,57 +3,63 @@
 import { motion } from "framer-motion";
 import {
   Search,
-  FileText,
+  Eye,
   Layers,
   BarChart3,
   GitBranch,
-  Shield,
+  FlaskConical,
   Zap,
-  Globe,
+  Database,
+  Lightbulb,
 } from "lucide-react";
 import { SectionWrapper, SectionHeading, SectionSubheading } from "./section-wrapper";
 import { StaggerContainer, staggerItem, ScrollReveal } from "@/components/shared/scroll-reveal";
 
 const features = [
   {
-    icon: Search,
-    title: "Semantic Search",
-    desc: "Dense vector search with pgvector and cosine similarity. Supports hybrid search combining semantic and keyword-based retrieval.",
-  },
-  {
-    icon: FileText,
-    title: "Document Intelligence",
-    desc: "Upload PDF, DOCX, CSV, and Markdown files. Automatic text extraction, chunking, and metadata parsing.",
-  },
-  {
-    icon: Layers,
-    title: "Embeddings Pipeline",
-    desc: "Generate embeddings via OpenAI or Gemini. Batch processing with configurable models and dimension sizes.",
+    icon: Eye,
+    title: "Explainable Retrieval",
+    desc: "Full pipeline trace per query. See which chunks were retrieved, why they matched, similarity scores, and prompt construction. No black boxes.",
   },
   {
     icon: GitBranch,
     title: "Multi-Strategy Retrieval",
-    desc: "Hybrid search, MMR with cross-encoder reranking, and iterative multi-hop strategies for different query types.",
+    desc: "8+ strategies: vector, BM25, hybrid RRF, query expansion, multi-query, reranking, context compression. Compare side by side.",
   },
   {
     icon: BarChart3,
-    title: "Explainable AI",
-    desc: "Every answer includes cited sources, similarity scores, and chunk-level provenance. Understand why each result was retrieved.",
+    title: "Statistical Evaluation",
+    desc: "12+ metrics with confidence intervals, p-values, effect sizes, and distribution analysis. Know if improvements are real or noise.",
   },
   {
-    icon: Shield,
-    title: "Evaluation Metrics",
-    desc: "Measure retrieval quality with recall, precision, MRR, and NDCG. Compare strategies side by side.",
+    icon: FlaskConical,
+    title: "Benchmark Campaigns",
+    desc: "Run multiple strategies against labeled datasets. Leaderboard with composite scores. Automated comparison reports.",
+  },
+  {
+    icon: Layers,
+    title: "Chunking Studio",
+    desc: "5 chunking strategies with visual preview. Recursive, sentence, fixed-size, Markdown, and semantic chunking.",
+  },
+  {
+    icon: Search,
+    title: "Retrieval Lab",
+    desc: "Interactive testing with real-time parameter adjustment. Debug why specific chunks were or were not retrieved.",
   },
   {
     icon: Zap,
     title: "Streaming Chat",
-    desc: "Real-time SSE streaming with citations displayed inline. Full conversation history with token tracking.",
+    desc: "Production-grade RAG chat with inline citations, similarity scores, and per-message pipeline traces.",
   },
   {
-    icon: Globe,
-    title: "Provider Agnostic",
-    desc: "Works with OpenAI and Gemini. Bring your own LLM, embedding model, or vector store.",
+    icon: Database,
+    title: "Research Intelligence",
+    desc: "Automated pattern discovery, trend detection, root cause inference, and experiment suggestions from benchmark data.",
+  },
+  {
+    icon: Lightbulb,
+    title: "Evidence-Backed Recommendations",
+    desc: "Every recommendation includes metrics, significance tests, confidence intervals, and explanations. Not guesses.",
   },
 ];
 
@@ -61,13 +67,13 @@ export function FeaturesGrid() {
   return (
     <SectionWrapper id="features">
       <ScrollReveal>
-        <SectionHeading>Research capabilities across the RAG pipeline</SectionHeading>
+        <SectionHeading>Core Capabilities</SectionHeading>
         <SectionSubheading>
-          Every component is observable, configurable, and measurable.
+          An end-to-end research workbench for building, testing, and understanding RAG systems.
         </SectionSubheading>
       </ScrollReveal>
 
-      <StaggerContainer className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" staggerDelay={0.06}>
+      <StaggerContainer className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" staggerDelay={0.06}>
         {features.map((feature) => {
           const Icon = feature.icon;
           return (

@@ -1,72 +1,71 @@
 "use client";
 
-import { Database, Cpu, Layers, Bot, Globe, Github } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Eye, FlaskConical, BarChart3 } from "lucide-react";
 import { SectionWrapper, SectionHeading } from "./section-wrapper";
 import { ScrollReveal } from "@/components/shared/scroll-reveal";
+import { Button } from "@/components/ui/button";
 
-const techStack = [
+const useCases = [
   {
-    category: "Vector Database",
-    items: ["PostgreSQL", "pgvector", "HNSW indexing"],
-    icon: Database,
+    icon: FlaskConical,
+    title: "For Researchers",
+    description: "Run controlled experiments, compare strategies with statistical rigor, generate academic reports. Every claim backed by data.",
   },
   {
-    category: "Embedding Models",
-    items: ["OpenAI text-embedding-3", "Gemini text-embedding", "Extensible providers"],
-    icon: Cpu,
+    icon: Eye,
+    title: "For Engineers",
+    description: "Debug retrieval failures, inspect pipeline traces, understand why specific chunks were retrieved or missed. Build trustworthy RAG systems.",
   },
   {
-    category: "Chunking Strategies",
-    items: ["Recursive split", "Sentence split", "Fixed-size", "Markdown-aware", "Semantic grouping"],
-    icon: Layers,
-  },
-  {
-    category: "LLM Providers",
-    items: ["OpenAI GPT-4o", "Gemini 2.0 Flash", "Configurable per query"],
-    icon: Bot,
-  },
-  {
-    category: "Retrieval Strategies",
-    items: ["Vector search", "BM25 keyword", "Hybrid RRF", "MMR", "Query expansion", "Cross-encoder reranking"],
-    icon: Globe,
-  },
-  {
-    category: "Infrastructure",
-    items: ["Next.js 15", "Prisma ORM", "Docker Compose", "MIT License"],
-    icon: Github,
+    icon: BarChart3,
+    title: "For Students",
+    description: "Learn RAG concepts by doing. Upload documents, experiment with configurations, see how chunking and embedding choices affect results.",
   },
 ];
 
 export function CTASection() {
   return (
-    <SectionWrapper id="tech-stack">
+    <SectionWrapper id="cta">
       <ScrollReveal>
-        <SectionHeading>Technology Stack</SectionHeading>
+        <SectionHeading>Who is Kairos for?</SectionHeading>
       </ScrollReveal>
 
-      <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {techStack.map((tech) => {
-          const Icon = tech.icon;
+      <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        {useCases.map((uc) => {
+          const Icon = uc.icon;
           return (
-            <div
-              key={tech.category}
-              className="rounded-xl border border-border bg-surface/50 p-5 transition-all duration-200 hover:border-border-hover hover:bg-surface"
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <Icon size={16} className="text-brand" />
-                <h3 className="text-sm font-semibold text-text-primary">{tech.category}</h3>
+            <ScrollReveal key={uc.title}>
+              <div className="rounded-xl border border-border bg-surface/50 p-6 text-center">
+                <Icon size={24} className="text-brand mx-auto mb-4" />
+                <h3 className="text-sm font-semibold text-text-primary mb-2">{uc.title}</h3>
+                <p className="text-xs text-text-tertiary leading-relaxed">{uc.description}</p>
               </div>
-              <ul className="space-y-1">
-                {tech.items.map((item) => (
-                  <li key={item} className="text-xs text-text-secondary">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            </ScrollReveal>
           );
         })}
       </div>
+
+      <ScrollReveal className="mt-16 text-center">
+        <h2 className="text-[28px] font-semibold text-text-primary mb-4">
+          Start building explainable RAG systems
+        </h2>
+        <p className="text-text-secondary mb-8 max-w-md mx-auto">
+          Upload documents, run retrieval tests, and evaluate with statistical rigor.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button variant="primary" size="lg" asChild>
+            <Link href="/signup">
+              Get Started Free <ArrowRight size={16} />
+            </Link>
+          </Button>
+          <Button variant="secondary" size="lg" asChild>
+            <Link href="/features">
+              Explore Features
+            </Link>
+          </Button>
+        </div>
+      </ScrollReveal>
     </SectionWrapper>
   );
 }

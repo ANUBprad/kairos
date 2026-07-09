@@ -1,4 +1,7 @@
 import type { DescriptiveStats } from "./statistics";
+import { compareMetrics, type ComparisonResult as SignificanceComparison } from "./significance";
+import type { IntelligenceResult } from "./research-intelligence";
+import { getMetricLabel } from "./research-intelligence";
 
 export interface ReportConfig {
   title: string;
@@ -18,6 +21,7 @@ export interface ReportStrategyResult {
   label: string;
   metrics: Record<string, number>;
   perQuestionStats: Record<string, DescriptiveStats>;
+  perQueryMetrics?: Record<string, number[]>;
   retrievalConfig: Record<string, unknown>;
 }
 
@@ -66,6 +70,7 @@ export function generateFullReport(
   config: ReportConfig,
   dataset: ReportDatasetInfo,
   strategyResults: ReportStrategyResult[],
+  intelligenceResult?: IntelligenceResult,
 ): FullReport {
   const metadata = {
     title: config.title,
@@ -84,9 +89,17 @@ export function generateFullReport(
     generateStatisticalAnalysisSection(strategyResults),
     generateLatencyAnalysisSection(strategyResults),
     generateRankingSection(strategyResults),
-    generateDiscussionSection(summary),
+    generateResearchFindingsSection(intelligenceResult),
+    generateDiscussionSection(summary, intelligenceResult),
+    generateThreatsToValiditySection(strategyResults, dataset),
     generateConclusionSection(summary),
-    generateFutureWorkSection(),
+    generateFutureWorkSection(intelligenceResult),
+    generateReproducibilitySection(),
+    generateProvenanceSection(),
+    generateCitationSection(),
+    generateNextExperimentsSection(),
+    generateCoverageAnalysisSection(),
+    generateResearchRoadmapSection(),
   ];
 
   const markdown = renderMarkdown(config, metadata, dataset, sections, summary);
@@ -99,7 +112,20 @@ export function generateFullReport(
     sections,
     summary,
     markdown,
-    json: JSON.stringify({ metadata, config, dataset, results: strategyResults, sections, summary }, null, 2),
+    json: JSON.stringify({
+      metadata,
+      config,
+      dataset,
+      results: strategyResults,
+      sections,
+      summary,
+      statisticalAnalysis: {
+        hasPerQueryData: strategyResults.every((r) => r.perQueryMetrics && Object.keys(r.perQueryMetrics).length > 0),
+        sampleSize: strategyResults[0]?.perQueryMetrics?.recallAtK?.length ?? 0,
+        significanceLevel: 0.05,
+        testMethods: ["Paired t-test (normal differences)", "Wilcoxon signed-rank (non-normal differences)"],
+      },
+    }, null, 2),
   };
 }
 
@@ -331,53 +357,117 @@ function generateStatisticalAnalysisSection(results: ReportStrategyResult[]): Re
     };
   }
 
-  const content = [
-    "Comparative statistical analysis between configurations. The improvement percentage indicates the relative difference in mean Recall@K.",
-    "",
-  ];
-
-  const tables: ReportTable[] = [];
   const sorted = [...results].sort((a, b) => (b.metrics.avgRecallAtK ?? 0) - (a.metrics.avgRecallAtK ?? 0));
   const best = sorted[0];
 
+  const hasPerQuery = sorted.every((r) => r.perQueryMetrics && Object.keys(r.perQueryMetrics).length > 0);
+
+  if (!hasPerQuery) {
+    const content = [
+      "Comparative statistical analysis between configurations. Per-query metrics are required for rigorous statistical testing.",
+      "The following comparison uses aggregated means. For statistically valid conclusions, ensure per-query metrics are stored.",
+      "",
+    ];
+
+    const tables: ReportTable[] = [];
+    for (let i = 1; i < sorted.length; i++) {
+      const other = sorted[i];
+      const improvement = best.metrics.avgRecallAtK - other.metrics.avgRecallAtK;
+      const improvementPct = other.metrics.avgRecallAtK !== 0
+        ? ((best.metrics.avgRecallAtK - other.metrics.avgRecallAtK) / other.metrics.avgRecallAtK) * 100
+        : 0;
+
+      tables.push({
+        caption: `${best.label} vs ${other.label}`,
+        headers: ["Metric", best.label, other.label, "Difference", "Improvement"],
+        rows: [
+          ["Recall@K",
+            best.metrics.avgRecallAtK.toFixed(4),
+            other.metrics.avgRecallAtK.toFixed(4),
+            `+${improvement.toFixed(4)}`,
+            `+${improvementPct.toFixed(1)}%`,
+          ],
+          ["Precision@K",
+            best.metrics.avgPrecisionAtK.toFixed(4),
+            other.metrics.avgPrecisionAtK.toFixed(4),
+            (best.metrics.avgPrecisionAtK - other.metrics.avgPrecisionAtK).toFixed(4),
+            `${other.metrics.avgPrecisionAtK !== 0 ? `+${((best.metrics.avgPrecisionAtK - other.metrics.avgPrecisionAtK) / other.metrics.avgPrecisionAtK * 100).toFixed(1)}%` : "N/A"}`,
+          ],
+          ["MRR",
+            best.metrics.avgMRR.toFixed(4),
+            other.metrics.avgMRR.toFixed(4),
+            (best.metrics.avgMRR - other.metrics.avgMRR).toFixed(4),
+            `${other.metrics.avgMRR !== 0 ? `+${((best.metrics.avgMRR - other.metrics.avgMRR) / other.metrics.avgMRR * 100).toFixed(1)}%` : "N/A"}`,
+          ],
+          ["nDCG",
+            best.metrics.avgNDCG.toFixed(4),
+            other.metrics.avgNDCG.toFixed(4),
+            (best.metrics.avgNDCG - other.metrics.avgNDCG).toFixed(4),
+            `${other.metrics.avgNDCG !== 0 ? `+${((best.metrics.avgNDCG - other.metrics.avgNDCG) / other.metrics.avgNDCG * 100).toFixed(1)}%` : "N/A"}`,
+          ],
+        ],
+      });
+    }
+
+    return {
+      title: "Statistical Analysis",
+      content: content.join("\n"),
+      tables,
+    };
+  }
+
+  const content = [
+    "Rigorous statistical comparison between configurations using per-query metrics.",
+    "Tests are automatically selected based on normality of differences (paired t-test for normal, Wilcoxon signed-rank for non-normal).",
+    "All comparisons use a significance level of α = 0.05.",
+    "",
+  ];
+
+  const metricKeys = ["recallAtK", "precisionAtK", "mrr", "ndcg", "hitRate"];
+  const tables: ReportTable[] = [];
+
   for (let i = 1; i < sorted.length; i++) {
     const other = sorted[i];
-    const improvement = best.metrics.avgRecallAtK - other.metrics.avgRecallAtK;
-    const improvementPct = other.metrics.avgRecallAtK !== 0
-      ? ((best.metrics.avgRecallAtK - other.metrics.avgRecallAtK) / other.metrics.avgRecallAtK) * 100
-      : 0;
+
+    const statResults: SignificanceComparison[] = [];
+    for (const key of metricKeys) {
+      const baselineValues = other.perQueryMetrics?.[key] ?? [];
+      const treatmentValues = best.perQueryMetrics?.[key] ?? [];
+      if (baselineValues.length >= 2 && treatmentValues.length >= 2) {
+        try {
+          const result = compareMetrics(baselineValues, treatmentValues, key, other.label, best.label);
+          statResults.push(result);
+        } catch {
+          // skip if comparison fails
+        }
+      }
+    }
+
+    if (statResults.length === 0) continue;
+
+    const headers = ["Metric", "Test Used", "p-value", "Effect Size", "95% CI", "Significant?", "Interpretation"];
+    const rows = statResults.map((r) => [
+      r.metricName,
+      r.significance.testUsed,
+      r.significance.pValue.toFixed(4),
+      `${r.effectSize.value.toFixed(3)} (${r.effectSize.magnitude})`,
+      `[${r.bootstrapCI.ciLower.toFixed(4)}, ${r.bootstrapCI.ciUpper.toFixed(4)}]`,
+      r.significance.significant ? "Yes" : "No",
+      r.interpretation,
+    ]);
 
     tables.push({
-      caption: `${best.label} vs ${other.label}`,
-      headers: ["Metric", best.label, other.label, "Difference", "Improvement"],
-      rows: [
-        ["Recall@K",
-          best.metrics.avgRecallAtK.toFixed(4),
-          other.metrics.avgRecallAtK.toFixed(4),
-          `+${improvement.toFixed(4)}`,
-          `+${improvementPct.toFixed(1)}%`,
-        ],
-        ["Precision@K",
-          best.metrics.avgPrecisionAtK.toFixed(4),
-          other.metrics.avgPrecisionAtK.toFixed(4),
-          (best.metrics.avgPrecisionAtK - other.metrics.avgPrecisionAtK).toFixed(4),
-          `${other.metrics.avgPrecisionAtK !== 0 ? `+${((best.metrics.avgPrecisionAtK - other.metrics.avgPrecisionAtK) / other.metrics.avgPrecisionAtK * 100).toFixed(1)}%` : "N/A"}`,
-        ],
-        ["MRR",
-          best.metrics.avgMRR.toFixed(4),
-          other.metrics.avgMRR.toFixed(4),
-          (best.metrics.avgMRR - other.metrics.avgMRR).toFixed(4),
-          `${other.metrics.avgMRR !== 0 ? `+${((best.metrics.avgMRR - other.metrics.avgMRR) / other.metrics.avgMRR * 100).toFixed(1)}%` : "N/A"}`,
-        ],
-        ["nDCG",
-          best.metrics.avgNDCG.toFixed(4),
-          other.metrics.avgNDCG.toFixed(4),
-          (best.metrics.avgNDCG - other.metrics.avgNDCG).toFixed(4),
-          `${other.metrics.avgNDCG !== 0 ? `+${((best.metrics.avgNDCG - other.metrics.avgNDCG) / other.metrics.avgNDCG * 100).toFixed(1)}%` : "N/A"}`,
-        ],
-      ],
+      caption: `${other.label} vs ${best.label} — Statistical Comparison`,
+      headers,
+      rows,
     });
   }
+
+  const sigCount = tables.reduce((s, t) => s + t.rows.filter((r) => r[5] === "Yes").length, 0);
+  const totalCount = tables.reduce((s, t) => s + t.rows.length, 0);
+
+  content.push(`**Summary:** ${sigCount} of ${totalCount} metric comparisons are statistically significant at α = 0.05.`);
+  content.push("");
 
   return {
     title: "Statistical Analysis",
@@ -450,12 +540,31 @@ function generateDiscussionSection(summary: {
   bestOverall: string;
   keyFindings: string[];
   recommendations: string[];
-}): ReportSection {
-  const content = [
+}, intelligenceResult?: IntelligenceResult): ReportSection {
+  const lines: string[] = [
     "## Key Findings",
     "",
     ...summary.keyFindings.map((f) => `- ${f}`),
     "",
+  ];
+
+  if (intelligenceResult && intelligenceResult.trends.length > 0) {
+    lines.push("## Temporal Trends", "");
+    for (const trend of intelligenceResult.trends) {
+      lines.push(`- ${getMetricLabel(trend.metric)}: ${trend.description}`);
+    }
+    lines.push("");
+  }
+
+  if (intelligenceResult && intelligenceResult.rootCauses.length > 0) {
+    lines.push("## Identified Issues", "");
+    for (const rc of intelligenceResult.rootCauses) {
+      lines.push(`- **${rc.issue}**: ${rc.recommendation}`);
+    }
+    lines.push("");
+  }
+
+  lines.push(
     "## Interpretation",
     "",
     "The evaluation reveals important tradeoffs between retrieval quality, latency, and computational cost. ",
@@ -466,11 +575,159 @@ function generateDiscussionSection(summary: {
     "- **Research/Exploration:** Prioritize Recall@K to capture all relevant information",
     "- **Real-time Applications:** Prioritize low latency, potentially sacrificing some accuracy",
     "",
-  ];
+  );
 
   return {
     title: "Discussion",
-    content: content.join("\n"),
+    content: lines.join("\n"),
+  };
+}
+
+function generateResearchFindingsSection(intelligenceResult?: IntelligenceResult): ReportSection {
+  if (!intelligenceResult || intelligenceResult.findings.length === 0) {
+    return {
+      title: "Research Findings",
+      content: "No automated findings detected. Run more experiments to enable pattern analysis.",
+    };
+  }
+
+  const lines: string[] = [
+    "Automated analysis of benchmark results identified the following research findings:",
+    "",
+  ];
+
+  const byType = new Map<string, typeof intelligenceResult.findings>();
+  for (const finding of intelligenceResult.findings) {
+    const group = byType.get(finding.type) ?? [];
+    group.push(finding);
+    byType.set(finding.type, group);
+  }
+
+  const typeLabels: Record<string, string> = {
+    correlation: "Correlations",
+    tradeoff: "Tradeoffs",
+    trend: "Trends",
+    pattern: "Patterns",
+    anomaly: "Anomalies",
+    insight: "Insights",
+  };
+
+  for (const [type, findings] of byType) {
+    lines.push(`### ${typeLabels[type] ?? type}`, "");
+    for (const f of findings) {
+      lines.push(`**${f.title}** (${f.severity} severity)`);
+      lines.push(`- Observation: ${f.observation}`);
+      lines.push(`- Evidence: ${f.evidence.join("; ")}`);
+      lines.push(`- Interpretation: ${f.interpretation}`);
+      lines.push("");
+    }
+  }
+
+  if (intelligenceResult.metricSummary && Object.keys(intelligenceResult.metricSummary).length > 0) {
+    lines.push("### Metric Summary", "");
+    const headers = ["Metric", "Mean", "Std Dev", "Min", "Max"];
+    const rows = Object.entries(intelligenceResult.metricSummary).map(([key, stats]) => [
+      getMetricLabel(key),
+      stats.mean.toFixed(4),
+      stats.std.toFixed(4),
+      stats.min.toFixed(4),
+      stats.max.toFixed(4),
+    ]);
+
+    lines.push(`| ${headers.join(" | ")} |`);
+    lines.push(`| ${headers.map(() => "---").join(" | ")} |`);
+    for (const row of rows) {
+      lines.push(`| ${row.join(" | ")} |`);
+    }
+    lines.push("");
+  }
+
+  return {
+    title: "Research Findings",
+    content: lines.join("\n"),
+  };
+}
+
+function generateThreatsToValiditySection(
+  results: ReportStrategyResult[],
+  dataset: ReportDatasetInfo,
+): ReportSection {
+  const totalQuestions = dataset.questionCount;
+  const lines: string[] = [
+    "This section identifies potential threats to the validity of the evaluation results.",
+    "",
+    "## Internal Validity",
+    "",
+  ];
+
+  if (totalQuestions < 30) {
+    lines.push(`- **Small sample size:** The dataset contains only ${totalQuestions} questions. Results may not generalize. Consider using datasets with 100+ questions for more reliable conclusions.`);
+  } else if (totalQuestions < 100) {
+    lines.push(`- **Moderate sample size:** ${totalQuestions} questions provide reasonable but not robust statistical power. Small effect sizes may be missed.`);
+  } else {
+    lines.push(`- **Adequate sample size:** ${totalQuestions} questions provide sufficient statistical power for most comparisons.`);
+  }
+
+  lines.push(
+    "",
+    "## Construct Validity",
+    "",
+    "- **Metric limitations:** IR metrics (Recall@K, Precision@K, nDCG) measure retrieval quality but do not capture answer quality, factual correctness, or user satisfaction.",
+    "- **Aggregation effects:** Averaging across questions may mask per-question variability. Some questions may benefit from different configurations.",
+    "- **Ground truth assumptions:** Relevance judgments are assumed to be binary (relevant/irrelevant). Partial relevance is not captured.",
+    "",
+    "## External Validity",
+    "",
+    `- **Domain specificity:** Results are specific to the **${dataset.name}** dataset and may not transfer to other domains or document collections.`,
+    "- **Configuration scope:** Only the tested configurations are evaluated. Other parameter combinations may perform differently.",
+    "- **Static evaluation:** Benchmark results reflect a point-in-time evaluation. Performance may vary as the knowledge base evolves.",
+    "",
+    "## Conclusion Validity",
+    "",
+    "- **Multiple comparisons:** Testing multiple metrics increases the chance of false positives. The analysis uses α = 0.05 without correction for multiple testing.",
+    "- **Selection bias:** Configurations may not represent the full parameter space. Results should be interpreted as indicative rather than definitive.",
+    "",
+  );
+
+  return {
+    title: "Threats to Validity",
+    content: lines.join("\n"),
+  };
+}
+
+function generateFutureWorkSection(intelligenceResult?: IntelligenceResult): ReportSection {
+  const lines: string[] = [
+    "Future work that could extend this evaluation:",
+    "",
+  ];
+
+  if (intelligenceResult && intelligenceResult.experimentSuggestions.length > 0) {
+    lines.push("### Recommended Experiments (from automated analysis)", "");
+    for (const sug of intelligenceResult.experimentSuggestions) {
+      lines.push(`**${sug.title}** (${sug.priority} priority)`);
+      lines.push(`- Rationale: ${sug.rationale}`);
+      lines.push(`- Expected impact: ${sug.expectedImpact}`);
+      lines.push(`- Parameters to vary: ${sug.parameters.join(", ")}`);
+      lines.push("");
+    }
+  }
+
+  lines.push(
+    "### General Recommendations",
+    "",
+    "- **Cross-Encoder Reranking:** Integrate a dedicated cross-encoder model for more accurate relevance scoring",
+    "- **LLM-as-Judge Evaluation:** Use an LLM to evaluate answer quality, faithfulness, and coherence",
+    "- **Multi-Hop Retrieval:** Implement recursive retrieval for complex questions requiring multiple reasoning steps",
+    "- **Adaptive Retrieval:** Adjust top-K and similarity threshold dynamically based on query type",
+    "- **Diverse Embedding Models:** Compare additional embedding providers (Cohere, Voyage, etc.)",
+    "- **Cost Analysis:** Include token usage and API cost as evaluation metrics",
+    "- **A/B Testing Framework:** Run live A/B tests in production to validate offline benchmark results",
+    "",
+  );
+
+  return {
+    title: "Future Work",
+    content: lines.join("\n"),
   };
 }
 
@@ -489,26 +746,6 @@ function generateConclusionSection(summary: {
 
   return {
     title: "Conclusion & Recommendations",
-    content: content.join("\n"),
-  };
-}
-
-function generateFutureWorkSection(): ReportSection {
-  const content = [
-    "Future work that could extend this evaluation:",
-    "",
-    "- **Cross-Encoder Reranking:** Integrate a dedicated cross-encoder model for more accurate relevance scoring",
-    "- **LLM-as-Judge Evaluation:** Use an LLM to evaluate answer quality, faithfulness, and coherence",
-    "- **Multi-Hop Retrieval:** Implement recursive retrieval for complex questions requiring multiple reasoning steps",
-    "- **Adaptive Retrieval:** Adjust top-K and similarity threshold dynamically based on query type",
-    "- **Diverse Embedding Models:** Compare additional embedding providers (Cohere, Voyage, etc.)",
-    "- **Cost Analysis:** Include token usage and API cost as evaluation metrics",
-    "- **A/B Testing Framework:** Run live A/B tests in production to validate offline benchmark results",
-    "",
-  ];
-
-  return {
-    title: "Future Work",
     content: content.join("\n"),
   };
 }
@@ -590,4 +827,149 @@ function renderMarkdown(
 function formatStat(value: number | undefined): string {
   if (value == null) return "—";
   return value.toFixed(4);
+}
+
+function generateReproducibilitySection(): ReportSection {
+  return {
+    title: "Reproducibility",
+    content: `This report supports full reproducibility through experiment manifests. Each experiment configuration is captured in a structured manifest that includes:
+
+- **Dataset**: Identifier, source, question count, and checksum for data integrity verification
+- **Pipeline**: Complete configuration of chunking, embedding, retrieval, reranking, prompt, generation, and evaluation stages
+- **Environment**: Runtime environment details including Kairos version, Node.js version, and platform
+- **Results**: Aggregated metrics, per-question metrics, and statistical summaries
+
+To reproduce this experiment:
+1. Import the experiment manifest (available in JSON or YAML format)
+2. Verify the dataset checksum matches your local copy
+3. Configure the pipeline with the captured parameters
+4. Run the evaluation with the same settings
+
+The reproducibility score indicates how completely the experiment configuration was captured. Higher scores mean more complete documentation for reproduction.`,
+    tables: [],
+  };
+}
+
+function generateProvenanceSection(): ReportSection {
+  return {
+    title: "Provenance Summary",
+    content: `All actions in this experiment are tracked through a provenance chain. Each step records:
+
+- **Action**: What was performed (created, executed, evaluated, analyzed, exported)
+- **Actor**: Who or what performed the action
+- **Inputs**: What data was consumed
+- **Outputs**: What data was produced
+- **Parameters**: Configuration used for the action
+- **Checksum**: Integrity verification for the record
+
+The provenance chain ensures that every result can be traced back to its origin. Any modification to the data or configuration will be detected through checksum verification.`,
+    tables: [],
+  };
+}
+
+function generateCitationSection(): ReportSection {
+  return {
+    title: "Citation Information",
+    content: `When citing results from this experiment, please use the following references:
+
+**Kairos System**
+Kairos Team. (2024). Kairos: Explainable RAG Research Workbench. GitHub Repository. https://github.com/kairos-rag/kairos
+
+**Benchmark Dataset**
+The benchmark dataset used in this experiment should be cited according to its original source.
+
+**Embedding Model**
+The embedding model used should be cited according to its original publication.
+
+**Configuration**
+When comparing configurations, cite the specific parameter settings used in this experiment.
+
+All citations are available in BibTeX format for easy inclusion in LaTeX documents.`,
+    tables: [],
+  };
+}
+
+function generateNextExperimentsSection(): ReportSection {
+  return {
+    title: "Next Recommended Experiments",
+    content: `Based on the analysis of current results and configuration coverage, the following experiments are recommended:
+
+**Priority 1: High-Impact Exploration**
+Focus on configurations that are predicted to yield the highest improvement with high confidence. These experiments target regions of the configuration space with high expected information gain.
+
+**Priority 2: Uncertainty Reduction**
+Execute experiments in areas where prediction uncertainty is highest. This reduces model uncertainty and improves future recommendation quality.
+
+**Priority 3: Pareto-Optimal Discovery**
+Explore configurations on the Pareto frontier to find optimal tradeoffs between competing objectives (e.g., accuracy vs. latency).
+
+Each recommendation includes:
+- Expected improvement percentage
+- Confidence level
+- Statistical basis (nearest neighbor analysis)
+- Expected information gain
+- Estimated cost (latency and tokens)`,
+    tables: [],
+  };
+}
+
+function generateCoverageAnalysisSection(): ReportSection {
+  return {
+    title: "Coverage Analysis",
+    content: `Configuration coverage measures how much of the potential configuration space has been explored.
+
+**Coverage Score**
+The coverage score is calculated as: explored combinations / total combinations.
+
+**Dimension Coverage**
+Each configuration dimension (retrieval mode, chunk size, top-K, etc.) is analyzed independently to identify which values have been tested.
+
+**Coverage Gaps**
+Gaps are identified when:
+- A dimension has less than 50% value coverage
+- Numeric dimensions have large gaps between tested values
+- Overall coverage is below 10%
+
+**Research Direction**
+Based on coverage analysis:
+1. If coverage < 10%: Focus on broad exploration
+2. If coverage 10-30%: Fill critical gaps in under-covered dimensions
+3. If coverage 30-70%: Balance exploration and exploitation
+4. If coverage > 70%: Focus on fine-tuning around the Pareto frontier`,
+    tables: [],
+  };
+}
+
+function generateResearchRoadmapSection(): ReportSection {
+  return {
+    title: "Research Roadmap",
+    content: `This roadmap outlines the recommended research trajectory based on current results and configuration coverage.
+
+**Phase 1: Foundation (Current)**
+- Establish baseline performance with standard configurations
+- Identify initial patterns and tradeoffs
+- Build coverage of core configuration dimensions
+
+**Phase 2: Exploration**
+- Test under-explored configuration regions
+- Validate hypotheses from Phase 1 findings
+- Reduce uncertainty in high-impact areas
+
+**Phase 3: Optimization**
+- Fine-tune around Pareto-optimal configurations
+- Optimize for specific deployment constraints
+- Validate robustness across datasets
+
+**Phase 4: Advanced**
+- Test novel combinations not previously explored
+- Investigate interactions between parameters
+- Develop domain-specific configurations
+
+**Milestones**
+- 25% coverage: Initial pattern identification
+- 50% coverage: Robust trend detection
+- 75% coverage: Optimization-ready
+- 90%+ coverage: Comprehensive understanding`,
+    tables: [],
+  };
 }

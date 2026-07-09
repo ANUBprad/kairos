@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { RetrievalDebugger } from "@/components/app/retrieval-debugger";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
@@ -119,6 +120,7 @@ export function RagChat({ kbs }: Props) {
   const [expandedChunks, setExpandedChunks] = useState<Set<string>>(new Set());
   const [showPrompt, setShowPrompt] = useState<string | null>(null);
   const [showTimeline, setShowTimeline] = useState<string | null>(null);
+  const [showDebugger, setShowDebugger] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -628,6 +630,69 @@ export function RagChat({ kbs }: Props) {
                               <span className="text-text-tertiary">Estimated tokens: {msg.pipeline.prompt.estimatedTokens}</span>
                             </div>
                           </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => setShowDebugger(showDebugger === msg.id ? null : msg.id)}
+                          className="flex items-center gap-2 text-xs text-text-secondary bg-bg/50 rounded-lg p-2.5 border border-border w-full hover:bg-bg transition-colors"
+                        >
+                          <Eye size={12} />
+                          <span>Retrieval Debugger</span>
+                          <span className="text-text-tertiary ml-auto">Full trace analysis</span>
+                        </button>
+                        {showDebugger === msg.id && (
+                          <RetrievalDebugger
+                            trace={{
+                              query: msg.pipeline.retrieval.query,
+                              strategy: msg.pipeline.strategy,
+                              config: msg.pipeline.config,
+                              embedding: [],
+                              embeddingLatencyMs: msg.pipeline.steps?.[0]?.durationMs ?? 0,
+                              steps: (msg.pipeline.steps ?? []).map((s) => ({
+                                step: s.name,
+                                description: s.description,
+                                latencyMs: s.durationMs,
+                                timestamp: 0,
+                                input: null,
+                                output: s.output ?? null,
+                              })),
+                              retrievedChunks: msg.pipeline.retrieval.chunks.map((c) => ({
+                                chunkId: c.id,
+                                content: c.content,
+                                documentName: c.documentName,
+                                documentId: c.documentId,
+                                similarity: c.similarity,
+                                rank: c.index + 1,
+                                tokenId: 0,
+                                startIndex: 0,
+                                endIndex: c.content.length,
+                                metadata: {},
+                              })),
+                              rerankedChunks: [],
+                              prompt: {
+                                systemPrompt: msg.pipeline.prompt.systemPrompt,
+                                userMessage: msg.pipeline.prompt.messages.find((m) => m.role === "user")?.content ?? "",
+                                contextChunks: msg.pipeline.retrieval.chunks.map((c) => ({
+                                  chunkId: c.id,
+                                  content: c.content,
+                                  documentName: c.documentName,
+                                  documentId: c.documentId,
+                                  similarity: c.similarity,
+                                  rank: c.index + 1,
+                                  tokenId: 0,
+                                  startIndex: 0,
+                                  endIndex: c.content.length,
+                                  metadata: {},
+                                })),
+                                totalTokens: msg.pipeline.prompt.estimatedTokens,
+                              },
+                              totalLatencyMs: msg.pipeline.retrieval.latencyMs,
+                              timestamp: Date.now(),
+                            }}
+                            answerText={msg.content}
+                          />
                         )}
                       </div>
                     </Card>
