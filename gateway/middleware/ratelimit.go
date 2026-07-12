@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"Keiro/gateway/config"
-	"Keiro/gateway/httpWriter"
-	"Keiro/gateway/metrics"
+	"Kairos/gateway/config"
+	"Kairos/gateway/httpWriter"
+	"Kairos/gateway/metrics"
 	"net/http"
 	"strconv"
 	"sync"

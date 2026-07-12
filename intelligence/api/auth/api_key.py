@@ -15,7 +15,7 @@ class APIKeyValidator:
         self._reload()
 
     def _reload(self) -> None:
-        api_key = self._provider.get("KEIRO_API_SECRET")
+        api_key = self._provider.get("KAIROS_API_SECRET")
         if api_key:
             self._valid_keys = {api_key}
         else:

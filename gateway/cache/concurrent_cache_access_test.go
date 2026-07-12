@@ -1,7 +1,7 @@
 package cache_test
 
 import (
-	"Keiro/gateway/cache"
+	"Kairos/gateway/cache"
 	"fmt"
 	"sync"
 	"testing"

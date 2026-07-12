@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"Keiro/gateway/httpWriter"
+	"Kairos/gateway/httpWriter"
 	"net/http"
 	"regexp"
 )

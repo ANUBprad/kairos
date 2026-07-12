@@ -1,10 +1,10 @@
 package api
 
 import (
-	"Keiro/gateway/httpWriter"
-	"Keiro/gateway/metrics"
-	"Keiro/gateway/queue"
-	pb "Keiro/generated/go/proto"
+	"Kairos/gateway/httpWriter"
+	"Kairos/gateway/metrics"
+	"Kairos/gateway/queue"
+	pb "Kairos/generated/go/proto"
 	"io"
 	"log/slog"
 	"mime/multipart"

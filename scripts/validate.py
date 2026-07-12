@@ -1,4 +1,4 @@
-"""Validate Keiro configuration and environment.
+"""Validate Kairos configuration and environment.
 
 Usage:
     python scripts/validate.py
@@ -88,7 +88,7 @@ def check_directories() -> list[str]:
 
 
 def main() -> int:
-    print("Keiro Validation Report")
+    print("Kairos Validation Report")
     print("=" * 50)
 
     all_errors: list[str] = []

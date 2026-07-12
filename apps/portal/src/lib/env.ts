@@ -22,8 +22,8 @@ const serverEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  KEIRO_SECRET: z.string().min(16).optional(),
-  KEIRO_API_SECRET: z.string().min(16).optional(),
+  KAIROS_SECRET: z.string().min(16).optional(),
+  KAIROS_API_SECRET: z.string().min(16).optional(),
 });
 
 const clientEnvSchema = z.object({

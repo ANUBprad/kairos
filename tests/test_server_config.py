@@ -43,15 +43,15 @@ class TestServerConfigFromEnv:
     def test_provider_specific_vars_default_to_none(self) -> None:
         _keys = [
             "OPENAI_API_KEY",
-            "KEIRO_OPENAI_MODEL_NAME",
+            "KAIROS_OPENAI_MODEL_NAME",
             "GEMINI_API_KEY",
-            "KEIRO_GEMINI_MODEL_NAME",
-            "KEIRO_OLLAMA_MODEL_NAME",
-            "KEIRO_OLLAMA_URL",
+            "KAIROS_GEMINI_MODEL_NAME",
+            "KAIROS_OLLAMA_MODEL_NAME",
+            "KAIROS_OLLAMA_URL",
             "GROQ_API_KEY",
             "GROQ_BASE_URL",
-            "KEIRO_LARGE_GROQ_MODEL",
-            "KEIRO_SMALL_GROQ_MODEL",
+            "KAIROS_LARGE_GROQ_MODEL",
+            "KAIROS_SMALL_GROQ_MODEL",
         ]
         _removed = {k: os.environ.pop(k) for k in _keys if k in os.environ}
         try:
@@ -87,12 +87,12 @@ class TestServerConfigFromEnv:
             assert config.chroma_store_port == 9001
 
     def test_reads_mmr_lambda(self) -> None:
-        with patch.dict(os.environ, {"KEIRO_MMR_RETRIEVAL_LAMBDA": "0.7"}):
+        with patch.dict(os.environ, {"KAIROS_MMR_RETRIEVAL_LAMBDA": "0.7"}):
             config = ServerConfig.from_env()
             assert config.mmr_retrieval_lambda == 0.7
 
     def test_reads_deployment_flag(self) -> None:
-        with patch.dict(os.environ, {"KEIRO_DEPLOYMENT": "True"}):
+        with patch.dict(os.environ, {"KAIROS_DEPLOYMENT": "True"}):
             config = ServerConfig.from_env()
             assert config.deployment is True
 
@@ -114,7 +114,7 @@ class TestServerConfigFromEnv:
 
 
 class TestValidateEnvDeployment:
-    """KEIRO_DEPLOYMENT=True requires complete Groq configuration."""
+    """KAIROS_DEPLOYMENT=True requires complete Groq configuration."""
 
     def test_valid_deployment(self) -> None:
         cfg = ServerConfig(
@@ -154,7 +154,7 @@ class TestValidateEnvDeployment:
             small_groq_model="llama2-7b",
         )
         errors = validate_env(cfg)
-        assert any("KEIRO_LARGE_GROQ_MODEL" in e for e in errors)
+        assert any("KAIROS_LARGE_GROQ_MODEL" in e for e in errors)
 
     def test_missing_small_groq_model(self) -> None:
         cfg = ServerConfig(
@@ -164,7 +164,7 @@ class TestValidateEnvDeployment:
             large_groq_model="mixtral-8x7b",
         )
         errors = validate_env(cfg)
-        assert any("KEIRO_SMALL_GROQ_MODEL" in e for e in errors)
+        assert any("KAIROS_SMALL_GROQ_MODEL" in e for e in errors)
 
     def test_all_errors_returned_at_once(self) -> None:
         cfg = ServerConfig(deployment=True)
@@ -178,7 +178,7 @@ class TestValidateEnvDeployment:
 
 
 class TestValidateEnvGemini:
-    """KEIRO_LLM_PROVIDER=gemini requires API key and model name."""
+    """KAIROS_LLM_PROVIDER=gemini requires API key and model name."""
 
     def test_valid_gemini(self) -> None:
         cfg = ServerConfig(
@@ -202,7 +202,7 @@ class TestValidateEnvGemini:
             gemini_api_key="AIza-test",
         )
         errors = validate_env(cfg)
-        assert any("KEIRO_GEMINI_MODEL_NAME" in e for e in errors)
+        assert any("KAIROS_GEMINI_MODEL_NAME" in e for e in errors)
 
 
 # ======================================================================
@@ -211,7 +211,7 @@ class TestValidateEnvGemini:
 
 
 class TestValidateEnvOpenAI:
-    """KEIRO_LLM_PROVIDER=openai requires API key and model name."""
+    """KAIROS_LLM_PROVIDER=openai requires API key and model name."""
 
     def test_valid_openai(self) -> None:
         cfg = ServerConfig(
@@ -235,7 +235,7 @@ class TestValidateEnvOpenAI:
             openai_api_key="sk-test",
         )
         errors = validate_env(cfg)
-        assert any("KEIRO_OPENAI_MODEL_NAME" in e for e in errors)
+        assert any("KAIROS_OPENAI_MODEL_NAME" in e for e in errors)
 
 
 # ======================================================================
@@ -244,7 +244,7 @@ class TestValidateEnvOpenAI:
 
 
 class TestValidateEnvOllama:
-    """KEIRO_LLM_PROVIDER=ollama requires model name and URL."""
+    """KAIROS_LLM_PROVIDER=ollama requires model name and URL."""
 
     def test_valid_ollama(self) -> None:
         cfg = ServerConfig(
@@ -260,7 +260,7 @@ class TestValidateEnvOllama:
             ollama_url="http://localhost:11434",
         )
         errors = validate_env(cfg)
-        assert any("KEIRO_OLLAMA_MODEL_NAME" in e for e in errors)
+        assert any("KAIROS_OLLAMA_MODEL_NAME" in e for e in errors)
 
     def test_missing_ollama_url(self) -> None:
         cfg = ServerConfig(
@@ -268,7 +268,7 @@ class TestValidateEnvOllama:
             ollama_model_name="llama3.2",
         )
         errors = validate_env(cfg)
-        assert any("KEIRO_OLLAMA_URL" in e for e in errors)
+        assert any("KAIROS_OLLAMA_URL" in e for e in errors)
 
 
 # ======================================================================
@@ -345,10 +345,10 @@ class TestServeValidation:
 
     def test_raises_on_missing_provider(self) -> None:
         _provider_keys = [
-            "KEIRO_LLM_PROVIDER",
-            "KEIRO_DEPLOYMENT",
-            "KEIRO_LARGE_GROQ_MODEL",
-            "KEIRO_SMALL_GROQ_MODEL",
+            "KAIROS_LLM_PROVIDER",
+            "KAIROS_DEPLOYMENT",
+            "KAIROS_LARGE_GROQ_MODEL",
+            "KAIROS_SMALL_GROQ_MODEL",
         ]
         with patch.dict(os.environ, {k: "" for k in _provider_keys}):
             from intelligence.server.grpc_server import serve
@@ -357,7 +357,7 @@ class TestServeValidation:
                 serve()
 
     def test_raises_on_missing_deployment_vars(self) -> None:
-        with patch.dict(os.environ, {"KEIRO_DEPLOYMENT": "True"}, clear=False):
+        with patch.dict(os.environ, {"KAIROS_DEPLOYMENT": "True"}, clear=False):
             from intelligence.server.grpc_server import serve
 
             with pytest.raises(ValueError, match="missing or invalid configuration"):

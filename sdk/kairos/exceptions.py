@@ -1,14 +1,14 @@
-class KeiroError(Exception):
-    """Base exception for all Keiro client errors."""
+class KairosError(Exception):
+    """Base exception for all Kairos client errors."""
     pass
 
 
-class AuthenticationError(KeiroError):
+class AuthenticationError(KairosError):
     """Raised when the shared secret is invalid or missing (HTTP 401)."""
     pass
 
 
-class RateLimitError(KeiroError):
+class RateLimitError(KairosError):
     """Raised when the namespace rate limit is exceeded (HTTP 429)."""
 
     def __init__(self, retry_after: float | None = None):
@@ -19,7 +19,7 @@ class RateLimitError(KeiroError):
         super().__init__(msg)
 
 
-class IngestionError(KeiroError):
+class IngestionError(KairosError):
     """Raised when an ingestion job reaches failed status."""
 
     def __init__(self, job_id: str, detail: str = ""):
@@ -27,6 +27,6 @@ class IngestionError(KeiroError):
         super().__init__(f"Ingestion job {job_id} failed: {detail}")
 
 
-class ConnectionError(KeiroError):
+class ConnectionError(KairosError):
     """Raised when the gateway cannot be reached."""
     pass

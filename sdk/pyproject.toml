@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "keiro-client"
+name = "kairos-client"
 version = "0.1.0"
-description = "Python client SDK for Keiro — self-hostable adaptive RAG infrastructure"
+description = "Python client SDK for Kairos — self-hostable adaptive RAG infrastructure"
 readme = "README.md"
 license = { file = "LICENSE.md" }
 requires-python = ">=3.11"
@@ -15,8 +15,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/ManasRanjanJena253/Keiro"
+Repository = "https://github.com/ANUBprad/kairos"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["keiro*"]
+include = ["kairos*"]

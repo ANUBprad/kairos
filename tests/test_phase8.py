@@ -60,12 +60,12 @@ class TestSettings:
         assert s.intelligence_port == 9999
 
     def test_env_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("KEIRO_CHROMA_STORE_HOST", "test-host")
+        monkeypatch.setenv("KAIROS_CHROMA_STORE_HOST", "test-host")
         s = Settings()
         assert s.chroma_store_host == "test-host"
 
     def test_env_prefix_embedding_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("KEIRO_EMBEDDING_MODEL", "openai")
+        monkeypatch.setenv("KAIROS_EMBEDDING_MODEL", "openai")
         s = Settings()
         assert s.embedding_model == "openai"
 
@@ -202,7 +202,7 @@ class TestValidation:
     def test_llm_provider_ollama_needs_model(self) -> None:
         settings = Settings(llm_provider="ollama")
         errors = validate_config(settings)
-        assert any("KEIRO_OLLAMA_MODEL_NAME" in e for e in errors)
+        assert any("KAIROS_OLLAMA_MODEL_NAME" in e for e in errors)
 
     def test_llm_provider_ollama_valid(self) -> None:
         settings = Settings(
@@ -354,7 +354,7 @@ from intelligence.api.middleware.rate_limit import RateLimitMiddleware  # noqa: 
 class TestAPIApp:
     def test_create_app_returns_fastapi_app(self) -> None:
         app = create_app()
-        assert app.title == "Keiro Intelligence API"
+        assert app.title == "Kairos Intelligence API"
         assert app.version == "1.0.0"
 
     def test_create_app_accepts_settings(self) -> None:

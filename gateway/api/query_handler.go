@@ -1,9 +1,9 @@
 package api
 
 import (
-	"Keiro/gateway/httpWriter"
-	"Keiro/gateway/intelligence"
-	"Keiro/gateway/metrics"
+	"Kairos/gateway/httpWriter"
+	"Kairos/gateway/intelligence"
+	"Kairos/gateway/metrics"
 	"encoding/json"
 	"log/slog"
 	"net/http"

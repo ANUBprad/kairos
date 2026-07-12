@@ -1,9 +1,9 @@
 package api
 
 import (
-	"Keiro/gateway/cache"
-	"Keiro/gateway/queue"
-	pb "Keiro/generated/go/proto"
+	"Kairos/gateway/cache"
+	"Kairos/gateway/queue"
+	pb "Kairos/generated/go/proto"
 
 	"github.com/google/uuid"
 )

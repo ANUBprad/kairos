@@ -1,8 +1,8 @@
 package queue
 
 import (
-	"Keiro/gateway/metrics"
-	pb "Keiro/generated/go/proto"
+	"Kairos/gateway/metrics"
+	pb "Kairos/generated/go/proto"
 	"context"
 	"errors"
 

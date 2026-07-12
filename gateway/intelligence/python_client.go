@@ -1,8 +1,8 @@
 package intelligence
 
 import (
-	"Keiro/gateway/config"
-	pb "Keiro/generated/go/proto"
+	"Kairos/gateway/config"
+	pb "Kairos/generated/go/proto"
 	"context"
 	"log/slog"
 	"time"

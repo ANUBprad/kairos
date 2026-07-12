@@ -1,4 +1,4 @@
-module Keiro
+module Kairos
 
 go 1.26
 

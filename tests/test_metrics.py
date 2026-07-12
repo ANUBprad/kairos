@@ -78,7 +78,7 @@ class TestMetricsInterceptor:
 
         continuation = MagicMock(return_value=handler)
         call_details = MagicMock()
-        call_details.method = "/keiro.v1.IntelligenceService/ExecuteRetrieval"
+        call_details.method = "/kairos.v1.IntelligenceService/ExecuteRetrieval"
 
         interceptor = MetricsInterceptor()
         result = interceptor.intercept_service(continuation, call_details)

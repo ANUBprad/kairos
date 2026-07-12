@@ -41,9 +41,9 @@ services:
     env_file:
       - .env
     environment:
-      - KEIRO_ENVIRONMENT=${KEIRO_ENVIRONMENT:-development}
-      - KEIRO_CHROMA_STORE_HOST=chromadb
-      - KEIRO_INTELLIGENCE_HOST=intelligence
+      - KAIROS_ENVIRONMENT=${KAIROS_ENVIRONMENT:-development}
+      - KAIROS_CHROMA_STORE_HOST=chromadb
+      - KAIROS_INTELLIGENCE_HOST=intelligence
     deploy:
       resources:
         limits:
@@ -69,8 +69,8 @@ services:
     env_file:
       - .env
     environment:
-      - KEIRO_CHROMA_STORE_HOST=chromadb
-      - KEIRO_INTELLIGENCE_HOST=intelligence
+      - KAIROS_CHROMA_STORE_HOST=chromadb
+      - KAIROS_INTELLIGENCE_HOST=intelligence
       - STREAMLIT_SERVER_HEADLESS=true
     deploy:
       resources:
@@ -98,7 +98,7 @@ services:
     env_file:
       - .env
     environment:
-      - KEIRO_CHROMA_STORE_HOST=chromadb
+      - KAIROS_CHROMA_STORE_HOST=chromadb
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if __import__('intelligence.worker', fromlist=['']).Worker is not None else 1)"]

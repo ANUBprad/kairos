@@ -1,9 +1,9 @@
-from .client import KeiroClient
+from .client import KairosClient
 from .exceptions import (
     AuthenticationError,
     ConnectionError,
     IngestionError,
-    KeiroError,
+    KairosError,
     RateLimitError,
 )
 from .models import (
@@ -15,8 +15,8 @@ from .models import (
 )
 
 __all__ = [
-    "KeiroClient",
-    "KeiroError",
+    "KairosClient",
+    "KairosError",
     "AuthenticationError",
     "RateLimitError",
     "IngestionError",

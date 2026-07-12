@@ -69,7 +69,7 @@ class TestHealthServicerGRPC:
         from grpc_health.v1 import health_pb2, health_pb2_grpc
 
         h = HealthServicer()
-        h.set_serving("test.Keiro")
+        h.set_serving("test.Kairos")
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
         add_health_servicer_to_server(h, server)
         port = server.add_insecure_port("localhost:0")
@@ -77,7 +77,7 @@ class TestHealthServicerGRPC:
         try:
             channel = grpc.insecure_channel(f"localhost:{port}")
             stub = health_pb2_grpc.HealthStub(channel)
-            resp = stub.Check(health_pb2.HealthCheckRequest(service="test.Keiro"))
+            resp = stub.Check(health_pb2.HealthCheckRequest(service="test.Kairos"))
             assert resp.status == SERVING
             resp2 = stub.Check(health_pb2.HealthCheckRequest(service=""))
             assert resp2.status == SERVING
@@ -95,7 +95,7 @@ class TestHealthConfig:
     def test_health_check_disabled_via_env(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("KEIRO_HEALTH_CHECK_ENABLED", "False")
+        monkeypatch.setenv("KAIROS_HEALTH_CHECK_ENABLED", "False")
         from intelligence.server.config import ServerConfig
 
         cfg = ServerConfig.from_env()

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"Keiro/gateway/api"
-	config "Keiro/gateway/config"
-	"Keiro/gateway/intelligence"
-	"Keiro/gateway/queue"
+	"Kairos/gateway/api"
+	config "Kairos/gateway/config"
+	"Kairos/gateway/intelligence"
+	"Kairos/gateway/queue"
 	"context"
 	"log"
 	"log/slog"

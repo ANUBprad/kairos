@@ -7,20 +7,20 @@ from .exceptions import (
     AuthenticationError,
     ConnectionError,
     IngestionError,
-    KeiroError,
+    KairosError,
     RateLimitError,
 )
 from .models import IngestResponse, JobStatusResponse, QueryResponse
 
 
-class KeiroClient:
+class KairosClient:
     """
-    Synchronous client for the Keiro adaptive RAG gateway.
+    Synchronous client for the Kairos adaptive RAG gateway.
 
     Parameters
     ----------
     base_url:  Base URL of the Go gateway, e.g. "http://localhost:8080"
-    secret:    Shared secret configured in KEIRO_SECRET
+    secret:    Shared secret configured in KAIROS_SECRET
     namespace: Namespace identifier scoping all operations to an isolated
                ChromaDB collection
     timeout:   httpx timeout in seconds (default 120 — multi-hop queries
@@ -133,7 +133,7 @@ class KeiroClient:
 
     # ── context manager ───────────────────────────────────────────────────────
 
-    def __enter__(self) -> KeiroClient:
+    def __enter__(self) -> KairosClient:
         return self
 
     def __exit__(self, *_) -> None:
@@ -155,10 +155,10 @@ class KeiroClient:
             response = self._client.request(method, path, **kwargs)
         except httpx.ConnectError as e:
             raise ConnectionError(
-                f"Cannot reach Keiro gateway at {self._base_url}: {e}"
+                f"Cannot reach Kairos gateway at {self._base_url}: {e}"
             ) from e
         except httpx.TimeoutException as e:
-            raise KeiroError(f"Request timed out: {e}") from e
+            raise KairosError(f"Request timed out: {e}") from e
 
         if response.status_code == 401:
             raise AuthenticationError("Invalid or missing X-Secret header")
@@ -166,7 +166,7 @@ class KeiroClient:
             retry_after = float(response.headers.get("Retry-After", 0) or 0)
             raise RateLimitError(retry_after=retry_after or None)
         if response.status_code >= 400:
-            raise KeiroError(
+            raise KairosError(
                 f"Gateway returned {response.status_code}: {response.text}"
             )
 

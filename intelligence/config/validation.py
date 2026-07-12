@@ -22,7 +22,7 @@ def validate_config(settings: Settings) -> List[str]:
             errors.append("api_secret is required in production")
         if settings.embedding_model == "local":
             errors.append(
-                "local embedding model is not recommended in production; set KEIRO_EMBEDDING_MODEL to 'openai' or 'gemini'"
+                "local embedding model is not recommended in production; set KAIROS_EMBEDDING_MODEL to 'openai' or 'gemini'"
             )
         if settings.llm_provider is None:
             errors.append("llm_provider is required in production")
@@ -37,36 +37,38 @@ def validate_config(settings: Settings) -> List[str]:
         if not settings.groq_base_url:
             errors.append("GROQ_BASE_URL is required when deployment=True")
         if not settings.large_groq_model:
-            errors.append("KEIRO_LARGE_GROQ_MODEL is required when deployment=True")
+            errors.append("KAIROS_LARGE_GROQ_MODEL is required when deployment=True")
         if not settings.small_groq_model:
-            errors.append("KEIRO_SMALL_GROQ_MODEL is required when deployment=True")
+            errors.append("KAIROS_SMALL_GROQ_MODEL is required when deployment=True")
         return errors
 
     if settings.llm_provider == "gemini":
         if not settings.gemini_api_key:
-            errors.append("GEMINI_API_KEY is required when KEIRO_LLM_PROVIDER=gemini")
+            errors.append("GEMINI_API_KEY is required when KAIROS_LLM_PROVIDER=gemini")
         if not settings.gemini_model_name:
             errors.append(
-                "KEIRO_GEMINI_MODEL_NAME is required when KEIRO_LLM_PROVIDER=gemini"
+                "KAIROS_GEMINI_MODEL_NAME is required when KAIROS_LLM_PROVIDER=gemini"
             )
         return errors
 
     if settings.llm_provider == "openai":
         if not settings.openai_api_key:
-            errors.append("OPENAI_API_KEY is required when KEIRO_LLM_PROVIDER=openai")
+            errors.append("OPENAI_API_KEY is required when KAIROS_LLM_PROVIDER=openai")
         if not settings.openai_model_name:
             errors.append(
-                "KEIRO_OPENAI_MODEL_NAME is required when KEIRO_LLM_PROVIDER=openai"
+                "KAIROS_OPENAI_MODEL_NAME is required when KAIROS_LLM_PROVIDER=openai"
             )
         return errors
 
     if settings.llm_provider == "ollama":
         if not settings.ollama_model_name:
             errors.append(
-                "KEIRO_OLLAMA_MODEL_NAME is required when KEIRO_LLM_PROVIDER=ollama"
+                "KAIROS_OLLAMA_MODEL_NAME is required when KAIROS_LLM_PROVIDER=ollama"
             )
         if not settings.ollama_url:
-            errors.append("KEIRO_OLLAMA_URL is required when KEIRO_LLM_PROVIDER=ollama")
+            errors.append(
+                "KAIROS_OLLAMA_URL is required when KAIROS_LLM_PROVIDER=ollama"
+            )
         return errors
 
     if settings.large_groq_model and settings.small_groq_model:
@@ -79,9 +81,9 @@ def validate_config(settings: Settings) -> List[str]:
     if not errors and settings.llm_provider is None:
         errors.append(
             "No LLM provider configured. "
-            "Set KEIRO_LLM_PROVIDER to 'gemini', 'openai', or 'ollama'; "
-            "or set KEIRO_DEPLOYMENT=True with Groq model variables; "
-            "or set KEIRO_LARGE_GROQ_MODEL and KEIRO_SMALL_GROQ_MODEL."
+            "Set KAIROS_LLM_PROVIDER to 'gemini', 'openai', or 'ollama'; "
+            "or set KAIROS_DEPLOYMENT=True with Groq model variables; "
+            "or set KAIROS_LARGE_GROQ_MODEL and KAIROS_SMALL_GROQ_MODEL."
         )
 
     return errors

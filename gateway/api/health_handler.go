@@ -1,7 +1,7 @@
 package api
 
 import (
-	"Keiro/gateway/httpWriter"
+	"Kairos/gateway/httpWriter"
 	"net/http"
 )
 

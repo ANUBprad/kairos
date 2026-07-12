@@ -59,15 +59,15 @@ func LoadEnv() (*Config, error) {
 	config.Chroma.Host = os.Getenv("CHROMA_STORE_HOST")
 	config.Chroma.Port = os.Getenv("CHROMA_STORE_PORT")
 
-	config.Auth = os.Getenv("KEIRO_SECRET")
+	config.Auth = os.Getenv("KAIROS_SECRET")
 	config.APIs.GEMINI = os.Getenv("GEMINI_API_KEY")
 	config.APIs.OPENAI = os.Getenv("OPENAI_API_KEY")
-	config.Cache.MaxSize, _ = strconv.Atoi(os.Getenv("KEIRO_CACHE_MAX_SIZE"))
-	config.Cache.TTL, _ = strconv.Atoi(os.Getenv("KEIRO_CACHE_TTL"))
-	config.Cache.SimilarityThreshold, _ = strconv.ParseFloat(os.Getenv("KEIRO_CACHE_SIMILARITY_THRESHOLD"), 32)
+	config.Cache.MaxSize, _ = strconv.Atoi(os.Getenv("KAIROS_CACHE_MAX_SIZE"))
+	config.Cache.TTL, _ = strconv.Atoi(os.Getenv("KAIROS_CACHE_TTL"))
+	config.Cache.SimilarityThreshold, _ = strconv.ParseFloat(os.Getenv("KAIROS_CACHE_SIMILARITY_THRESHOLD"), 32)
 
-	config.RateLimit, _ = strconv.Atoi(os.Getenv("KEIRO_RATE_LIMIT"))
-	config.BurstLimit, _ = strconv.Atoi(os.Getenv("KEIRO_BURST_LIMIT"))
+	config.RateLimit, _ = strconv.Atoi(os.Getenv("KAIROS_RATE_LIMIT"))
+	config.BurstLimit, _ = strconv.Atoi(os.Getenv("KAIROS_BURST_LIMIT"))
 	config.MaxFileSize, _ = strconv.Atoi(os.Getenv("MAX_FILE_SIZE"))
 
 	return &config, nil

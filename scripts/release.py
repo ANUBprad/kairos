@@ -37,7 +37,7 @@ def run(cmd: list[str], cwd: str | None = None) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Keiro release workflow")
+    parser = argparse.ArgumentParser(description="Kairos release workflow")
     parser.add_argument("--execute", action="store_true", help="Execute the full release (default: dry-run)")
     args = parser.parse_args()
 
@@ -90,7 +90,7 @@ def main() -> int:
         tracker = VersionTracker()
         release_version = tracker.current_str
 
-        release_notes = f"""# Keiro Release {release_version}
+        release_notes = f"""# Kairos Release {release_version}
 
 **Date:** {datetime.now(timezone.utc).isoformat()}
 
@@ -101,7 +101,7 @@ CI/CD pipelines, artifact management, and deployment documentation.
 
 ## Artifacts
 
-- Python SDK: `dist/keiro-client-{release_version}.tar.gz`
+- Python SDK: `dist/kairos-client-{release_version}.tar.gz`
 - Docker images tagged `{release_version}`
 ```
 

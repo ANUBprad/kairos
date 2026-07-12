@@ -2,7 +2,7 @@
   "__inputs": [],
   "__requires": [],
   "annotations": { "list": [] },
-  "description": "Keiro RAG Infrastructure Observability",
+  "description": "Kairos RAG Infrastructure Observability",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -48,7 +48,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum(rate(keiro_cache_hits_total[5m])) / (sum(rate(keiro_cache_hits_total[5m])) + sum(rate(keiro_cache_misses_total[5m])))",
+          "expr": "sum(rate(kairos_cache_hits_total[5m])) / (sum(rate(kairos_cache_hits_total[5m])) + sum(rate(kairos_cache_misses_total[5m])))",
           "legendFormat": "Hit Rate",
           "refId": "A"
         }
@@ -82,13 +82,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (namespace) (rate(keiro_cache_hits_total[5m]))",
+          "expr": "sum by (namespace) (rate(kairos_cache_hits_total[5m]))",
           "legendFormat": "Hits — {{namespace}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (namespace) (rate(keiro_cache_misses_total[5m]))",
+          "expr": "sum by (namespace) (rate(kairos_cache_misses_total[5m]))",
           "legendFormat": "Misses — {{namespace}}",
           "refId": "B"
         }
@@ -129,7 +129,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.50, sum by (le, tier) (rate(keiro_query_latency_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.50, sum by (le, tier) (rate(kairos_query_latency_seconds_bucket[5m])))",
           "legendFormat": "p50 — {{tier}}",
           "refId": "A"
         }
@@ -163,13 +163,13 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.95, sum by (le, tier) (rate(keiro_query_latency_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, tier) (rate(kairos_query_latency_seconds_bucket[5m])))",
           "legendFormat": "p95 — {{tier}}",
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "histogram_quantile(0.99, sum by (le, tier) (rate(keiro_query_latency_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le, tier) (rate(kairos_query_latency_seconds_bucket[5m])))",
           "legendFormat": "p99 — {{tier}}",
           "refId": "B"
         }
@@ -210,7 +210,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (namespace, model) (rate(keiro_token_usage_total[5m]))",
+          "expr": "sum by (namespace, model) (rate(kairos_token_usage_total[5m]))",
           "legendFormat": "{{namespace}} — {{model}}",
           "refId": "A"
         }
@@ -251,7 +251,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (namespace) (rate(keiro_ingestion_documents_total[5m]))",
+          "expr": "sum by (namespace) (rate(kairos_ingestion_documents_total[5m]))",
           "legendFormat": "{{namespace}}",
           "refId": "A"
         }
@@ -289,7 +289,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "keiro_active_ingestion_jobs",
+          "expr": "kairos_active_ingestion_jobs",
           "legendFormat": "Active Jobs",
           "refId": "A"
         }
@@ -323,7 +323,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "expr": "sum by (namespace) (rate(keiro_rate_limit_rejections_total[5m]))",
+          "expr": "sum by (namespace) (rate(kairos_rate_limit_rejections_total[5m]))",
           "legendFormat": "{{namespace}}",
           "refId": "A"
         }
@@ -332,12 +332,12 @@
   ],
   "refresh": "10s",
   "schemaVersion": 38,
-  "tags": ["keiro", "rag"],
+  "tags": ["kairos", "rag"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Keiro RAG Dashboard",
-  "uid": "keiro-rag-dashboard",
+  "title": "Kairos RAG Dashboard",
+  "uid": "kairos-rag-dashboard",
   "version": 1
 }

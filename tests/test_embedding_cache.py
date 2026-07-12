@@ -194,8 +194,8 @@ class TestCachedEmbedderConfig:
         assert cfg.cache_ttl_seconds == 300
 
     def test_cache_config_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("KEIRO_CACHE_MAXSIZE", "512")
-        monkeypatch.setenv("KEIRO_CACHE_TTL_SECONDS", "60")
+        monkeypatch.setenv("KAIROS_CACHE_MAXSIZE", "512")
+        monkeypatch.setenv("KAIROS_CACHE_TTL_SECONDS", "60")
         from intelligence.server.config import ServerConfig
 
         cfg = ServerConfig.from_env()

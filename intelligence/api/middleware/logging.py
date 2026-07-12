@@ -7,7 +7,7 @@ from typing import Callable
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-logger = logging.getLogger("keiro.api")
+logger = logging.getLogger("kairos.api")
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):

@@ -24,7 +24,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         settings = get_settings()
 
     app = FastAPI(
-        title="Keiro Intelligence API",
+        title="Kairos Intelligence API",
         version="1.0.0",
         docs_url="/docs" if settings.environment != "production" else None,
         redoc_url="/redoc" if settings.environment != "production" else None,

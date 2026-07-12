@@ -1,7 +1,7 @@
-// ── Keiro Unified JS Driver ──
+// ── Kairos Unified JS Driver ──
 
-const KEIRO = (() => {
-    const CREDS_KEY = 'keiro_creds';
+const KAIROS = (() => {
+    const CREDS_KEY = 'kairos_creds';
 
     function getCreds() {
         try {
@@ -11,7 +11,7 @@ const KEIRO = (() => {
 
     function saveCreds(secret, namespace) {
         localStorage.setItem(CREDS_KEY, JSON.stringify({ secret, namespace }));
-        window.dispatchEvent(new Event('keiro-creds-updated'));
+        window.dispatchEvent(new Event('kairos-creds-updated'));
     }
 
     function getHeaders(overrideNamespace) {
@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load credentials to inputs & display
     function loadSettingsToInputs() {
-        const { secret, namespace } = KEIRO.getCreds();
+        const { secret, namespace } = KAIROS.getCreds();
         if (secretInput) secretInput.value = secret || '';
         if (nsInput) nsInput.value = namespace || '';
         if (activeNamespaceDisplay) activeNamespaceDisplay.textContent = namespace || 'not-set';
@@ -293,11 +293,11 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = `
             <div class="info-row">
                 <span class="info-label">FILE</span>
-                <span class="info-val" style="word-break:break-all;">${KEIRO.escapeHTML(fileName)}</span>
+                <span class="info-val" style="word-break:break-all;">${KAIROS.escapeHTML(fileName)}</span>
             </div>
             <div class="info-row" style="margin-top:0.4rem;">
                 <span class="info-label">JOB ID</span>
-                <span class="info-val" style="font-family:var(--font-mono);font-size:0.72rem;word-break:break-all;">${KEIRO.escapeHTML(jobId)}</span>
+                <span class="info-val" style="font-family:var(--font-mono);font-size:0.72rem;word-break:break-all;">${KAIROS.escapeHTML(jobId)}</span>
             </div>
             <div class="info-row" style="margin-top:0.4rem;">
                 <span class="info-label">STATUS</span>
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const pollInterval = setInterval(async () => {
             try {
-                const data = await KEIRO.jobStatus(jobId, namespace);
+                const data = await KAIROS.jobStatus(jobId, namespace);
                 const statusMap = { '0': 'PENDING', '1': 'PROCESSING', '2': 'COMPLETED', '3': 'FAILED' };
                 const jobStatusVal = data.job_status !== undefined ? data.job_status : data.JobStatus;
                 const rawStatus = String(jobStatusVal);
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     async function updateSystemHealth() {
         try {
-            const data = await KEIRO.health();
+            const data = await KAIROS.health();
 
             if (gwDot && gwLat) {
                 gwDot.className = 'status-dot ' + (data.gateway_up ? 'up' : 'down');
@@ -430,12 +430,12 @@ document.addEventListener('DOMContentLoaded', () => {
         saveSettingsBtn.addEventListener('click', () => {
             const secret = secretInput.value.trim();
             const namespace = nsInput.value.trim();
-            KEIRO.saveCreds(secret, namespace);
+            KAIROS.saveCreds(secret, namespace);
             settingsOverlay.classList.remove('visible');
         });
     }
 
-    window.addEventListener('keiro-creds-updated', () => {
+    window.addEventListener('kairos-creds-updated', () => {
         loadSettingsToInputs();
         resetJobTracker();
     });
@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (startIngestBtn) {
         startIngestBtn.addEventListener('click', async () => {
-            const { secret, namespace } = KEIRO.getCreds();
+            const { secret, namespace } = KAIROS.getCreds();
             if (!secret || !namespace) {
                 alert('Please configure Namespace and Secret in settings (gear icon) first.');
                 settingsOverlay.classList.add('visible');
@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('chunking_strategy', strategy);
-                const data = await KEIRO.ingest(formData, namespace);
+                const data = await KAIROS.ingest(formData, namespace);
                 const jobId = data.job_id || data.JobId;
                 if (!jobId) throw new Error(`No Job ID returned for "${file.name}"`);
                 addJobTracker(jobId, namespace, file.name);
@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Query events
     if (runQueryBtn && queryInput) {
         runQueryBtn.addEventListener('click', async () => {
-            const { secret, namespace } = KEIRO.getCreds();
+            const { secret, namespace } = KAIROS.getCreds();
             if (!secret || !namespace) {
                 alert('Please configure Namespace and Secret in settings (gear icon) first.');
                 settingsOverlay.classList.add('visible');
@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const startTime = Date.now();
 
             try {
-                const data = await KEIRO.query(queryText, namespace);
+                const data = await KAIROS.query(queryText, namespace);
                 const responseText = data.response !== undefined ? data.response : data.Response;
                 const isCached = data.cache_hit !== undefined ? !!data.cache_hit : !!data.CacheHit;
                 const retrievalDetailsVal = data.retrieval_details !== undefined ? data.retrieval_details : data.RetrievalDetails;

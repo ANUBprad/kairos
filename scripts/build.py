@@ -61,7 +61,7 @@ def build_docker_images(root: Path) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build Keiro distribution artifacts")
+    parser = argparse.ArgumentParser(description="Build Kairos distribution artifacts")
     parser.add_argument("--python", action="store_true", help="Build Python SDK only")
     parser.add_argument("--docker", action="store_true", help="Build Docker images only")
     args = parser.parse_args()

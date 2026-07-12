@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"Keiro/gateway/config"
-	"Keiro/gateway/httpWriter"
+	"Kairos/gateway/config"
+	"Kairos/gateway/httpWriter"
 	"context"
 	"net/http"
 	"net/http/httptest"

@@ -168,9 +168,9 @@ class TestCircuitBreakerConfig:
         assert cfg.circuit_breaker_recovery_timeout == 30.0
 
     def test_timeout_config_from_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("KEIRO_PROVIDER_TIMEOUT_SECONDS", "15.0")
-        monkeypatch.setenv("KEIRO_CIRCUIT_BREAKER_FAILURE_THRESHOLD", "3")
-        monkeypatch.setenv("KEIRO_CIRCUIT_BREAKER_RECOVERY_TIMEOUT", "10.0")
+        monkeypatch.setenv("KAIROS_PROVIDER_TIMEOUT_SECONDS", "15.0")
+        monkeypatch.setenv("KAIROS_CIRCUIT_BREAKER_FAILURE_THRESHOLD", "3")
+        monkeypatch.setenv("KAIROS_CIRCUIT_BREAKER_RECOVERY_TIMEOUT", "10.0")
         from intelligence.server.config import ServerConfig
 
         cfg = ServerConfig.from_env()

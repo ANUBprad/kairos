@@ -31,7 +31,7 @@ def collect_benchmark_data() -> Dict[str, Any]:
 
 def generate_report(data: Dict[str, Any], output_dir: Path) -> Path:
     report_lines = [
-        "# Keiro Benchmark Report",
+        "# Kairos Benchmark Report",
         "",
         f"**Generated:** {data['timestamp']}",
         "",
@@ -53,7 +53,7 @@ def generate_report(data: Dict[str, Any], output_dir: Path) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Keiro benchmark runner")
+    parser = argparse.ArgumentParser(description="Kairos benchmark runner")
     parser.add_argument("--report-only", action="store_true", help="Generate report from existing data only")
     args = parser.parse_args()
 

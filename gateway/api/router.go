@@ -1,10 +1,10 @@
 package api
 
 import (
-	"Keiro/gateway/config"
-	"Keiro/gateway/middleware"
-	"Keiro/gateway/queue"
-	pb "Keiro/generated/go/proto"
+	"Kairos/gateway/config"
+	"Kairos/gateway/middleware"
+	"Kairos/gateway/queue"
+	pb "Kairos/generated/go/proto"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
