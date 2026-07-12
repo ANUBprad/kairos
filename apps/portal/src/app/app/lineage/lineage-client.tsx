@@ -20,6 +20,7 @@ import {
   citationCollectionToMarkdown,
 } from "@/lib/reproducibility";
 import type { LineageNodeType } from "@/lib/reproducibility/types";
+import { PageHeader } from "@/components/app/page-header";
 
 interface RunData {
   id: string;
@@ -177,14 +178,16 @@ export function LineagePage({ runs }: LineagePageProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-border bg-surface p-5">
-        <h1 className="text-lg font-semibold text-text-primary">Experiment Lineage</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Trace the complete lineage of your experiments from dataset to research report.
-          Every node is clickable and shows detailed parameters and metrics.
-        </p>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Experiment Lineage"
+        description="Trace the complete lineage of your experiments from dataset to research report."
+        purpose="Track experiment history and provenance."
+        relatedPages={[
+          { label: "Research Dashboard", href: "/app/research" },
+          { label: "Evaluation", href: "/app/evaluation" },
+        ]}
+      />
 
       <div className="flex gap-2 border-b border-border pb-2">
         {(["lineage", "diff", "reproducibility", "citations"] as const).map((tab) => (

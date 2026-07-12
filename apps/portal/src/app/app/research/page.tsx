@@ -3,7 +3,20 @@ import { requireSession } from "@/lib/server/auth-utils";
 import { compareMetrics } from "@/lib/evaluation/significance";
 import { analyzeResearchIntelligence, type IntelligenceRun } from "@/lib/evaluation/research-intelligence";
 import { generateResearchPaper } from "@/lib/research-scientist";
-import { ResearchDashboard } from "./research-client";
+import dynamic from "next/dynamic";
+
+const ResearchDashboard = dynamic(
+  () => import("./research-client").then((mod) => mod.ResearchDashboard),
+  {
+    loading: () => (
+      <div className="space-y-4">
+        <div className="h-8 w-64 animate-pulse rounded bg-surface" />
+        <div className="h-4 w-96 animate-pulse rounded bg-surface" />
+        <div className="h-64 animate-pulse rounded-xl bg-surface" />
+      </div>
+    ),
+  }
+);
 
 export const metadata = {
   title: "Research Dashboard | Kairos",

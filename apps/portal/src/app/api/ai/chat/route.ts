@@ -6,6 +6,8 @@ import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { buildChatPrompt } from "@/lib/ai/prompts";
 import { executeRetrievalWithTrace } from "@/lib/retrieval/strategies";
 import { getConversationMessages } from "@/lib/ai/memory";
+import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
+import { sanitizeError } from "@/lib/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,8 +18,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { conversationId, kbId, query, provider, model, explainable } = body;
+  const rl = rateLimit(`chat:${session.user.id}`, RATE_LIMITS.chat);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.chat) },
+    );
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const conversationId = typeof body.conversationId === "string" ? body.conversationId.trim() : "";
+  const kbId = typeof body.kbId === "string" ? body.kbId.trim() : "";
+  const query = typeof body.query === "string" ? body.query.trim() : "";
+  const provider = typeof body.provider === "string" ? body.provider : undefined;
+  const model = typeof body.model === "string" ? body.model : undefined;
+  const explainable = typeof body.explainable === "boolean" ? body.explainable : false;
+
+  const validProviders = ["openai", "gemini"] as const;
+  const typedProvider = provider && validProviders.includes(provider as typeof validProviders[number])
+    ? (provider as typeof validProviders[number])
+    : undefined;
 
   if (!conversationId || !kbId || !query) {
     return NextResponse.json(
@@ -31,6 +57,11 @@ export async function POST(request: NextRequest) {
       { error: "Query is too long" },
       { status: 400 },
     );
+  }
+
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_REGEX.test(conversationId) || !UUID_REGEX.test(kbId)) {
+    return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
   }
 
   const conversation = await prisma.conversation.findUnique({
@@ -202,7 +233,7 @@ ${contextStr || "No relevant documents found."}`;
           conversationId,
           kbId,
           query,
-          providerType: provider || undefined,
+          providerType: typedProvider,
           model: model || undefined,
         });
 
@@ -233,8 +264,8 @@ ${contextStr || "No relevant documents found."}`;
         const finalData = JSON.stringify({ type: "done" });
         controller.enqueue(encoder.encode(`data: ${finalData}\n\n`));
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Internal server error";
-        const errorData = JSON.stringify({ type: "error", content: errorMessage });
+        const sanitized = sanitizeError(err);
+        const errorData = JSON.stringify({ type: "error", content: "An error occurred while processing your request", errorId: sanitized.errorId });
         controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
       } finally {
         controller.close();

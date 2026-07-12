@@ -8,6 +8,8 @@ import { getStorageProvider } from "@/lib/storage";
 import { extractText } from "@/lib/extraction";
 import { chunkText } from "@/lib/chunking";
 import { generateEmbeddings } from "@/lib/ai/embeddings";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { sanitizeFilename } from "@/lib/validation";
 import type { Prisma } from "@prisma/client";
 
 const ALLOWED_EXTENSIONS = ["pdf", "txt", "md", "markdown", "csv", "docx"];
@@ -119,6 +121,9 @@ export async function uploadDocument(kbId: string, formData: FormData) {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
+  const rl = rateLimit(`upload:${session.user.id}`, RATE_LIMITS.upload);
+  if (!rl.allowed) throw new Error("Rate limit exceeded. Please try again later.");
+
   await getOrgFromKb(kbId, session.user.id);
 
   const files = formData.getAll("files") as File[];
@@ -162,7 +167,8 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 
   for (const { file, buffer, fileType, hash } of fileEntries) {
     const ext = file.name.split(".").pop() || "";
-    const storageKey = `${kbId}/${Date.now()}-${file.name.replace(`.${ext}`, "")}`;
+    const safeName = sanitizeFilename(file.name.replace(`.${ext}`, ""));
+    const storageKey = `${kbId}/${Date.now()}-${safeName}`;
 
     const stored = await storage.upload(buffer, file.name, storageKey);
 

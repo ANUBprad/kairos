@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   X,
   FileText,
@@ -117,6 +117,42 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"content" | "original">("content");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (docId) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      setTimeout(() => dialogRef.current?.focus(), 100);
+    } else {
+      previousFocusRef.current?.focus();
+    }
+  }, [docId]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+    if (docId) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [docId, onClose]);
 
   useEffect(() => {
     if (!docId) return;
@@ -145,7 +181,15 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 flex w-full max-w-5xl flex-col rounded-2xl border border-border bg-surface shadow-xl max-h-[90vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="preview-dialog-title"
+        aria-describedby="preview-dialog-description"
+        tabIndex={-1}
+        className="relative z-10 flex w-full max-w-5xl flex-col rounded-2xl border border-border bg-surface shadow-xl max-h-[90vh] outline-none"
+      >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-3 min-w-0">
             {preview?.type === "pdf" ? (
@@ -155,7 +199,7 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
             ) : (
               <FileText size={20} className="shrink-0 text-text-secondary" />
             )}
-            <h2 className="truncate text-lg font-semibold text-text-primary">
+            <h2 id="preview-dialog-title" className="truncate text-lg font-semibold text-text-primary">
               {doc?.name || "Loading..."}
             </h2>
           </div>
@@ -167,6 +211,8 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
             <X size={20} />
           </button>
         </div>
+
+        <p id="preview-dialog-description" className="sr-only">Document preview and properties viewer.</p>
 
         {loading ? (
           <div className="flex items-center justify-center py-24">

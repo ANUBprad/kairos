@@ -10,6 +10,7 @@ import { RETRIEVAL_STRATEGIES } from "@/lib/retrieval/types";
 import { executeRetrieval } from "@/lib/actions/retrieval-lab";
 import { BarChart, MetricCard } from "@/lib/evaluation/visualization/charts";
 import type { RetrievalConfig, RetrievalResultDisplay } from "@/lib/retrieval/types";
+import { PageHeader } from "@/components/app/page-header";
 
 interface KB {
   id: string; name: string; retrievalConfig: unknown;
@@ -90,13 +91,16 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Advanced Retrieval</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Compare retrieval strategies and analyze performance
-        </p>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Advanced Retrieval"
+        description="Compare retrieval strategies and analyze performance"
+        purpose="Configure advanced retrieval strategies."
+        relatedPages={[
+          { label: "Retrieval Lab", href: "/app/retrieval-lab" },
+          { label: "Evaluation", href: "/app/evaluation" },
+        ]}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Knowledge Bases" value={String(stats.kbCount)} footer="Available for retrieval" />

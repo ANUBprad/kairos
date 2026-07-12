@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { runCopilot } from "@/lib/copilot";
+import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
+import { sanitizeError } from "@/lib/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,10 +13,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { query, benchmarkRuns } = body;
+  const rl = rateLimit(`copilot:${session.user.id}`, RATE_LIMITS.copilot);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.copilot) },
+    );
+  }
 
-  if (!query || typeof query !== "string") {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const query = typeof body.query === "string" ? body.query.trim() : "";
+  const benchmarkRuns = Array.isArray(body.benchmarkRuns) ? body.benchmarkRuns : [];
+
+  if (!query) {
     return NextResponse.json(
       { error: "Missing required field: query" },
       { status: 400 }
@@ -28,10 +45,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (benchmarkRuns.length > 50) {
+    return NextResponse.json(
+      { error: "Too many benchmark runs" },
+      { status: 400 }
+    );
+  }
+
   try {
     const result = await runCopilot({
       request: { query },
-      benchmarkRuns: benchmarkRuns || [],
+      benchmarkRuns,
     });
 
     return NextResponse.json({
@@ -47,9 +71,9 @@ export async function POST(request: NextRequest) {
       dailyBrief: result.dailyBrief,
     });
   } catch (error) {
-    console.error("Copilot error:", error);
+    const sanitized = sanitizeError(error);
     return NextResponse.json(
-      { error: "Failed to process request" },
+      { error: "Failed to process request", errorId: sanitized.errorId },
       { status: 500 }
     );
   }

@@ -160,6 +160,32 @@
   50% { opacity: 0.8; }
 }
 
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.05); opacity: 0.3; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
 @utility animate-accordion-down {
   animation: accordion-down 200ms ease-out;
 }
@@ -170,6 +196,42 @@
 
 @utility animate-skeleton {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@utility animate-fade-in {
+  animation: fade-in 300ms ease-out;
+}
+
+@utility animate-slide-in-right {
+  animation: slide-in-right 300ms ease-out;
+}
+
+@utility animate-slide-in-up {
+  animation: slide-in-up 300ms ease-out;
+}
+
+@utility animate-scale-in {
+  animation: scale-in 200ms ease-out;
+}
+
+@utility animate-pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+@utility stagger-1 {
+  animation-delay: 50ms;
+}
+
+@utility stagger-2 {
+  animation-delay: 100ms;
+}
+
+@utility stagger-3 {
+  animation-delay: 150ms;
+}
+
+@utility stagger-4 {
+  animation-delay: 200ms;
 }
 
 .light * {

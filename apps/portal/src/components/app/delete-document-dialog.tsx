@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,17 +12,53 @@ interface Props {
   onClose: () => void;
 }
 
-export function DeleteDocumentDialog({ document, onClose }: Props) {
+export function DeleteDocumentDialog({ document: doc, onClose }: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
-  if (!document) return null;
+  useEffect(() => {
+    if (doc) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      setTimeout(() => dialogRef.current?.focus(), 100);
+    } else {
+      previousFocusRef.current?.focus();
+    }
+  }, [doc]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isLoading) onClose();
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+    if (doc) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [doc, isLoading, onClose]);
+
+  if (!doc) return null;
 
   const handleDelete = async () => {
     setIsLoading(true);
     try {
       const formData = new FormData();
-      formData.set("id", document.id);
+      formData.set("id", doc.id);
       await deleteDocument(formData);
       toast.success("Document deleted");
       onClose();
@@ -37,9 +73,17 @@ export function DeleteDocumentDialog({ document, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isLoading && onClose()} />
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl">
+      <div
+        ref={dialogRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-doc-title"
+        aria-describedby="delete-doc-description"
+        tabIndex={-1}
+        className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl outline-none"
+      >
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-text-primary">Delete document</h2>
+          <h2 id="delete-doc-title" className="text-lg font-semibold text-text-primary">Delete document</h2>
           <button
             onClick={onClose}
             className="text-text-tertiary transition-colors hover:text-text-primary"
@@ -49,12 +93,12 @@ export function DeleteDocumentDialog({ document, onClose }: Props) {
             <X size={20} />
           </button>
         </div>
-        <div className="flex flex-col items-center text-center">
+        <div id="delete-doc-description" className="flex flex-col items-center text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-error/10">
             <Trash2 size={28} className="text-error" />
           </div>
           <p className="mt-4 text-text-primary">
-            Are you sure you want to delete <strong>{document.name}</strong>?
+            Are you sure you want to delete <strong>{doc.name}</strong>?
           </p>
           <p className="mt-2 text-sm text-text-secondary">
             This action cannot be undone. All chunks and processing data will be permanently removed.

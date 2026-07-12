@@ -1,8 +1,8 @@
 import { requireSession } from "@/lib/server/auth-utils";
 import dynamic from "next/dynamic";
 
-const ArchitectureViewer = dynamic(
-  () => import("./architecture-client").then((mod) => mod.ArchitectureViewer),
+const NotebookPageClient = dynamic(
+  () => import("./notebook-client").then((mod) => mod.NotebookPageClient),
   {
     loading: () => (
       <div className="space-y-4">
@@ -15,11 +15,11 @@ const ArchitectureViewer = dynamic(
 );
 
 export const metadata = {
-  title: "Architecture | Kairos",
+  title: "Research Notebook",
+  description: "Create and organize research notes with charts, tables, and experiment references.",
 };
 
-export default async function ArchitecturePage() {
+export default async function NotebookPage() {
   await requireSession();
-
-  return <ArchitectureViewer />;
+  return <NotebookPageClient />;
 }

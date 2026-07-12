@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { chunkText, estimateChunkStats, CHUNK_STRATEGIES } from "@/lib/chunking";
 import type { ChunkStrategy, Chunk } from "@/lib/chunking/types";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/app/page-header";
 
 const SAMPLE_TEXT = `# Introduction to Retrieval-Augmented Generation
 
@@ -53,13 +54,16 @@ export function ChunkingStudio() {
   const selectedStrategy = CHUNK_STRATEGIES.find((s) => s.value === strategy);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-text-primary">Chunking Studio</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Explore how different chunking strategies partition text.
-        </p>
-      </div>
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Chunking Studio"
+        description="Explore how different chunking strategies partition text."
+        purpose="Experiment with different text chunking strategies."
+        relatedPages={[
+          { label: "Document Repository", href: "/app/knowledge-bases" },
+          { label: "Retrieval Lab", href: "/app/retrieval-lab" },
+        ]}
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1 space-y-4">

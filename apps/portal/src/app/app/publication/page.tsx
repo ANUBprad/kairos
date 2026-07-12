@@ -1,8 +1,8 @@
 import { requireSession } from "@/lib/server/auth-utils";
 import dynamic from "next/dynamic";
 
-const ArchitectureViewer = dynamic(
-  () => import("./architecture-client").then((mod) => mod.ArchitectureViewer),
+const PublicationModeClient = dynamic(
+  () => import("./publication-client").then((mod) => mod.PublicationModeClient),
   {
     loading: () => (
       <div className="space-y-4">
@@ -15,11 +15,11 @@ const ArchitectureViewer = dynamic(
 );
 
 export const metadata = {
-  title: "Architecture | Kairos",
+  title: "Publication Mode",
+  description: "Generate publication-ready research outputs in Markdown, HTML, PDF, and LaTeX formats.",
 };
 
-export default async function ArchitecturePage() {
+export default async function PublicationPage() {
   await requireSession();
-
-  return <ArchitectureViewer />;
+  return <PublicationModeClient />;
 }

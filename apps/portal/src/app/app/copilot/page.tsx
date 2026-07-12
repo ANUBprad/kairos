@@ -1,6 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/server/auth-utils";
-import { CopilotPage } from "./copilot-client";
+import dynamic from "next/dynamic";
+
+const CopilotPage = dynamic(
+  () => import("./copilot-client").then((mod) => mod.CopilotPage),
+  {
+    loading: () => (
+      <div className="space-y-4">
+        <div className="h-8 w-64 animate-pulse rounded bg-surface" />
+        <div className="h-4 w-96 animate-pulse rounded bg-surface" />
+        <div className="h-64 animate-pulse rounded-xl bg-surface" />
+      </div>
+    ),
+  }
+);
 
 export const metadata = {
   title: "AI Research Copilot | Kairos",

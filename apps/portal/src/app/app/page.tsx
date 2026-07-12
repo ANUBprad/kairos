@@ -16,6 +16,7 @@ import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
 import { ResearchNote } from "@/components/research/research-note";
 import { Pipeline } from "@/components/research/pipeline";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/app/page-header";
 import { PremiumCard, CardHeader, CardTitle, CardDescription } from "@/components/ui/premium-card";
 import { MetricCard } from "@/components/ui/metric-display";
 import { ProgressRing, ProgressBar } from "@/components/ui/progress";
@@ -87,7 +88,18 @@ export default async function AppPage() {
   const avgMrr = benchmarkMetrics?.avgMrr ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Research Overview"
+        description="Your RAG research command center"
+        purpose="Your central command center for RAG research experiments."
+        nextAction={{ label: "New Experiment", href: "/app/experiment-builder" }}
+        relatedPages={[
+          { label: "Research Dashboard", href: "/app/research" },
+          { label: "Retrieval Lab", href: "/app/retrieval-lab" },
+          { label: "Evaluation", href: "/app/evaluation" },
+        ]}
+      />
       {/* Hero Greeting */}
       <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-border bg-gradient-to-br from-surface via-surface to-brand/5 p-8">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />

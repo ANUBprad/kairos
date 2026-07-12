@@ -1,8 +1,8 @@
 import { requireSession } from "@/lib/server/auth-utils";
 import dynamic from "next/dynamic";
 
-const ArchitectureViewer = dynamic(
-  () => import("./architecture-client").then((mod) => mod.ArchitectureViewer),
+const ExperimentBuilderClient = dynamic(
+  () => import("./experiment-builder-client").then((mod) => mod.ExperimentBuilderClient),
   {
     loading: () => (
       <div className="space-y-4">
@@ -15,11 +15,11 @@ const ArchitectureViewer = dynamic(
 );
 
 export const metadata = {
-  title: "Architecture | Kairos",
+  title: "Experiment Builder",
+  description: "Visually assemble RAG experiment pipelines with drag-and-drop stages.",
 };
 
-export default async function ArchitecturePage() {
+export default async function ExperimentBuilderPage() {
   await requireSession();
-
-  return <ArchitectureViewer />;
+  return <ExperimentBuilderClient />;
 }

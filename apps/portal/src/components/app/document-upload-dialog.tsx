@@ -64,6 +64,33 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
     }
   }, [open]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isUploading) onOpenChange(false);
+      if (e.key === "Tab" && dropRef.current) {
+        const dialog = dropRef.current.closest('[role="dialog"]');
+        if (!dialog) return;
+        const focusableElements = dialog.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+    if (open) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [open, isUploading, onOpenChange]);
+
   const validateFile = useCallback(
     (file: File): string | null => {
       const ext = "." + file.name.split(".").pop()?.toLowerCase();
@@ -254,9 +281,17 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => !isUploading && onOpenChange(false)}
       />
-      <div className="relative z-10 flex w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-xl max-h-[80vh]">
+      <div
+        ref={dropRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upload-dialog-title"
+        aria-describedby="upload-dialog-description"
+        tabIndex={-1}
+        className="relative z-10 flex w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-xl max-h-[80vh] outline-none"
+      >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-lg font-semibold text-text-primary">Upload documents</h2>
+          <h2 id="upload-dialog-title" className="text-lg font-semibold text-text-primary">Upload documents</h2>
           <button
             onClick={() => onOpenChange(false)}
             className="text-text-tertiary transition-colors hover:text-text-primary"
@@ -266,6 +301,8 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
             <X size={20} />
           </button>
         </div>
+
+        <p id="upload-dialog-description" className="sr-only">Upload PDF, DOCX, TXT, MD, or CSV files up to 10MB each.</p>
 
         <div className="flex-1 overflow-y-auto p-6">
           <div

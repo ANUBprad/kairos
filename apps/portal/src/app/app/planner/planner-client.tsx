@@ -24,6 +24,7 @@ import type {
 } from "@/lib/experiment-planner/types";
 import { PremiumCard, CardHeader, CardTitle, CardDescription } from "@/components/ui/premium-card";
 import { MetricDisplay } from "@/components/ui/metric-display";
+import { PageHeader } from "@/components/app/page-header";
 
 interface RunData {
   id: string;
@@ -165,20 +166,40 @@ export function PlannerPage({ runs }: PlannerPageProps) {
 
   if (runs.length === 0) {
     return (
-      <PremiumCard variant="elevated">
-        <CardHeader icon={<Target size={16} />}>
-          <CardTitle>Experiment Planner</CardTitle>
-          <CardDescription>AI-powered experiment recommendations</CardDescription>
-        </CardHeader>
-        <p className="text-sm text-text-secondary">
-          No completed experiments found. Run benchmarks from the Evaluation page to get recommendations.
-        </p>
-      </PremiumCard>
+      <div className="animate-fade-in">
+        <PageHeader
+          title="Experiment Planner"
+          description="AI-powered experiment recommendations"
+          purpose="AI-powered suggestions for your next experiments."
+          relatedPages={[
+            { label: "Research Dashboard", href: "/app/research" },
+            { label: "Copilot", href: "/app/copilot" },
+          ]}
+        />
+        <PremiumCard variant="elevated">
+          <CardHeader icon={<Target size={16} />}>
+            <CardTitle>Experiment Planner</CardTitle>
+            <CardDescription>AI-powered experiment recommendations</CardDescription>
+          </CardHeader>
+          <p className="text-sm text-text-secondary">
+            No completed experiments found. Run benchmarks from the Evaluation page to get recommendations.
+          </p>
+        </PremiumCard>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Experiment Planner"
+        description="AI-powered experiment recommendations based on your configuration space, coverage gaps, and expected information gain."
+        purpose="AI-powered suggestions for your next experiments."
+        relatedPages={[
+          { label: "Research Dashboard", href: "/app/research" },
+          { label: "Copilot", href: "/app/copilot" },
+        ]}
+      />
       {/* Hero Header */}
       <PremiumCard variant="gradient">
         <div className="flex items-center gap-3 mb-2">

@@ -28,6 +28,7 @@ import { listKbsForLab } from "@/lib/actions/retrieval-lab";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 import { MetricCard, RadarChart, BarChart } from "@/lib/evaluation/visualization/charts";
 import { METRIC_DEFINITIONS, type ComparisonResult, type EvaluationReport } from "@/lib/evaluation/types";
+import { PageHeader } from "@/components/app/page-header";
 
 interface RunMetric {
   id: string;
@@ -97,7 +98,18 @@ export function EvaluationDashboard({ runs, datasets, benchmarkRuns }: Props) {
   const [report, setReport] = useState<ReportViewProps | null>(null);
 
   return (
-    <div>
+    <div className="animate-fade-in">
+      <PageHeader
+        title="Evaluation"
+        description="Benchmark your RAG system with standardized metrics"
+        purpose="Run benchmarks and compare retrieval configurations."
+        nextAction={{ label: "Benchmark Explorer", href: "/app/benchmark-explorer" }}
+        relatedPages={[
+          { label: "Retrieval Lab", href: "/app/retrieval-lab" },
+          { label: "Research Dashboard", href: "/app/research" },
+        ]}
+      />
+
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Evaluation</h1>
         <p className="mt-1 text-sm text-text-secondary">

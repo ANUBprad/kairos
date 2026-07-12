@@ -1,8 +1,8 @@
 import { requireSession } from "@/lib/server/auth-utils";
 import dynamic from "next/dynamic";
 
-const ArchitectureViewer = dynamic(
-  () => import("./architecture-client").then((mod) => mod.ArchitectureViewer),
+const BenchmarkExplorerClient = dynamic(
+  () => import("./benchmark-explorer-client").then((mod) => mod.BenchmarkExplorerClient),
   {
     loading: () => (
       <div className="space-y-4">
@@ -15,11 +15,11 @@ const ArchitectureViewer = dynamic(
 );
 
 export const metadata = {
-  title: "Architecture | Kairos",
+  title: "Benchmark Explorer",
+  description: "Interactive exploration of benchmark results with scatter plots, parallel coordinates, and statistical analysis.",
 };
 
-export default async function ArchitecturePage() {
+export default async function BenchmarkExplorerPage() {
   await requireSession();
-
-  return <ArchitectureViewer />;
+  return <BenchmarkExplorerClient />;
 }

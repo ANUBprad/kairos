@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 export class AppError extends Error {
   public readonly code: string;
   public readonly statusCode: number;
@@ -13,30 +15,37 @@ export class AppError extends Error {
 export function logError(context: string, error: unknown, extra?: Record<string, unknown>) {
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
-  console.error(JSON.stringify({
-    level: "error",
-    context,
+  logger.error(context, {
     message,
     ...extra,
     ...(stack ? { stack: stack.split("\n").slice(0, 5).join("\n") } : {}),
-  }));
+  });
 }
 
-export function sanitizeError(error: unknown): { code: string; message: string } {
+function generateErrorId(): string {
+  return `err_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function sanitizeError(error: unknown): { code: string; message: string; errorId: string } {
+  const errorId = generateErrorId();
+
   if (error instanceof AppError) {
-    return { code: error.code, message: error.message };
+    logger.warn(`AppError [${error.code}]`, { message: error.message, errorId });
+    return { code: error.code, message: error.message, errorId };
   }
   if (error instanceof Error) {
     if (error.message.includes("not found") || error.message.includes("Not found")) {
-      return { code: "NOT_FOUND", message: "Resource not found" };
+      return { code: "NOT_FOUND", message: "Resource not found", errorId };
     }
     if (error.message.includes("authenticated") || error.message.includes("unauthorized")) {
-      return { code: "UNAUTHORIZED", message: "Not authenticated" };
+      return { code: "UNAUTHORIZED", message: "Not authenticated", errorId };
     }
     if (error.message.includes("forbidden") || error.message.includes("permission")) {
-      return { code: "FORBIDDEN", message: "Insufficient permissions" };
+      return { code: "FORBIDDEN", message: "Insufficient permissions", errorId };
     }
-    return { code: "INTERNAL_ERROR", message: "An unexpected error occurred" };
+    logger.error("Unhandled error", { message: error.message, stack: error.stack, errorId });
+    return { code: "INTERNAL_ERROR", message: "An unexpected error occurred", errorId };
   }
-  return { code: "INTERNAL_ERROR", message: "An unexpected error occurred" };
+  logger.error("Non-Error thrown", { value: String(error), errorId });
+  return { code: "INTERNAL_ERROR", message: "An unexpected error occurred", errorId };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,42 @@ interface Props {
 export function DeleteKnowledgeBaseDialog({ kb, onClose }: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (kb) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      setTimeout(() => dialogRef.current?.focus(), 100);
+    } else {
+      previousFocusRef.current?.focus();
+    }
+  }, [kb]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isLoading) onClose();
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+    if (kb) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [kb, isLoading, onClose]);
 
   if (!kb) return null;
 
@@ -39,9 +75,17 @@ export function DeleteKnowledgeBaseDialog({ kb, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isLoading && onClose()} />
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl">
+      <div
+        ref={dialogRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-kb-title"
+        aria-describedby="delete-kb-description"
+        tabIndex={-1}
+        className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl outline-none"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-text-primary">Delete</h2>
+          <h2 id="delete-kb-title" className="text-lg font-semibold text-text-primary">Delete</h2>
           <button
             onClick={onClose}
             className="text-text-tertiary hover:text-text-primary transition-colors"
@@ -52,7 +96,7 @@ export function DeleteKnowledgeBaseDialog({ kb, onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex items-start gap-3 rounded-xl border border-error/20 bg-error/5 p-4">
+        <div id="delete-kb-description" className="flex items-start gap-3 rounded-xl border border-error/20 bg-error/5 p-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-error/10">
             <AlertTriangle size={18} className="text-error" />
           </div>

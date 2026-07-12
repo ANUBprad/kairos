@@ -6,6 +6,7 @@ import {
   Cpu, Layers, Terminal, BarChart3,
   AlertTriangle, Lightbulb, ChevronRight,
 } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
 
 interface Tab {
   id: string;
@@ -83,13 +84,16 @@ export function ProjectGuide() {
   const [activeTab, setActiveTab] = useState("abstract");
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Project Guide</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Comprehensive project documentation, methodology, and viva preparation
-        </p>
-      </div>
+    <div className="animate-fade-in">
+      <PageHeader
+        title="Project Guide"
+        description="Comprehensive project documentation, methodology, and viva preparation"
+        purpose="Learn how to use Kairos effectively."
+        relatedPages={[
+          { label: "Architecture", href: "/app/architecture" },
+          { label: "Documentation", href: "#" },
+        ]}
+      />
 
       <div className="flex gap-6">
         {/* Sidebar Navigation */}

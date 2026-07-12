@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PremiumCard, CardHeader, CardTitle, CardDescription } from "@/components/ui/premium-card";
+import { PageHeader } from "@/components/app/page-header";
 
 interface CopilotRun {
   id: string;
@@ -155,7 +156,17 @@ export function CopilotPage({ runs }: CopilotPageProps) {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] gap-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] animate-fade-in">
+      <PageHeader
+        title="AI Research Copilot"
+        description="Evidence-backed research assistance"
+        purpose="Get AI-powered recommendations for your RAG experiments."
+        relatedPages={[
+          { label: "Research Dashboard", href: "/app/research" },
+          { label: "Experiment Planner", href: "/app/planner" },
+        ]}
+      />
+      <div className="flex flex-1 gap-4 min-h-0">
       <div className="flex flex-1 flex-col rounded-xl border border-border bg-surface overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-gradient-to-r from-brand/5 to-transparent">
@@ -459,6 +470,7 @@ export function CopilotPage({ runs }: CopilotPageProps) {
           </div>
         </PremiumCard>
       )}
+      </div>
     </div>
   );
 }

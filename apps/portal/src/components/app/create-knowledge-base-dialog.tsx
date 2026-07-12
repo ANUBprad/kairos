@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ interface Props {
 export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const {
     register,
@@ -37,6 +39,40 @@ export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
     resolver: zodResolver(createSchema),
     mode: "onBlur",
   });
+
+  useEffect(() => {
+    if (open) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      setTimeout(() => dialogRef.current?.focus(), 100);
+    } else {
+      previousFocusRef.current?.focus();
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isLoading) onOpenChange(false);
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+    if (open) {
+      document.addEventListener("keydown", handleKeyDown);
+      return () => document.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [open, isLoading, onOpenChange]);
 
   if (!open) return null;
 
@@ -63,9 +99,17 @@ export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isLoading && onOpenChange(false)} />
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-kb-title"
+        aria-describedby="create-kb-description"
+        tabIndex={-1}
+        className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl outline-none"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-text-primary">Create knowledge base</h2>
+          <h2 id="create-kb-title" className="text-lg font-semibold text-text-primary">Create knowledge base</h2>
           <button
             onClick={() => onOpenChange(false)}
             className="text-text-tertiary hover:text-text-primary transition-colors"
@@ -75,6 +119,8 @@ export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
             <X size={20} />
           </button>
         </div>
+
+        <p id="create-kb-description" className="sr-only">Create a new knowledge base to organize your documents.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <FormField

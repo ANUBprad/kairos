@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Bot, CheckCircle2, Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
 
 interface ProviderInfo {
   available: boolean;
@@ -45,13 +46,16 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-text-primary">Settings</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Configure your AI provider and model preferences.
-        </p>
-      </div>
+    <div className="max-w-2xl mx-auto animate-fade-in">
+      <PageHeader
+        title="Configuration"
+        description="Configure your AI provider and model preferences."
+        purpose="Manage your platform settings and API keys."
+        relatedPages={[
+          { label: "Architecture", href: "/app/architecture" },
+          { label: "Project Guide", href: "/app/project-guide" },
+        ]}
+      />
 
       <div className="space-y-6">
         <div className="rounded-xl border border-border bg-surface p-6">

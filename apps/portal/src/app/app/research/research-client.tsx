@@ -16,6 +16,7 @@ import { ResearchScientist } from "@/components/app/research-scientist";
 import { PremiumCard, CardHeader, CardTitle, CardDescription } from "@/components/ui/premium-card";
 import { MetricDisplay } from "@/components/ui/metric-display";
 import { StatusIndicator } from "@/components/ui/status-indicator";
+import { PageHeader } from "@/components/app/page-header";
 
 interface ResearchDashboardProps {
   currentKbName: string | null;
@@ -136,7 +137,18 @@ export function ResearchDashboard({
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
+      <PageHeader
+        title="Research Dashboard"
+        description="Adaptive Retrieval-Augmented Generation Research Platform"
+        purpose="Statistical analysis and automated insights from your experiments."
+        nextAction={{ label: "Ask Copilot", href: "/app/copilot" }}
+        relatedPages={[
+          { label: "Experiment Planner", href: "/app/planner" },
+          { label: "Evaluation", href: "/app/evaluation" },
+          { label: "Benchmark Explorer", href: "/app/benchmark-explorer" },
+        ]}
+      />
       {/* Hero Header */}
       <PremiumCard variant="gradient">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
