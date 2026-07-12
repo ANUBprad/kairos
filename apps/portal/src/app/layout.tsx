@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     icon: { url: "/kai.png", type: "image/png" },
     apple: { url: "/kai.png", sizes: "500x500" },
   },
-  metadataBase: new URL("https://kairos.dev"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://kairos.dev"),
   alternates: {
     canonical: "/",
   },
