@@ -6,7 +6,7 @@ If you discover a security vulnerability within Kairos, please report it respons
 
 **Please do NOT report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to [INSERT SECURITY EMAIL].
+Instead, please report them via email to security@kairos.dev.
 
 You should receive a response within 48 hours. If for some reason you do not, please follow up via email to ensure we received your original message.
 

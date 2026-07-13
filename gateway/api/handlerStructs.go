@@ -23,10 +23,6 @@ type docHandlerResponse struct {
 	Error     string       `json:"error"`
 }
 
-var queryReq struct {
-	Query string `json:"query"`
-}
-
 type QueryHandler struct {
 	intelClient pb.IntelligenceServiceClient
 	semCache    *cache.SemanticCache

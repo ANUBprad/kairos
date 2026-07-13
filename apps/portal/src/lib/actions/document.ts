@@ -172,46 +172,47 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 
     const stored = await storage.upload(buffer, file.name, storageKey);
 
-    const doc = await prisma.document.create({
-      data: {
-        name: file.name,
-        fileType,
-        size: file.size,
-        fileHash: hash,
-        storageProvider: stored.provider,
-        storageKey: stored.key,
-        storageUrl: stored.url,
-        status: "UPLOADING",
-        knowledgeBaseId: kbId,
-        uploadedById: session.user.id,
-        metadata: { mimeType: file.type, extension: ext },
-      },
-      include: { uploadedBy: true },
-    });
+    const doc = await prisma.$transaction(async (tx) => {
+      const created = await tx.document.create({
+        data: {
+          name: file.name,
+          fileType,
+          size: file.size,
+          fileHash: hash,
+          storageProvider: stored.provider,
+          storageKey: stored.key,
+          storageUrl: stored.url,
+          status: "STORED",
+          knowledgeBaseId: kbId,
+          uploadedById: session.user.id,
+          metadata: { mimeType: file.type, extension: ext },
+        },
+        include: { uploadedBy: true },
+      });
 
-    await prisma.document.update({
-      where: { id: doc.id },
-      data: { status: "STORED" },
-    });
+      await tx.documentVersion.create({
+        data: {
+          version: 1,
+          fileType,
+          size: file.size,
+          storageKey: stored.key,
+          storageUrl: stored.url,
+          documentId: created.id,
+          uploadedById: session.user.id,
+          metadata: { mimeType: file.type, fileHash: hash },
+        },
+      });
 
-    await prisma.documentVersion.create({
-      data: {
-        version: 1,
-        fileType,
-        size: file.size,
-        storageKey: stored.key,
-        storageUrl: stored.url,
-        documentId: doc.id,
-        uploadedById: session.user.id,
-        metadata: { mimeType: file.type, fileHash: hash },
-      },
-    });
+      await tx.documentActivity.create({
+        data: {
+          documentId: created.id,
+          userId: session.user.id,
+          action: "UPLOADED",
+          details: { fileName: file.name, fileType, size: file.size, fileHash: hash } as never,
+        },
+      });
 
-    await logActivity(doc.id, session.user.id, "UPLOADED", {
-      fileName: file.name,
-      fileType,
-      size: file.size,
-      fileHash: hash,
+      return created;
     });
 
     results.push(doc);
@@ -278,26 +279,30 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       overlap: retrievalConfig.overlap ?? 200,
     });
 
-    for (const chunk of chunks) {
-      await prisma.documentChunk.create({
-        data: {
+    await prisma.$transaction(async (tx) => {
+      await tx.documentChunk.createMany({
+        data: chunks.map((chunk) => ({
           content: chunk.content,
           index: chunk.index,
           tokenCount: chunk.tokenCount,
           metadata: (chunk.metadata || {}) as never,
           documentId: docId,
+        })),
+      });
+
+      await tx.document.update({
+        where: { id: docId },
+        data: { status: "EMBEDDING_PENDING" },
+      });
+
+      await tx.documentActivity.create({
+        data: {
+          documentId: docId,
+          userId: doc.uploadedById || "",
+          action: "PROCESSED",
+          details: { chunks: chunks.length, characters: extraction.metadata.characters } as never,
         },
       });
-    }
-
-    await prisma.document.update({
-      where: { id: docId },
-      data: { status: "EMBEDDING_PENDING" },
-    });
-
-    await logActivity(docId, doc.uploadedById || "", "PROCESSED", {
-      chunks: chunks.length,
-      characters: extraction.metadata.characters,
     });
 
     // Fire-and-forget embedding generation
@@ -394,11 +399,12 @@ export async function reprocessDocument(formData: FormData) {
   if (!doc) throw new Error("Document not found");
   await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
 
-  await prisma.documentChunk.deleteMany({ where: { documentId: id } });
-
-  const updated = await prisma.document.update({
-    where: { id },
-    data: { status: "QUEUED" },
+  await prisma.$transaction(async (tx) => {
+    await tx.documentChunk.deleteMany({ where: { documentId: id } });
+    await tx.document.update({
+      where: { id },
+      data: { status: "QUEUED" },
+    });
   });
 
   await logActivity(id, session.user.id, "REPROCESSED", { fileName: doc.name });
@@ -408,7 +414,7 @@ export async function reprocessDocument(formData: FormData) {
   });
 
   revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
-  return updated;
+  return { ...doc, status: "QUEUED" as const };
 }
 
 export async function bulkDeleteDocuments(formData: FormData) {
@@ -455,10 +461,12 @@ export async function bulkReprocessDocuments(formData: FormData) {
   await getOrgFromKb(docs[0].knowledgeBaseId, session.user.id);
 
   for (const doc of docs) {
-    await prisma.documentChunk.deleteMany({ where: { documentId: doc.id } });
-    await prisma.document.update({
-      where: { id: doc.id },
-      data: { status: "QUEUED" },
+    await prisma.$transaction(async (tx) => {
+      await tx.documentChunk.deleteMany({ where: { documentId: doc.id } });
+      await tx.document.update({
+        where: { id: doc.id },
+        data: { status: "QUEUED" },
+      });
     });
     await logActivity(doc.id, session.user.id, "REPROCESSED", { fileName: doc.name });
 

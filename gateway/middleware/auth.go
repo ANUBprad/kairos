@@ -4,6 +4,7 @@ import (
 	"Kairos/gateway/config"
 	"Kairos/gateway/httpWriter"
 	"context"
+	"crypto/subtle"
 	"net/http"
 )
 
@@ -17,7 +18,7 @@ func Auth(envVar *config.Config) func(http.Handler) http.Handler {
 				return
 			}
 
-			if apiKey == envVar.Auth {
+			if subtle.ConstantTimeCompare([]byte(apiKey), []byte(envVar.Auth)) == 1 {
 				namespace := r.Header.Get("X-Namespace")
 
 				if namespace == "" {

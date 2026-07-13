@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -39,6 +40,7 @@ type Config struct {
 	RateLimit   int
 	BurstLimit  int
 	MaxFileSize int
+	CORSOrigins []string
 }
 
 func LoadEnv() (*Config, error) {
@@ -69,6 +71,10 @@ func LoadEnv() (*Config, error) {
 	config.RateLimit, _ = strconv.Atoi(os.Getenv("KAIROS_RATE_LIMIT"))
 	config.BurstLimit, _ = strconv.Atoi(os.Getenv("KAIROS_BURST_LIMIT"))
 	config.MaxFileSize, _ = strconv.Atoi(os.Getenv("MAX_FILE_SIZE"))
+
+	if corsOrigins := os.Getenv("KAIROS_CORS_ORIGINS"); corsOrigins != "" {
+		config.CORSOrigins = strings.Split(corsOrigins, ",")
+	}
 
 	return &config, nil
 }

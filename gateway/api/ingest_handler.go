@@ -9,7 +9,9 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Request) {
@@ -51,10 +53,11 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 
 	id, err := ingester.tracker.CreateJob()
 	if err != nil {
+		slog.Error("Unable to create job", "ERROR", err)
 		response := docHandlerResponse{
 			JobId:     id,
 			JobStatus: queue.Failed,
-			Error:     err.Error(),
+			Error:     "Failed to create ingestion job",
 		}
 		httpWriter.RespondWithJSON(w, 500, response)
 		return
@@ -67,11 +70,15 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	ctx := r.Context()
-	namespace := ctx.Value(httpWriter.NamespaceKey{})
-	fileName := header.Filename
+	namespace, ok := ctx.Value(httpWriter.NamespaceKey{}).(string)
+	if !ok {
+		httpWriter.RespondWithError(w, 400, "Missing namespace")
+		return
+	}
+	fileName := sanitizeFilename(header.Filename)
 	fileDetails := pb.IngestDocumentRequest{
 		DocContent:       contentBytes,
-		Namespace:        namespace.(string),
+		Namespace:        namespace,
 		Filename:         fileName,
 		MimeType:         mimeType,
 		ChunkingStrategy: pb.ChunkingStrategy(chunkingStrat),
@@ -83,7 +90,7 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 		response := docHandlerResponse{
 			JobId:     id,
 			JobStatus: queue.Failed,
-			Error:     err.Error(),
+			Error:     "Failed to enqueue ingestion job",
 		}
 		httpWriter.RespondWithJSON(w, 500, response)
 		return
@@ -94,6 +101,20 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 		Error:     "",
 	}
 
-	metrics.IngestionThroughput.WithLabelValues(namespace.(string)).Inc()
+	metrics.IngestionThroughput.WithLabelValues(namespace).Inc()
 	httpWriter.RespondWithJSON(w, 200, response)
+}
+
+var unsafeCharsRegex = regexp.MustCompile(`[^a-zA-Z0-9._-]`)
+
+func sanitizeFilename(name string) string {
+	if name == "" {
+		return "unnamed"
+	}
+	name = strings.TrimLeft(name, ".")
+	name = unsafeCharsRegex.ReplaceAllString(name, "_")
+	if len(name) > 255 {
+		name = name[:255]
+	}
+	return name
 }

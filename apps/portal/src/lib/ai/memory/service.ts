@@ -175,9 +175,10 @@ export async function deleteConversation(
 export async function updateConversationTitle(
   conversationId: string,
   title: string,
+  userId: string,
 ): Promise<void> {
   await prisma.conversation.update({
-    where: { id: conversationId },
+    where: { id: conversationId, userId },
     data: { title, updatedAt: new Date() },
   });
 }

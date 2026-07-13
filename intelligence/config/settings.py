@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000, description="REST API bind port")
     api_workers: int = Field(default=1, description="Number of API worker processes")
     api_cors_origins: list[str] = Field(
-        default=["*"], description="Allowed CORS origins"
+        default=[], description="Allowed CORS origins (empty = allow all)"
     )
     api_rate_limit: int = Field(
         default=100, description="Default API rate limit per minute"

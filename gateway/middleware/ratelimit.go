@@ -13,16 +13,14 @@ import (
 
 func RateLimit(envVar *config.Config) func(http.Handler) http.Handler {
 	clients := sync.Map{}
+	rateLimitVal := envVar.RateLimit
+	burstVal := envVar.BurstLimit
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-			rateLimit := envVar.RateLimit
-			burst := envVar.BurstLimit
 			namespace := ctx.Value(httpWriter.NamespaceKey{}).(string)
 
-			limiter := rate.NewLimiter(rate.Limit(rateLimit), burst)
-
-			val, _ := clients.LoadOrStore(namespace, limiter)
+			val, _ := clients.LoadOrStore(namespace, rate.NewLimiter(rate.Limit(rateLimitVal), burstVal))
 
 			clientLimiter := val.(*rate.Limiter)
 			reservation := clientLimiter.Reserve()

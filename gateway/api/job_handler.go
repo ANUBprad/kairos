@@ -23,10 +23,14 @@ func (jobHandler *JobHandler) UserJobHandler(w http.ResponseWriter, r *http.Requ
 		httpWriter.RespondWithError(w, 404, "Job not found")
 		return
 	}
+	jobErr := job.GetJobError()
+	if jobErr != "" {
+		jobErr = "Ingestion processing failed"
+	}
 	response := docHandlerResponse{
 		JobId:     jobID,
 		JobStatus: job.GetStatus(),
-		Error:     job.GetJobError(),
+		Error:     jobErr,
 	}
 	httpWriter.RespondWithJSON(w, 200, response)
 }

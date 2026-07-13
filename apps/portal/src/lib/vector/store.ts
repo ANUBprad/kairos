@@ -74,8 +74,11 @@ class PgVectorStore implements VectorStore {
     const minSim = options.minSimilarity ?? 0.7;
     const queryVec = vecLiteral(queryEmbedding);
 
-    const kbFilter = options.knowledgeBaseIds?.length
-      ? `AND d."knowledgeBaseId" IN (${options.knowledgeBaseIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(",")})`
+    const kbIds = options.knowledgeBaseIds?.filter(
+      (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+    );
+    const kbPlaceholders = kbIds?.length
+      ? `AND d."knowledgeBaseId" IN (${kbIds.map((_, i) => `$${i + 3}`).join(",")})`
       : "";
 
     const sql = `
@@ -92,11 +95,16 @@ class PgVectorStore implements VectorStore {
       JOIN "Document" d ON d.id = c."documentId"
       WHERE e.embedding IS NOT NULL
         AND d.status = 'INDEXED'
-        ${kbFilter}
+        ${kbPlaceholders}
         AND 1 - (e.embedding <=> '${queryVec}'::vector) >= $1
       ORDER BY e.embedding <=> '${queryVec}'::vector
       LIMIT $2
     `;
+
+    const params: unknown[] = [minSim, topK];
+    if (kbIds?.length) {
+      params.push(...kbIds);
+    }
 
     const rows = await prisma.$queryRawUnsafe<
       {
@@ -108,7 +116,7 @@ class PgVectorStore implements VectorStore {
         metadata: Record<string, unknown> | null;
         similarity: number;
       }[]
-    >(sql, minSim, topK);
+    >(sql, ...params);
 
     return (rows || []).map((r) => ({
       ...r,

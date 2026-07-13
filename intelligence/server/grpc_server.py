@@ -54,8 +54,9 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
             embeddings = self._engine.compute_embeddings(request.user_query)
             return rag_pb2.ComputeEmbeddingResponse(vector_embeddings=embeddings)
         except Exception as e:
+            logger.error("ComputeEmbeddings failed: %s", e)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal embedding computation error")
             return rag_pb2.ComputeEmbeddingResponse()
 
     def ClassifyQueryType(self, request, context):
@@ -72,8 +73,9 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
                 confidence_score=result["confidence_score"],
             )
         except Exception as e:
+            logger.error("ClassifyQueryType failed: %s", e)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal query classification error")
             return rag_pb2.ClassifyQueryResponse()
 
     def ExecuteRetrieval(self, request, context):
@@ -99,9 +101,10 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
                 retrieved_chunk=retrieved_chunks,
                 retrieval_status=True,
             )
-        except ValueError as e:
+        except Exception as e:
+            logger.error("ExecuteRetrieval failed: %s", e)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal retrieval execution error")
             return rag_pb2.ExecuteRetrievalResponse(retrieval_status=False)
 
     def GenerateResponse(self, request, context):
@@ -129,9 +132,10 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
                 embedding_status=True,
                 chunk_count=chunk_count,
             )
-        except ValueError as e:
+        except Exception as e:
+            logger.error("IngestDocument failed: %s", e)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal document ingestion error")
             return rag_pb2.IngestDocumentResponse()
 
 

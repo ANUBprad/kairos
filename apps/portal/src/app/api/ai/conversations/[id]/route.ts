@@ -86,7 +86,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Title too long" }, { status: 400 });
   }
 
-  await updateConversationTitle(id, title);
+  await updateConversationTitle(id, title, session.user.id);
 
   return NextResponse.json({ success: true });
 }

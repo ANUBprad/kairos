@@ -19,8 +19,13 @@ func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, 
 
 	jobHandler := NewJobHandler(tracker)
 
+	corsOrigins := envVar.CORSOrigins
+	if len(corsOrigins) == 0 {
+		corsOrigins = []string{"*"}
+	}
+
 	mainRouter.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   corsOrigins,
 		AllowedHeaders:   []string{"Content-Type", "X-Secret", "X-Namespace", "X-Trace-ID"},
 		AllowCredentials: false,
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "OPTIONS"},

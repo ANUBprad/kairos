@@ -14,13 +14,29 @@ import (
 func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	ctx := r.Context()
-	namespace := ctx.Value(httpWriter.NamespaceKey{})
+	namespace, ok := ctx.Value(httpWriter.NamespaceKey{}).(string)
+	if !ok {
+		httpWriter.RespondWithError(w, 400, "Missing namespace")
+		return
+	}
+
+	var queryReq struct {
+		Query string `json:"query"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&queryReq); err != nil {
 		httpWriter.RespondWithError(w, 400, "Invalid request body")
 		return
 	}
 
-	query := queryReq.Query
+	query := strings.TrimSpace(queryReq.Query)
+	if query == "" {
+		httpWriter.RespondWithError(w, 400, "Query is required")
+		return
+	}
+	if len(query) > 10000 {
+		httpWriter.RespondWithError(w, 400, "Query exceeds maximum length")
+		return
+	}
 
 	queryEmbed, err := intelligence.ComputeEmbeddings(qHandler.intelClient, query)
 
@@ -30,10 +46,10 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	response, ok := qHandler.semCache.Get(namespace.(string), queryEmbed)
+	response, ok := qHandler.semCache.Get(namespace, queryEmbed)
 	if !ok { // cache miss
-		metrics.CacheMisses.WithLabelValues(namespace.(string)).Inc()
-		queryDetails, err := intelligence.ClassifyQuery(qHandler.intelClient, query, namespace.(string))
+		metrics.CacheMisses.WithLabelValues(namespace).Inc()
+		queryDetails, err := intelligence.ClassifyQuery(qHandler.intelClient, query, namespace)
 		if err != nil {
 			httpWriter.RespondWithError(w, 502, "Unable to connect with gateway")
 			slog.Error("Unable to reach ClassifyQuery", "ERROR", err)
@@ -41,7 +57,7 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		}
 		queryConfig := queryDetails.Config
 
-		retrieval, err := intelligence.ExecuteRetrieval(qHandler.intelClient, query, queryConfig, namespace.(string))
+		retrieval, err := intelligence.ExecuteRetrieval(qHandler.intelClient, query, queryConfig, namespace)
 		if err != nil {
 			httpWriter.RespondWithError(w, 502, "Unable to connect with gateway")
 			slog.Error("Unable to reach Retrieve data", "ERROR", err)
@@ -55,7 +71,7 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		}
 		retrievedChunks := retrieval.RetrievedChunk
 
-		finalResponse, err := intelligence.GenerateResponse(qHandler.intelClient, namespace.(string), query, retrievedChunks)
+		finalResponse, err := intelligence.GenerateResponse(qHandler.intelClient, namespace, query, retrievedChunks)
 
 		if err != nil {
 			httpWriter.RespondWithError(w, 502, "Unable to connect with gateway")
@@ -63,9 +79,9 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		metrics.TokenUsage.WithLabelValues(namespace.(string), finalResponse.Model).Add(float64(finalResponse.PromptTokens + finalResponse.CompletionTokens))
+		metrics.TokenUsage.WithLabelValues(namespace, finalResponse.Model).Add(float64(finalResponse.PromptTokens + finalResponse.CompletionTokens))
 
-		qHandler.semCache.Set(namespace.(string), query, queryEmbed, finalResponse.Response)
+		qHandler.semCache.Set(namespace, query, queryEmbed, finalResponse.Response)
 
 		tier := strings.ToLower(queryDetails.Config.RetrievalType.String())
 		metrics.QueryLatency.WithLabelValues(tier).Observe(time.Since(startTime).Seconds())
@@ -81,7 +97,7 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	metrics.CacheHits.WithLabelValues(namespace.(string)).Inc()
+	metrics.CacheHits.WithLabelValues(namespace).Inc()
 
 	httpWriter.RespondWithJSON(w, 200, queryResponseStruct{
 		Response:         response,
