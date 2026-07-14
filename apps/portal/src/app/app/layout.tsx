@@ -2,6 +2,7 @@ import { requireSession } from "@/lib/server/auth-utils";
 import { ensureDefaultOrg } from "@/lib/server/organization";
 import { AppSidebar } from "@/components/app/sidebar";
 import { AppHeader } from "@/components/app/app-header";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: { template: "%s | Kairos", default: "Research Platform | Kairos" },
@@ -13,7 +14,14 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireSession();
+  let session;
+  try {
+    session = await requireSession();
+  } catch {
+    redirect("/login");
+  }
+
+  if (!session) redirect("/login");
 
   const { organization } = await ensureDefaultOrg();
 

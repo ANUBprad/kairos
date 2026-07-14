@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const SESSION_COOKIE_CANDIDATES = [
+  "__Secure-kairos.session_token",
+  "kairos.session_token",
+  "better-auth.session_token",
+];
+
+function getSessionCookie(request: NextRequest): string | undefined {
+  for (const name of SESSION_COOKIE_CANDIDATES) {
+    const cookie = request.cookies.get(name);
+    if (cookie?.value) return cookie.value;
+  }
+  return undefined;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/app")) {
-    const sessionCookie = request.cookies.get("better-auth.session_token");
-    if (!sessionCookie?.value) {
+    if (!getSessionCookie(request)) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
@@ -15,8 +28,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/login" || pathname === "/signup") {
-    const sessionCookie = request.cookies.get("better-auth.session_token");
-    if (sessionCookie?.value) {
+    if (getSessionCookie(request)) {
       return NextResponse.redirect(new URL("/app", request.url));
     }
   }

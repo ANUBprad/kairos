@@ -79,3 +79,6 @@ dashboard/
 experiments/
 gateway/main
 *.tsbuildinfo
+
+.vercel
+.env*
