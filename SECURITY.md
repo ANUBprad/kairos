@@ -20,16 +20,12 @@ Please include the following information in your report:
 - Proof-of-concept or exploit code (if possible)
 - Impact of the issue, including how an attacker might exploit it
 
-This information will help us triage your report more quickly.
-
 ## Supported Versions
 
 | Version | Supported          |
 | ------- | ------------------ |
 | 3.0.x   | :white_check_mark: |
-| 2.0.x   | :white_check_mark: |
-| 1.0.x   | :x:                |
-| < 1.0   | :x:                |
+| < 3.0   | :x:                |
 
 ## Security Advisories
 

@@ -4,83 +4,68 @@ All notable changes to the Kairos project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [3.0.0] - 2026-01-01
+## [Unreleased]
 
 ### Added
-- Complete system architecture redesign
-- Multi-agent orchestration framework
-- Advanced task routing and scheduling
-- Real-time monitoring dashboard
-- Comprehensive API documentation
-
-### Changed
-- Migrated to Next.js 14 with App Router
-- Upgraded Python backend to FastAPI
-- Improved database schema and migrations
+- Email + password authentication alongside GitHub OAuth
+- Forgot password and email verification flows
+- Regional pricing with currency detection
+- Session persistence fixes for Vercel serverless
 
 ### Fixed
-- Resolved memory leak in long-running processes
-- Fixed race conditions in concurrent task execution
-
-## [2.0.0] - 2025-06-15
-
-### Added
-- User authentication and authorization system
-- Role-based access control
-- Audit logging for all operations
-- Integration with external services
+- Middleware cookie name mismatch causing 401 on `/app`
+- Open redirect vulnerability in login flow
+- Layout crash on auth failure (missing try/catch)
+- SQL injection in vector store knowledge base queries
+- Error message leakage in Go gateway and Python gRPC
+- CORS configuration now environment-driven
+- Rate limiter instantiated once per namespace (data race fix)
+- Unsafe Go type assertions replaced with comma-ok pattern
+- Auth timing attack via constant-time comparison
+- Prisma transactions for multi-step document operations
 
 ### Changed
-- Redesigned the frontend UI components
-- Optimized database queries for better performance
-- Updated all dependencies to latest versions
+- Branded from Keiro to Kairos across entire codebase
+- Python API CORS default changed from `["*"]` to `[]`
+- Middleware checks multiple cookie name candidates for production compatibility
+
+## [RC-2] - 2026-07-14
 
 ### Fixed
-- Fixed pagination issues in list views
-- Resolved timezone handling bugs
-
-## [1.0.0] - 2025-01-20
-
-### Added
-- Initial production release
-- Core functionality for task management
-- Basic user interface
-- REST API endpoints
-- Database persistence layer
+- Production auth session persistence
+- Go gateway data race in query handler
+- IDOR in conversation title update
+- Prisma transaction wrapping for document uploads
 
 ### Changed
-- Migrated from prototype to production-ready codebase
+- All error messages sanitized to prevent information leakage
+
+## [RC-1] - 2026-07-13
+
+### Added
+- Full security audit and hardening
+- Rate limiting on all API routes
+- Input validation across all endpoints
+- HTTP security headers (CSP, HSTS, Permissions-Policy)
+- Error sanitization middleware
 
 ### Fixed
-- Various bug fixes from beta testing
+- Vercel deployment configuration
+- CSP blocking inline scripts
+- Build failures from module-level side effects
 
-## [0.3.0] - 2024-10-10
-
-### Added
-- Beta testing framework
-- Performance monitoring tools
-- Error tracking and reporting
-
-### Changed
-- Improved code structure and organization
-- Enhanced test coverage
-
-## [0.2.0] - 2024-07-15
+## [0.1.0] - 2026-07-01
 
 ### Added
-- Advanced configuration options
-- Plugin system architecture
-- Extended API capabilities
-
-### Changed
-- Refactored core modules
-- Updated documentation
-
-## [0.1.0] - 2024-04-01
-
-### Added
-- Initial project setup
-- Basic project structure
-- Core development environment
-- Initial README and documentation
-- Basic CI/CD pipeline
+- Initial repository setup
+- Next.js 15 portal with App Router
+- Python intelligence engine with gRPC
+- Go HTTP gateway
+- Prisma schema with PostgreSQL
+- BetterAuth with GitHub OAuth
+- Document upload and processing pipeline
+- RAG chat with citations
+- Retrieval debugger
+- Chunking studio
+- Benchmark campaigns
+- Research intelligence engine

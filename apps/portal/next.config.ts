@@ -12,7 +12,7 @@ const securityHeaders = [
   ...(isProduction
     ? [
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: https://vitals.vercel-insights.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://us.i.posthog.com https://*.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: https://vitals.vercel-insights.com https://us.i.posthog.com https://*.i.posthog.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'" },
       ]
     : []),
 ];

@@ -68,7 +68,7 @@ const modules = [
     what: "Record every experiment configuration, capture retrieval traces, and compare results across runs. Automatic metric calculation and aggregation.",
     why: "Reproducibility requires capturing every variable. Without experiment tracking, results cannot be validated or compared.",
     learn: "How to design controlled experiments. Why configuration snapshots matter. The importance of latency tracking alongside quality metrics.",
-    href: "/app/experiments",
+    href: "/app/experiment-builder",
   },
   {
     icon: Trophy,

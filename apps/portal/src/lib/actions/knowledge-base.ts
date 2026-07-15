@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { ensureDefaultOrg } from "@/lib/server/organization";
 import { revalidatePath } from "next/cache";
+import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
+import { checkEntitlement, incrementUsage } from "@/lib/billing/entitlements";
 
 async function assertMemberAccess(kbId: string, userId: string) {
   const kb = await prisma.knowledgeBase.findUnique({
@@ -50,6 +52,11 @@ export async function createKnowledgeBase(formData: FormData) {
 
   const { project } = await ensureDefaultOrg();
 
+  const entitlement = await checkEntitlement(session.user.id, "knowledgeBases");
+  if (!entitlement.allowed) {
+    throw new Error(`Knowledge base limit reached (${entitlement.limit}). Upgrade your plan.`);
+  }
+
   const kb = await prisma.knowledgeBase.create({
     data: {
       name: name.trim(),
@@ -58,6 +65,8 @@ export async function createKnowledgeBase(formData: FormData) {
     },
   });
 
+  serverTrackEvent("knowledge_base_created", { kbId: kb.id, name: kb.name }, session.user.id);
+  await incrementUsage(session.user.id, "knowledgeBases");
   revalidatePath("/app");
   return kb;
 }

@@ -3,7 +3,7 @@ import { RetrievalLab } from "@/components/app/retrieval-lab";
 import { PageHeader } from "@/components/app/page-header";
 
 export const metadata = {
-  title: "Retrieval Lab | Kairos",
+  title: "Retrieval Lab",
 };
 
 export default async function RetrievalLabPage() {

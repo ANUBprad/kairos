@@ -19,7 +19,7 @@ const ResearchDashboard = dynamic(
 );
 
 export const metadata = {
-  title: "Research Dashboard | Kairos",
+  title: "Research Dashboard",
 };
 
 export default async function ResearchPage() {
@@ -28,16 +28,17 @@ export default async function ResearchPage() {
   const { ensureDefaultOrg } = await import("@/lib/server/organization");
   const { project } = await ensureDefaultOrg();
 
-  const [
-    knowledgeBases,
-    totalDocuments,
-    totalChunks,
-    totalEmbeddings,
-    experiments,
-    experimentRuns,
-    benchmarkRuns,
-    datasets,
-  ] = await Promise.all([
+  try {
+    const [
+      knowledgeBases,
+      totalDocuments,
+      totalChunks,
+      totalEmbeddings,
+      experiments,
+      experimentRuns,
+      benchmarkRuns,
+      datasets,
+    ] = await Promise.all([
     prisma.knowledgeBase.findMany({
       where: { projectId: project.id },
       orderBy: { createdAt: "desc" },
@@ -336,4 +337,16 @@ export default async function ResearchPage() {
     />
     </div>
   );
+  } catch {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-xl border border-border bg-surface p-5">
+          <h1 className="text-lg font-semibold text-text-primary">Research Dashboard</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Unable to load research data. Please try again later.
+          </p>
+        </div>
+      </div>
+    );
+  }
 }

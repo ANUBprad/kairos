@@ -1,71 +1,43 @@
 # Contributing to Kairos
 
-Thank you for your interest in contributing to Kairos! This document provides guidelines and instructions for contributing.
+Kairos is a solo-maintained open-source project. Contributions are welcome.
 
-## Branch Strategy
+## Getting Started
 
-We use a feature branch workflow with pull requests:
-
-- The `main` branch is the stable, production-ready branch
-- Create feature branches from `main` for all new work
-- Use descriptive branch names: `feature/add-user-auth`, `fix/login-redirect`, `docs/update-readme`
-- Keep branches focused on a single change
-- Delete branches after merging
+```bash
+git clone https://github.com/ANUBprad/kairos.git
+cd kairos/apps/portal
+npm install
+cp .env.example .env
+npx prisma generate
+npx prisma db push
+npm run dev
+```
 
 ## Coding Standards
 
 ### Python
-- Use type hints for all function signatures
-- Follow PEP 8 style guidelines
-- Format code with `ruff format`
-- Run `ruff check` before committing
-
-### TypeScript/Next.js
-- Follow Next.js conventions and file structure
-- Use TypeScript strict mode
-- Prefer functional components with hooks
-- Use named exports over default exports
-
-### General
-- Write clear, descriptive commit messages
-- Keep changes focused and minimal
-- Document public functions and classes
-
-## Testing Requirements
-
-### Python
-- Write unit tests with `pytest`
-- Aim for meaningful coverage of business logic
-- Place tests in `tests/` directory
-- Run `pytest` before submitting PRs
+- Type hints on all functions
+- `ruff format` and `ruff check` before committing
+- `pytest` for tests
 
 ### TypeScript
-- Write tests with Jest
-- Test component behavior, not implementation details
-- Place tests alongside source files or in `__tests__/` directories
-- Run `npm test` before submitting PRs
+- Next.js conventions, strict mode, functional components
+- `npm run lint` and `npx tsc --noEmit` before committing
 
-## Pull Request Checklist
+## Reporting Issues
 
-Before submitting a pull request, ensure you have:
+Open a GitHub issue with:
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details
 
-- [ ] Run the linter and fixed any issues
-- [ ] Run all tests and verified they pass
-- [ ] Run type checking and resolved any errors
-- [ ] Updated documentation if needed
-- [ ] Added tests for new functionality
-- [ ] Kept commits focused and well-described
-- [ ] Rebased on latest `main`
+## Pull Requests
 
-## Development Workflow
+1. Fork the repo
+2. Create a branch from `main`
+3. Make your changes
+4. Run linters and tests
+5. Open a PR against `main`
 
-1. **Fork** the repository to your GitHub account
-2. **Clone** your fork locally
-3. **Create a branch** for your feature or fix
-4. **Make your changes** following the coding standards
-5. **Write or update tests** to cover your changes
-6. **Run the test suite** to ensure everything passes
-7. **Push** your branch to your fork
-8. **Open a pull request** against `main`
-9. **Respond to feedback** from code reviewers
-10. **Merge** once approved and all checks pass
+Keep PRs focused on a single change.

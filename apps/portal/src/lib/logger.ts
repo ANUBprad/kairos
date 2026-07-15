@@ -59,71 +59,125 @@ function redactObject(obj: Record<string, unknown>): Record<string, unknown> {
   return redacted;
 }
 
-export type LogLevel = "debug" | "info" | "warn" | "error";
+export type LogLevel = "debug" | "info" | "warn" | "error" | "audit";
 
 interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: string;
+  requestId?: string;
+  userId?: string;
+  route?: string;
+  duration?: number;
+  status?: number;
+  env?: string;
   context?: string;
   [key: string]: unknown;
 }
+
+const ENVIRONMENT = process.env.NODE_ENV ?? "development";
 
 function formatLog(entry: LogEntry): string {
   return JSON.stringify(entry);
 }
 
+function createEntry(
+  level: LogLevel,
+  message: string,
+  extra?: Record<string, unknown>,
+): LogEntry {
+  const entry: LogEntry = {
+    level,
+    message,
+    timestamp: new Date().toISOString(),
+    env: ENVIRONMENT,
+  };
+
+  if (extra) {
+    const redacted = redactObject(extra);
+    Object.assign(entry, redacted);
+  }
+
+  return entry;
+}
+
+export interface LogContext {
+  requestId?: string;
+  userId?: string;
+  route?: string;
+}
+
+let _globalContext: LogContext = {};
+
+export function setLogContext(ctx: LogContext) {
+  _globalContext = { ..._globalContext, ...ctx };
+}
+
+export function getLogContext(): LogContext {
+  return { ..._globalContext };
+}
+
+export function clearLogContext() {
+  _globalContext = {};
+}
+
 export const logger = {
   debug(message: string, extra?: Record<string, unknown>) {
-    const entry: LogEntry = {
-      level: "debug",
-      message,
-      timestamp: new Date().toISOString(),
-      ...(extra ? redactObject(extra) : {}),
-    };
+    const entry = createEntry("debug", message, {
+      ..._globalContext,
+      ...extra,
+    });
     // eslint-disable-next-line no-console
     console.debug(formatLog(entry));
   },
 
   info(message: string, extra?: Record<string, unknown>) {
-    const entry: LogEntry = {
-      level: "info",
-      message,
-      timestamp: new Date().toISOString(),
-      ...(extra ? redactObject(extra) : {}),
-    };
+    const entry = createEntry("info", message, {
+      ..._globalContext,
+      ...extra,
+    });
     // eslint-disable-next-line no-console
     console.log(formatLog(entry));
   },
 
   warn(message: string, extra?: Record<string, unknown>) {
-    const entry: LogEntry = {
-      level: "warn",
-      message,
-      timestamp: new Date().toISOString(),
-      ...(extra ? redactObject(extra) : {}),
-    };
+    const entry = createEntry("warn", message, {
+      ..._globalContext,
+      ...extra,
+    });
     console.warn(formatLog(entry));
   },
 
   error(message: string, extra?: Record<string, unknown>) {
-    const entry: LogEntry = {
-      level: "error",
-      message,
-      timestamp: new Date().toISOString(),
-      ...(extra ? redactObject(extra) : {}),
-    };
+    const entry = createEntry("error", message, {
+      ..._globalContext,
+      ...extra,
+    });
     console.error(formatLog(entry));
   },
 
   audit(action: string, extra?: Record<string, unknown>) {
-    const entry: LogEntry = {
-      level: "info",
-      message: `AUDIT: ${action}`,
-      timestamp: new Date().toISOString(),
-      ...(extra ? redactObject(extra) : {}),
-    };
+    const entry = createEntry("audit", `AUDIT: ${action}`, {
+      ..._globalContext,
+      ...extra,
+    });
     // eslint-disable-next-line no-console
     console.log(formatLog(entry));
+  },
+
+  child(context: LogContext) {
+    const merged = { ..._globalContext, ...context };
+    return {
+      debug: (msg: string, extra?: Record<string, unknown>) =>
+        logger.debug(msg, { ...merged, ...extra }),
+      info: (msg: string, extra?: Record<string, unknown>) =>
+        logger.info(msg, { ...merged, ...extra }),
+      warn: (msg: string, extra?: Record<string, unknown>) =>
+        logger.warn(msg, { ...merged, ...extra }),
+      error: (msg: string, extra?: Record<string, unknown>) =>
+        logger.error(msg, { ...merged, ...extra }),
+      audit: (msg: string, extra?: Record<string, unknown>) =>
+        logger.audit(msg, { ...merged, ...extra }),
+    };
   },
 };

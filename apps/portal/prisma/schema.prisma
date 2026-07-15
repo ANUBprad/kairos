@@ -31,6 +31,9 @@ model User {
   members          Member[]
   ownedOrgs        Organization[]     @relation("OrganizationOwner")
   apiKeys          ApiKey[]
+  subscription     Subscription?
+  usageRecords     UsageRecord[]
+  notifications    Notification[]
   activityLogs     ActivityLog[]
   Document         Document[]
   documentVersions DocumentVersion[]
@@ -104,7 +107,7 @@ model Organization {
   metadata Json?
 
   ownerId String
-  owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
   members  Member[]
   projects Project[]
@@ -263,7 +266,6 @@ model Document {
   uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
   chunks         DocumentChunk[]
-  processingJobs ProcessingJob[]
   versions       DocumentVersion[]
   activities     DocumentActivity[]
 
@@ -309,26 +311,6 @@ model DocumentEmbedding {
   @@index([chunkId])
 }
 
-model ProcessingJob {
-  id          String    @id @default(cuid())
-  type        String    @db.VarChar(64)
-  status      JobStatus @default(PENDING)
-  retryCount  Int       @default(0)
-  maxRetries  Int       @default(3)
-  error       String?   @db.Text
-  startedAt   DateTime?
-  completedAt DateTime?
-
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([documentId, type])
-  @@index([status])
-}
-
 model DocumentVersion {
   id         String  @id @default(cuid())
   version    Int     @default(1)
@@ -343,7 +325,7 @@ model DocumentVersion {
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   uploadedById String
-  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -379,14 +361,6 @@ enum DocumentStatus {
   INDEXED
   READY
   ERROR
-}
-
-enum JobStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  CANCELLED
 }
 
 /// API Keys
@@ -478,7 +452,6 @@ model BenchmarkDataset {
 
   questions    BenchmarkQuestion[]
   runs         BenchmarkRun[]
-  campaignRuns CampaignRun[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -558,30 +531,6 @@ model BenchmarkRun {
   @@index([datasetId])
 }
 
-/// Campaign Runs (Phase 24)
-
-model CampaignRun {
-  id          String  @id @default(cuid())
-  name        String  @db.VarChar(255)
-  description String? @db.Text
-  status      String  @default("running")
-
-  configSnapshot Json
-  resultSnapshot Json?
-
-  datasetId String
-  dataset   BenchmarkDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
-
-  startedAt   DateTime?
-  completedAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([datasetId])
-  @@index([status])
-}
-
 /// Activity / Audit Logs
 
 model ActivityLog {
@@ -598,20 +547,74 @@ model ActivityLog {
 
   createdAt DateTime @default(now())
 
-  @@index([userId, createdAt])
+  @@index([userId, action])
 }
 
-model AuditLog {
-  id         String  @id @default(cuid())
-  action     String  @db.VarChar(128)
-  actorId    String? @db.VarChar(255)
-  actorType  String? @db.VarChar(64)
-  resource   String? @db.VarChar(255)
-  resourceId String? @db.VarChar(255)
-  details    Json?
-  ipAddress  String?
+/// Billing & Subscriptions
+
+model Subscription {
+  id                 String   @id @default(cuid())
+  stripeCustomerId   String?  @unique @db.VarChar(255)
+  stripeSubscriptionId String? @unique @db.VarChar(255)
+  stripePriceId      String?  @db.VarChar(255)
+  plan               PlanType @default(FREE)
+  status             SubscriptionStatus @default(ACTIVE)
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean  @default(false)
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([actorId, createdAt])
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([status])
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  UNPAID
+}
+
+model UsageRecord {
+  id        String   @id @default(cuid())
+  meter     String   @db.VarChar(64)
+  quantity  Int      @default(0)
+  period    String   @db.VarChar(7)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, meter, period])
+  @@index([userId, period])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   @db.VarChar(64)
+  title     String   @db.VarChar(255)
+  message   String   @db.Text
+  read      Boolean  @default(false)
+  metadata  Json?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

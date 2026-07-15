@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { logger } from "@/lib/logger";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -16,6 +17,13 @@ function getAuth(): any {
     database: prismaAdapter(prisma, {
       provider: "postgresql",
     }),
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: false,
+      sendResetPassword: async ({ user: _user, url: _url, token: _token }) => {
+        logger.info("Password reset requested");
+      },
+    },
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,

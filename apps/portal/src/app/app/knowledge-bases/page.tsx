@@ -1,8 +1,25 @@
 import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
 import { KnowledgeBaseList } from "@/components/app/knowledge-base-list";
 
-export default async function KnowledgeBasesPage() {
-  const knowledgeBases = await listKnowledgeBases();
+export const metadata = {
+  title: "Knowledge Bases",
+};
 
-  return <KnowledgeBaseList items={knowledgeBases} />;
+export default async function KnowledgeBasesPage() {
+  try {
+    const knowledgeBases = await listKnowledgeBases();
+
+    return <KnowledgeBaseList items={knowledgeBases} />;
+  } catch (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-text-primary">Error loading knowledge bases</h2>
+          <p className="mt-2 text-sm text-text-secondary">
+            Please try refreshing the page. If the problem persists, contact support.
+          </p>
+        </div>
+      </div>
+    );
+  }
 }

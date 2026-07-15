@@ -15,7 +15,7 @@ const ArchitectureViewer = dynamic(
 );
 
 export const metadata = {
-  title: "Architecture | Kairos",
+  title: "Architecture",
 };
 
 export default async function ArchitecturePage() {

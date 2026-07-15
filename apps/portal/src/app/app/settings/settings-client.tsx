@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bot, CheckCircle2, Loader2 } from "lucide-react";
+import { Bot, CheckCircle2, Loader2, Lock } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
+import { ChangePasswordForm } from "@/components/app/change-password-form";
 
 interface ProviderInfo {
   available: boolean;
@@ -27,7 +28,9 @@ export function SettingsPage() {
         setSettings(data);
         setSelectedProvider(data.defaultProvider || "openai");
       })
-      .catch(() => {})
+      .catch(() => {
+        setSettings({ providers: {}, defaultProvider: "openai" });
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -137,6 +140,14 @@ export function SettingsPage() {
             </p>
           </div>
         )}
+
+        <div className="rounded-xl border border-border bg-surface p-6">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary mb-4">
+            <Lock size={20} />
+            Change Password
+          </h2>
+          <ChangePasswordForm />
+        </div>
 
         <div className="rounded-xl border border-border bg-surface p-6">
           <h2 className="text-lg font-semibold text-text-primary mb-4">

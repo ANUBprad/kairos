@@ -8,6 +8,9 @@ import { getStorageProvider } from "@/lib/storage";
 import { extractText } from "@/lib/extraction";
 import { chunkText } from "@/lib/chunking";
 import { generateEmbeddings } from "@/lib/ai/embeddings";
+import { logger } from "@/lib/logger";
+import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
+import { checkEntitlement, incrementUsage } from "@/lib/billing/entitlements";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
 import type { Prisma } from "@prisma/client";
@@ -126,6 +129,11 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 
   await getOrgFromKb(kbId, session.user.id);
 
+  const entitlement = await checkEntitlement(session.user.id, "uploads");
+  if (!entitlement.allowed) {
+    throw new Error(`Upload limit reached (${entitlement.limit}/day). Upgrade your plan.`);
+  }
+
   const files = formData.getAll("files") as File[];
   if (files.length === 0) throw new Error("No files provided");
 
@@ -219,10 +227,12 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 
     // Fire-and-forget processing
     processDocument(doc.id, fileType, buffer).catch((err) => {
-      console.error(`Processing failed for ${doc.id}:`, err);
+      logger.error(`Processing failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
     });
   }
 
+  serverTrackEvent("documents_uploaded", { count: results.length, kbId }, session.user.id);
+  await incrementUsage(session.user.id, "uploads", results.length);
   revalidatePath(`/app/knowledge-bases/${kbId}`);
   return results;
 }
@@ -307,10 +317,10 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
 
     // Fire-and-forget embedding generation
     generateEmbeddings(docId).catch((embedErr) => {
-      console.error(`Embedding failed for ${docId}:`, embedErr);
+      logger.error(`Embedding failed for ${docId}`, { error: embedErr instanceof Error ? embedErr.message : "unknown" });
     });
   } catch (err) {
-    console.error(`Processing error for ${docId}:`, err);
+    logger.error(`Processing error for ${docId}`, { error: err instanceof Error ? err.message : "unknown" });
     await prisma.document.update({
       where: { id: docId },
       data: { status: "ERROR" },
@@ -410,7 +420,7 @@ export async function reprocessDocument(formData: FormData) {
   await logActivity(id, session.user.id, "REPROCESSED", { fileName: doc.name });
 
   processDocument(id, doc.fileType).catch((err) => {
-    console.error(`Reprocessing failed for ${id}:`, err);
+    logger.error(`Reprocessing failed for ${id}`, { error: err instanceof Error ? err.message : "unknown" });
   });
 
   revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
@@ -471,7 +481,7 @@ export async function bulkReprocessDocuments(formData: FormData) {
     await logActivity(doc.id, session.user.id, "REPROCESSED", { fileName: doc.name });
 
     processDocument(doc.id, doc.fileType).catch((err) => {
-      console.error(`Bulk reprocess failed for ${doc.id}:`, err);
+      logger.error(`Bulk reprocess failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
     });
   }
 

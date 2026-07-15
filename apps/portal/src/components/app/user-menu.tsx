@@ -46,7 +46,11 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
 
   const handleSignOut = async () => {
     setOpen(false);
-    await authClient.signOut();
+    try {
+      await authClient.signOut();
+    } catch {
+      // Sign out even if the API call fails (cookie will be cleared by browser)
+    }
     router.push("/");
     router.refresh();
   };

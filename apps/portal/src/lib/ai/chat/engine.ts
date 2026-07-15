@@ -4,6 +4,7 @@ import { buildChatPrompt, formatForProvider } from "@/lib/ai/prompts";
 import { addMessage, getConversationMessages } from "@/lib/ai/memory";
 import { extractCitationsFromChunks } from "@/lib/ai/citations";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
+import { logger } from "@/lib/logger";
 import type { ProviderType, CitationSource, StreamChunk } from "@/lib/ai/types";
 
 export interface ChatRequest {
@@ -88,49 +89,57 @@ export async function generateChatResponse(
 export async function* streamChatResponse(
   request: ChatRequest,
 ): AsyncGenerator<StreamChunk, void, unknown> {
-  const provider = getAIProvider(request.providerType);
-
-  const retrievalOptions = await getRetrievalOptions(request.kbId);
-
-  const retrieval = await searchSimilar(request.query, retrievalOptions);
-
-  const citations = extractCitationsFromChunks(retrieval.chunks);
-
-  const conversationMessages = await getConversationMessages(
-    request.conversationId,
-  );
-
-  const prompt = buildChatPrompt({
-    systemPrompt: "",
-    conversationHistory: conversationMessages,
-    retrievedChunks: retrieval.chunks,
-    userQuery: request.query,
-  });
-
-  const formattedMessages = formatForProvider(prompt.messages, provider.type);
-
-  await addMessage(request.conversationId, "user", request.query);
-
   let fullContent = "";
 
-  const stream = provider.streamChat({
-    model: request.model || provider.getDefaultModel(),
-    messages: formattedMessages,
-  });
+  try {
+    const provider = getAIProvider(request.providerType);
 
-  for await (const chunk of stream) {
-    if (chunk.done) break;
-    fullContent += chunk.content;
-    yield { content: chunk.content, done: false };
+    const retrievalOptions = await getRetrievalOptions(request.kbId);
+
+    const retrieval = await searchSimilar(request.query, retrievalOptions);
+
+    const citations = extractCitationsFromChunks(retrieval.chunks);
+
+    const conversationMessages = await getConversationMessages(
+      request.conversationId,
+    );
+
+    const prompt = buildChatPrompt({
+      systemPrompt: "",
+      conversationHistory: conversationMessages,
+      retrievedChunks: retrieval.chunks,
+      userQuery: request.query,
+    });
+
+    const formattedMessages = formatForProvider(prompt.messages, provider.type);
+
+    await addMessage(request.conversationId, "user", request.query);
+
+    const stream = provider.streamChat({
+      model: request.model || provider.getDefaultModel(),
+      messages: formattedMessages,
+    });
+
+    for await (const chunk of stream) {
+      if (chunk.done) break;
+      fullContent += chunk.content;
+      yield { content: chunk.content, done: false };
+    }
+
+    await addMessage(
+      request.conversationId,
+      "assistant",
+      fullContent,
+      undefined,
+      citations,
+    );
+
+    yield { content: "", done: true, citations };
+  } catch (err) {
+    logger.error("Chat stream error", { error: err instanceof Error ? err.message : "unknown" });
+    yield {
+      content: "",
+      done: true,
+    };
   }
-
-  await addMessage(
-    request.conversationId,
-    "assistant",
-    fullContent,
-    undefined,
-    citations,
-  );
-
-  yield { content: "", done: true, citations };
 }

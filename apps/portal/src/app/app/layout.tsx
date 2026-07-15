@@ -38,7 +38,7 @@ export default async function AppLayout({
           image={session?.user?.image ?? null}
           organizationName={organization?.name ?? null}
         />
-        <main className="flex-1 p-6">{children}</main>
+        <main id="main-content" className="flex-1 p-6">{children}</main>
       </div>
     </div>
   );

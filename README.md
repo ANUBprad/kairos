@@ -2,8 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)
-![Tests](https://img.shields.io/badge/tests-1%2C802-brightgreen.svg)
-![Coverage](https://img.shields.io/badge/coverage-85%25-green.svg)
+![Tests](https://img.shields.io/badge/tests-1%2C768-brightgreen.svg)
 
 **A configurable RAG experimentation platform with full pipeline visibility, statistical evaluation, and retrieval debugging.**
 
@@ -103,7 +102,7 @@ Kairos aims to make every RAG pipeline decision transparent, reproducible, and s
                                     ▼
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                            DATA LAYER                                    │
-│  PostgreSQL (pgvector) · Prisma ORM · Redis (queue) · Cloudinary         │
+│  PostgreSQL (pgvector) · Prisma ORM · Cloudinary                        │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -114,20 +113,19 @@ Kairos aims to make every RAG pipeline decision transparent, reproducible, and s
 | Layer | Technologies |
 |-------|-------------|
 | **Frontend** | Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, Lucide React, Framer Motion |
-| **Backend** | Next.js Server Actions, Prisma ORM, PostgreSQL (Aiven), pgvector |
-| **AI Services** | OpenAI (GPT-4o, GPT-4o-mini, text-embedding-3-small/large), Google Gemini (2.0 Flash, embedding-004), Anthropic Claude |
+| **Backend** | Next.js Server Actions, Prisma ORM, PostgreSQL, pgvector |
+| **AI Services** | OpenAI (GPT-4o, GPT-4o-mini, text-embedding-3-small/large), Google Gemini (2.0 Flash, embedding-004) |
 | **Authentication** | Better Auth (email/password + GitHub OAuth) |
 | **File Storage** | Cloudinary |
-| **Deployment** | Vercel (Next.js), Docker, Supabase (PostgreSQL) |
+| **Deployment** | Vercel (Next.js), Docker |
 
 ---
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/your-org/kairos.git
-cd kairos
-cd apps/portal
+git clone https://github.com/ANUBprad/kairos.git
+cd kairos/apps/portal
 npm install
 cp .env.example .env
 npx prisma generate
@@ -155,10 +153,10 @@ npm run dev
 |-----------|-------------|
 | `apps/portal` | Next.js 15 frontend application |
 | `intelligence` | Python research intelligence engine |
-| `benchmarks` | Benchmark runners, datasets, and leaderboard |
-| `tests` | Python test suite (1,802 tests) |
-| `examples` | Example RAG configurations |
-| `docs` | Documentation and architecture diagrams |
+| `benchmarks` | Benchmark runners, datasets, and metrics |
+| `tests` | Python test suite (1,768 tests) |
+| `examples` | Example RAG pipeline configurations |
+| `docs` | Architecture, deployment, and operations documentation |
 
 ---
 
@@ -173,11 +171,8 @@ npm run dev
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/kairos.git
-cd kairos
-
-# Install portal dependencies
-cd apps/portal
+git clone https://github.com/ANUBprad/kairos.git
+cd kairos/apps/portal
 npm install
 
 # Configure environment
@@ -221,9 +216,6 @@ Sign up via email/password or GitHub OAuth.
 ### 2. Create a Knowledge Base
 Navigate to the Document Repository and create a knowledge base.
 
-### 3. Explore the Dashboard
-The dashboard provides an overview of your knowledge bases, recent queries, and system health.
-
 ### 3. Upload Documents
 Upload PDF, DOCX, TXT, CSV, or Markdown files.
 
@@ -262,6 +254,12 @@ Export comprehensive evaluation reports.
 
 ## Documentation
 
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — System architecture and design
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — Production deployment guide
+- [docs/BILLING.md](docs/BILLING.md) — Billing and subscription setup
+- [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) — Logging, metrics, and monitoring
+- [docs/API_KEYS.md](docs/API_KEYS.md) — API key management
+- [docs/ACCOUNT.md](docs/ACCOUNT.md) — Account management
 - [CONTRIBUTING.md](CONTRIBUTING.md) — How to contribute
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Community standards
 - [SECURITY.md](SECURITY.md) — Security policy

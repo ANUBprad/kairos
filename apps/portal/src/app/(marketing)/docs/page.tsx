@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Layers, BookOpen, Database, Scissors, FlaskConical,
-  BarChart3, Eye, Trophy, ArrowRight, Search, Lightbulb,
+  BarChart3, Eye, Trophy, ArrowRight, Lightbulb,
 } from "lucide-react";
 import { ScrollReveal, StaggerContainer } from "@/components/shared/scroll-reveal";
 
@@ -93,19 +93,6 @@ export default function DocsPage() {
             Learn how Retrieval-Augmented Generation works. Explore the concepts, algorithms, and methodology behind Kairos.
           </p>
         </ScrollReveal>
-
-        {/* Search placeholder */}
-        <div className="mb-12">
-          <div className="relative max-w-md mx-auto">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
-            <input
-              type="text"
-              placeholder="Search documentation..."
-              readOnly
-              className="w-full h-11 pl-10 pr-4 rounded-xl border border-border bg-surface/50 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none"
-            />
-          </div>
-        </div>
 
         {/* Documentation sections */}
         <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-16" staggerDelay={0.04}>

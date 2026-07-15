@@ -55,9 +55,6 @@ export const metadata: Metadata = {
     apple: { url: "/kai.png", sizes: "500x500" },
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://kairos.dev"),
-  alternates: {
-    canonical: "/",
-  },
 };
 
 export default function RootLayout({

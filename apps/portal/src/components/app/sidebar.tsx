@@ -25,6 +25,7 @@ import {
   Command,
   Menu,
   X,
+  User,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -104,6 +105,7 @@ const navSections: NavSection[] = [
     label: "System",
     items: [
       { label: "Configuration", href: "/app/settings", icon: SlidersHorizontal },
+      { label: "Account", href: "/app/account", icon: User },
     ],
   },
 ];

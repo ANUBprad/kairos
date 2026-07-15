@@ -2,6 +2,7 @@ import { cache } from "react";
 import { auth } from "@/lib/server/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { logger } from "@/lib/logger";
 
 function isDynamicServerError(err: unknown): boolean {
   return (
@@ -19,7 +20,9 @@ export const getServerSession = cache(async () => {
     if (isDynamicServerError(err)) {
       throw err;
     }
-    console.error("[AUTH] Session validation failed:", err);
+    logger.error("Session validation failed", {
+      error: err instanceof Error ? err.message : "unknown",
+    });
     redirect("/login");
   }
 });

@@ -38,23 +38,37 @@ export default async function AppPage() {
   const { ensureDefaultOrg } = await import("@/lib/server/organization");
   const { project } = await ensureDefaultOrg();
 
-  const [knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark] = await Promise.all([
-    listKnowledgeBases(),
-    prisma.document.count({
-      where: { knowledgeBase: { projectId: project.id } },
-    }),
-    prisma.documentChunk.count({
-      where: { document: { knowledgeBase: { projectId: project.id } } },
-    }),
-    prisma.experimentRun.count({
-      where: { knowledgeBase: { projectId: project.id } },
-    }),
-    prisma.benchmarkRun.findFirst({
-      where: { status: "completed", dataset: { knowledgeBase: { projectId: project.id } } },
-      orderBy: { createdAt: "desc" },
-      select: { name: true, createdAt: true, aggregatedMetrics: true },
-    }),
-  ]);
+  let knowledgeBases: Awaited<ReturnType<typeof listKnowledgeBases>> = [];
+  let docCount = 0;
+  let chunkCount = 0;
+  let experimentCount = 0;
+  let latestBenchmark: {
+    name: string | null;
+    createdAt: Date;
+    aggregatedMetrics: import("@prisma/client").Prisma.JsonValue | null;
+  } | null = null;
+
+  try {
+    [knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark] = await Promise.all([
+      listKnowledgeBases(),
+      prisma.document.count({
+        where: { knowledgeBase: { projectId: project.id } },
+      }),
+      prisma.documentChunk.count({
+        where: { document: { knowledgeBase: { projectId: project.id } } },
+      }),
+      prisma.experimentRun.count({
+        where: { knowledgeBase: { projectId: project.id } },
+      }),
+      prisma.benchmarkRun.findFirst({
+        where: { status: "completed", dataset: { knowledgeBase: { projectId: project.id } } },
+        orderBy: { createdAt: "desc" },
+        select: { name: true, createdAt: true, aggregatedMetrics: true },
+      }),
+    ]);
+  } catch {
+    // Dashboard will render with empty/default data
+  }
 
   const currentKb = knowledgeBases[0] ?? null;
   const currentConfig = currentKb

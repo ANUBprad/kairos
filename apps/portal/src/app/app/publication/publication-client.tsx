@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { PageHeader } from "@/components/app/page-header";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBaselines } from "@/lib/actions/evaluation";
+
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 type ExportFormat = "markdown" | "html" | "latex" | "pdf";
 
@@ -311,17 +314,7 @@ export function PublicationModeClient() {
             {showPreview && (
               <div className="rounded-lg border border-border bg-bg p-6 max-h-[600px] overflow-y-auto">
                 <div className="prose prose-invert prose-sm max-w-none">
-                  <div
-                    className="whitespace-pre-wrap text-xs leading-relaxed text-text-secondary font-mono"
-                    dangerouslySetInnerHTML={{
-                      __html: paperContent
-                        .replace(/^# (.+)$/gm, '<h1 class="text-lg font-bold text-text-primary mb-2">$1</h1>')
-                        .replace(/^## (.+)$/gm, '<h2 class="text-base font-semibold text-text-primary mt-4 mb-2">$1</h2>')
-                        .replace(/^### (.+)$/gm, '<h3 class="text-sm font-semibold text-text-primary mt-3 mb-1">$1</h3>')
-                        .replace(/\*\*(.+?)\*\*/g, '<strong class="text-text-primary">$1</strong>')
-                        .replace(/`([^`]+)`/g, '<code class="rounded bg-surface px-1 py-0.5 text-brand">$1</code>')
-                    }}
-                  />
+                  <ReactMarkdown>{paperContent}</ReactMarkdown>
                 </div>
               </div>
             )}
