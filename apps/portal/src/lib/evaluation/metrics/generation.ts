@@ -1,3 +1,4 @@
+import { round } from "@/lib/utils";
 import type { GenerationMetrics } from "../types";
 
 export interface GenerationEvalInput {
@@ -112,8 +113,4 @@ export function calculateAverageGenerationMetrics(
     contextRecall: round(allMetrics.reduce((s, m) => s + m.contextRecall, 0) / n),
     answerRelevancy: round(allMetrics.reduce((s, m) => s + m.answerRelevancy, 0) / n),
   };
-}
-
-function round(value: number): number {
-  return Math.round(value * 10000) / 10000;
 }

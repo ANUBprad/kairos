@@ -2,6 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { ChatInterface } from "@/components/app/chat-interface";
 
+export const metadata = {
+  title: "Knowledge Base Chat",
+};
+
 interface Props {
   params: Promise<{ kbId: string }>;
 }

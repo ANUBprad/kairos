@@ -6,7 +6,7 @@ const LineagePage = dynamic(() => import("./lineage-client").then((m) => m.Linea
 });
 
 export const metadata = {
-  title: "Experiment Lineage | Kairos",
+  title: "Experiment Lineage",
 };
 
 export default async function LineagePageRoute() {
@@ -62,7 +62,7 @@ export default async function LineagePageRoute() {
     }));
 
     return <LineagePage runs={runs} />;
-  } catch (error) {
+  } catch {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">

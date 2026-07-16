@@ -9,11 +9,10 @@ import { LeafLogo } from "./leaf-logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 const navLinks = [
-  { label: "Architecture", href: "/architecture" },
   { label: "Features", href: "/features" },
   { label: "Docs", href: "/docs" },
   { label: "Blog", href: "/blog" },
-  { label: "GitHub", href: "https://github.com/your-org/kairos" },
+  { label: "GitHub", href: "https://github.com/kairos-ai/kairos" },
 ];
 
 export function Nav() {

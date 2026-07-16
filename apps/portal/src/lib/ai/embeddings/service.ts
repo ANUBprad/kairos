@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getEmbeddingProvider } from "@/lib/ai/providers";
 import { vectorStore } from "@/lib/vector";
-import { revalidatePath } from "next/cache";
 import type { ProviderType } from "@/lib/ai/types";
 
 const BATCH_SIZE = 20;
@@ -135,16 +134,6 @@ export async function generateEmbeddings(
         } as never,
       },
     });
-  }
-
-  revalidatePath(`/app`);
-  revalidatePath(`/app/knowledge-bases`);
-  const dbDoc = await prisma.document.findUnique({
-    where: { id: documentId },
-    select: { knowledgeBaseId: true },
-  });
-  if (dbDoc) {
-    revalidatePath(`/app/knowledge-bases/${dbDoc.knowledgeBaseId}`);
   }
 
   return {

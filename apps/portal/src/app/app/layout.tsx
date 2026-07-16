@@ -42,7 +42,6 @@ export default async function AppLayout({
       </a>
       <AppSidebar
         organization={organization}
-        userEmail="demo@kairos.dev"
       />
       <div className="flex flex-1 flex-col">
         <AppHeader

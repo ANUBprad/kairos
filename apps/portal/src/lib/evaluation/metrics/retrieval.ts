@@ -1,3 +1,4 @@
+import { round } from "@/lib/utils";
 import type { RetrievalMetrics } from "../types";
 
 export function calculateRetrievalMetrics(
@@ -70,8 +71,4 @@ function calculateNDCG(
   }
 
   return idcg > 0 ? dcg / idcg : 0;
-}
-
-function round(value: number): number {
-  return Math.round(value * 10000) / 10000;
 }

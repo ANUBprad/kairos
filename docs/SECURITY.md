@@ -18,23 +18,11 @@ Kairos is a public-facing RAG research workbench. The threat model assumes:
 
 ## Authentication
 
-### BetterAuth Configuration
-- **Session duration**: 7 days with 24-hour refresh interval
-- **Cookie settings**: HttpOnly, Secure (production), SameSite=Lax
-- **Cookie prefix**: `kairos_` to avoid conflicts
-- **Session caching**: Enabled with 7-day max age
-
 ### Session Management
-- Sessions are validated on every request via `getServerSession()`
+- Sessions are validated on every request via session middleware
 - Failed validation redirects to `/login`
 - Session tokens are never exposed to client-side JavaScript
-- GitHub OAuth supported as optional social login
-
-### Password Policy
-- Minimum 8 characters
-- At least one uppercase letter
-- At least one number
-- Passwords are hashed by BetterAuth (bcrypt)
+- OAuth supported as optional social login
 
 ---
 
@@ -56,7 +44,7 @@ All server actions and API routes verify:
 ### API Route Protection
 - `/app/*` routes: Protected by middleware (session cookie check)
 - `/api/*` routes: Protected by `getServerSession()` in each handler
-- Public routes: `/`, `/login`, `/signup`, `/features`, `/pricing`, etc.
+- Public routes: `/`, `/login`, `/signup`, `/features`, `/capabilities`, etc.
 
 ---
 

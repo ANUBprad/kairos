@@ -32,29 +32,6 @@ function SkeletonCard({ className, ...props }: React.HTMLAttributes<HTMLDivEleme
   );
 }
 
-function SkeletonTable({ rows = 5, cols = 4, className }: { rows?: number; cols?: number; className?: string }) {
-  return (
-    <div className={cn("rounded-[var(--radius-lg)] border border-border bg-surface overflow-hidden", className)}>
-      <div className="border-b border-border px-6 py-3">
-        <div className="flex gap-4">
-          {Array.from({ length: cols }).map((_, i) => (
-            <Skeleton key={i} className="h-4 flex-1" />
-          ))}
-        </div>
-      </div>
-      {Array.from({ length: rows }).map((_, rowIdx) => (
-        <div key={rowIdx} className="border-b border-border last:border-b-0 px-6 py-3">
-          <div className="flex gap-4">
-            {Array.from({ length: cols }).map((_, colIdx) => (
-              <Skeleton key={colIdx} className="h-4 flex-1" />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function SkeletonStat({ className }: { className?: string }) {
   return (
     <div className={cn("rounded-[var(--radius-lg)] border border-border bg-surface p-5 space-y-3", className)}>
@@ -65,4 +42,4 @@ function SkeletonStat({ className }: { className?: string }) {
   );
 }
 
-export { Skeleton, SkeletonCard, SkeletonTable, SkeletonStat };
+export { Skeleton, SkeletonCard, SkeletonStat };

@@ -6,7 +6,7 @@ const AdvancedRetrievalDashboard = dynamic(() => import("./advanced-retrieval-cl
 });
 
 export const metadata = {
-  title: "Advanced Retrieval | Kairos",
+  title: "Advanced Retrieval",
 };
 
 export default async function AdvancedRetrievalPage() {
@@ -73,7 +73,7 @@ export default async function AdvancedRetrievalPage() {
         />
       </div>
     );
-  } catch (error) {
+  } catch {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">

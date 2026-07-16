@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { DocumentTable } from "@/components/app/document-table";
 import { listDocuments } from "@/lib/actions/document";
 
+export const metadata = {
+  title: "Knowledge Base",
+};
+
 interface Props {
   params: Promise<{ kbId: string }>;
 }

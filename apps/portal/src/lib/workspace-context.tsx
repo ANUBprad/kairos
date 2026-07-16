@@ -154,9 +154,15 @@ const INITIAL_STATE = {
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
+  const pageBreadcrumbs = useMemo<BreadcrumbItem[]>(() => {
+    return PAGE_BREADCRUMBS[pathname] || [
+      { label: pathname?.split("/").pop() || "Page" },
+    ];
+  }, [pathname]);
+
   const [project, setProject] = useState<Project | null>(INITIAL_STATE.project);
   const [experiments, setExperiments] = useState<Experiment[]>(INITIAL_STATE.experiments);
-  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>(INITIAL_STATE.breadcrumbs);
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>(pageBreadcrumbs);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useLocalStorageState<boolean>("sidebarCollapsed", false);
   const [recentActivity, setRecentActivity] = useLocalStorageState<ActivityItem[]>("recentActivity", []);
@@ -212,13 +218,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const unregisterShortcut = useCallback((key: string) => {
     shortcutsRef.delete(key);
   }, []);
-
-  useEffect(() => {
-    const crumbs = PAGE_BREADCRUMBS[pathname] || [
-      { label: pathname.split("/").pop() || "Page" },
-    ];
-    setBreadcrumbs(crumbs);
-  }, [pathname, setBreadcrumbs]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { round } from "@/lib/utils";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 import { runRetrieval } from "@/lib/retrieval/service";
 import { getAIProvider } from "@/lib/ai/providers";
@@ -562,8 +563,4 @@ export async function runStrategyBenchmark(
   }
 
   return results;
-}
-
-function round(value: number): number {
-  return Math.round(value * 10000) / 10000;
 }

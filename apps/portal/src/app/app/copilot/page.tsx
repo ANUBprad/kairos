@@ -66,7 +66,7 @@ export default async function CopilotPageRoute() {
     }));
 
     return <CopilotPage runs={runs} />;
-  } catch (error) {
+  } catch {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">

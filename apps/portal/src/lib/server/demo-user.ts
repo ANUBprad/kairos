@@ -16,7 +16,7 @@ export interface DemoSession {
   };
 }
 
-async function ensureDemoUser(): Promise<string> {
+export async function ensureDemoUser(): Promise<string> {
   const user = await prisma.user.upsert({
     where: { id: DEMO_USER_ID },
     update: {},

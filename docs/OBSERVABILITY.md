@@ -121,19 +121,6 @@ Privacy-friendly analytics via PostHog (self-hostable).
 
 ---
 
-## Admin Diagnostics
-
-`/app/admin` — Authenticated system status dashboard.
-
-**Displays:**
-- Application version, environment, git info
-- Health status (database, AI provider)
-- Feature flags (PostHog, Sentry, OAuth)
-- Data statistics (users, KBs, documents)
-- Request and AI metrics summary
-
----
-
 ## Startup Validation
 
 On server start, the application validates:

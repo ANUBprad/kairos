@@ -10,7 +10,7 @@ export default async function KnowledgeBasesPage() {
     const knowledgeBases = await listKnowledgeBases();
 
     return <KnowledgeBaseList items={knowledgeBases} />;
-  } catch (error) {
+  } catch {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">

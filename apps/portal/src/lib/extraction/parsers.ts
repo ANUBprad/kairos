@@ -1,5 +1,4 @@
 import type { FileParser, ExtractionResult } from "./types";
-import { Buffer } from "node:buffer";
 
 class TextParser implements FileParser {
   supports(fileType: string) {
@@ -60,14 +59,13 @@ class PdfParser implements FileParser {
 
   async parse(buffer: ArrayBuffer): Promise<ExtractionResult> {
     const { PDFParse } = await import("pdf-parse");
-    const pdf = new PDFParse({ data: Buffer.from(buffer) });
+    const pdf = new PDFParse({ data: buffer });
     const result = await pdf.getText();
-    const data = { text: result.text, numpages: result.total };
     return {
-      text: data.text,
+      text: result.text,
       metadata: {
-        pages: data.numpages,
-        characters: data.text.length,
+        pages: result.total,
+        characters: result.text.length,
         language: "en",
       },
     };

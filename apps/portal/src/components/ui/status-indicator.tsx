@@ -52,44 +52,4 @@ function StatusIndicator({
   );
 }
 
-interface HealthScoreProps {
-  score: number;
-  label?: string;
-  className?: string;
-}
-
-function HealthScore({ score, label = "Health", className }: HealthScoreProps) {
-  const getStatus = (s: number) => {
-    if (s >= 80) return "success" as const;
-    if (s >= 60) return "warning" as const;
-    return "error" as const;
-  };
-
-  const status = getStatus(score);
-  const colorMap = {
-    success: "text-success",
-    warning: "text-warning",
-    error: "text-error",
-  };
-
-  return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <div className={cn(
-        "flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)]",
-        status === "success" ? "bg-success/10" : status === "warning" ? "bg-warning/10" : "bg-error/10"
-      )}>
-        <span className={cn("text-lg font-bold tabular-nums", colorMap[status])}>
-          {score}
-        </span>
-      </div>
-      <div>
-        <p className="text-xs font-medium text-text-secondary">{label}</p>
-        <p className={cn("text-[11px] font-medium", colorMap[status])}>
-          {status === "success" ? "Excellent" : status === "warning" ? "Needs attention" : "Critical"}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export { StatusIndicator, HealthScore };
+export { StatusIndicator };

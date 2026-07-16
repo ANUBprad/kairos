@@ -5,7 +5,7 @@ const ChunkingStudio = dynamic(() => import("./studio-client").then((m) => m.Chu
 });
 
 export const metadata = {
-  title: "Chunking Studio | Kairos",
+  title: "Chunking Studio",
 };
 
 export default function ChunkingStudioPage() {

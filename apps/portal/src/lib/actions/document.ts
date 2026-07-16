@@ -231,6 +231,7 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 }
 
 async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer) {
+  let stage = "init";
   try {
     const doc = await prisma.document.findUnique({
       where: { id: docId },
@@ -238,6 +239,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
     });
     if (!doc) return;
 
+    stage = "fetch";
     await prisma.document.update({
       where: { id: docId },
       data: { status: "EXTRACTING" },
@@ -254,7 +256,9 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
 
     if (!buffer) throw new Error("No file data available for processing");
 
-    const extraction = await extractText(buffer.buffer.slice(0), fileType);
+    stage = "extract";
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+    const extraction = await extractText(arrayBuffer, fileType);
 
     const existingMeta = doc.metadata as Record<string, unknown> | null;
     await prisma.document.update({
@@ -269,6 +273,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       },
     });
 
+    stage = "chunk";
     await prisma.document.update({
       where: { id: docId },
       data: { status: "CHUNKING" },
@@ -285,6 +290,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       overlap: retrievalConfig.overlap ?? 200,
     });
 
+    stage = "store";
     await prisma.$transaction(async (tx) => {
       await tx.documentChunk.createMany({
         data: chunks.map((chunk) => ({
@@ -316,10 +322,18 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       logger.error(`Embedding failed for ${docId}`, { error: embedErr instanceof Error ? embedErr.message : "unknown" });
     });
   } catch (err) {
-    logger.error(`Processing error for ${docId}`, { error: err instanceof Error ? err.message : "unknown" });
+    const stageMessages: Record<string, string> = {
+      init: "Failed to load document metadata",
+      fetch: "Failed to fetch file from storage",
+      extract: "Text extraction failed — file may be corrupted or password-protected",
+      chunk: "Text chunking failed",
+      store: "Failed to save processed chunks to database",
+    };
+    const message = stageMessages[stage] || "Processing failed";
+    logger.error(`Processing error for ${docId}`, { stage, error: err instanceof Error ? err.message : "unknown" });
     await prisma.document.update({
       where: { id: docId },
-      data: { status: "ERROR" },
+      data: { status: "ERROR", metadata: { error: message } as never },
     }).catch(() => {});
   } finally {
     revalidatePath(`/app`);

@@ -3,7 +3,7 @@ import { createConversation, listConversations } from "@/lib/ai/memory";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { DEMO_USER_ID } from "@/lib/server/demo-user";
+import { DEMO_USER_ID, ensureDemoUser } from "@/lib/server/demo-user";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +69,8 @@ export async function POST(request: NextRequest) {
     if (title && title.length > 500) {
       return NextResponse.json({ error: "Title too long" }, { status: 400 });
     }
+
+    await ensureDemoUser();
 
     const conversation = await createConversation(
       kbId,

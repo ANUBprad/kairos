@@ -73,7 +73,7 @@ export default async function EvaluationPage() {
         />
       </div>
     );
-  } catch (error) {
+  } catch {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">

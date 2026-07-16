@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/login", "/signup", "/forgot-password", "/app/"],
+      disallow: ["/api/", "/app/"],
     },
     sitemap: "https://kairos.dev/sitemap.xml",
   };

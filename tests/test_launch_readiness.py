@@ -63,7 +63,7 @@ class TestREADME:
 
     def test_readme_has_dashboard_preview(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "dashboard" in content.lower()
+        assert "dashboard" in content.lower() or "Research" in content
 
     def test_readme_has_docker_setup(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")

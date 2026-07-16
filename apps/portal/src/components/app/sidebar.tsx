@@ -41,7 +41,6 @@ interface SidebarProps {
       _count: { knowledgeBases: number };
     }[];
   } | null;
-  userEmail: string;
 }
 
 interface NavItem {

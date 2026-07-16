@@ -6,7 +6,7 @@ const PlannerPage = dynamic(() => import("./planner-client").then((m) => m.Plann
 });
 
 export const metadata = {
-  title: "Experiment Planner | Kairos",
+  title: "Experiment Planner",
 };
 
 export default async function PlannerPageRoute() {

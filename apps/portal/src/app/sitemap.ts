@@ -4,8 +4,8 @@ const baseUrl = "https://kairos.dev";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const marketingRoutes = [
-    "", "/features", "/pricing", "/docs", "/blog", "/security",
-    "/about", "/changelog", "/contact", "/privacy", "/terms", "/cookies",
+    "", "/features", "/capabilities", "/docs", "/blog", "/security",
+    "/about", "/changelog", "/privacy", "/terms",
   ];
 
   return marketingRoutes.map((route) => ({

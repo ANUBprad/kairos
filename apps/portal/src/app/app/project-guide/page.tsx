@@ -5,7 +5,7 @@ const ProjectGuide = dynamic(() => import("./project-guide-client").then((m) => 
 });
 
 export const metadata = {
-  title: "Project Guide | Kairos",
+  title: "Project Guide",
 };
 
 export default async function ProjectGuidePage() {

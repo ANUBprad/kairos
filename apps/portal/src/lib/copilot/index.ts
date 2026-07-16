@@ -13,13 +13,13 @@ import type {
 } from "./types";
 import { detectIntent } from "./intent";
 import { buildCopilotContext, enrichContextWithResults, getContextSummary } from "./context-builder";
-import { selectEvidence, getEvidenceSummary } from "./evidence-selector";
-import { computeConfidence, formatConfidence } from "./confidence";
+import { selectEvidence } from "./evidence-selector";
+import { computeConfidence } from "./confidence";
 import { loadMemory, addQuestionToMemory, detectConstraintsFromQuery, setConstraint } from "./memory";
-import { groundResponse, generateGroundingSummary } from "./grounding";
+import { groundResponse } from "./grounding";
 import { generateSuggestions } from "./suggestions";
-import { generateTimeline, getTimelineMilestone } from "./timeline";
-import { buildCopilotResponse, responseToMarkdown, getResponseSummary } from "./response";
+import { generateTimeline } from "./timeline";
+import { buildCopilotResponse } from "./response";
 import { buildPrompt } from "./prompt-builder";
 import { explainConcept, getAvailableConcepts } from "./explainer";
 import { generateAdvisorRecommendations, prioritizeForConstraints } from "./advisor";
@@ -584,30 +584,3 @@ function generateDailyBrief(context: CopilotContext): DailyBrief {
     researchDirection,
   };
 }
-
-export {
-  detectIntent,
-  buildCopilotContext,
-  enrichContextWithResults,
-  selectEvidence,
-  computeConfidence,
-  formatConfidence,
-  loadMemory,
-  groundResponse,
-  generateGroundingSummary,
-  generateSuggestions,
-  generateTimeline,
-  getTimelineMilestone,
-  buildCopilotResponse,
-  responseToMarkdown,
-  getResponseSummary,
-  buildPrompt,
-  explainConcept,
-  getAvailableConcepts,
-  generateAdvisorRecommendations,
-  prioritizeForConstraints,
-  generateResearchPlan,
-  adaptPlanToConstraints,
-  getContextSummary,
-  getEvidenceSummary,
-};

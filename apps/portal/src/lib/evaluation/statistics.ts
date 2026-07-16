@@ -1,3 +1,5 @@
+import { round } from "@/lib/utils";
+
 export interface DescriptiveStats {
   n: number;
   mean: number;
@@ -58,8 +60,4 @@ function getTValue(df: number): number {
     if (df >= keys[i]) return tTable[keys[i]];
   }
   return 1.96;
-}
-
-function round(value: number): number {
-  return Math.round(value * 10000) / 10000;
 }
