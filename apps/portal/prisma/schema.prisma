@@ -31,8 +31,6 @@ model User {
   members          Member[]
   ownedOrgs        Organization[]     @relation("OrganizationOwner")
   apiKeys          ApiKey[]
-  subscription     Subscription?
-  usageRecords     UsageRecord[]
   notifications    Notification[]
   activityLogs     ActivityLog[]
   Document         Document[]
@@ -548,60 +546,6 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@index([userId, action])
-}
-
-/// Billing & Subscriptions
-
-model Subscription {
-  id                 String   @id @default(cuid())
-  stripeCustomerId   String?  @unique @db.VarChar(255)
-  stripeSubscriptionId String? @unique @db.VarChar(255)
-  stripePriceId      String?  @db.VarChar(255)
-  plan               PlanType @default(FREE)
-  status             SubscriptionStatus @default(ACTIVE)
-  trialEndsAt        DateTime?
-  currentPeriodStart DateTime?
-  currentPeriodEnd   DateTime?
-  cancelAtPeriodEnd  Boolean  @default(false)
-
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@index([stripeCustomerId])
-  @@index([status])
-}
-
-enum PlanType {
-  FREE
-  STARTER
-  PRO
-  BUSINESS
-  ENTERPRISE
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  PAST_DUE
-  CANCELED
-  TRIALING
-  UNPAID
-}
-
-model UsageRecord {
-  id        String   @id @default(cuid())
-  meter     String   @db.VarChar(64)
-  quantity  Int      @default(0)
-  period    String   @db.VarChar(7)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, meter, period])
-  @@index([userId, period])
 }
 
 model Notification {

@@ -7,6 +7,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
@@ -236,7 +237,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   return (
     <WorkspaceContext.Provider
-      value={{
+      value={useMemo(() => ({
         project,
         experiments,
         selectedExperiment,
@@ -256,7 +257,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         addRecentSearch,
         setPreferredMetric,
         clearWorkspace,
-      }}
+      }), [
+        project, experiments, selectedExperiment, breadcrumbs, recentActivity,
+        sidebarCollapsed, recentSearches, preferredMetric,
+        setProject, setExperiments, selectExperiment, setBreadcrumbs,
+        addActivity, toggleSidebar, registerShortcut, unregisterShortcut,
+        addRecentSearch, setPreferredMetric, clearWorkspace,
+      ])}
     >
       {children}
     </WorkspaceContext.Provider>

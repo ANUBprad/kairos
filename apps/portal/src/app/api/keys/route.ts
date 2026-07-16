@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { sanitizeError } from "@/lib/errors";
 import { createHash } from "node:crypto";
 import { randomBytes } from "node:crypto";
-import { checkEntitlement } from "@/lib/billing/entitlements";
+
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +20,6 @@ function hashKey(key: string): string {
 export async function GET() {
   try {
     const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
 
     const keys = await prisma.apiKey.findMany({
       where: { userId: session.user.id, revokedAt: null },
@@ -47,17 +44,6 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const entitlement = await checkEntitlement(session.user.id, "apiKeys");
-    if (!entitlement.allowed) {
-      return NextResponse.json(
-        { error: "API key limit reached. Upgrade your plan." },
-        { status: 403 },
-      );
-    }
 
     const body = await request.json();
     const name = typeof body.name === "string" ? body.name.trim() : "";
@@ -102,9 +88,6 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
 
     const body = await request.json();
     const { keyId } = body;
@@ -115,6 +98,7 @@ export async function DELETE(request: NextRequest) {
 
     const key = await prisma.apiKey.findFirst({
       where: { id: keyId, userId: session.user.id },
+      select: { id: true },
     });
 
     if (!key) {

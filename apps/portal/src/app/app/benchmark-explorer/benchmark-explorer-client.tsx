@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { PageHeader } from "@/components/app/page-header";
 import { ChartScatter, ChartBar } from "@/components/ui/charts";
 import { ConfidenceIntervalChart } from "@/components/ui/confidence-interval-chart";
@@ -12,6 +12,7 @@ import {
   Search,
 } from "lucide-react";
 import { listDatasets, getBaselines } from "@/lib/actions/evaluation";
+import { logger } from "@/lib/logger";
 
 interface BenchmarkRun {
   id: string;
@@ -40,7 +41,7 @@ const METRICS = [
   { key: "cost", label: "Cost ($)" },
 ];
 
-export function BenchmarkExplorerClient() {
+const BenchmarkExplorerClientInner = function BenchmarkExplorerClient() {
   const [runs, setRuns] = useState<BenchmarkRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<Record<string, string | null>>({
@@ -87,7 +88,7 @@ export function BenchmarkExplorerClient() {
 
         setRuns(mappedRuns);
       } catch (error) {
-        console.error("Failed to fetch benchmark data:", error);
+        logger.error("Failed to fetch benchmark data", { error: error instanceof Error ? error.message : String(error) });
       } finally {
         setLoading(false);
       }
@@ -303,4 +304,6 @@ export function BenchmarkExplorerClient() {
       </div>
     </div>
   );
-}
+};
+
+export const BenchmarkExplorerClient = memo(BenchmarkExplorerClientInner);

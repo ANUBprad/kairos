@@ -9,16 +9,13 @@ import { getConversationMessages } from "@/lib/ai/memory";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
-import { checkEntitlement, incrementUsage } from "@/lib/billing/entitlements";
+
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
 
   const rl = rateLimit(`chat:${session.user.id}`, RATE_LIMITS.chat);
   if (!rl.allowed) {
@@ -92,14 +89,6 @@ export async function POST(request: NextRequest) {
 
   if (!kb || kb.project.organization.members.length === 0) {
     return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
-  }
-
-  const entitlement = await checkEntitlement(session.user.id, "aiChats");
-  if (!entitlement.allowed) {
-    return NextResponse.json(
-      { error: `AI chat limit reached (${entitlement.limit}). Upgrade your plan.` },
-      { status: 403 },
-    );
   }
 
   const encoder = new TextEncoder();
@@ -274,7 +263,6 @@ ${contextStr || "No relevant documents found."}`;
         const finalData = JSON.stringify({ type: "done" });
         controller.enqueue(encoder.encode(`data: ${finalData}\n\n`));
 
-        await incrementUsage(session.user.id, "aiChats").catch(() => {});
       } catch (err) {
         const sanitized = sanitizeError(err);
         const errorData = JSON.stringify({ type: "error", content: "An error occurred while processing your request", errorId: sanitized.errorId });

@@ -149,7 +149,7 @@ export default function FeaturesPage() {
           <h2 className="text-[24px] font-semibold text-text-primary mb-4">Start experimenting</h2>
           <p className="text-text-secondary mb-8 max-w-md mx-auto">Upload documents, run retrieval tests, and generate evaluation reports.</p>
           <Button variant="primary" size="lg" asChild>
-            <Link href="/app">Open Platform <ArrowRight size={16} /></Link>
+            <Link href="/app">Launch Workspace <ArrowRight size={16} /></Link>
           </Button>
         </ScrollReveal>
       </div>

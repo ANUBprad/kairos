@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import os
+import logging
 from typing import Optional, Set
 
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from intelligence.config.secrets import SecretProvider, get_secret_provider
+
+logger = logging.getLogger(__name__)
+
+_ENVIRONMENT = os.environ.get("KAIROS_ENVIRONMENT", "development")
 
 
 class APIKeyValidator:
@@ -20,10 +26,17 @@ class APIKeyValidator:
             self._valid_keys = {api_key}
         else:
             self._valid_keys = set()
+            if _ENVIRONMENT != "development":
+                logger.warning(
+                    "KAIROS_API_SECRET is not set — all API requests will be rejected. "
+                    "Set KAIROS_API_SECRET to allow authenticated access."
+                )
 
     def is_valid(self, api_key: str) -> bool:
         if not self._valid_keys:
-            return True
+            if _ENVIRONMENT == "development":
+                return True
+            return False
         return api_key in self._valid_keys
 
     def add_key(self, key: str) -> None:

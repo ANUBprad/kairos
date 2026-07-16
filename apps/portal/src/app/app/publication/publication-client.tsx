@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getBaselines } from "@/lib/actions/evaluation";
+import { logger } from "@/lib/logger";
 
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
@@ -153,7 +154,7 @@ export function PublicationModeClient() {
         const content = generatePaperContent(baselines);
         setPaperContent(content);
       } catch (error) {
-        console.error("Failed to generate paper content:", error);
+        logger.error("Failed to generate paper content", { error: error instanceof Error ? error.message : String(error) });
         setPaperContent("# Error\n\nFailed to load benchmark data. Please try again later.");
       } finally {
         setLoading(false);

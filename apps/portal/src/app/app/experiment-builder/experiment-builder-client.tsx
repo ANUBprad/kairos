@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDatasetsForSelector } from "@/lib/actions/evaluation";
+import { logger } from "@/lib/logger";
 
 interface PipelineStage {
   id: string;
@@ -157,7 +158,7 @@ export function ExperimentBuilderClient() {
           })
         );
       } catch (error) {
-        console.error("Failed to fetch dynamic options:", error);
+        logger.error("Failed to fetch dynamic options", { error: error instanceof Error ? error.message : String(error) });
         setStages((prev) =>
           prev.map((stage) => {
             if (stage.id === "dataset") {

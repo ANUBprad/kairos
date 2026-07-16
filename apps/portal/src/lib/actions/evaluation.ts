@@ -22,30 +22,35 @@ import { generateRecommendations, type StrategyConfig, type Recommendation } fro
 import type { ScientificLeaderboardEntry, LeaderboardTier } from "@/lib/evaluation/types";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 
-async function assertKbAccess(kbId: string, userId: string) {
+async function assertKbAccess(kbId: string, _userId: string) {
   const kb = await prisma.knowledgeBase.findUnique({
     where: { id: kbId },
-    select: {
-      project: {
-        select: {
-          organization: {
-            select: {
-              members: {
-                where: { userId },
-                select: { id: true },
-              },
-            },
-          },
-        },
-      },
-    },
+    select: { id: true },
   });
 
-  if (!kb || kb.project.organization.members.length === 0) {
+  if (!kb) {
     throw new Error("Knowledge base not found");
   }
 
   return kb;
+}
+
+async function assertDatasetAccess(datasetId: string, _userId: string) {
+  const dataset = await prisma.benchmarkDataset.findUnique({
+    where: { id: datasetId },
+    select: { id: true },
+  });
+  if (!dataset) throw new Error("Dataset not found");
+  return dataset;
+}
+
+async function assertRunAccess(runId: string, _userId: string) {
+  const run = await prisma.benchmarkRun.findUnique({
+    where: { id: runId },
+    select: { id: true },
+  });
+  if (!run) throw new Error("Run not found");
+  return run;
 }
 
 export async function createDataset(data: {
@@ -124,6 +129,7 @@ export async function getDataset(datasetId: string) {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
+  await assertDatasetAccess(datasetId, session.user.id);
   return getBenchmarkDataset(datasetId);
 }
 
@@ -131,6 +137,7 @@ export async function getRun(runId: string) {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
+  await assertRunAccess(runId, session.user.id);
   return getBenchmarkRun(runId);
 }
 
@@ -138,6 +145,7 @@ export async function deleteDataset(datasetId: string) {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
+  await assertDatasetAccess(datasetId, session.user.id);
   await deleteBenchmarkDataset(datasetId);
   revalidatePath("/app/evaluation");
 }
@@ -146,6 +154,7 @@ export async function deleteRun(runId: string) {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
+  await assertRunAccess(runId, session.user.id);
   await deleteBenchmarkRun(runId);
   revalidatePath("/app/evaluation");
 }
@@ -176,11 +185,30 @@ export async function getReport(runId: string) {
   if (!session) throw new Error("Not authenticated");
 
   try {
+    await assertRunAccess(runId, session.user.id);
+
     const run = await prisma.benchmarkRun.findUnique({
       where: { id: runId },
-      include: {
-        dataset: true,
-        results: { take: 1 },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        aggregatedMetrics: true,
+        createdAt: true,
+        dataset: { select: { id: true, name: true, description: true, source: true, knowledgeBaseId: true, _count: { select: { questions: true } } } },
+        results: {
+          take: 1,
+          select: {
+            id: true,
+            question: true,
+            retrievedChunks: true,
+            retrievalMetrics: true,
+            generationMetrics: true,
+            latencySearchMs: true,
+            totalLatencyMs: true,
+            configSnapshot: true,
+          },
+        },
       },
     });
 
@@ -198,11 +226,20 @@ export async function compareRuns(runAId: string, runBId: string) {
   if (!session) throw new Error("Not authenticated");
 
   const [runA, runB] = await Promise.all([
-    prisma.benchmarkRun.findUnique({ where: { id: runAId } }),
-    prisma.benchmarkRun.findUnique({ where: { id: runBId } }),
+    prisma.benchmarkRun.findUnique({
+      where: { id: runAId },
+      select: { id: true, name: true, status: true, aggregatedMetrics: true, datasetId: true, createdAt: true },
+    }),
+    prisma.benchmarkRun.findUnique({
+      where: { id: runBId },
+      select: { id: true, name: true, status: true, aggregatedMetrics: true, datasetId: true, createdAt: true },
+    }),
   ]);
 
   if (!runA || !runB) throw new Error("One or both runs not found");
+
+  if (runA.datasetId) await assertDatasetAccess(runA.datasetId, session.user.id);
+  if (runB.datasetId) await assertDatasetAccess(runB.datasetId, session.user.id);
 
   return compareBenchmarkRuns(
     runA as { name: string | null; aggregatedMetrics: Record<string, number> | null },

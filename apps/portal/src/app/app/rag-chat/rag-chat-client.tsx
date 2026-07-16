@@ -24,8 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RetrievalDebugger } from "@/components/app/retrieval-debugger";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 import { toast } from "sonner";
 
 interface PipelineChunk {
@@ -417,9 +416,7 @@ export function RagChat({ kbs }: Props) {
                   ) : (
                     <>
                       <div className="prose prose-sm prose-invert max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {msg.content || (isStreaming ? "..." : "")}
-                        </ReactMarkdown>
+                        <MarkdownRenderer content={msg.content || (isStreaming ? "..." : "")} />
                       </div>
                       {msg.citations && msg.citations.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-border/50">

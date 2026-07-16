@@ -193,12 +193,12 @@ export default function AboutPage() {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button variant="primary" size="lg" asChild>
               <Link href="/app">
-                Open Platform <ArrowRight size={16} />
+                Launch Workspace <ArrowRight size={16} />
               </Link>
             </Button>
             <Button variant="secondary" size="lg" asChild>
               <Link href="/features">
-                Explore Features
+                Explore Capabilities
               </Link>
             </Button>
           </div>

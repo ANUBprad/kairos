@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "@/lib/server/auth-utils";
 import { createConversation, listConversations } from "@/lib/ai/memory";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { DEMO_USER_ID } from "@/lib/server/demo-user";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const start = performance.now();
   try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const kbId = searchParams.get("kbId");
 
@@ -27,9 +22,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid kbId format" }, { status: 400 });
     }
 
-    const conversations = await listConversations(kbId, session.user.id);
+    const conversations = await listConversations(kbId, DEMO_USER_ID);
     const duration = Math.round(performance.now() - start);
-    logger.info("List conversations", { userId: session.user.id, count: conversations.length, duration });
+    logger.info("List conversations", { userId: DEMO_USER_ID, count: conversations.length, duration });
     return NextResponse.json({ conversations });
   } catch (err) {
     const duration = Math.round(performance.now() - start);
@@ -42,12 +37,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const start = performance.now();
   try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
-
-    const rl = rateLimit(`conversation:create:${session.user.id}`, RATE_LIMITS.chat);
+    const rl = rateLimit(`conversation:create:demo-user`, RATE_LIMITS.chat);
     if (!rl.allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded" },
@@ -82,14 +72,14 @@ export async function POST(request: NextRequest) {
 
     const conversation = await createConversation(
       kbId,
-      session.user.id,
+      DEMO_USER_ID,
       title,
       model,
       provider,
     );
 
     const duration = Math.round(performance.now() - start);
-    logger.info("Create conversation", { userId: session.user.id, kbId, duration });
+    logger.info("Create conversation", { userId: DEMO_USER_ID, kbId, duration });
     return NextResponse.json({ conversation });
   } catch (err) {
     const duration = Math.round(performance.now() - start);

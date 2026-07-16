@@ -1,4 +1,3 @@
-import { requireSession } from "@/lib/server/auth-utils";
 import dynamic from "next/dynamic";
 
 const NotebookPageClient = dynamic(
@@ -20,6 +19,5 @@ export const metadata = {
 };
 
 export default async function NotebookPage() {
-  await requireSession();
   return <NotebookPageClient />;
 }

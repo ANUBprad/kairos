@@ -1,4 +1,8 @@
-import { ChunkingStudio } from "./studio-client";
+import dynamic from "next/dynamic";
+
+const ChunkingStudio = dynamic(() => import("./studio-client").then((m) => m.ChunkingStudio), {
+  loading: () => <div className="animate-pulse bg-surface rounded-lg h-96" />,
+});
 
 export const metadata = {
   title: "Chunking Studio | Kairos",

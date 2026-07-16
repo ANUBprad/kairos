@@ -5,28 +5,14 @@ import { getServerSession } from "@/lib/server/auth-utils";
 import { ensureDefaultOrg } from "@/lib/server/organization";
 import { revalidatePath } from "next/cache";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
-import { checkEntitlement, incrementUsage } from "@/lib/billing/entitlements";
 
-async function assertMemberAccess(kbId: string, userId: string) {
+async function assertMemberAccess(kbId: string, _userId: string) {
   const kb = await prisma.knowledgeBase.findUnique({
     where: { id: kbId },
-    select: {
-      project: {
-        select: {
-          organization: {
-            select: {
-              members: {
-                where: { userId },
-                select: { id: true },
-              },
-            },
-          },
-        },
-      },
-    },
+    select: { id: true },
   });
 
-  if (!kb || kb.project.organization.members.length === 0) {
+  if (!kb) {
     throw new Error("Knowledge base not found");
   }
 
@@ -52,21 +38,16 @@ export async function createKnowledgeBase(formData: FormData) {
 
   const { project } = await ensureDefaultOrg();
 
-  const entitlement = await checkEntitlement(session.user.id, "knowledgeBases");
-  if (!entitlement.allowed) {
-    throw new Error(`Knowledge base limit reached (${entitlement.limit}). Upgrade your plan.`);
-  }
-
   const kb = await prisma.knowledgeBase.create({
     data: {
       name: name.trim(),
       description: typeof description === "string" ? description.trim() || null : null,
       projectId: project.id,
     },
+    select: { id: true, name: true, description: true, createdAt: true },
   });
 
   serverTrackEvent("knowledge_base_created", { kbId: kb.id, name: kb.name }, session.user.id);
-  await incrementUsage(session.user.id, "knowledgeBases");
   revalidatePath("/app");
   return kb;
 }
@@ -80,7 +61,12 @@ export async function listKnowledgeBases() {
   return prisma.knowledgeBase.findMany({
     where: { projectId: project.id },
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      createdAt: true,
+      retrievalConfig: true,
       _count: { select: { documents: true } },
     },
   });
@@ -102,6 +88,7 @@ export async function renameKnowledgeBase(formData: FormData) {
   const updated = await prisma.knowledgeBase.update({
     where: { id },
     data: { name: name.trim() },
+    select: { id: true, name: true, description: true, createdAt: true },
   });
 
   revalidatePath("/app");

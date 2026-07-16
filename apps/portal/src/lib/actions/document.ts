@@ -10,7 +10,6 @@ import { chunkText } from "@/lib/chunking";
 import { generateEmbeddings } from "@/lib/ai/embeddings";
 import { logger } from "@/lib/logger";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
-import { checkEntitlement, incrementUsage } from "@/lib/billing/entitlements";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
 import type { Prisma } from "@prisma/client";
@@ -129,11 +128,6 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 
   await getOrgFromKb(kbId, session.user.id);
 
-  const entitlement = await checkEntitlement(session.user.id, "uploads");
-  if (!entitlement.allowed) {
-    throw new Error(`Upload limit reached (${entitlement.limit}/day). Upgrade your plan.`);
-  }
-
   const files = formData.getAll("files") as File[];
   if (files.length === 0) throw new Error("No files provided");
 
@@ -232,14 +226,16 @@ export async function uploadDocument(kbId: string, formData: FormData) {
   }
 
   serverTrackEvent("documents_uploaded", { count: results.length, kbId }, session.user.id);
-  await incrementUsage(session.user.id, "uploads", results.length);
   revalidatePath(`/app/knowledge-bases/${kbId}`);
   return results;
 }
 
 async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer) {
   try {
-    const doc = await prisma.document.findUnique({ where: { id: docId } });
+    const doc = await prisma.document.findUnique({
+      where: { id: docId },
+      select: { id: true, storageUrl: true, knowledgeBaseId: true, fileType: true, metadata: true, uploadedById: true },
+    });
     if (!doc) return;
 
     await prisma.document.update({
@@ -339,7 +335,15 @@ export async function listDocuments(kbId: string) {
   return prisma.document.findMany({
     where: { knowledgeBaseId: kbId },
     orderBy: { createdAt: "desc" },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      fileType: true,
+      size: true,
+      status: true,
+      storageUrl: true,
+      createdAt: true,
+      metadata: true,
       uploadedBy: { select: { id: true, name: true, image: true } },
       _count: { select: { chunks: true } },
     },
@@ -362,13 +366,17 @@ export async function renameDocument(formData: FormData) {
   if (!id || !name?.trim()) throw new Error("Invalid input");
   if (name.length > 255) throw new Error("Name is too long");
 
-  const doc = await prisma.document.findUnique({ where: { id } });
+  const doc = await prisma.document.findUnique({
+    where: { id },
+    select: { id: true, name: true, knowledgeBaseId: true },
+  });
   if (!doc) throw new Error("Document not found");
   await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
 
   const updated = await prisma.document.update({
     where: { id },
     data: { name: name.trim() },
+    select: { id: true, name: true },
   });
 
   await logActivity(id, session.user.id, "RENAMED", { oldName: doc.name, newName: name.trim() });
@@ -384,7 +392,10 @@ export async function deleteDocument(formData: FormData) {
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("ID is required");
 
-  const doc = await prisma.document.findUnique({ where: { id } });
+  const doc = await prisma.document.findUnique({
+    where: { id },
+    select: { id: true, name: true, knowledgeBaseId: true, storageKey: true },
+  });
   if (!doc) throw new Error("Document not found");
   await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
 
@@ -405,7 +416,10 @@ export async function reprocessDocument(formData: FormData) {
   const id = formData.get("id")?.toString();
   if (!id) throw new Error("ID is required");
 
-  const doc = await prisma.document.findUnique({ where: { id } });
+  const doc = await prisma.document.findUnique({
+    where: { id },
+    select: { id: true, name: true, knowledgeBaseId: true, fileType: true },
+  });
   if (!doc) throw new Error("Document not found");
   await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
 
@@ -445,11 +459,20 @@ export async function bulkDeleteDocuments(formData: FormData) {
 
   const storage = getStorageProvider();
   for (const doc of docs) {
-    await logActivity(doc.id, session.user.id, "DELETED", { fileName: doc.name });
     storage.delete(doc.storageKey).catch(() => {});
   }
 
-  await prisma.document.deleteMany({ where: { id: { in: ids } } });
+  await prisma.$transaction([
+    prisma.documentActivity.createMany({
+      data: docs.map((doc) => ({
+        documentId: doc.id,
+        userId: session.user.id,
+        action: "DELETED",
+        details: { fileName: doc.name },
+      })),
+    }),
+    prisma.document.deleteMany({ where: { id: { in: ids } } }),
+  ]);
 
   revalidatePath(`/app/knowledge-bases/${docs[0].knowledgeBaseId}`);
 }
@@ -470,16 +493,25 @@ export async function bulkReprocessDocuments(formData: FormData) {
 
   await getOrgFromKb(docs[0].knowledgeBaseId, session.user.id);
 
-  for (const doc of docs) {
-    await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
+    for (const doc of docs) {
       await tx.documentChunk.deleteMany({ where: { documentId: doc.id } });
       await tx.document.update({
         where: { id: doc.id },
         data: { status: "QUEUED" },
       });
-    });
-    await logActivity(doc.id, session.user.id, "REPROCESSED", { fileName: doc.name });
+      await tx.documentActivity.create({
+        data: {
+          documentId: doc.id,
+          userId: session.user.id,
+          action: "REPROCESSED",
+          details: { fileName: doc.name },
+        },
+      });
+    }
+  });
 
+  for (const doc of docs) {
     processDocument(doc.id, doc.fileType).catch((err) => {
       logger.error(`Bulk reprocess failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
     });

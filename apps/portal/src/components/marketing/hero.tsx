@@ -308,8 +308,8 @@ export function Hero() {
               className="flex flex-col sm:flex-row items-start gap-3 pt-2"
             >
               <Button variant="primary" size="lg" className="gap-2" asChild>
-                <Link href="/signup">
-                  Launch Platform
+                <Link href="/app">
+                  Launch Workspace
                   <ArrowRight size={16} />
                 </Link>
               </Button>

@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/server/auth-utils";
 import { redirect } from "next/navigation";
 import { DocumentTable } from "@/components/app/document-table";
 import { listDocuments } from "@/lib/actions/document";
@@ -9,8 +8,6 @@ interface Props {
 }
 
 export default async function KnowledgeBasePage({ params }: Props) {
-  const session = await requireSession();
-
   const { kbId } = await params;
 
   const kb = await prisma.knowledgeBase.findUnique({
@@ -18,22 +15,10 @@ export default async function KnowledgeBasePage({ params }: Props) {
     select: {
       id: true,
       name: true,
-      project: {
-        select: {
-          organization: {
-            select: {
-              members: {
-                where: { userId: session.user.id },
-                select: { id: true },
-              },
-            },
-          },
-        },
-      },
     },
   });
 
-  if (!kb || kb.project.organization.members.length === 0) {
+  if (!kb) {
     redirect("/app");
   }
 

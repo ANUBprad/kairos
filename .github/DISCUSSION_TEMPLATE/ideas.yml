@@ -1,0 +1,36 @@
+title: "[Idea] "
+labels: ["discussion", "idea"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe your idea or feature request
+      placeholder: Tell us what you're thinking...
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: What problem does this solve?
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Kairos does this relate to?
+      options:
+        - Retrieval
+        - Evaluation
+        - Chunking
+        - Embedding
+        - Chat / RAG
+        - Benchmarking
+        - Frontend / UI
+        - API / Gateway
+        - Documentation
+        - Other
+    validations:
+      required: true

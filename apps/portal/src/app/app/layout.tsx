@@ -1,8 +1,8 @@
-import { requireSession } from "@/lib/server/auth-utils";
-import { ensureDefaultOrg } from "@/lib/server/organization";
+import { getDemoOrgAndProject } from "@/lib/server/demo-user";
+import { prisma } from "@/lib/prisma";
 import { AppSidebar } from "@/components/app/sidebar";
 import { AppHeader } from "@/components/app/app-header";
-import { redirect } from "next/navigation";
+import { PageTransition } from "@/components/shared/page-transition";
 
 export const metadata = {
   title: { template: "%s | Kairos", default: "Research Platform | Kairos" },
@@ -14,31 +14,46 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let session;
-  try {
-    session = await requireSession();
-  } catch {
-    redirect("/login");
-  }
+  const { orgId } = await getDemoOrgAndProject();
 
-  if (!session) redirect("/login");
-
-  const { organization } = await ensureDefaultOrg();
+  const organization = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { knowledgeBases: true } },
+        },
+      },
+    },
+  });
 
   return (
     <div className="flex min-h-screen bg-bg">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:bg-background focus:px-4 focus:py-2 focus:rounded-lg focus:border focus:border-border"
+      >
+        Skip to content
+      </a>
       <AppSidebar
         organization={organization}
-        userEmail={session?.user?.email ?? ""}
+        userEmail="demo@kairos.dev"
       />
       <div className="flex flex-1 flex-col">
         <AppHeader
-          email={session?.user?.email ?? ""}
-          name={session?.user?.name ?? null}
-          image={session?.user?.image ?? null}
+          email="demo@kairos.dev"
+          name="Demo User"
+          image={null}
           organizationName={organization?.name ?? null}
         />
-        <main id="main-content" className="flex-1 p-6">{children}</main>
+        <main id="main-content" className="flex-1 p-6">
+          <PageTransition>{children}</PageTransition>
+        </main>
       </div>
     </div>
   );

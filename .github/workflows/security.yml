@@ -29,11 +29,9 @@ jobs:
 
       - name: Run bandit (SAST)
         run: bandit -r intelligence/ -f sarif -o bandit-results.sarif || true
-        continue-on-error: true
 
       - name: Run safety (dependency scan)
         run: safety check -r requirements.txt --full-report || true
-        continue-on-error: true
 
       - name: Upload bandit results
         uses: github/codeql-action/upload-sarif@v3

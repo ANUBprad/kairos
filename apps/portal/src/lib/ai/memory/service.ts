@@ -62,6 +62,7 @@ export async function createConversation(
       knowledgeBaseId,
       userId,
     },
+    select: { id: true, title: true, model: true, provider: true, knowledgeBaseId: true, createdAt: true, updatedAt: true },
   });
   return conversation;
 }
@@ -71,7 +72,15 @@ export async function getConversation(
 ): Promise<(ConversationData & { userId: string; messages: AIMessage[] }) | null> {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      model: true,
+      provider: true,
+      knowledgeBaseId: true,
+      userId: true,
+      createdAt: true,
+      updatedAt: true,
       messages: {
         orderBy: { createdAt: "asc" },
         select: { role: true, content: true, tokens: true },
@@ -99,6 +108,7 @@ export async function listConversations(
     where: { knowledgeBaseId, userId },
     orderBy: { updatedAt: "desc" },
     take: limit,
+    select: { id: true, title: true, model: true, provider: true, knowledgeBaseId: true, createdAt: true, updatedAt: true },
   });
 }
 

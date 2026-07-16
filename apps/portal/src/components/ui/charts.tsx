@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import {
   BarChart as RechartsBarChart,
   Bar,
@@ -9,18 +10,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart as RechartsLineChart,
-  Line,
-  AreaChart as RechartsAreaChart,
-  Area,
   ScatterChart as RechartsScatterChart,
   Scatter,
   Cell,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +73,7 @@ interface BarChartProps extends BaseChartProps {
   formatter?: (value: number) => string;
 }
 
-export function ChartBar({
+export const ChartBar = memo(function ChartBar({
   data,
   xKey,
   yKeys,
@@ -133,102 +125,7 @@ export function ChartBar({
       </ResponsiveContainer>
     </div>
   );
-}
-
-interface LineChartProps extends BaseChartProps {
-  data: Record<string, unknown>[];
-  xKey: string;
-  yKeys: { key: string; color?: string; name?: string; dashed?: boolean }[];
-  formatter?: (value: number) => string;
-}
-
-export function ChartLine({
-  data,
-  xKey,
-  yKeys,
-  height = 300,
-  className,
-  title,
-  formatter,
-}: LineChartProps) {
-  return (
-    <div className={cn("rounded-xl border border-border bg-surface p-4", className)}>
-      {title && (
-        <h3 className="mb-3 text-sm font-semibold text-text-primary">{title}</h3>
-      )}
-      <ResponsiveContainer width="100%" height={height}>
-        <RechartsLineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-          <XAxis dataKey={xKey} tick={{ fill: "#8B8B8B", fontSize: 11 }} />
-          <YAxis tick={{ fill: "#8B8B8B", fontSize: 11 }} />
-          <Tooltip content={<ChartTooltip formatter={formatter} />} />
-          <Legend wrapperStyle={{ fontSize: 11, color: "#8B8B8B" }} />
-          {yKeys.map((yk, i) => (
-            <Line
-              key={yk.key}
-              type="monotone"
-              dataKey={yk.key}
-              name={yk.name || yk.key}
-              stroke={yk.color || CHART_COLORS[i % CHART_COLORS.length]}
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
-              strokeDasharray={yk.dashed ? "5 5" : undefined}
-            />
-          ))}
-        </RechartsLineChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-interface AreaChartProps extends BaseChartProps {
-  data: Record<string, unknown>[];
-  xKey: string;
-  yKeys: { key: string; color?: string; name?: string }[];
-  stacked?: boolean;
-  formatter?: (value: number) => string;
-}
-
-export function ChartArea({
-  data,
-  xKey,
-  yKeys,
-  stacked,
-  height = 300,
-  className,
-  title,
-  formatter,
-}: AreaChartProps) {
-  return (
-    <div className={cn("rounded-xl border border-border bg-surface p-4", className)}>
-      {title && (
-        <h3 className="mb-3 text-sm font-semibold text-text-primary">{title}</h3>
-      )}
-      <ResponsiveContainer width="100%" height={height}>
-        <RechartsAreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-          <XAxis dataKey={xKey} tick={{ fill: "#8B8B8B", fontSize: 11 }} />
-          <YAxis tick={{ fill: "#8B8B8B", fontSize: 11 }} />
-          <Tooltip content={<ChartTooltip formatter={formatter} />} />
-          <Legend wrapperStyle={{ fontSize: 11, color: "#8B8B8B" }} />
-          {yKeys.map((yk, i) => (
-            <Area
-              key={yk.key}
-              type="monotone"
-              dataKey={yk.key}
-              name={yk.name || yk.key}
-              stroke={yk.color || CHART_COLORS[i % CHART_COLORS.length]}
-              fill={yk.color || CHART_COLORS[i % CHART_COLORS.length]}
-              fillOpacity={0.15}
-              stackId={stacked ? "1" : undefined}
-            />
-          ))}
-        </RechartsAreaChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
+});
 
 interface ScatterChartProps extends BaseChartProps {
   data: Record<string, unknown>[];
@@ -241,7 +138,7 @@ interface ScatterChartProps extends BaseChartProps {
   formatter?: (value: number) => string;
 }
 
-export function ChartScatter({
+export const ChartScatter = memo(function ChartScatter({
   data,
   xKey,
   yKey,
@@ -253,12 +150,16 @@ export function ChartScatter({
   title,
   formatter,
 }: ScatterChartProps) {
-  const colored = data.map((d, i) => ({
-    ...d,
-    fill: colorKey
-      ? CHART_COLORS[i % CHART_COLORS.length]
-      : "#FF5A0A",
-  }));
+  const colored = useMemo(
+    () =>
+      data.map((d, i) => ({
+        ...d,
+        fill: colorKey
+          ? CHART_COLORS[i % CHART_COLORS.length]
+          : "#FF5A0A",
+      })),
+    [data, colorKey]
+  );
 
   return (
     <div className={cn("rounded-xl border border-border bg-surface p-4", className)}>
@@ -308,48 +209,6 @@ export function ChartScatter({
       </ResponsiveContainer>
     </div>
   );
-}
-
-interface RadarChartProps extends BaseChartProps {
-  data: Record<string, unknown>[];
-  dataKey: string;
-  keys: { key: string; color?: string; name?: string }[];
-}
-
-export function ChartRadar({
-  data,
-  dataKey,
-  keys,
-  height = 300,
-  className,
-  title,
-}: RadarChartProps) {
-  return (
-    <div className={cn("rounded-xl border border-border bg-surface p-4", className)}>
-      {title && (
-        <h3 className="mb-3 text-sm font-semibold text-text-primary">{title}</h3>
-      )}
-      <ResponsiveContainer width="100%" height={height}>
-        <RadarChart data={data}>
-          <PolarGrid stroke="#2A2A2A" />
-          <PolarAngleAxis dataKey={dataKey} tick={{ fill: "#8B8B8B", fontSize: 11 }} />
-          <PolarRadiusAxis tick={{ fill: "#8B8B8B", fontSize: 10 }} />
-          {keys.map((k, i) => (
-            <Radar
-              key={k.key}
-              name={k.name || k.key}
-              dataKey={k.key}
-              stroke={k.color || CHART_COLORS[i % CHART_COLORS.length]}
-              fill={k.color || CHART_COLORS[i % CHART_COLORS.length]}
-              fillOpacity={0.15}
-            />
-          ))}
-          <Legend wrapperStyle={{ fontSize: 11, color: "#8B8B8B" }} />
-          <Tooltip content={<ChartTooltip />} />
-        </RadarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
+});
 
 export { CHART_COLORS };

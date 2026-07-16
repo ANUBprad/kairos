@@ -6,14 +6,14 @@ import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { LeafLogo } from "./leaf-logo";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 const navLinks = [
-  { label: "About", href: "/about" },
+  { label: "Architecture", href: "/architecture" },
   { label: "Features", href: "/features" },
   { label: "Docs", href: "/docs" },
   { label: "Blog", href: "/blog" },
+  { label: "GitHub", href: "https://github.com/your-org/kairos" },
 ];
 
 export function Nav() {
@@ -63,16 +63,7 @@ export function Nav() {
         </div>
 
         <div className="hidden md:flex items-center gap-2">
-          <Link
-            href="/login"
-            className="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors duration-200"
-          >
-            Sign In
-          </Link>
           <ThemeToggle />
-          <Button variant="primary" size="md" asChild>
-            <Link href="/signup">Get started</Link>
-          </Button>
         </div>
 
         <div className="flex md:hidden items-center gap-2">
@@ -107,19 +98,8 @@ export function Nav() {
                   {link.label}
                 </Link>
               ))}
-              <div className="mt-6 flex flex-col gap-3">
-                <Link
-                  href="/login"
-                  className="text-sm font-medium text-text-secondary hover:text-text-primary text-center py-2 transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Button variant="primary" size="lg" className="w-full" asChild>
-                  <Link href="/signup" onClick={() => setMobileOpen(false)}>
-                    Get started
-                  </Link>
-                </Button>
+              <div className="mt-6">
+                <ThemeToggle />
               </div>
             </div>
           </motion.div>

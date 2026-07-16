@@ -25,7 +25,6 @@ import {
   Command,
   Menu,
   X,
-  User,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -105,7 +104,6 @@ const navSections: NavSection[] = [
     label: "System",
     items: [
       { label: "Configuration", href: "/app/settings", icon: SlidersHorizontal },
-      { label: "Account", href: "/app/account", icon: User },
     ],
   },
 ];
@@ -157,6 +155,7 @@ export function AppSidebar({ organization }: SidebarProps) {
             window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
           }}
           className="ml-auto flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-[10px] text-text-tertiary hover:bg-surface-hover hover:text-text-secondary transition-colors"
+          aria-label="Open command palette"
         >
           <Command size={10} />
           K
@@ -215,7 +214,7 @@ export function AppSidebar({ organization }: SidebarProps) {
       )}
 
       <div className="flex-1 overflow-y-auto p-3">
-        <nav className="space-y-5">
+        <nav className="space-y-5" role="navigation" aria-label="Main navigation">
           {navSections.map((section) => (
             <div key={section.label}>
               <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary/60">

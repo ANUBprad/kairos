@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/server/auth-utils";
 import dynamic from "next/dynamic";
 
 const CopilotPage = dynamic(
@@ -21,8 +20,6 @@ export const metadata = {
 
 export default async function CopilotPageRoute() {
   try {
-    await requireSession();
-
     const { ensureDefaultOrg } = await import("@/lib/server/organization");
     const { project } = await ensureDefaultOrg();
 

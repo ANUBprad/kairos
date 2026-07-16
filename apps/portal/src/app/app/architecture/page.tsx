@@ -1,4 +1,3 @@
-import { requireSession } from "@/lib/server/auth-utils";
 import dynamic from "next/dynamic";
 
 const ArchitectureViewer = dynamic(
@@ -19,7 +18,5 @@ export const metadata = {
 };
 
 export default async function ArchitecturePage() {
-  await requireSession();
-
   return <ArchitectureViewer />;
 }

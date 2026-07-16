@@ -1,220 +1,555 @@
 # Deployment Guide
 
-Complete guide for deploying Kairos to production using Vercel + Supabase.
+Complete guide for deploying Kairos to production.
 
 ---
 
-## Prerequisites
+## Deployment Options
 
-- GitHub account
-- Vercel account (free tier works)
-- Supabase account (free tier works)
+| Option | Description | Best For |
+|--------|-------------|----------|
+| **Docker Compose** | Full stack with all services | Development, small deployments |
+| **Vercel + Supabase** | Frontend on Vercel, DB on Supabase | Production web app |
+| **Self-Hosted** | All services on your infrastructure | Enterprise, compliance |
+
+---
+
+## 1. Docker Compose Deployment (Recommended)
+
+### Prerequisites
+
+- Docker Engine 20.10+
+- Docker Compose v2+
+- 8GB RAM minimum
 - OpenAI or Gemini API key
 
+### Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/ANUBprad/kairos.git
+cd kairos
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your API keys
+
+# Start all services
+docker compose up -d
+
+# Verify services
+docker compose ps
+```
+
+### Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Portal | 3000 | Next.js frontend |
+| Gateway | 8080 | Go HTTP gateway |
+| Intelligence | 28080 | Python RAG engine |
+| ChromaDB | 7777 | Vector store |
+| PostgreSQL | 5432 | Database |
+| Prometheus | 9090 | Metrics collection |
+| Grafana | 3001 | Metrics dashboards |
+
+### Environment Variables
+
+```env
+# Database (Required)
+DATABASE_URL="postgresql://postgres:postgres@db:5432/kairos"
+DIRECT_URL="postgresql://postgres:postgres@db:5432/kairos"
+
+# AI Providers (At least one required)
+OPENAI_API_KEY="sk-..."
+GEMINI_API_KEY="AIza..."
+
+# Auth (Required)
+BETTER_AUTH_SECRET="your-secret-here"
+
+# File Storage (Required for uploads)
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
+
+# Optional
+PROMETHEUS_PORT=9090
+GRAFANA_PASSWORD="admin"
+```
+
+### Docker Compose Configuration
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+
+services:
+  portal:
+    build:
+      context: ./apps/portal
+      dockerfile: ../../docker/Dockerfile.portal
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - NEXT_PUBLIC_BETTER_AUTH_URL=${NEXT_PUBLIC_BETTER_AUTH_URL:-http://localhost:3000}
+    depends_on:
+      - db
+      - intelligence
+      - gateway
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: ../docker/Dockerfile.gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - INTELLIGENCE_URL=intelligence:28080
+    depends_on:
+      - intelligence
+
+  intelligence:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.intelligence
+    ports:
+      - "28080:28080"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CHROMA_HOST=chroma
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - chroma
+      - db
+
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "7777:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  db:
+    image: pgvector/pgvector:pg15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=kairos
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+
+volumes:
+  pg_data:
+  chroma_data:
+```
+
+### Useful Commands
+
+```bash
+# View logs
+docker compose logs -f portal
+docker compose logs -f intelligence
+
+# Restart a service
+docker compose restart intelligence
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes
+docker compose down -v
+
+# Rebuild after changes
+docker compose up -d --build
+```
+
 ---
 
-## 1. Supabase Setup
+## 2. Vercel + Supabase Deployment
 
-### Create Project
+### Supabase Setup
 
-1. Go to [supabase.com](https://supabase.com) and create a new project
-2. Note your **Project URL** and **Anon Key** from Settings > API
-3. Go to **Settings > Database** and note the **Connection string** (Transaction mode)
+1. Create project at [supabase.com](https://supabase.com)
+2. Enable pgvector extension:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
+3. Get connection strings from Settings > Database:
+   - **Transaction mode** (for `DATABASE_URL`)
+   - **Session mode** (for `DIRECT_URL`)
 
-### Enable pgvector
-
-1. Go to **SQL Editor** in the Supabase dashboard
-2. Run: `CREATE EXTENSION IF NOT EXISTS vector;`
-3. Verify: `SELECT * FROM pg_extension WHERE extname = 'vector';`
-
-### Get Connection Strings
-
-From **Settings > Database > Connection string**:
-
-- **Transaction mode** (for Prisma `DATABASE_URL`):
-  ```
-  postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true
-  ```
-
-- **Session mode** (for Prisma `DIRECT_URL`):
-  ```
-  postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres
-  ```
-
----
-
-## 2. GitHub OAuth Setup
-
-### Create OAuth App
+### GitHub OAuth Setup
 
 1. Go to [github.com/settings/developers](https://github.com/settings/developers)
-2. Click **New OAuth App**
-3. Fill in:
-   - **Application name:** Kairos
+2. Create new OAuth App:
    - **Homepage URL:** `https://your-domain.vercel.app`
-   - **Authorization callback URL:** `https://your-domain.vercel.app/api/auth/callback/github`
-4. Click **Register application**
-5. Copy the **Client ID**
-6. Click **Generate a new client secret** and copy it
+   - **Callback URL:** `https://your-domain.vercel.app/api/auth/callback/github`
 
-### Update Vercel Environment
+### Vercel Configuration
 
-After deployment, update the OAuth app with the production URL:
-- **Homepage URL:** `https://your-production-domain.vercel.app`
-- **Authorization callback URL:** `https://your-production-domain.vercel.app/api/auth/callback/github`
-
----
-
-## 3. Vercel Deployment
-
-### Import Repository
-
-1. Go to [vercel.com](https://vercel.com) and click **New Project**
-2. Import your GitHub repository
-3. Configure:
-   - **Framework Preset:** Next.js
+1. Import repository at [vercel.com](https://vercel.com)
+2. Configure:
+   - **Framework:** Next.js
    - **Root Directory:** `apps/portal`
    - **Build Command:** `npm run build`
-   - **Output Directory:** `.next`
-4. Click **Deploy** (will fail until env vars are set)
+3. Set environment variables in Settings
 
-### Set Environment Variables
+### Environment Variables for Vercel
 
-Go to **Settings > Environment Variables** and add:
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Supabase transaction mode connection string |
+| `DIRECT_URL` | Supabase session mode connection string |
+| `BETTER_AUTH_SECRET` | Random 32-byte base64 string |
+| `NEXT_PUBLIC_BETTER_AUTH_URL` | `https://your-domain.vercel.app` |
+| `OPENAI_API_KEY` | Your OpenAI API key |
+| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 
-| Variable | Value | Environment |
-|----------|-------|-------------|
-| `DATABASE_URL` | Supabase transaction mode connection string | Production |
-| `DIRECT_URL` | Supabase session mode connection string | Production |
-| `BETTER_AUTH_SECRET` | Random 32-byte base64 string | Production |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | `https://your-domain.vercel.app` | Production |
-| `OPENAI_API_KEY` | Your OpenAI API key | Production |
-| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID | Production |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | Production |
-| `CLOUDINARY_CLOUD_NAME` | Your Cloudinary cloud name | Production |
-| `CLOUDINARY_API_KEY` | Your Cloudinary API key | Production |
-| `CLOUDINARY_API_SECRET` | Your Cloudinary API secret | Production |
-
-### Generate BETTER_AUTH_SECRET
+### Generate Auth Secret
 
 ```bash
 openssl rand -base64 32
 ```
 
-### Deploy
+---
 
-1. Go to **Deployments** tab
-2. Click **Redeploy** on the latest deployment
-3. Wait for build to complete
-4. Visit your deployment URL
+## 3. Self-Hosted Deployment
+
+### Prerequisites
+
+- Linux server (Ubuntu 22.04+ recommended)
+- Docker and Docker Compose
+- Domain name with SSL
+- Reverse proxy (nginx/caddy)
+
+### Server Setup
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install Docker Compose
+sudo apt install docker-compose-plugin
+
+# Clone repository
+git clone https://github.com/ANUBprad/kairos.git /opt/kairos
+cd /opt/kairos
+
+# Configure environment
+cp .env.example .env
+nano .env  # Add your configuration
+
+# Start services
+docker compose up -d
+```
+
+### Reverse Proxy (Nginx)
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/gateway {
+        proxy_pass http://localhost:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+    }
+
+    location /api/intelligence {
+        proxy_pass http://localhost:28080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+    }
+}
+```
+
+### SSL with Let's Encrypt
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+```
 
 ---
 
-## 4. First Deployment
+## 4. Production Checklist
 
-### Run Database Migrations
+### Security
 
-After first deployment, the database schema needs to be applied:
+- [ ] Generate strong `BETTER_AUTH_SECRET`
+- [ ] Use environment variables for all secrets
+- [ ] Enable HTTPS with valid SSL certificate
+- [ ] Configure CORS for production domain only
+- [ ] Set up rate limiting
+- [ ] Enable audit logging
+- [ ] Review Cloudinary security settings
 
-1. Go to **Supabase SQL Editor**
-2. Run the Prisma migration SQL, or
-3. Connect to your database locally and run:
-   ```bash
-   DATABASE_URL="your-supabase-connection-string" npx prisma db push
-   ```
+### Database
 
-### Create First User
+- [ ] Enable pgvector extension
+- [ ] Set up automated backups
+- [ ] Configure connection pooling
+- [ ] Set up monitoring
+- [ ] Test backup restoration
 
-1. Visit your deployment URL
-2. Click **Sign Up**
-3. Create an account with email/password
-4. You become the organization owner
+### Monitoring
+
+- [ ] Configure Prometheus scraping
+- [ ] Set up Grafana dashboards
+- [ ] Configure alerting rules
+- [ ] Set up log aggregation
+- [ ] Monitor resource usage
+
+### Performance
+
+- [ ] Enable response caching
+- [ ] Configure connection limits
+- [ ] Set up CDN for static assets
+- [ ] Optimize database queries
+- [ ] Enable compression
+
+### Backup & Recovery
+
+- [ ] Automated database backups
+- [ ] Document backup restoration process
+- [ ] Test disaster recovery
+- [ ] Set up off-site backups
 
 ---
 
-## 5. Custom Domain (Optional)
-
-1. In Vercel, go to **Settings > Domains**
-2. Add your custom domain
-3. Update DNS records as instructed
-4. Update `NEXT_PUBLIC_BETTER_AUTH_URL` to your custom domain
-5. Update GitHub OAuth app callback URLs
-
----
-
-## 6. Troubleshooting
+## 5. Troubleshooting
 
 ### Build Fails
 
-- **Error:** `EINVAL: invalid argument, readlink`
-  - **Fix:** Delete `.next` directory and redeploy
+```bash
+# Clean Docker cache
+docker system prune -a
 
-- **Error:** `Prisma schema validation failed`
-  - **Fix:** Ensure `DATABASE_URL` is set correctly
+# Rebuild from scratch
+docker compose build --no-cache
+```
 
-### Authentication Issues
+### Database Connection Issues
 
-- **Error:** `OAuth callback URL mismatch`
-  - **Fix:** Ensure GitHub OAuth callback URL matches exactly:
-    ```
-    https://your-domain.vercel.app/api/auth/callback/github
-    ```
+```bash
+# Check PostgreSQL status
+docker compose exec db pg_isready
 
-- **Error:** `Invalid BETTER_AUTH_SECRET`
-  - **Fix:** Regenerate with `openssl rand -base64 32`
+# Test connection
+docker compose exec db psql -U postgres -d kairos -c "SELECT 1"
 
-### Database Issues
+# Enable pgvector
+docker compose exec db psql -U postgres -d kairos -c "CREATE EXTENSION IF NOT EXISTS vector;"
+```
 
-- **Error:** `relation "User" does not exist`
-  - **Fix:** Run `npx prisma db push` with your production database URL
+### Intelligence Engine Issues
 
-- **Error:** `pgvector extension not found`
-  - **Fix:** Run `CREATE EXTENSION IF NOT EXISTS vector;` in Supabase SQL Editor
+```bash
+# Check logs
+docker compose logs intelligence
 
-### File Upload Issues
+# Test health endpoint
+curl http://localhost:28080/health
 
-- **Error:** `Cloudinary upload failed`
-  - **Fix:** Verify `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
+# Restart service
+docker compose restart intelligence
+```
+
+### Vector Store Issues
+
+```bash
+# Check ChromaDB status
+curl http://localhost:7777/api/v1/heartbeat
+
+# List collections
+curl http://localhost:7777/api/v1/collections
+```
 
 ---
 
-## 7. Rollback Steps
+## 6. Rollback Procedures
 
 ### Rollback Vercel Deployment
 
-1. Go to **Deployments** tab
-2. Find the last working deployment
+1. Go to Vercel Dashboard > Deployments
+2. Find last working deployment
 3. Click **...** > **Promote to Production**
+
+### Rollback Docker Deployment
+
+```bash
+# List images
+docker images
+
+# Tag previous version
+docker tag kairos-portal:previous kairos-portal:latest
+
+# Restart with previous version
+docker compose up -d
+```
 
 ### Rollback Database
 
-If you need to rollback database changes:
+```bash
+# From backup
+docker compose exec db psql -U postgres -d kairos < backup.sql
 
-1. Go to Supabase **SQL Editor**
-2. Run the appropriate rollback SQL
-3. Or restore from a backup in **Settings > Database > Backups**
+# Or restore from Supabase dashboard
+```
 
 ---
 
-## 8. Environment Variables Reference
+## 7. Scaling
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (transaction mode for Supabase) |
-| `DIRECT_URL` | No | Direct connection string (session mode for Supabase) |
-| `BETTER_AUTH_SECRET` | Yes | Secret for signing auth tokens |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | No | Public URL of the app (defaults to http://localhost:3000) |
-| `OPENAI_API_KEY` | Yes* | OpenAI API key for embeddings and chat |
-| `GEMINI_API_KEY` | Yes* | Google Gemini API key (alternative to OpenAI) |
-| `GITHUB_CLIENT_ID` | No | GitHub OAuth Client ID |
-| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth Client Secret |
-| `CLOUDINARY_CLOUD_NAME` | Yes | Cloudinary cloud name for file storage |
-| `CLOUDINARY_API_KEY` | Yes | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Yes | Cloudinary API secret |
-| `AI_PROVIDER` | No | Default AI provider: `openai` or `gemini` (default: `openai`) |
-| `OPENAI_CHAT_MODEL` | No | OpenAI chat model (default: `gpt-4o-mini`) |
-| `OPENAI_EMBEDDING_MODEL` | No | OpenAI embedding model (default: `text-embedding-3-small`) |
-| `GEMINI_CHAT_MODEL` | No | Gemini chat model (default: `gemini-2.0-flash`) |
-| `GEMINI_EMBEDDING_MODEL` | No | Gemini embedding model (default: `text-embedding-004`) |
+### Horizontal Scaling
 
-*At least one AI provider API key is required.
+```yaml
+# docker-compose.yml
+services:
+  portal:
+    deploy:
+      replicas: 3
+  
+  gateway:
+    deploy:
+      replicas: 2
+  
+  intelligence:
+    deploy:
+      replicas: 3
+```
+
+### Vertical Scaling
+
+Increase resources for individual services:
+
+```yaml
+services:
+  intelligence:
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+```
+
+### Load Balancing
+
+Use a load balancer (HAProxy, Traefik) for multiple instances:
+
+```yaml
+# traefik.yml
+http:
+  routers:
+    portal:
+      rule: "Host(`your-domain.com`)"
+      service: portal
+      tls:
+        certResolver: letsencrypt
+  services:
+    portal:
+      loadBalancer:
+        servers:
+          - url: "http://portal1:3000"
+          - url: "http://portal2:3000"
+```
+
+---
+
+## 8. Monitoring & Alerting
+
+### Prometheus Configuration
+
+```yaml
+# prometheus.yml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'gateway'
+    static_configs:
+      - targets: ['gateway:8080']
+  
+  - job_name: 'intelligence'
+    static_configs:
+      - targets: ['intelligence:28080']
+```
+
+### Grafana Dashboards
+
+Import pre-built dashboards:
+1. Portal dashboard: `grafana/dashboards/portal.json`
+2. Gateway dashboard: `grafana/dashboards/gateway.json`
+3. Intelligence dashboard: `grafana/dashboards/intelligence.json`
+
+### Alert Rules
+
+```yaml
+# prometheus/alerts.yml
+groups:
+  - name: kairos
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+      
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected"
+```

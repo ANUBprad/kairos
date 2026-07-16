@@ -1,6 +1,9 @@
+import dynamic from "next/dynamic";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/server/auth-utils";
-import { AdvancedRetrievalDashboard } from "./advanced-retrieval-client";
+
+const AdvancedRetrievalDashboard = dynamic(() => import("./advanced-retrieval-client").then((m) => m.AdvancedRetrievalDashboard), {
+  loading: () => <div className="animate-pulse bg-surface rounded-lg h-96" />,
+});
 
 export const metadata = {
   title: "Advanced Retrieval | Kairos",
@@ -8,8 +11,6 @@ export const metadata = {
 
 export default async function AdvancedRetrievalPage() {
   try {
-    await requireSession();
-
     const { ensureDefaultOrg } = await import("@/lib/server/organization");
     const { project } = await ensureDefaultOrg();
 
@@ -23,7 +24,12 @@ export default async function AdvancedRetrievalPage() {
         where: { status: "completed" },
         orderBy: { createdAt: "desc" },
         take: 20,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          aggregatedMetrics: true,
+          createdAt: true,
           dataset: { select: { name: true } },
           _count: { select: { results: true } },
         },

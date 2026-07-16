@@ -13,8 +13,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 
 interface Citation {
   chunkId: string;
@@ -314,7 +313,7 @@ export function ChatInterface({ kbId, kbName }: Props) {
           </h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-label="Chat messages" aria-live="polite">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <Bot size={40} className="text-text-tertiary mb-4" />
@@ -346,9 +345,7 @@ export function ChatInterface({ kbId, kbName }: Props) {
                 }`}
               >
                 <div className="prose prose-sm prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {msg.content || (msg.role === "assistant" && isStreaming ? "..." : "")}
-                  </ReactMarkdown>
+                  <MarkdownRenderer content={msg.content || (msg.role === "assistant" && isStreaming ? "..." : "")} />
                 </div>
                 {msg.citations && msg.citations.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-border/50">

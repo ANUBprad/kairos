@@ -289,9 +289,33 @@ export async function listExperimentRuns(kbId: string) {
     where: { knowledgeBaseId: kbId },
     orderBy: { createdAt: "desc" },
     take: 50,
+    select: {
+      id: true,
+      query: true,
+      totalLatency: true,
+      chunkCount: true,
+      embeddingModel: true,
+      retrievalMode: true,
+      createdAt: true,
+    },
   });
 }
 
 export async function getExperimentRun(runId: string) {
-  return prisma.experimentRun.findUnique({ where: { id: runId } });
+  return prisma.experimentRun.findUnique({
+    where: { id: runId },
+    select: {
+      id: true,
+      query: true,
+      configSnapshot: true,
+      retrievedChunks: true,
+      metrics: true,
+      totalLatency: true,
+      chunkCount: true,
+      embeddingModel: true,
+      retrievalMode: true,
+      createdAt: true,
+      knowledgeBaseId: true,
+    },
+  });
 }

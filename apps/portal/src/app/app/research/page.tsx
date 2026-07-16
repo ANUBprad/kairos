@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/server/auth-utils";
 import { compareMetrics } from "@/lib/evaluation/significance";
 import { analyzeResearchIntelligence, type IntelligenceRun } from "@/lib/evaluation/research-intelligence";
 import { generateResearchPaper } from "@/lib/research-scientist";
@@ -23,8 +22,6 @@ export const metadata = {
 };
 
 export default async function ResearchPage() {
-  await requireSession();
-
   const { ensureDefaultOrg } = await import("@/lib/server/organization");
   const { project } = await ensureDefaultOrg();
 

@@ -60,7 +60,7 @@ export default function SecurityPage() {
                 <div className="flex items-center justify-center w-9 h-9 rounded-[10px] bg-brand/10 mb-4">
                   <Icon size={16} className="text-brand" />
                 </div>
-                <h3 className="text-sm font-semibold text-text-primary mb-2">{section.title}</h3>
+                <h2 className="text-sm font-semibold text-text-primary mb-2">{section.title}</h2>
                 <p className="text-sm text-text-secondary leading-relaxed">{section.desc}</p>
               </Card>
             );

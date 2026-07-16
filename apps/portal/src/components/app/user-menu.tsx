@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  LogOut,
   ChevronDown,
   LayoutDashboard,
   Settings,
@@ -12,7 +10,6 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { authClient } from "@/lib/client/auth-client";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/app/user-avatar";
 
@@ -24,7 +21,6 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ email, name, image, organizationName }: UserMenuProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -43,17 +39,6 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleSignOut = async () => {
-    setOpen(false);
-    try {
-      await authClient.signOut();
-    } catch {
-      // Sign out even if the API call fails (cookie will be cleared by browser)
-    }
-    router.push("/");
-    router.refresh();
-  };
 
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
@@ -85,7 +70,7 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
               <UserAvatar image={image} name={name} email={email} size="lg" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-text-primary truncate">
-                  {name || "User"}
+                  {name || "Demo User"}
                 </p>
                 <p className="text-xs text-text-tertiary truncate">{email}</p>
               </div>
@@ -134,16 +119,6 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
                   )}
                 />
               </div>
-            </button>
-          </div>
-
-          <div className="border-t border-border pt-1">
-            <button
-              onClick={handleSignOut}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-error"
-            >
-              <LogOut size={16} />
-              Sign out
             </button>
           </div>
         </div>

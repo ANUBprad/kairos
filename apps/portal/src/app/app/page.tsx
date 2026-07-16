@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/server/auth-utils";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -33,8 +32,6 @@ const PIPELINE_STAGES = [
 ];
 
 export default async function AppPage() {
-  await requireSession();
-
   const { ensureDefaultOrg } = await import("@/lib/server/organization");
   const { project } = await ensureDefaultOrg();
 

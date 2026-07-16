@@ -48,15 +48,15 @@ export function CTASection() {
 
       <ScrollReveal className="mt-16 text-center">
         <h2 className="text-[28px] font-semibold text-text-primary mb-4">
-          Start building explainable RAG systems
+          Explore the platform
         </h2>
         <p className="text-text-secondary mb-8 max-w-md mx-auto">
           Upload documents, run retrieval tests, and evaluate with statistical rigor.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button variant="primary" size="lg" asChild>
-            <Link href="/signup">
-              Get Started Free <ArrowRight size={16} />
+            <Link href="/app">
+              Explore Platform <ArrowRight size={16} />
             </Link>
           </Button>
           <Button variant="secondary" size="lg" asChild>

@@ -1,6 +1,9 @@
+import dynamic from "next/dynamic";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/server/auth-utils";
-import { RagChat } from "./rag-chat-client";
+
+const RagChat = dynamic(() => import("./rag-chat-client").then((m) => m.RagChat), {
+  loading: () => <div className="animate-pulse bg-surface rounded-lg h-96" />,
+});
 
 export const metadata = {
   title: "RAG Chat",
@@ -8,8 +11,6 @@ export const metadata = {
 
 export default async function RagChatPage() {
   try {
-    await requireSession();
-
     const { ensureDefaultOrg } = await import("@/lib/server/organization");
     const { project } = await ensureDefaultOrg();
 

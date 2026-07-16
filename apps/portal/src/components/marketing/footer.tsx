@@ -32,7 +32,6 @@ const footerColumns = [
     links: [
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
-      { label: "Cookies", href: "/cookies" },
     ],
   },
 ];
@@ -60,7 +59,7 @@ export function Footer() {
               />
             </Link>
             <p className="text-[13px] text-text-tertiary leading-relaxed max-w-[200px]">
-              RAG Research Platform
+              Open-source AI Research Platform
             </p>
           </div>
           {footerColumns.map((col) => (

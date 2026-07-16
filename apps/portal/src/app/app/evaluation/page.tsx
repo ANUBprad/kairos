@@ -1,6 +1,9 @@
+import dynamic from "next/dynamic";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/server/auth-utils";
-import { EvaluationDashboard } from "./evaluation-client";
+
+const EvaluationDashboard = dynamic(() => import("./evaluation-client").then((m) => m.EvaluationDashboard), {
+  loading: () => <div className="animate-pulse bg-surface rounded-lg h-96" />,
+});
 
 export const metadata = {
   title: "Evaluation",
@@ -8,8 +11,6 @@ export const metadata = {
 
 export default async function EvaluationPage() {
   try {
-    await requireSession();
-
     const { ensureDefaultOrg } = await import("@/lib/server/organization");
     const { project } = await ensureDefaultOrg();
 
@@ -31,13 +32,18 @@ export default async function EvaluationPage() {
       }),
       prisma.benchmarkDataset.findMany({
         orderBy: { createdAt: "desc" },
-        include: { _count: { select: { questions: true, runs: true } } },
+        select: { id: true, name: true, description: true, createdAt: true, _count: { select: { questions: true, runs: true } } },
       }),
       prisma.benchmarkRun.findMany({
         where: { status: "completed" },
         orderBy: { createdAt: "desc" },
         take: 20,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          aggregatedMetrics: true,
+          createdAt: true,
           dataset: { select: { name: true } },
           _count: { select: { results: true } },
         },

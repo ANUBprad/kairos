@@ -29,6 +29,7 @@ import type { RetrievalConfig } from "@/lib/retrieval/types";
 import { MetricCard, RadarChart, BarChart } from "@/lib/evaluation/visualization/charts";
 import { METRIC_DEFINITIONS, type ComparisonResult, type EvaluationReport } from "@/lib/evaluation/types";
 import { PageHeader } from "@/components/app/page-header";
+import { logger } from "@/lib/logger";
 
 interface RunMetric {
   id: string;
@@ -1130,7 +1131,7 @@ function LeaderboardTab({ runs }: { runs: BenchmarkRunSummary[] }) {
       setLeaderboard(result.entries);
       setTiers(result.tiers);
     } catch (e) {
-      console.error("Failed to load leaderboard", e);
+      logger.error("Failed to load leaderboard", { error: e instanceof Error ? e.message : String(e) });
     } finally {
       setLoading(false);
     }

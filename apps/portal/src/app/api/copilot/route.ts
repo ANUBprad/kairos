@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "@/lib/server/auth-utils";
 import { runCopilot } from "@/lib/copilot";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
@@ -8,12 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const rl = rateLimit(`copilot:${session.user.id}`, RATE_LIMITS.copilot);
+  const rl = rateLimit(`copilot:demo-user`, RATE_LIMITS.copilot);
   if (!rl.allowed) {
     return NextResponse.json(
       { error: "Rate limit exceeded" },

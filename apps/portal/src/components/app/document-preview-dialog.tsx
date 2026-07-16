@@ -12,8 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
 import { getDocument, getDocumentPreviewContent } from "@/lib/actions/document";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 
 interface PreviewResult {
   content: string | null;
@@ -264,11 +263,13 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
                   <div className="space-y-4">
                     {preview.type === "markdown" ? (
                       <div className="prose prose-sm prose-invert max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {preview.content.length > 100000
-                            ? preview.content.slice(0, 100000) + "\n\n*Content truncated...*"
-                            : preview.content}
-                        </ReactMarkdown>
+                        <MarkdownRenderer
+                          content={
+                            preview.content.length > 100000
+                              ? preview.content.slice(0, 100000) + "\n\n*Content truncated...*"
+                              : preview.content
+                          }
+                        />
                       </div>
                     ) : preview.type === "csv" ? (
                       renderCsvTable(preview.content)

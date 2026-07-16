@@ -14,26 +14,13 @@ import {
 } from "@/lib/retrieval/service";
 import type { RetrievalConfig, RetrievalResultDisplay } from "@/lib/retrieval/types";
 
-async function assertKbAccess(kbId: string, userId: string) {
+async function assertKbAccess(kbId: string, _userId: string) {
   const kb = await prisma.knowledgeBase.findUnique({
     where: { id: kbId },
-    select: {
-      project: {
-        select: {
-          organization: {
-            select: {
-              members: {
-                where: { userId },
-                select: { id: true },
-              },
-            },
-          },
-        },
-      },
-    },
+    select: { id: true },
   });
 
-  if (!kb || kb.project.organization.members.length === 0) {
+  if (!kb) {
     throw new Error("Knowledge base not found");
   }
 
@@ -99,13 +86,18 @@ export async function persistRun(
 export async function fetchRuns(kbId: string) {
   const session = await getServerSession();
   if (!session) return [];
+  await assertKbAccess(kbId, session.user.id);
   return listExperimentRuns(kbId);
 }
 
 export async function fetchRun(runId: string) {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
-  return getExperimentRun(runId);
+  const run = await getExperimentRun(runId);
+  if (run && "knowledgeBaseId" in run && run.knowledgeBaseId) {
+    await assertKbAccess(run.knowledgeBaseId as string, session.user.id);
+  }
+  return run;
 }
 
 export async function getKbDocuments(kbId: string) {

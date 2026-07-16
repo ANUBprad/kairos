@@ -508,7 +508,7 @@ export function ArchitectureViewer() {
           </div>
           <div className="relative w-64">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input type="text" placeholder="Search modules..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border bg-background/50 backdrop-blur focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow" />
+            <input type="text" placeholder="Search modules..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border bg-background/50 backdrop-blur focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow" aria-label="Search architecture modules" />
           </div>
         </div>
         <ArchitectureDiagram onSelectModule={(id) => setSelectedModule(selectedModule === id ? null : id)} selectedId={selectedModule} hoveredId={hoveredModule} onHoverModule={setHoveredModule} searchQuery={searchQuery} />

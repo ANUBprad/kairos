@@ -16,6 +16,7 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 interface NotebookEntry {
   id: string;
@@ -44,7 +45,7 @@ function saveEntries(entries: NotebookEntry[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
   } catch (error) {
-    console.error("Failed to save notebook entries:", error);
+    logger.error("Failed to save notebook entries", { error: error instanceof Error ? error.message : String(error) });
   }
 }
 

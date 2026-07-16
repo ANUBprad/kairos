@@ -1,6 +1,10 @@
+import dynamic from "next/dynamic";
 import { listKbsForLab } from "@/lib/actions/retrieval-lab";
-import { RetrievalLab } from "@/components/app/retrieval-lab";
 import { PageHeader } from "@/components/app/page-header";
+
+const RetrievalLab = dynamic(() => import("@/components/app/retrieval-lab").then((m) => m.RetrievalLab), {
+  loading: () => <div className="animate-pulse bg-surface rounded-lg h-96" />,
+});
 
 export const metadata = {
   title: "Retrieval Lab",

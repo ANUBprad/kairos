@@ -1,4 +1,3 @@
-import { requireSession } from "@/lib/server/auth-utils";
 import dynamic from "next/dynamic";
 
 const PublicationModeClient = dynamic(
@@ -20,6 +19,5 @@ export const metadata = {
 };
 
 export default async function PublicationPage() {
-  await requireSession();
   return <PublicationModeClient />;
 }

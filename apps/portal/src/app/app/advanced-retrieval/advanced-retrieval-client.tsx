@@ -11,6 +11,7 @@ import { executeRetrieval } from "@/lib/actions/retrieval-lab";
 import { BarChart, MetricCard } from "@/lib/evaluation/visualization/charts";
 import type { RetrievalConfig, RetrievalResultDisplay } from "@/lib/retrieval/types";
 import { PageHeader } from "@/components/app/page-header";
+import { logger } from "@/lib/logger";
 
 interface KB {
   id: string; name: string; retrievalConfig: unknown;
@@ -66,7 +67,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
       const result = await executeRetrieval(selectedKb, query.trim(), config, true);
       setResults(result);
     } catch (err) {
-      console.error("Advanced retrieval execution failed:", err);
+      logger.error("Advanced retrieval execution failed", { error: err instanceof Error ? err.message : String(err) });
     } finally {
       setLoading(false);
     }

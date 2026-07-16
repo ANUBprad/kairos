@@ -41,6 +41,10 @@ const nextConfig: NextConfig = {
     },
   ],
   poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: ['recharts', 'lucide-react', 'date-fns', '@radix-ui/react-icons'],
+  },
+  output: 'standalone',
 };
 
 export default nextConfig;
