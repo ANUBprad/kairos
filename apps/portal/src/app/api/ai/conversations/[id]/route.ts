@@ -6,7 +6,7 @@ import {
 } from "@/lib/ai/memory";
 import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { DEMO_USER_ID } from "@/lib/server/demo-user";
+import { ensureDemoUser } from "@/lib/server/demo-user";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +24,15 @@ export async function GET(
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
+    const userId = await ensureDemoUser();
     const conversation = await getConversation(id);
 
-    if (!conversation || conversation.userId !== DEMO_USER_ID) {
+    if (!conversation || conversation.userId !== userId) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     const duration = Math.round(performance.now() - start);
-    logger.info("Get conversation", { userId: DEMO_USER_ID, duration });
+    logger.info("Get conversation", { userId, duration });
     return NextResponse.json({ conversation });
   } catch (err) {
     const duration = Math.round(performance.now() - start);
@@ -53,10 +54,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    await deleteConversation(id, DEMO_USER_ID);
+    const userId = await ensureDemoUser();
+    await deleteConversation(id, userId);
 
     const duration = Math.round(performance.now() - start);
-    logger.info("Delete conversation", { userId: DEMO_USER_ID, duration });
+    logger.info("Delete conversation", { userId, duration });
     return NextResponse.json({ success: true });
   } catch (err) {
     const duration = Math.round(performance.now() - start);
@@ -95,10 +97,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Title too long" }, { status: 400 });
     }
 
-    await updateConversationTitle(id, title, DEMO_USER_ID);
+    const userId = await ensureDemoUser();
+    await updateConversationTitle(id, title, userId);
 
     const duration = Math.round(performance.now() - start);
-    logger.info("Update conversation", { userId: DEMO_USER_ID, duration });
+    logger.info("Update conversation", { userId, duration });
     return NextResponse.json({ success: true });
   } catch (err) {
     const duration = Math.round(performance.now() - start);

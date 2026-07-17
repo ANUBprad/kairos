@@ -12,7 +12,9 @@ export const metadata = {
 export default async function LineagePageRoute() {
   try {
     const { ensureDefaultOrg } = await import("@/lib/server/organization");
-    const { project } = await ensureDefaultOrg();
+    const result = await ensureDefaultOrg();
+    if (!result) throw new Error("No organization found");
+    const { project } = result;
 
     const benchmarkRuns = await prisma.benchmarkRun.findMany({
       where: { status: "completed", dataset: { knowledgeBase: { projectId: project.id } } },

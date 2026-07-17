@@ -11,19 +11,23 @@ interface Props {
 }
 
 export default async function ChatPage({ params }: Props) {
-  const { kbId } = await params;
+  try {
+    const { kbId } = await params;
 
-  const kb = await prisma.knowledgeBase.findUnique({
-    where: { id: kbId },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
+    const kb = await prisma.knowledgeBase.findUnique({
+      where: { id: kbId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
 
-  if (!kb) {
+    if (!kb) {
+      redirect("/app");
+    }
+
+    return <ChatInterface kbId={kbId} kbName={kb.name} />;
+  } catch {
     redirect("/app");
   }
-
-  return <ChatInterface kbId={kbId} kbName={kb.name} />;
 }

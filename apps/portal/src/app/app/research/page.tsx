@@ -22,10 +22,11 @@ export const metadata = {
 };
 
 export default async function ResearchPage() {
-  const { ensureDefaultOrg } = await import("@/lib/server/organization");
-  const { project } = await ensureDefaultOrg();
-
   try {
+    const { ensureDefaultOrg } = await import("@/lib/server/organization");
+    const result = await ensureDefaultOrg();
+    if (!result) throw new Error("No organization found");
+    const { project } = result;
     const [
       knowledgeBases,
       totalDocuments,

@@ -12,30 +12,34 @@ interface Props {
 }
 
 export default async function KnowledgeBasePage({ params }: Props) {
-  const { kbId } = await params;
+  try {
+    const { kbId } = await params;
 
-  const kb = await prisma.knowledgeBase.findUnique({
-    where: { id: kbId },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
+    const kb = await prisma.knowledgeBase.findUnique({
+      where: { id: kbId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
 
-  if (!kb) {
+    if (!kb) {
+      redirect("/app");
+    }
+
+    const documents = await listDocuments(kbId);
+
+    return (
+      <DocumentTable
+        items={documents.map((d) => ({
+          ...d,
+          createdAt: new Date(d.createdAt),
+        }))}
+        kbId={kbId}
+        kbName={kb.name}
+      />
+    );
+  } catch {
     redirect("/app");
   }
-
-  const documents = await listDocuments(kbId);
-
-  return (
-    <DocumentTable
-      items={documents.map((d) => ({
-        ...d,
-        createdAt: new Date(d.createdAt),
-      }))}
-      kbId={kbId}
-      kbName={kb.name}
-    />
-  );
 }

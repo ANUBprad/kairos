@@ -118,7 +118,9 @@ export async function listKbsForLab() {
   if (!session) return [];
 
   const { ensureDefaultOrg } = await import("@/lib/server/organization");
-  const { project } = await ensureDefaultOrg();
+  const orgResult = await ensureDefaultOrg();
+  if (!orgResult) return [];
+  const { project } = orgResult;
 
   return prisma.knowledgeBase.findMany({
     where: { projectId: project.id },

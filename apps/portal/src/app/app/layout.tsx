@@ -14,23 +14,25 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { orgId } = await getDemoOrgAndProject();
+  const result = await getDemoOrgAndProject();
 
-  const organization = await prisma.organization.findUnique({
-    where: { id: orgId },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      projects: {
+  const organization = result
+    ? await prisma.organization.findUnique({
+        where: { id: result.orgId },
         select: {
           id: true,
           name: true,
-          _count: { select: { knowledgeBases: true } },
+          slug: true,
+          projects: {
+            select: {
+              id: true,
+              name: true,
+              _count: { select: { knowledgeBases: true } },
+            },
+          },
         },
-      },
-    },
-  });
+      })
+    : null;
 
   return (
     <div className="flex min-h-screen bg-bg">

@@ -3,7 +3,7 @@ import { createConversation, listConversations } from "@/lib/ai/memory";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { DEMO_USER_ID, ensureDemoUser } from "@/lib/server/demo-user";
+import { ensureDemoUser } from "@/lib/server/demo-user";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +22,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid kbId format" }, { status: 400 });
     }
 
-    const conversations = await listConversations(kbId, DEMO_USER_ID);
+    const userId = await ensureDemoUser();
+    const conversations = await listConversations(kbId, userId);
     const duration = Math.round(performance.now() - start);
-    logger.info("List conversations", { userId: DEMO_USER_ID, count: conversations.length, duration });
+    logger.info("List conversations", { userId, count: conversations.length, duration });
     return NextResponse.json({ conversations });
   } catch (err) {
     const duration = Math.round(performance.now() - start);
@@ -70,18 +71,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Title too long" }, { status: 400 });
     }
 
-    await ensureDemoUser();
+    const userId = await ensureDemoUser();
 
     const conversation = await createConversation(
       kbId,
-      DEMO_USER_ID,
+      userId,
       title,
       model,
       provider,
     );
 
     const duration = Math.round(performance.now() - start);
-    logger.info("Create conversation", { userId: DEMO_USER_ID, kbId, duration });
+    logger.info("Create conversation", { userId, kbId, duration });
     return NextResponse.json({ conversation });
   } catch (err) {
     const duration = Math.round(performance.now() - start);

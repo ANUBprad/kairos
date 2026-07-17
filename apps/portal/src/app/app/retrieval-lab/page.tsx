@@ -11,20 +11,33 @@ export const metadata = {
 };
 
 export default async function RetrievalLabPage() {
-  const kbs = await listKbsForLab();
+  try {
+    const kbs = await listKbsForLab();
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="Retrieval Lab"
-        description="Test retrieval configurations interactively with real-time parameter adjustment."
-        purpose="Test retrieval configurations interactively."
-        relatedPages={[
-          { label: "Evaluation", href: "/app/evaluation" },
-          { label: "Advanced Retrieval", href: "/app/advanced-retrieval" },
-        ]}
-      />
-      <RetrievalLab kbs={kbs} />
-    </div>
-  );
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader
+          title="Retrieval Lab"
+          description="Test retrieval configurations interactively with real-time parameter adjustment."
+          purpose="Test retrieval configurations interactively."
+          relatedPages={[
+            { label: "Evaluation", href: "/app/evaluation" },
+            { label: "Advanced Retrieval", href: "/app/advanced-retrieval" },
+          ]}
+        />
+        <RetrievalLab kbs={kbs} />
+      </div>
+    );
+  } catch {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-text-primary">Error loading retrieval lab</h2>
+          <p className="mt-2 text-sm text-text-secondary">
+            Please try refreshing the page.
+          </p>
+        </div>
+      </div>
+    );
+  }
 }

@@ -36,7 +36,9 @@ export async function createKnowledgeBase(formData: FormData) {
     throw new Error("Description is too long");
   }
 
-  const { project } = await ensureDefaultOrg();
+  const orgResult = await ensureDefaultOrg();
+  if (!orgResult) throw new Error("No organization found. Run `npx prisma db seed` first.");
+  const { project } = orgResult;
 
   const kb = await prisma.knowledgeBase.create({
     data: {
@@ -56,7 +58,9 @@ export async function listKnowledgeBases() {
   const session = await getServerSession();
   if (!session) return [];
 
-  const { project } = await ensureDefaultOrg();
+  const orgResult = await ensureDefaultOrg();
+  if (!orgResult) return [];
+  const { project } = orgResult;
 
   return prisma.knowledgeBase.findMany({
     where: { projectId: project.id },
