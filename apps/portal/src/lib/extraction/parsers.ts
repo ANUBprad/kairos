@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import type { FileParser, ExtractionResult } from "./types";
 
 class TextParser implements FileParser {
@@ -6,6 +7,9 @@ class TextParser implements FileParser {
   }
 
   async parse(buffer: ArrayBuffer): Promise<ExtractionResult> {
+    if (buffer.byteLength === 0) {
+      throw new Error("Cannot parse empty file (0 bytes)");
+    }
     const text = new TextDecoder("utf-8").decode(buffer);
     return {
       text,
@@ -20,6 +24,9 @@ class MarkdownParser implements FileParser {
   }
 
   async parse(buffer: ArrayBuffer): Promise<ExtractionResult> {
+    if (buffer.byteLength === 0) {
+      throw new Error("Cannot parse empty file (0 bytes)");
+    }
     const text = new TextDecoder("utf-8").decode(buffer);
     return {
       text,
@@ -34,6 +41,9 @@ class CsvParser implements FileParser {
   }
 
   async parse(buffer: ArrayBuffer): Promise<ExtractionResult> {
+    if (buffer.byteLength === 0) {
+      throw new Error("Cannot parse empty file (0 bytes)");
+    }
     const text = new TextDecoder("utf-8").decode(buffer);
     const { parse } = await import("csv-parse/sync");
     const records = parse(text, {
@@ -58,9 +68,32 @@ class PdfParser implements FileParser {
   }
 
   async parse(buffer: ArrayBuffer): Promise<ExtractionResult> {
-    const { PDFParse } = await import("pdf-parse");
+    if (buffer.byteLength === 0) {
+      throw new Error("Cannot parse empty PDF (0 bytes)");
+    }
+
+    let PDFParse: new (opts: { data: ArrayBuffer }) => { getText(): Promise<{ text: string; total: number; pages: unknown[] }> };
+    try {
+      const mod = await import("pdf-parse");
+      PDFParse = mod.PDFParse as typeof PDFParse;
+    } catch {
+      throw new Error("pdf-parse module is not installed. Run: npm install pdf-parse");
+    }
+
+    if (!PDFParse) {
+      throw new Error("pdf-parse does not export PDFParse. Check the installed version.");
+    }
+
     const pdf = new PDFParse({ data: buffer });
     const result = await pdf.getText();
+
+    if (result.text.length === 0) {
+      logger.warn("[Extraction] pdf-parse returned empty text", {
+        total: result.total,
+        pagesRendered: result.pages?.length,
+      });
+    }
+
     return {
       text: result.text,
       metadata: {
@@ -78,6 +111,9 @@ class DocxParser implements FileParser {
   }
 
   async parse(buffer: ArrayBuffer): Promise<ExtractionResult> {
+    if (buffer.byteLength === 0) {
+      throw new Error("Cannot parse empty DOCX (0 bytes)");
+    }
     const mammoth = await import("mammoth");
     const result = await mammoth.extractRawText({ buffer: Buffer.from(buffer) });
     return {

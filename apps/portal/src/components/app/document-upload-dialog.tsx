@@ -12,6 +12,8 @@ import {
   RefreshCw,
   XCircle,
   Ban,
+  FileSpreadsheet,
+  FileType,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -40,6 +42,16 @@ function getMimeCategory(mime: string): string {
   return ALLOWED_MIME_PREFIXES.find((p) => mime.startsWith(p)) || "";
 }
 
+function getFileIcon(fileName: string) {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "pdf": return <FileText size={18} className="shrink-0 text-error" />;
+    case "docx": return <FileType size={18} className="shrink-0 text-info" />;
+    case "csv": return <FileSpreadsheet size={18} className="shrink-0 text-success" />;
+    default: return <FileText size={18} className="shrink-0 text-text-secondary" />;
+  }
+}
+
 interface Props {
   kbId: string;
   open: boolean;
@@ -53,6 +65,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const abortRef = useRef<Map<string, boolean>>(new Map());
+  const intervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const dropRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +74,10 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
       setUploadQueue([]);
       setIsUploading(false);
       abortRef.current.clear();
+      for (const interval of intervalsRef.current.values()) {
+        clearInterval(interval);
+      }
+      intervalsRef.current.clear();
     }
   }, [open]);
 
@@ -212,6 +229,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
           ),
         );
       }, 300);
+      intervalsRef.current.set(item.id, progressInterval);
 
       try {
         const formData = new FormData();
@@ -220,6 +238,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         await uploadDocument(kbId, formData);
 
         clearInterval(progressInterval);
+        intervalsRef.current.delete(item.id);
 
         if (abortRef.current.get(item.id)) continue;
 
@@ -231,6 +250,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         successCount++;
       } catch (err) {
         clearInterval(progressInterval);
+        intervalsRef.current.delete(item.id);
 
         if (abortRef.current.get(item.id)) continue;
 
@@ -260,10 +280,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
       toast.error(`${failCount} file(s) failed to upload`);
     }
 
-    const hasPending = uploadQueue.some(
-      (f) => f.status === "pending" || f.status === "uploading",
-    );
-    if (!hasPending && successCount > 0 && failCount === 0) {
+    if (successCount > 0 && failCount === 0) {
       onOpenChange(false);
     }
   };
@@ -375,7 +392,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
                   ) : item.status === "uploading" ? (
                     <Loader2 size={18} className="shrink-0 animate-spin text-brand" />
                   ) : (
-                    <FileText size={18} className="shrink-0 text-text-secondary" />
+                    getFileIcon(item.file.name)
                   )}
 
                   <div className="min-w-0 flex-1">

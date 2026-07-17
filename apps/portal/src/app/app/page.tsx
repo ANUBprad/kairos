@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   ArrowRight,
   Microscope,
@@ -12,14 +13,33 @@ import {
   Zap,
 } from "lucide-react";
 import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
-import { ResearchNote } from "@/components/research/research-note";
-import { Pipeline } from "@/components/research/pipeline";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/app/page-header";
 import { PremiumCard, CardHeader, CardTitle, CardDescription } from "@/components/ui/premium-card";
 import { MetricCard } from "@/components/ui/metric-display";
-import { ProgressRing, ProgressBar } from "@/components/ui/progress";
-import { Timeline, type TimelineStep } from "@/components/ui/timeline";
+
+const ResearchNote = dynamic(
+  () => import("@/components/research/research-note").then((m) => m.ResearchNote),
+);
+const Pipeline = dynamic(
+  () => import("@/components/research/pipeline").then((m) => m.Pipeline),
+);
+const ProgressRing = dynamic(
+  () => import("@/components/ui/progress").then((m) => m.ProgressRing),
+);
+const ProgressBar = dynamic(
+  () => import("@/components/ui/progress").then((m) => m.ProgressBar),
+);
+const Timeline = dynamic(
+  () => import("@/components/ui/timeline").then((m) => m.Timeline),
+);
+
+type TimelineStep = {
+  id: string;
+  label: string;
+  status: "completed" | "current" | "upcoming";
+  description: string;
+};
 
 const PIPELINE_STAGES = [
   { id: "documents", label: "Documents", icon: "FileText", color: "bg-blue-500" },
@@ -111,7 +131,6 @@ export default async function AppPage() {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Research Overview"
-        description="Your RAG research command center"
         purpose="Your central command center for RAG research experiments."
         nextAction={{ label: "New Experiment", href: "/app/experiment-builder" }}
         relatedPages={[
@@ -130,11 +149,10 @@ export default async function AppPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-text-primary tracking-tight">Research Dashboard</h1>
-              <p className="text-sm text-text-secondary">Your RAG research command center</p>
             </div>
           </div>
 
-          {/* Today's Research Brief */}
+          {/* Metrics Strip */}
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-[var(--radius-lg)] bg-surface/50 border border-border/50 p-4">
               <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider mb-1">Knowledge Bases</p>
@@ -380,6 +398,20 @@ export default async function AppPage() {
             <p className="mt-2 text-sm text-text-secondary max-w-md mx-auto">
               Start your RAG research journey by creating a knowledge base and uploading documents.
             </p>
+            <div className="mt-6 flex flex-col items-center gap-3 max-w-xs mx-auto">
+              <div className="flex items-center gap-3 text-xs text-text-tertiary w-full">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-brand font-semibold shrink-0">1</span>
+                <span>Create a knowledge base for your documents</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-text-tertiary w-full">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover font-semibold shrink-0">2</span>
+                <span>Upload PDFs, DOCX, TXT, MD, or CSV files</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-text-tertiary w-full">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover font-semibold shrink-0">3</span>
+                <span>Run retrieval tests and evaluate with metrics</span>
+              </div>
+            </div>
             <Button variant="primary" className="mt-6" asChild>
               <Link href="/app/knowledge-bases">Create Knowledge Base</Link>
             </Button>

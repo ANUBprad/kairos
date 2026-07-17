@@ -48,7 +48,7 @@ export function CTASection() {
 
       <ScrollReveal className="mt-16 text-center">
         <h2 className="text-[28px] font-semibold text-text-primary mb-4">
-          Explore the platform
+          Start building transparent AI
         </h2>
         <p className="text-text-secondary mb-8 max-w-md mx-auto">
           Upload documents, run retrieval tests, and evaluate with statistical rigor.

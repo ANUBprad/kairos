@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/README.md" alt="Kairos" width="0" height="0" />
+  <img src="docs/screenshots/hero.png" alt="Kairos" width="0" height="0" />
 </p>
 
 <h1 align="center">Kairos</h1>
@@ -251,15 +251,15 @@ Use the RAG Chat interface to ask questions and see exactly how answers are cons
 ### Prerequisites
 
 - Node.js 20+
-- Python 3.11+
-- Go 1.22+
 - PostgreSQL 15+ (with pgvector extension)
+- Python 3.11+ (optional — for intelligence engine)
+- Go 1.22+ (optional — for API gateway)
 - Docker (optional)
 
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-org/kairos.git
+git clone https://github.com/kairos-ai/kairos.git
 cd kairos
 
 # Frontend
@@ -313,7 +313,6 @@ Visit [http://localhost:3000](http://localhost:3000)
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string for Prisma ORM |
-| `BETTER_AUTH_SECRET` | Secret for signing auth tokens (`openssl rand -base64 32`) |
 
 ### Optional — AI Providers
 
@@ -334,14 +333,6 @@ Visit [http://localhost:3000](http://localhost:3000)
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name for file storage |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-
-### Optional — Authentication
-
-| Variable | Description |
-|----------|-------------|
-| `GITHUB_CLIENT_ID` | GitHub OAuth client ID |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret |
-| `NEXT_PUBLIC_BETTER_AUTH_URL` | Public auth URL (default: `http://localhost:3000`) |
 
 See [`.env.example`](.env.example) for the full configuration reference.
 
@@ -464,51 +455,6 @@ Kairos implements 12+ Information Retrieval metrics:
 | Cohen's d | Effect size measurement |
 | Cliff's delta | Non-parametric effect size |
 | Confidence intervals | 95% CI for all metrics |
-
----
-
-## Architecture Diagram
-
-```mermaid
-flowchart TB
-    subgraph Client["Client Layer"]
-        Browser["Web Browser"]
-    end
-
-    subgraph Portal["Next.js 15 Portal"]
-        Marketing["Marketing Pages"]
-        App["Research Workbench"]
-        API["API Routes"]
-    end
-
-    subgraph Backend["Backend Services"]
-        Gateway["Go API Gateway<br/>Chi Router · gRPC"]
-        Intelligence["Python Intelligence Engine<br/>FastAPI · NumPy · SciPy"]
-    end
-
-    subgraph Storage["Data Layer"]
-        PostgreSQL["PostgreSQL 15<br/>+ pgvector"]
-        ChromaDB["ChromaDB<br/>Vector Store"]
-        Cloudinary["Cloudinary<br/>File Storage"]
-    end
-
-    subgraph External["External Services"]
-        OpenAI["OpenAI API"]
-        Gemini["Google Gemini API"]
-    end
-
-    Browser --> Portal
-    Marketing --> App
-    App --> API
-    API --> Gateway
-    Gateway --> Intelligence
-    Gateway --> PostgreSQL
-    Intelligence --> ChromaDB
-    Intelligence --> OpenAI
-    Intelligence --> Gemini
-    App --> Cloudinary
-    App --> PostgreSQL
-```
 
 ---
 

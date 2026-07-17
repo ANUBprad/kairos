@@ -25,6 +25,9 @@ const MIME_MAP: Record<string, string> = {
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_DOWNLOAD_SIZE = 15 * 1024 * 1024;
+const FETCH_TIMEOUT_MS = 60_000;
+const MAX_BULK_OPERATIONS = 50;
 
 function getFileType(name: string, mime: string): string {
   const ext = name.split(".").pop()?.toLowerCase() || "";
@@ -114,9 +117,13 @@ async function logActivity(
   action: string,
   details?: Record<string, unknown>,
 ) {
-  await prisma.documentActivity.create({
-    data: { documentId, userId, action, details: (details || {}) as never },
-  });
+  try {
+    await prisma.documentActivity.create({
+      data: { documentId, userId, action, details: (details || {}) as never },
+    });
+  } catch {
+    // Activity logging failure should not fail the user operation
+  }
 }
 
 export async function uploadDocument(kbId: string, formData: FormData) {
@@ -231,15 +238,29 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 }
 
 async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer) {
+  const pipelineStart = Date.now();
   let stage = "init";
+
+  const meta: Record<string, unknown> = {
+    stage: "init",
+    startedAt: new Date().toISOString(),
+    fileType,
+    bufferProvided: !!existingBuffer,
+  };
+
   try {
     const doc = await prisma.document.findUnique({
       where: { id: docId },
       select: { id: true, storageUrl: true, knowledgeBaseId: true, fileType: true, metadata: true, uploadedById: true },
     });
-    if (!doc) return;
+    if (!doc) {
+      logger.warn("[Init] Document not found, aborting", { docId });
+      return;
+    }
 
+    logger.info("[Init] Starting pipeline", { docId, fileType, hasBuffer: !!existingBuffer });
     stage = "fetch";
+
     await prisma.document.update({
       where: { id: docId },
       data: { status: "EXTRACTING" },
@@ -248,17 +269,55 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
     let buffer = existingBuffer;
 
     if (!buffer && doc.storageUrl) {
-      const res = await fetch(doc.storageUrl);
-      if (!res.ok) throw new Error(`Failed to fetch file from storage: ${res.statusText}`);
-      const arrayBuffer = await res.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
+      logger.info("[Download] Fetching from storage", { docId, storageUrl: doc.storageUrl });
+      const t0 = Date.now();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      try {
+        const res = await fetch(doc.storageUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} fetching from storage`);
+
+        const contentLength = res.headers.get("content-length");
+        if (contentLength && parseInt(contentLength, 10) > MAX_DOWNLOAD_SIZE) {
+          throw new Error(`File too large: ${contentLength} bytes (max: ${MAX_DOWNLOAD_SIZE})`);
+        }
+
+        const arrayBuffer = await res.arrayBuffer();
+        if (arrayBuffer.byteLength === 0) {
+          throw new Error("Downloaded file is empty (0 bytes)");
+        }
+        if (arrayBuffer.byteLength > MAX_DOWNLOAD_SIZE) {
+          throw new Error(`Downloaded file too large: ${arrayBuffer.byteLength} bytes`);
+        }
+        buffer = Buffer.from(arrayBuffer);
+        logger.info("[Download] Complete", { docId, bytes: buffer.byteLength, ms: Date.now() - t0 });
+      } catch (fetchErr) {
+        clearTimeout(timeout);
+        if (fetchErr instanceof Error && fetchErr.name === "AbortError") {
+          throw new Error(`Download timed out after ${FETCH_TIMEOUT_MS / 1000}s`, { cause: fetchErr });
+        }
+        throw fetchErr;
+      }
+    } else if (buffer) {
+      logger.info("[Download] Using provided buffer", { docId, bytes: buffer.byteLength });
     }
 
-    if (!buffer) throw new Error("No file data available for processing");
+    if (!buffer) throw new Error("No file data available — no buffer provided and no storageUrl on document");
 
     stage = "extract";
+    logger.info("[Extraction] Converting buffer → ArrayBuffer", {
+      docId,
+      bufferByteLength: buffer.byteLength,
+      bufferByteOffset: buffer.byteOffset,
+      underlyingABLength: buffer.buffer.byteLength,
+    });
+
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+
+    logger.info("[Extraction] Starting extraction", { docId, arrayBufferByteLength: arrayBuffer.byteLength });
     const extraction = await extractText(arrayBuffer, fileType);
+    logger.info("[Extraction] Success", { docId, chars: extraction.metadata.characters, pages: extraction.metadata.pages });
 
     const existingMeta = doc.metadata as Record<string, unknown> | null;
     await prisma.document.update({
@@ -284,13 +343,17 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       select: { retrievalConfig: true },
     });
     const retrievalConfig = (kb?.retrievalConfig as { chunkStrategy?: string; chunkSize?: number; overlap?: number } | null) || {};
+    const tChunk = Date.now();
     const chunks = chunkText(extraction.text, {
       strategy: (retrievalConfig.chunkStrategy as "recursive" | "sentence" | "fixed" | "markdown" | "semantic") || "recursive",
       chunkSize: retrievalConfig.chunkSize ?? 1000,
       overlap: retrievalConfig.overlap ?? 200,
     });
+    logger.info("[Chunking] Complete", { docId, chunks: chunks.length, ms: Date.now() - tChunk });
 
     stage = "store";
+    logger.info("[Database] Writing chunks", { docId, chunkCount: chunks.length });
+    const tDb = Date.now();
     await prisma.$transaction(async (tx) => {
       await tx.documentChunk.createMany({
         data: chunks.map((chunk) => ({
@@ -316,27 +379,62 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
         },
       });
     });
+    logger.info("[Database] Write complete", { docId, ms: Date.now() - tDb });
 
-    // Fire-and-forget embedding generation
+    stage = "embed";
+    logger.info("[Embedding] Queuing embedding generation (fire-and-forget)", { docId });
     generateEmbeddings(docId).catch((embedErr) => {
-      logger.error(`Embedding failed for ${docId}`, { error: embedErr instanceof Error ? embedErr.message : "unknown" });
+      const errMsg = embedErr instanceof Error ? embedErr.message : String(embedErr);
+      const errStack = embedErr instanceof Error ? embedErr.stack : undefined;
+      logger.error("[Embedding] Failed", { docId, error: errMsg, stack: errStack });
+
+      prisma.document.update({
+        where: { id: docId },
+        data: {
+          status: "ERROR",
+          metadata: {
+            ...meta,
+            stage: "embed",
+            error: errMsg,
+            stack: errStack ?? null,
+            timestamp: new Date().toISOString(),
+            durationMs: Date.now() - pipelineStart,
+          } as never,
+        },
+      }).catch(() => {});
     });
+
+    meta.stage = "completed";
+    meta.durationMs = Date.now() - pipelineStart;
+    meta.extractedChars = extraction.metadata.characters;
+    meta.pages = extraction.metadata.pages;
+    meta.chunks = chunks.length;
+    logger.info("[Completed] Pipeline finished", { docId, ...meta });
   } catch (err) {
-    const stageMessages: Record<string, string> = {
-      init: "Failed to load document metadata",
-      fetch: "Failed to fetch file from storage",
-      extract: "Text extraction failed — file may be corrupted or password-protected",
-      chunk: "Text chunking failed",
-      store: "Failed to save processed chunks to database",
-    };
-    const message = stageMessages[stage] || "Processing failed";
-    logger.error(`Processing error for ${docId}`, { stage, error: err instanceof Error ? err.message : "unknown" });
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? err.stack : undefined;
+    const errName = err instanceof Error ? err.name : "Unknown";
+
+    meta.stage = stage;
+    meta.error = errMsg;
+    meta.errorName = errName;
+    meta.stack = errStack ?? null;
+    meta.timestamp = new Date().toISOString();
+    meta.durationMs = Date.now() - pipelineStart;
+
+    logger.error(`[Pipeline] Failed at stage "${stage}"`, {
+      docId,
+      stage,
+      error: errMsg,
+      errorName: errName,
+      stack: errStack,
+      durationMs: meta.durationMs,
+    });
+
     await prisma.document.update({
       where: { id: docId },
-      data: { status: "ERROR", metadata: { error: message } as never },
+      data: { status: "ERROR", metadata: meta as never },
     }).catch(() => {});
-  } finally {
-    revalidatePath(`/app`);
   }
 }
 
@@ -461,6 +559,7 @@ export async function bulkDeleteDocuments(formData: FormData) {
 
   const ids = formData.getAll("ids") as string[];
   if (ids.length === 0) throw new Error("No documents selected");
+  if (ids.length > MAX_BULK_OPERATIONS) throw new Error(`Cannot delete more than ${MAX_BULK_OPERATIONS} documents at once`);
 
   const docs = await prisma.document.findMany({
     where: { id: { in: ids } },
@@ -497,6 +596,7 @@ export async function bulkReprocessDocuments(formData: FormData) {
 
   const ids = formData.getAll("ids") as string[];
   if (ids.length === 0) throw new Error("No documents selected");
+  if (ids.length > MAX_BULK_OPERATIONS) throw new Error(`Cannot reprocess more than ${MAX_BULK_OPERATIONS} documents at once`);
 
   const docs = await prisma.document.findMany({
     where: { id: { in: ids } },
@@ -553,12 +653,23 @@ export async function getDocumentPreviewContent(docId: string) {
   else if (doc.fileType === "md" || doc.fileType === "markdown") type = "markdown";
 
   if (chunkCount > 0) {
+    const MAX_PREVIEW_CHARS = 200_000;
     const allContent = await prisma.documentChunk.findMany({
       where: { documentId: docId },
       orderBy: { index: "asc" },
       select: { content: true },
     });
-    content = allContent.map((c) => c.content).join("\n\n");
+    let charCount = 0;
+    const parts: string[] = [];
+    for (const chunk of allContent) {
+      if (charCount + chunk.content.length > MAX_PREVIEW_CHARS) {
+        parts.push(chunk.content.slice(0, MAX_PREVIEW_CHARS - charCount));
+        break;
+      }
+      parts.push(chunk.content);
+      charCount += chunk.content.length;
+    }
+    content = parts.join("\n\n");
   }
 
   return {

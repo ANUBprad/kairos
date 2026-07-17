@@ -40,6 +40,20 @@ export function KnowledgeBaseList({ items }: Props) {
         <p className="mt-2 max-w-sm text-center text-sm text-text-secondary">
           Create your first knowledge base to start uploading documents and building retrieval systems.
         </p>
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-3 text-xs text-text-tertiary">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-brand font-semibold">1</span>
+            Create a knowledge base
+          </div>
+          <div className="flex items-center gap-3 text-xs text-text-tertiary">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover font-semibold">2</span>
+            Upload PDFs, DOCX, TXT, MD, or CSV files
+          </div>
+          <div className="flex items-center gap-3 text-xs text-text-tertiary">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover font-semibold">3</span>
+            Run retrieval tests and evaluate results
+          </div>
+        </div>
         <Button variant="primary" className="mt-8" onClick={() => setCreateOpen(true)}>
           <Plus size={16} />
           Create knowledge base

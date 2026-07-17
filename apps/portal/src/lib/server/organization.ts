@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
+import { logger } from "@/lib/logger";
 
 /**
  * Returns the existing organization and its first project for the current
@@ -39,7 +40,8 @@ export const ensureDefaultOrg = cache(async () => {
     if (!project) return null;
 
     return { organization, project };
-  } catch {
+  } catch (err) {
+    logger.warn("ensureDefaultOrg failed", { error: err instanceof Error ? err.message : String(err) });
     return null;
   }
 });

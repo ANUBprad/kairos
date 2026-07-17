@@ -122,7 +122,8 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
   useEffect(() => {
     if (docId) {
       previousFocusRef.current = document.activeElement as HTMLElement;
-      setTimeout(() => dialogRef.current?.focus(), 100);
+      const timer = setTimeout(() => dialogRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
     } else {
       previousFocusRef.current?.focus();
     }
@@ -155,6 +156,7 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
 
   useEffect(() => {
     if (!docId) return;
+    let cancelled = false;
     setLoading(true);
     setError(null);
     setViewMode("content");
@@ -164,13 +166,19 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
       getDocumentPreviewContent(docId),
     ])
       .then(([docData, previewData]) => {
+        if (cancelled) return;
         setDoc(docData as unknown as DocumentData);
         setPreview(previewData);
       })
       .catch((err) => {
+        if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to load preview");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
   }, [docId]);
 
   if (!docId) return null;
@@ -379,6 +387,24 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
                     <p className="mt-0.5 text-sm text-text-primary">
                       {String(metadata.columns)}
                     </p>
+                  </div>
+                )}
+                {(preview?.status === "ERROR" || doc?.status === "ERROR") && metadata?.error != null && (
+                  <div>
+                    <p className="text-[11px] text-text-tertiary">Error</p>
+                    <p className="mt-0.5 text-xs text-error break-words">
+                      {String(metadata.error)}
+                    </p>
+                    {metadata.stage != null && (
+                      <p className="mt-1 text-[11px] text-text-tertiary">
+                        Failed at: {String(metadata.stage)}
+                      </p>
+                    )}
+                    {metadata.durationMs != null && (
+                      <p className="mt-0.5 text-[11px] text-text-tertiary">
+                        Duration: {String(metadata.durationMs)}ms
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

@@ -21,16 +21,20 @@ export function SettingsPage() {
   const [selectedModel, setSelectedModel] = useState<string>("gpt-4o-mini");
 
   useEffect(() => {
-    fetch("/api/ai/settings")
+    const controller = new AbortController();
+    fetch("/api/ai/settings", { signal: controller.signal })
       .then((res) => res.json())
       .then((data: SettingsData) => {
         setSettings(data);
         setSelectedProvider(data.defaultProvider || "openai");
       })
-      .catch(() => {
+      .catch((err) => {
+        if (err.name === "AbortError") return;
         setSettings({ providers: {}, defaultProvider: "openai" });
       })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {

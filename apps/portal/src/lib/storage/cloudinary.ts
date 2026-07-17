@@ -1,6 +1,8 @@
 import { v2 as cloudinary } from "cloudinary";
 import type { StorageFile, StorageProvider } from "./types";
 
+const UPLOAD_TIMEOUT_MS = 120_000;
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -12,6 +14,11 @@ export class CloudinaryStorageProvider implements StorageProvider {
     const publicId = path || fileName.replace(/\.[^.]+$/, "");
 
     return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        uploadStream.destroy(new Error(`Cloudinary upload timed out after ${UPLOAD_TIMEOUT_MS / 1000}s`));
+        reject(new Error(`Cloudinary upload timed out after ${UPLOAD_TIMEOUT_MS / 1000}s`));
+      }, UPLOAD_TIMEOUT_MS);
+
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           public_id: publicId,
@@ -19,6 +26,7 @@ export class CloudinaryStorageProvider implements StorageProvider {
           access_mode: "public",
         },
         (err, result) => {
+          clearTimeout(timer);
           if (err || !result) {
             reject(new Error(err?.message || "Cloudinary upload failed"));
             return;
@@ -30,6 +38,11 @@ export class CloudinaryStorageProvider implements StorageProvider {
           });
         },
       );
+
+      uploadStream.on("error", (streamErr) => {
+        clearTimeout(timer);
+        reject(new Error(streamErr.message || "Cloudinary upload stream error"));
+      });
 
       uploadStream.end(buffer);
     });

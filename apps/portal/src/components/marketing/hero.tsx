@@ -297,7 +297,7 @@ export function Hero() {
               <p className="text-[15px] sm:text-[17px] text-text-secondary leading-relaxed max-w-[440px]">
                 Upload documents. Experiment with retrieval strategies.
                 Inspect every stage of the pipeline. Evaluate with statistical rigor.
-                Understand <em>why</em> your RAG system works — or why it doesn&apos;t.
+                Finally understand <em>why</em> your RAG system works — or why it doesn&apos;t.
               </p>
             </motion.div>
 

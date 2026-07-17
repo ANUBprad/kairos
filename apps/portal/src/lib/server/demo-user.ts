@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 const DEMO_USER_EMAIL = "demo@kairos.dev";
 const DEMO_USER_NAME = "Demo User";
@@ -24,19 +25,24 @@ export interface DemoSession {
 export async function ensureDemoUser(): Promise<string> {
   if (cachedUserId) return cachedUserId;
 
-  const user = await prisma.user.upsert({
-    where: { email: DEMO_USER_EMAIL },
-    update: {},
-    create: {
-      email: DEMO_USER_EMAIL,
-      name: DEMO_USER_NAME,
-      emailVerified: true,
-    },
-    select: { id: true },
-  });
+  try {
+    const user = await prisma.user.upsert({
+      where: { email: DEMO_USER_EMAIL },
+      update: {},
+      create: {
+        email: DEMO_USER_EMAIL,
+        name: DEMO_USER_NAME,
+        emailVerified: true,
+      },
+      select: { id: true },
+    });
 
-  cachedUserId = user.id;
-  return user.id;
+    cachedUserId = user.id;
+    return user.id;
+  } catch (err) {
+    logger.error("ensureDemoUser failed", { error: err instanceof Error ? err.message : String(err) });
+    throw new Error("Failed to initialize demo user. Check that the database is available.", { cause: err });
+  }
 }
 
 /**

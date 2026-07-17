@@ -15,12 +15,16 @@ const faqs = [
     a: "LangChain and LlamaIndex are frameworks for assembling RAG pipelines. Kairos is a platform for studying and experimenting with every stage of the RAG pipeline — from chunking to retrieval to prompt construction — with full observability into each step.",
   },
   {
+    q: "Do I need an API key to try it?",
+    a: "No. Kairos runs in demo mode by default — no authentication required. Upload documents, run retrieval tests, and explore the interface immediately. Bring your own API keys when you're ready to use LLM features.",
+  },
+  {
     q: "What embedding providers do you support?",
     a: "Kairos supports OpenAI (text-embedding-3-small, text-embedding-3-large) and Gemini (text-embedding-004). The architecture supports adding local models like BGE, E5, MiniLM, and Ollama.",
   },
   {
-    q: "Do I need to host anything?",
-    a: "The platform runs locally via Docker Compose. Sign up with GitHub, upload documents, and start experimenting with retrieval strategies. Self-hosting is available.",
+    q: "Is my data private?",
+    a: "Yes. Kairos is self-hosted — your documents never leave your infrastructure. All data stays on your PostgreSQL database. No data is sent to external services unless you configure an AI provider.",
   },
   {
     q: "What LLMs do you support for generation?",
@@ -37,10 +41,6 @@ const faqs = [
   {
     q: "How does the explainable pipeline work?",
     a: "After every query in RAG Chat, the platform displays each stage: user query, retrieval configuration, retrieved chunks with similarity scores, prompt construction, and the final LLM response with citations.",
-  },
-  {
-    q: "What about security?",
-    a: "All data is encrypted in transit (TLS 1.3) and at rest. API keys are hashed with SHA-256. Authentication uses GitHub OAuth. Self-hosted options are available for air-gapped environments.",
   },
 ];
 

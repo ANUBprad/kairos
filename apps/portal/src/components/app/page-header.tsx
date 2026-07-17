@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {
   title: string;
-  description: string;
+  description?: string;
   purpose: string;
   nextAction?: { label: string; href: string };
   relatedPages?: { label: string; href: string }[];
@@ -30,7 +30,7 @@ export function PageHeader({
           <h1 className="text-2xl font-bold tracking-tight text-text-primary">
             {title}
           </h1>
-          <p className="text-sm text-text-secondary max-w-2xl">{description}</p>
+          {description && <p className="text-sm text-text-secondary max-w-2xl">{description}</p>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {docLink && (
