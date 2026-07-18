@@ -488,3 +488,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 <p align="center">
   Built with care for the RAG research community.
 </p>
+
+## Support
+
+If you found Kairos useful, consider giving the repository a ⭐ on GitHub.
