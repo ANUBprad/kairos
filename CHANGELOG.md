@@ -4,6 +4,46 @@ All notable changes to the Kairos project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.0-rc1] - 2026-07-18
+
+### Added
+- Persistent BM25 inverted index (build-once, query-many)
+- Worker pool for concurrent ingestion (configurable workers, exponential backoff)
+- LRU retrieval cache with TTL, namespace invalidation, and Prometheus metrics
+- Streaming document loader with bounded memory and cancellation support
+- Upload validation with magic-byte MIME detection and PDF bomb detection
+- Structured JSON logging with correlation IDs
+- OpenTelemetry tracing bridge with structured logging fallback
+- Request context propagation (trace ID, namespace, user agent)
+- 17 new Prometheus metrics (ingestion timing, cache ratios, connection counts)
+- Multi-stage Docker builds for all Python services (25-98% image reduction)
+- Resource limits on all Docker Compose services
+- Health checks with startup probes on all services
+- Distroless runtime for Go gateway
+- Integration tests (29 tests covering ingestion, caching, BM25, chunking, pipelines)
+- Stress tests (10 tests covering concurrent access, memory pressure, thread safety)
+- Load testing suite (10/25/50/100 concurrent users with markdown/JSON reports)
+- Memory profiling suite (leak detection, allocation analysis, thread safety)
+- RAG evaluation framework (BM25 vs Dense vs Hybrid with Recall/Precision/MRR/nDCG)
+- CODEOWNERS file
+- RELEASE_NOTES.md
+- Showcase-quality README with Mermaid diagrams, badges, deployment guide
+
+### Fixed
+- BM25 per-query corpus loading replaced with persistent index
+- Ingestion pipeline now records per-stage timing
+- Go gateway graceful shutdown now stops worker pool before HTTP server
+- Job tracker TTL eviction prevents memory leaks from completed jobs
+
+### Changed
+- Docker images reduced from ~2GB to ~1.5GB (Python) and ~800MB to ~15MB (Go)
+- All Docker services now have CPU and memory resource limits
+- All Docker services now have health checks with appropriate intervals
+- Ingestion queue now supports configurable worker count (default 4)
+- Ingestion jobs now retry up to 3 times with exponential backoff
+- Error messages sanitized to prevent information leakage
+- Python cache bytecode disabled in Docker images (PYTHONDONTWRITEBYTECODE=1)
+
 ## [Unreleased]
 
 ### Added

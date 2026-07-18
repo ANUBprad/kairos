@@ -35,7 +35,7 @@ Keep PRs focused on a single change. Write a clear description of what changed a
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - Python 3.11+
 - Docker and Docker Compose
 - PostgreSQL (or use the Docker Compose database)
@@ -54,10 +54,8 @@ npm run dev
 ### Backend (Python Intelligence Layer)
 
 ```bash
-cd intelligence
 pip install -r requirements.txt
-# or with poetry
-poetry install
+python -m intelligence.main
 ```
 
 ### Go Gateway
@@ -65,13 +63,13 @@ poetry install
 ```bash
 cd gateway
 go mod download
-go run .
+go run main.go
 ```
 
 ### Docker Compose (Full Stack)
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
 ## Code Style
@@ -95,6 +93,22 @@ docker compose up
 - Standard Go formatting (`gofmt`)
 - `go vet` and `staticcheck` before committing
 
+## Running Tests
+
+```bash
+# Frontend
+cd apps/portal && npm test
+
+# Python — full suite
+python -m pytest tests/ -v
+
+# Python — targeted subset (fast)
+python -m pytest tests/test_phase_b_integration.py tests/test_phase_b_stress.py -v
+
+# Go
+cd gateway && go test ./...
+```
+
 ## Pull Request Process
 
 1. Ensure your branch is up to date with `main`
@@ -112,13 +126,12 @@ Kairos is built around the idea that **different queries require different retri
 
 ```
 Client (Next.js Portal)
-  → Go API Gateway
-    → gRPC
-      → Python Intelligence Layer
-        → Query Classification
-        → Retrieval Planning
-        → Retrieval Execution
-        → Response Assembly
+  → Go API Gateway (Chi + gRPC)
+    → Python Intelligence Engine
+      → Query Classification
+      → Retrieval Planning
+      → Retrieval Execution (BM25 / Dense / Hybrid / Multi-hop)
+      → Response Assembly
 ```
 
 ### Key Components
@@ -126,11 +139,11 @@ Client (Next.js Portal)
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | Portal | `apps/portal/` | Next.js frontend — knowledge bases, experiments, AI copilot |
-| Gateway | `gateway/` | Go API gateway — routing, auth, rate limiting |
+| Gateway | `gateway/` | Go API gateway — routing, auth, rate limiting, caching |
 | Intelligence | `intelligence/` | Python — query classification, retrieval, embeddings, evaluation |
 | Proto | `proto/` | gRPC contract definitions |
 | SDK | `sdk/` | Python client SDK |
-| Benchmarks | `benchmarks/` | Evaluation datasets and results |
+| Benchmarks | `benchmarks/` | Evaluation datasets, load tests, profiling |
 
 ### Data Flow
 
@@ -149,41 +162,15 @@ kairos/
 ├── intelligence/        # Python intelligence layer
 ├── proto/               # gRPC contracts
 ├── sdk/                 # Python client SDK
-├── benchmarks/          # Evaluation datasets
-├── docker/              # Dockerfiles
+├── benchmarks/          # Evaluation datasets and load tests
+├── docker/              # Multi-stage Dockerfiles
 ├── docs/                # Architecture and operations docs
 ├── scripts/             # Build, release, benchmark scripts
-├── tests/               # Integration tests
+├── tests/               # Integration and stress tests
 └── examples/            # Usage examples
 ```
 
-## Running Tests
-
-```bash
-# Frontend
-cd apps/portal && npm test
-
-# Python
-cd intelligence && pytest
-
-# Go
-cd gateway && go test ./...
-
-# Integration
-cd tests && pytest
-```
-
 ## Documentation
-
-### Running Docs Locally
-
-```bash
-cd docs
-npm install
-npm run dev
-```
-
-The documentation site will be available at `http://localhost:3000`. Edits to Markdown files in `docs/` will hot-reload automatically.
 
 ### Mermaid Diagram Syntax
 
@@ -199,19 +186,6 @@ graph TD
 ````
 
 Supported types: `graph`, `sequenceDiagram`, `classDiagram`, `stateDiagram`, `gantt`, `pie`. See the [Mermaid docs](https://mermaid-js.github.io/mermaid/) for full syntax.
-
-### Documentation File Structure
-
-```
-docs/
-├── architecture/    # System design and component docs
-├── guides/          # Step-by-step tutorials
-├── api/             # API reference
-├── concepts/        # Conceptual explanations
-└── assets/          # Images and diagrams
-```
-
-Place new documentation under the appropriate subdirectory. Use descriptive filenames in `kebab-case` (e.g., `query-classification.md`).
 
 ## Code of Conduct
 

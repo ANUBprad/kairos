@@ -5,16 +5,10 @@ RUN go mod download
 COPY gateway/templates /app/templates
 COPY gateway/static /app/static
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o kairos-gateway ./gateway
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o kairos-gateway ./gateway
 
-FROM debian:bookworm-slim
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-RUN adduser --disabled-password --gecos "" kairos
-WORKDIR /app
-COPY --from=builder --chown=kairos:kairos /app/kairos-gateway .
-COPY --from=builder --chown=kairos:kairos /app/templates ./templates
-COPY --from=builder --chown=kairos:kairos /app/static ./static
-USER kairos
+FROM gcr.io/distroless/static-debian12
+COPY --from=builder /app/kairos-gateway /app/kairos-gateway
+COPY --from=builder /app/templates /app/templates
+COPY --from=builder /app/static /app/static
 ENTRYPOINT ["/app/kairos-gateway"]

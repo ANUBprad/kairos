@@ -58,6 +58,38 @@ var (
 		},
 		[]string{"namespace"},
 	)
+
+	IngestionRetries = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "kairos_ingestion_retries_total",
+			Help: "Total number of ingestion retries",
+		},
+		[]string{"namespace"},
+	)
+
+	IngestionJobDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "kairos_ingestion_job_duration_seconds",
+			Help:    "Duration of completed ingestion jobs",
+			Buckets: []float64{0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0},
+		},
+		[]string{"status"},
+	)
+
+	IngestionJobFailures = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "kairos_ingestion_job_failures_total",
+			Help: "Total number of failed ingestion jobs",
+		},
+		[]string{"reason"},
+	)
+
+	WorkerPoolSize = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "kairos_worker_pool_size",
+			Help: "Number of active ingestion workers",
+		},
+	)
 )
 
 func init() {
@@ -69,5 +101,9 @@ func init() {
 		IngestionThroughput,
 		ActiveIngestionJobs,
 		RateLimitRejections,
+		IngestionRetries,
+		IngestionJobDuration,
+		IngestionJobFailures,
+		WorkerPoolSize,
 	)
 }

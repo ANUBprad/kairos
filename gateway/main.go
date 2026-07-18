@@ -54,8 +54,11 @@ func main() {
 	log.Println("Host:Port ", address)
 
 	server := &http.Server{
-		Handler: mainRouter,
-		Addr:    address,
+		Handler:      mainRouter,
+		Addr:         address,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 60 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
 	quit := make(chan os.Signal, 1)
@@ -72,6 +75,9 @@ func main() {
 	<-quit // Blocks until signal received
 
 	slog.Info("Shutting Down server......")
+
+	inQueue.Shutdown()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

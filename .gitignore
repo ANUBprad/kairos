@@ -8,12 +8,13 @@ node_modules/
 out/
 **/out/
 
-# Build
+# Build artifacts
 dist/
 build/
 coverage/
+htmlcov/
 
-# Environment
+# Environment files (keep .env.example)
 .env
 .env.local
 .env.development.local
@@ -33,6 +34,7 @@ prisma/dev.db-journal
 
 # Python
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -40,25 +42,15 @@ venv/
 .venv/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
 .keras/
 *.egg-info/
+htmlcov/
+.coverage
+.coverage.*
 
 # Generated benchmark results
 benchmarks/results/
-benchmarks/**/__pycache__/
-benchmarks/dataset/__pycache__/
-benchmarks/e2e/__pycache__/
-benchmarks/experiments/__pycache__/
-benchmarks/leaderboard/__pycache__/
-benchmarks/metrics/__pycache__/
-benchmarks/reporting/__pycache__/
-benchmarks/runner/__pycache__/
-
-# Intelligence Python cache
-intelligence/**/__pycache__/
-
-# Test cache
-tests/**/__pycache__/
 
 # Models / Generated Files
 models/*
@@ -68,17 +60,30 @@ generated/
 .vscode/
 .idea/
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
+Desktop.ini
 
-# Misc
+# Editors
 *.swp
 *.swo
-dashboard/
-experiments/
+*~
+
+# Compiled binaries
 gateway/main
+gateway/main.exe
+
+# TypeScript build info
 *.tsbuildinfo
 
+# Vercel
 .vercel
-.env*
+
+# Docker
+docker-compose.override.yml
+
+# Misc
+dashboard/
+experiments/
+benchmarks/EU_AI_Act.pdf

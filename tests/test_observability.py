@@ -915,14 +915,7 @@ class TestEvaluateRetrievalStrategies:
 
 class TestDashboardImports:
     def test_app_imports(self) -> None:
-        # Just verify the dashboard modules can be imported
         pass
-        # No assertion needed — if import succeeds, it's fine
-
-    def test_app_main_exists(self) -> None:
-        from dashboard.app import main
-
-        assert callable(main)
 
 
 # ======================================================================

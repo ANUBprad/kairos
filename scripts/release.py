@@ -103,7 +103,7 @@ CI/CD pipelines, artifact management, and deployment documentation.
 
 - Python SDK: `dist/kairos-client-{release_version}.tar.gz`
 - Docker images tagged `{release_version}`
-```
+"""
 
         report_path = Path("releases") / f"RELEASE_{release_version}.md"
         report_path.parent.mkdir(parents=True, exist_ok=True)

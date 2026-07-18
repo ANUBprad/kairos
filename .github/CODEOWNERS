@@ -1,0 +1,24 @@
+# Code Owners — Kairos
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything
+* @ANUBprad
+
+# Frontend
+apps/portal/ @ANUBprad
+
+# Go Gateway
+gateway/ @ANUBprad
+
+# Python Intelligence Engine
+intelligence/ @ANUBprad
+
+# Infrastructure
+docker/ @ANUBprad
+.github/ @ANUBprad
+
+# Benchmarks
+benchmarks/ @ANUBprad
+
+# Tests
+tests/ @ANUBprad

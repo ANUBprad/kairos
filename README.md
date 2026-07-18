@@ -15,13 +15,13 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="#"><img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build Status" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/tests-1%2C768-brightgreen.svg" alt="Tests" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/tests-275%2B-brightgreen.svg" alt="Tests" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/python-3.11+-3776AB.svg" alt="Python 3.11+" /></a>
   <a href="#"><img src="https://img.shields.io/badge/go-1.22+-00ADD8.svg" alt="Go 1.22+" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/node.js-20+-339933.svg" alt="Node.js 20+" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/next.js-15-black" alt="Next.js 15" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/typescript-5.8-blue" alt="TypeScript" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/postgresql-15-336791" alt="PostgreSQL" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/next.js-15-000000" alt="Next.js 15" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/typescript-5.8-3178C6" alt="TypeScript" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/docker-ready-2496ED" alt="Docker" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/prometheus-监控-red" alt="Prometheus" /></a>
 </p>
 
 ---
@@ -30,12 +30,12 @@
 
 Kairos is an open-source research workbench for **Retrieval-Augmented Generation** (RAG) pipelines. It provides end-to-end pipeline visibility across ingestion, chunking, embedding, retrieval, generation, and evaluation — with statistical rigor at every stage.
 
-Most RAG tools give you a black box. Kairos gives you full transparency:
+Most RAG tools give you a black box. **Kairos gives you full transparency:**
 
 - **Every query decision is inspectable** — trace retrieval strategies, chunk selection, and generation inputs
 - **Statistical rigor** — 12+ IR metrics with confidence intervals, p-values, and effect sizes
 - **Reproducible experiments** — run multiple strategies against labeled datasets with full configuration capture
-- **Production architecture** — PostgreSQL, gRPC, Prometheus, and Docker
+- **Production architecture** — Go gateway, Python intelligence engine, gRPC, Prometheus, and Docker
 
 ---
 
@@ -126,7 +126,7 @@ flowchart TD
 |-------|------------|
 | **Frontend** | Next.js 15, React 19, TypeScript 5.8, Tailwind CSS v4, Framer Motion, Recharts |
 | **API Gateway** | Go 1.22, Chi Router, gRPC, Protocol Buffers |
-| **Intelligence** | Python 3.11+, FastAPI, NumPy, SciPy, scikit-learn |
+| **Intelligence** | Python 3.11+, SentenceTransformers, NumPy, SciPy, scikit-learn |
 | **Database** | PostgreSQL 15, pgvector, Prisma ORM |
 | **Vector Store** | ChromaDB (pluggable) |
 | **Observability** | Prometheus, Grafana, OpenTelemetry |
@@ -149,9 +149,8 @@ kairos/
 │       │   │   ├── app/           # App-specific components
 │       │   │   ├── marketing/     # Marketing page components
 │       │   │   ├── research/      # Research UI components
-│       │   │   ├── shared/        # Shared utilities
 │       │   │   └── ui/            # Design system primitives
-│       │   └── lib/               # Utilities, actions, AI subsystem
+│       │   └── lib/               # Utilities, AI subsystem
 │       │       ├── ai/            # AI providers, chat, embeddings
 │       │       ├── copilot/       # Research copilot engine
 │       │       ├── evaluation/    # Metrics, benchmarks, statistics
@@ -160,19 +159,25 @@ kairos/
 │       └── prisma/                # Database schema
 ├── gateway/                       # Go API gateway
 │   ├── api/                       # HTTP handlers
-│   ├── middleware/                 # Auth, rate limiting
-│   └── intelligence/              # gRPC client
+│   ├── middleware/                 # Auth, rate limiting, tracing
+│   ├── queue/                     # Ingestion queue with worker pool
+│   ├── cache/                     # Semantic + LRU cache
+│   └── metrics/                   # Prometheus metrics
 ├── intelligence/                  # Python intelligence engine
-│   ├── api/                       # FastAPI server
-│   ├── classifier/                # Query classification
-│   ├── planner/                   # Retrieval planning
-│   ├── retrieval/                 # Search strategies
-│   ├── evaluation/                # IR metrics
-│   └── calibration/               # Confidence calibration
+│   ├── retrieval/                 # BM25, Hybrid, Complex, Multi-hop
+│   ├── embeddings/                # SentenceTransformers + cache
+│   ├── ingestion/                 # Document loading, chunking, pipeline
+│   ├── cache/                     # Retrieval + embedding cache
+│   ├── metrics/                   # Prometheus metrics (17 histograms)
+│   ├── telemetry/                 # OpenTelemetry tracing
+│   └── logging/                   # Structured JSON logging
 ├── benchmarks/                    # Evaluation framework
+│   ├── load_test/                 # Concurrency load testing
+│   ├── memory_profile/            # Memory profiling
+│   └── rag_evaluation/            # BM25/Dense/Hybrid comparison
 ├── sdk/                           # Python SDK
-├── tests/                         # 1,768 tests
-├── docker/                        # Dockerfiles
+├── tests/                         # 275+ tests
+├── docker/                        # Multi-stage Dockerfiles
 ├── docs/                          # Documentation
 └── proto/                         # gRPC contracts
 ```
@@ -183,12 +188,12 @@ kairos/
 
 ### 1. Upload Documents
 
-Upload PDFs, Word documents, plain text, or markdown files into a Knowledge Base. Documents are automatically chunked using one of 5 strategies (fixed-size, recursive, semantic, paragraph, or heading-based) and embedded into a vector store.
+Upload PDFs, Word documents, plain text, or markdown files into a Knowledge Base. Documents are automatically chunked using one of 5 strategies (fixed-size, structural, semantic, paragraph, or heading-based) and embedded into a vector store.
 
 ### 2. Build Experiments
 
 Configure retrieval experiments with different parameters:
-- **Embedding models** — OpenAI, Gemini, or local embeddings
+- **Embedding models** — OpenAI, Gemini, or local SentenceTransformers
 - **Retrieval strategies** — Vector, BM25, hybrid, or reranked
 - **Chunking configurations** — Size, overlap, and strategy
 - **Top-K values** — How many chunks to retrieve
@@ -214,9 +219,8 @@ Use the RAG Chat interface to ask questions and see exactly how answers are cons
 
 | Format | Extension | Parser |
 |--------|-----------|--------|
-| PDF | `.pdf` | pdf-parse |
-| Microsoft Word | `.docx` | mammoth |
-| Plain Text | `.txt` | Native |
+| PDF | `.pdf` | pypdf |
+| Plain Text | `.txt` | Native UTF-8 |
 | Markdown | `.md` | Native |
 | CSV | `.csv` | csv-parse |
 
@@ -246,17 +250,27 @@ Use the RAG Chat interface to ask questions and see exactly how answers are cons
 
 ---
 
-## Installation
+## Quick Start
 
-### Prerequisites
+### Option 1: Docker (Recommended)
 
+```bash
+git clone https://github.com/kairos-ai/kairos.git
+cd kairos
+cp .env.example .env
+# Edit .env with your API keys
+docker compose up -d
+```
+
+Visit [http://localhost:8080](http://localhost:8080)
+
+### Option 2: Manual Setup
+
+**Prerequisites:**
 - Node.js 20+
+- Python 3.11+
+- Go 1.22+
 - PostgreSQL 15+ (with pgvector extension)
-- Python 3.11+ (optional — for intelligence engine)
-- Go 1.22+ (optional — for API gateway)
-- Docker (optional)
-
-### 1. Clone & Install
 
 ```bash
 git clone https://github.com/kairos-ai/kairos.git
@@ -266,43 +280,55 @@ cd kairos
 cd apps/portal
 cp .env.example .env
 npm install
-
-# Intelligence Engine
-cd ../../
-pip install -r requirements.txt
-```
-
-### 2. Setup Database
-
-```bash
-cd apps/portal
 npx prisma generate
 npx prisma db push
-```
-
-### 3. Run
-
-```bash
-# Frontend (port 3000)
-cd apps/portal
 npm run dev
 
-# Intelligence Engine (port 8000)
+# Intelligence Engine (new terminal)
 cd ../../
+pip install -r requirements.txt
 python -m intelligence.main
 
-# Gateway (port 8080)
+# Gateway (new terminal)
 cd gateway
 go run main.go
 ```
 
-### 4. Docker (Full Stack)
+---
+
+## Deployment
+
+### Docker Compose
+
+The full stack runs via Docker Compose with 8 services:
+
+| Service | Port | Description |
+|---------|------|-------------|
+| `gateway` | 8080 | Go API gateway |
+| `intelligence` | 28080 | Python gRPC server |
+| `api` | 8000 | FastAPI REST server |
+| `internal-dashboard` | 8501 | Streamlit dashboard |
+| `worker` | — | Background ingestion worker |
+| `chromadb` | 7777 | Vector database |
+| `prometheus` | 9090 | Metrics collection |
+| `grafana` | 3000 | Metrics visualization |
 
 ```bash
-docker-compose up -d
+docker compose up -d
+docker compose ps          # Check health
+docker compose logs -f     # Follow logs
+docker compose down        # Stop
 ```
 
-Visit [http://localhost:3000](http://localhost:3000)
+### Resource Limits
+
+| Service | CPU | Memory |
+|---------|-----|--------|
+| Intelligence | 2 cores | 4 GB |
+| API | 1 core | 2 GB |
+| Gateway | 0.5 core | 512 MB |
+| ChromaDB | 1 core | 2 GB |
+| Worker | 1 core | 2 GB |
 
 ---
 
@@ -313,117 +339,80 @@ Visit [http://localhost:3000](http://localhost:3000)
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string for Prisma ORM |
+| `KAIROS_SECRET` | Shared API secret for authentication |
 
-### Optional — AI Providers
+### Intelligence Engine
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `AI_PROVIDER` | Default AI provider (`openai` or `gemini`) | `openai` |
-| `OPENAI_API_KEY` | OpenAI API key for chat and embeddings | — |
-| `OPENAI_CHAT_MODEL` | OpenAI chat model | `gpt-4o-mini` |
-| `OPENAI_EMBEDDING_MODEL` | OpenAI embedding model | `text-embedding-3-small` |
-| `GEMINI_API_KEY` | Google Gemini API key | — |
-| `GEMINI_CHAT_MODEL` | Gemini chat model | `gemini-2.0-flash` |
-| `GEMINI_EMBEDDING_MODEL` | Gemini embedding model | `text-embedding-004` |
+| `KAIROS_LLM_PROVIDER` | LLM provider (`gemini`, `openai`, `ollama`) | — |
+| `KAIROS_DEPLOYMENT` | Production mode with Groq | `False` |
+| `KAIROS_CHUNK_SIZE` | Chunk size in characters | `1024` |
+| `KAIROS_OVERLAP` | Chunk overlap in characters | `150` |
+| `KAIROS_EMBEDDING_MODEL` | Embedding backend (`local`) | `local` |
+| `KAIROS_CACHE_MAXSIZE` | Embedding cache size | `4096` |
+| `KAIROS_CACHE_TTL_SECONDS` | Cache TTL in seconds | `300` |
+| `KAIROS_METRICS_ENABLED` | Enable Prometheus metrics | `True` |
+| `KAIROS_METRICS_PORT` | Prometheus metrics port | `8001` |
+| `KAIROS_HEALTH_CHECK_ENABLED` | Enable gRPC health checks | `True` |
+| `KAIROS_PROVIDER_TIMEOUT_SECONDS` | LLM provider timeout | `30.0` |
+| `KAIROS_CIRCUIT_BREAKER_FAILURE_THRESHOLD` | Circuit breaker threshold | `5` |
+| `KAIROS_CIRCUIT_BREAKER_RECOVERY_TIMEOUT` | Circuit breaker recovery | `30.0` |
 
-### Optional — Storage
+### AI Providers
 
 | Variable | Description |
 |----------|-------------|
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name for file storage |
-| `CLOUDINARY_API_KEY` | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `GEMINI_API_KEY` | Google Gemini API key |
+| `KAIROS_GEMINI_MODEL_NAME` | Gemini model name |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `KAIROS_OPENAI_MODEL_NAME` | OpenAI model name |
+| `GROQ_API_KEY` | Groq API key (production) |
+| `GROQ_BASE_URL` | Groq base URL |
+
+### Gateway
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GATEWAY_HOST` | Gateway bind host | `0.0.0.0` |
+| `GATEWAY_PORT` | Gateway port | `8080` |
+| `KAIROS_RATE_LIMIT` | Requests per second per namespace | — |
+| `KAIROS_BURST_LIMIT` | Burst limit | — |
+| `MAX_FILE_SIZE` | Max upload size in MB | `50` |
+| `KAIROS_CACHE_MAX_SIZE` | Semantic cache size | — |
+| `KAIROS_CACHE_TTL` | Semantic cache TTL (seconds) | — |
+| `KAIROS_CACHE_SIMILARITY_THRESHOLD` | Cache similarity threshold | — |
+| `KAIROS_CORS_ORIGINS` | Allowed CORS origins | `*` |
 
 See [`.env.example`](.env.example) for the full configuration reference.
 
 ---
 
-## Running Locally
+## API Reference
 
-```bash
-# Install dependencies
-cd apps/portal && npm install
+### Gateway Endpoints (port 8080)
 
-# Setup database
-npx prisma generate
-npx prisma db push
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+| `POST` | `/v1/query` | Execute RAG query |
+| `POST` | `/v1/ingest` | Upload document |
+| `GET` | `/v1/jobs/{job_id}` | Check job status |
+| `GET` | `/metrics` | Prometheus metrics |
 
-# Start development server
-npm run dev
-```
+### Intelligence Engine (port 28080 — gRPC)
 
-The portal runs at [http://localhost:3000](http://localhost:3000).
-
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint |
-
----
-
-## Project Workflow
-
-```mermaid
-flowchart LR
-    A[Upload Documents] --> B[Configure Experiment]
-    B --> C[Run Benchmark]
-    C --> D[Evaluate Results]
-    D --> E[Chat with Docs]
-    E --> F[Publish Findings]
-    F --> A
-```
-
-1. **Ingest** — Upload documents to a Knowledge Base
-2. **Configure** — Set up retrieval strategies and parameters
-3. **Benchmark** — Execute experiments against labeled datasets
-4. **Evaluate** — Analyze results with statistical rigor
-5. **Chat** — Query your documents with full traceability
-6. **Publish** — Generate academic reports with findings
-
----
-
-## Example Usage
-
-### Create a Knowledge Base
-
-```bash
-# Via the UI: Navigate to Document Repository → Create Knowledge Base
-# Or via API:
-curl -X POST http://localhost:3000/api/knowledge-bases \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Research Papers"}'
-```
-
-### Upload Documents
-
-```bash
-# Via the UI: Drag and drop files into the Knowledge Base
-# Supported: PDF, DOCX, TXT, MD, CSV
-```
-
-### Run a Benchmark
-
-```bash
-# Via the UI: Navigate to Benchmark Explorer → New Benchmark
-# Select your Knowledge Base, dataset, and retrieval configuration
-```
-
-### Chat with Your Documents
-
-```bash
-# Via the UI: Navigate to RAG Chat
-# Ask questions and see inline citations with pipeline traces
-```
+| RPC | Description |
+|-----|-------------|
+| `ComputeEmbeddings` | Generate embeddings for text |
+| `ClassifyQueryType` | Classify query and select retrieval strategy |
+| `ExecuteRetrieval` | Execute retrieval with given config |
+| `GenerateResponse` | Generate LLM response from context |
+| `IngestDocument` | Ingest and index a document |
 
 ---
 
 ## Benchmarks
-
-Kairos implements 12+ Information Retrieval metrics:
 
 ### Retrieval Metrics
 
@@ -458,16 +447,16 @@ Kairos implements 12+ Information Retrieval metrics:
 
 ---
 
-## Future Improvements
+## Roadmap
 
-- HNSW indexing for faster vector search
-- Streaming RAG responses
-- Multi-tenant support
-- Custom embedding model training
-- Automated hyperparameter optimization
-- Integration with LangChain and LlamaIndex
-- Real-time collaboration on experiments
-- Export to Jupyter notebooks
+- [ ] HNSW indexing for faster vector search
+- [ ] Streaming RAG responses
+- [ ] Multi-tenant support
+- [ ] Custom embedding model training
+- [ ] Automated hyperparameter optimization
+- [ ] Integration with LangChain and LlamaIndex
+- [ ] Real-time collaboration on experiments
+- [ ] Export to Jupyter notebooks
 
 ---
 
@@ -478,6 +467,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Code style guide
 - Pull request process
 - Architecture overview
+
+---
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for:
+- Vulnerability reporting
+- Security best practices
+- Supported versions
 
 ---
 
