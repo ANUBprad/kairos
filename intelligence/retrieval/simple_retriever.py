@@ -1,8 +1,8 @@
-# Hybrid retrieval
+# Hybrid retrieval with persistent BM25 index
 
-from rank_bm25 import BM25Okapi
 from intelligence.embeddings.base_embedder import BaseEmbedder
 from .retriever import BaseRetriever
+from .persistent_bm25 import PersistentBM25Index
 from intelligence.vectorstore.chroma_store import ChromaStore
 
 
@@ -11,6 +11,38 @@ class SimpleRetriever(BaseRetriever):
         super().__init__(embedder, store)
         self.store = store
         self.embedder = embedder
+        self._bm25_indices: dict[str, PersistentBM25Index] = {}
+        self._corpora_versions: dict[str, int] = {}
+
+    def _get_or_build_index(self, namespace: str, all_docs: list[str]) -> PersistentBM25Index:
+        """Get cached BM25 index or build from corpus, with incremental updates."""
+        corpus_version = self._corpora_versions.get(namespace, 0)
+        current_version = self._get_corpus_version(namespace)
+
+        if namespace not in self._bm25_indices:
+            idx = PersistentBM25Index()
+            doc_id_texts = [(f"doc_{i}", doc) for i, doc in enumerate(all_docs)]
+            idx.add_documents(doc_id_texts)
+            self._bm25_indices[namespace] = idx
+            self._corpora_versions[namespace] = current_version
+            return idx
+
+        idx = self._bm25_indices[namespace]
+
+        if current_version > corpus_version:
+            doc_id_texts = [(f"doc_{i}", doc) for i, doc in enumerate(all_docs)]
+            idx.add_documents(doc_id_texts)
+            self._corpora_versions[namespace] = current_version
+
+        return idx
+
+    def _get_corpus_version(self, namespace: str) -> int:
+        """Simple versioning based on document count in ChromaDB."""
+        try:
+            collection = self.store.client.get_collection(name=namespace)
+            return collection.count()
+        except Exception:
+            return 0
 
     def retrieve_top_k(self, namespace: str, top_k: int, query: str) -> list[str]:
         query_embed = self.embedder.embed(query)
@@ -24,17 +56,18 @@ class SimpleRetriever(BaseRetriever):
         if not all_docs:
             return dense_chunks
 
-        tokenized_corpus = [doc.lower().split() for doc in all_docs]
-        tokenized_query = query.lower().split()
-        bm25 = BM25Okapi(tokenized_corpus)
-        sparse_chunks = bm25.get_top_n(tokenized_query, all_docs, n=top_k)
+        bm25_index = self._get_or_build_index(namespace, all_docs)
+
+        ranked = bm25_index.query(query, top_k=top_k)
+        sparse_chunks = [doc_id for doc_id, _ in ranked]
+        sparse_texts = bm25_index.get_documents_by_ids(sparse_chunks)
 
         rrf_scores = {}
 
         for rank, chunk in enumerate(dense_chunks, start=1):
             rrf_scores[chunk] = rrf_scores.get(chunk, 0) + 1 / (60 + rank)
 
-        for rank, chunk in enumerate(sparse_chunks, start=1):
+        for rank, chunk in enumerate(sparse_texts, start=1):
             rrf_scores[chunk] = rrf_scores.get(chunk, 0) + 1 / (60 + rank)
 
         sorted_chunks = sorted(rrf_scores, key=lambda c: rrf_scores[c], reverse=True)
