@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
-import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -127,7 +124,7 @@ class TestRetrievalCacheStress:
 
         cache = RetrievalCache(maxsize=10, ttl_seconds=300)
         for i in range(1000):
-            cache.put(f"ns", f"query_{i}", 5, 1, False, False, [f"chunk_{i}"])
+            cache.put("ns", f"query_{i}", 5, 1, False, False, [f"chunk_{i}"])
         assert cache.stats()["size"] <= 10
 
 

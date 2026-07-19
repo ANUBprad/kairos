@@ -202,40 +202,55 @@ class TestLearnedBudgetTable:
 
 
 class TestBudgetDatasetGenerator:
-    def test_generate_creates_file(self):
-        gen = BudgetDatasetGenerator()
-        entries = gen.generate(
-            "benchmarks/results/calibration_dataset.jsonl",
-            augment=False,
+    @staticmethod
+    def _write_calibration(path, entries):
+        with open(path, "w") as f:
+            for e in entries:
+                f.write(json.dumps(e) + "\n")
+
+    def test_generate_creates_file(self, tmp_path):
+        calib = tmp_path / "calibration.jsonl"
+        self._write_calibration(
+            calib,
+            [
+                {"query_id": "Q1", "confidence": 0.9, "success": True, "latency_ms": 50,
+                 "retrieval_type": "HYBRID", "top_k": 3, "rerank": False, "decompose": False},
+                {"query_id": "Q2", "confidence": 0.6, "success": False, "latency_ms": 120,
+                 "retrieval_type": "HYBRID", "top_k": 5, "rerank": True, "decompose": False},
+            ],
         )
+        gen = BudgetDatasetGenerator()
+        entries = gen.generate(calib, augment=False)
         assert len(entries) > 0
         assert all(isinstance(e, BudgetDatasetEntry) for e in entries)
 
-    def test_generate_with_augment(self):
+    def test_generate_with_augment(self, tmp_path):
+        calib = tmp_path / "calibration.jsonl"
+        base = [
+            {"query_id": f"Q{i}", "confidence": c, "success": s, "latency_ms": 50 + i * 10,
+             "retrieval_type": "HYBRID", "top_k": 5, "rerank": False, "decompose": False}
+            for i, (c, s) in enumerate([(0.9, True), (0.6, False), (0.3, True)])
+        ]
+        self._write_calibration(calib, base)
         gen = BudgetDatasetGenerator()
-        entries = gen.generate(
-            "benchmarks/results/calibration_dataset.jsonl",
-            augment=True,
-        )
-        assert len(entries) > 150
+        entries = gen.generate(calib, augment=True)
+        assert len(entries) > len(base)
 
-    def test_generate_writes_jsonl(self):
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
-            out = f.name
-        try:
-            gen = BudgetDatasetGenerator()
-            gen.generate(
-                "benchmarks/results/calibration_dataset.jsonl", output_path=out
-            )
-            with open(out) as f2:
-                lines = f2.readlines()
-            assert len(lines) > 0
-            parsed = json.loads(lines[0])
-            assert "query_type" in parsed
-            assert "confidence" in parsed
-        finally:
-            if os.path.exists(out):
-                os.unlink(out)
+    def test_generate_writes_jsonl(self, tmp_path):
+        calib = tmp_path / "calibration.jsonl"
+        self._write_calibration(
+            calib,
+            [{"query_id": "Q1", "confidence": 0.8, "success": True, "latency_ms": 60,
+              "retrieval_type": "HYBRID", "top_k": 3, "rerank": False, "decompose": False}],
+        )
+        out = tmp_path / "output.jsonl"
+        gen = BudgetDatasetGenerator()
+        gen.generate(calib, output_path=out)
+        lines = out.read_text().splitlines()
+        assert len(lines) > 0
+        parsed = json.loads(lines[0])
+        assert "query_type" in parsed
+        assert "confidence" in parsed
 
     def test_entry_fields(self):
         e = BudgetDatasetEntry(
@@ -247,11 +262,17 @@ class TestBudgetDatasetGenerator:
         assert e.decompose is False
         assert e.success is True
 
-    def test_generator_deterministic(self):
+    def test_generator_deterministic(self, tmp_path):
+        calib = tmp_path / "calibration.jsonl"
+        self._write_calibration(
+            calib,
+            [{"query_id": "Q1", "confidence": 0.9, "success": True, "latency_ms": 50,
+              "retrieval_type": "HYBRID", "top_k": 3, "rerank": False, "decompose": False}],
+        )
         gen1 = BudgetDatasetGenerator(seed=42)
         gen2 = BudgetDatasetGenerator(seed=42)
-        e1 = gen1.generate("benchmarks/results/calibration_dataset.jsonl", augment=True)
-        e2 = gen2.generate("benchmarks/results/calibration_dataset.jsonl", augment=True)
+        e1 = gen1.generate(calib, augment=True)
+        e2 = gen2.generate(calib, augment=True)
         assert len(e1) == len(e2)
         for a, b in zip(e1, e2):
             assert a.success == b.success

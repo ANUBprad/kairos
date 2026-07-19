@@ -15,7 +15,6 @@ import threading
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

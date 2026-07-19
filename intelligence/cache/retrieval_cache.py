@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from threading import RLock
 from typing import Callable, Optional
 

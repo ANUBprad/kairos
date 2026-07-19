@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -142,7 +142,6 @@ class TestEmbeddingCache:
 
         cache = EmbeddingCache(maxsize=100, ttl_seconds=1)
         cache.set("key", [1.0])
-        import time
         time.sleep(1.1)
         result = cache.get("key")
         assert result is None
