@@ -5,11 +5,11 @@
 <h1 align="center">Kairos</h1>
 
 <p align="center">
-  <strong>An Explainable AI Research Workbench for Retrieval-Augmented Generation</strong>
+  <strong>Explainable AI Workbench for Retrieval-Augmented Generation</strong>
 </p>
 
 <p align="center">
-  Document intelligence, benchmarking, and evaluation — with full transparency into how answers are constructed from your documents.
+  End-to-end RAG pipeline visibility — from ingestion and chunking through retrieval and generation — with statistical rigor at every stage.
 </p>
 
 <p align="center">
@@ -19,100 +19,126 @@
   <a href="#"><img src="https://img.shields.io/badge/python-3.11+-3776AB.svg" alt="Python 3.11+" /></a>
   <a href="#"><img src="https://img.shields.io/badge/go-1.22+-00ADD8.svg" alt="Go 1.22+" /></a>
   <a href="#"><img src="https://img.shields.io/badge/next.js-15-000000" alt="Next.js 15" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/typescript-5.8-3178C6" alt="TypeScript" /></a>
   <a href="#"><img src="https://img.shields.io/badge/docker-ready-2496ED" alt="Docker" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/prometheus-监控-red" alt="Prometheus" /></a>
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#why-kairos">Why Kairos</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#contributing">Contributing</a>
 </p>
 
 ---
 
 ## What is Kairos?
 
-Kairos is an open-source research workbench for **Retrieval-Augmented Generation** (RAG) pipelines. It provides end-to-end pipeline visibility across ingestion, chunking, embedding, retrieval, generation, and evaluation — with statistical rigor at every stage.
+Kairos is an open-source research workbench for **Retrieval-Augmented Generation** (RAG) pipelines. It gives you full visibility into how answers are constructed from your documents — every retrieval decision, every chunk selection, every generation input is inspectable.
 
-Most RAG tools give you a black box. **Kairos gives you full transparency:**
+Most RAG tools are black boxes. **Kairos is a microscope.**
 
-- **Every query decision is inspectable** — trace retrieval strategies, chunk selection, and generation inputs
-- **Statistical rigor** — 12+ IR metrics with confidence intervals, p-values, and effect sizes
-- **Reproducible experiments** — run multiple strategies against labeled datasets with full configuration capture
-- **Production architecture** — Go gateway, Python intelligence engine, gRPC, Prometheus, and Docker
+---
+
+## Why Kairos?
+
+| | Traditional RAG Tools | Kairos |
+|---|---|---|
+| Retrieval | Black box — trust the results | **Explainable** — trace every decision |
+| Evaluation | Basic similarity scores | **Statistical rigor** — 12+ IR metrics with confidence intervals |
+| Experiments | Manual, ad-hoc | **Reproducible** — full configuration capture per run |
+| Debugging | Logs and guesswork | **Pipeline traces** — inspect chunks, scores, and inferences |
+| Benchmarking | One-off comparisons | **Campaign mode** — A/B testing across configurations |
 
 ---
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Explainable Retrieval** | Full pipeline trace per query. Inspect retrieved chunks, similarity scores, and document inclusion decisions. |
-| **Statistical Evaluation** | 12+ metrics with confidence intervals, p-values, effect sizes, and distribution analysis. |
-| **Benchmark Campaigns** | Leaderboard with composite scores. Run A/B comparisons across retrieval configurations. |
-| **Experiment Tracking** | Run multiple strategies against labeled datasets. Capture configurations, results, and reproduce any experiment. |
-| **RAG Chat** | Chat interface with inline citations and per-message pipeline traces. |
-| **Chunking Studio** | 5 chunking strategies with visual preview and size analysis. |
-| **Research Intelligence** | Automated pattern discovery, trend detection, root cause inference, and experiment suggestions. |
-| **Architecture Visualization** | Interactive SVG diagram of the full system with module details. |
-| **Report Generator** | Academic reports in Markdown with executive summaries, configuration matrices, and statistical analysis. |
-| **Retrieval Lab** | Test retrieval configurations interactively with real-time parameter adjustment. |
-| **Advanced Retrieval** | Compare hybrid search, query expansion, multi-query, and reranking strategies. |
-| **AI Copilot** | Context-aware research assistant with intent detection, evidence selection, and grounding. |
-| **Experiment Planner** | Automated experiment planning with cost-quality tradeoff analysis. |
-| **Knowledge Base Management** | Upload, organize, and manage research documents with automatic chunking and embedding. |
+<table>
+<tr>
+<td width="50%">
+
+### 🔍 Explainable Retrieval
+Full pipeline trace per query. Inspect retrieved chunks, similarity scores, and document inclusion decisions.
+
+### 📊 Statistical Evaluation
+12+ IR metrics with confidence intervals, p-values, effect sizes (Cohen's d, Cliff's delta), and distribution analysis.
+
+### 🧪 Experiment Tracking
+Run multiple strategies against labeled datasets. Capture configurations, results, and reproduce any experiment.
+
+</td>
+<td width="50%">
+
+### 💬 RAG Chat
+Chat interface with inline citations, retrieved chunks, similarity scores, and per-message pipeline traces.
+
+### ⚡ Production Architecture
+Go gateway for performance. Python intelligence engine for ML. gRPC, Prometheus, Docker-ready.
+
+### 📈 Benchmark Campaigns
+Leaderboard with composite scores. Run A/B comparisons across retrieval configurations with statistical validation.
+
+</td>
+</tr>
+</table>
 
 ---
 
 ## Architecture
 
+**Simple flow:**
+
+```
+User → Next.js Portal → Go Gateway → Python Intelligence → Postgres + Vector Store → LLM Providers
+```
+
+**Detailed system:**
+
 ```mermaid
 flowchart TD
     User["User"]
     Portal["Next.js 15 Portal<br/>React 19 · TypeScript · Tailwind v4"]
-    
-    subgraph Research["Research Modules"]
+
+    subgraph Research["Research"]
         R1["Research Dashboard"]
         R2["AI Copilot"]
-        R3["Notebook"]
-        R4["Experiment Planner"]
-        R5["Publication"]
+        R3["Experiment Planner"]
     end
-    
+
     subgraph Build["Build & Ingest"]
         B1["Knowledge Base Manager"]
         B2["Chunking Studio"]
-        B3["Experiment Builder"]
     end
-    
+
     subgraph Evaluate["Evaluation"]
         E1["Retrieval Lab"]
         E2["Evaluation Dashboard"]
         E3["Benchmark Explorer"]
-        E4["Advanced Retrieval"]
     end
-    
+
     subgraph Explain["Explainability"]
         X1["RAG Chat"]
         X2["Retrieval Debugger"]
-        X3["Architecture Viewer"]
     end
-    
+
     KB["Knowledge Base<br/>PostgreSQL + pgvector"]
     Retrieval["Retrieval Engine<br/>BM25 · Vector · Hybrid · Reranking"]
     Embedding["Embedding Service<br/>OpenAI · Gemini · Local"]
     LLMs["LLM Providers<br/>OpenAI · Gemini"]
     Eval["Evaluation Engine<br/>12+ IR Metrics · Statistical Tests"]
-    Results["Results & Insights<br/>Leaderboards · Reports · Trends"]
 
     User --> Portal
     Portal --> Research
     Portal --> Build
     Portal --> Evaluate
     Portal --> Explain
-    
+
     Build --> KB
     KB --> Retrieval
     Retrieval --> Embedding
     Retrieval --> LLMs
     Evaluate --> Eval
-    Eval --> Results
     Explain --> Retrieval
     Research --> LLMs
     Research --> Eval
@@ -122,15 +148,23 @@ flowchart TD
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | Next.js 15, React 19, TypeScript 5.8, Tailwind CSS v4, Framer Motion, Recharts |
-| **API Gateway** | Go 1.22, Chi Router, gRPC, Protocol Buffers |
-| **Intelligence** | Python 3.11+, SentenceTransformers, NumPy, SciPy, scikit-learn |
-| **Database** | PostgreSQL 15, pgvector, Prisma ORM |
-| **Vector Store** | ChromaDB (pluggable) |
-| **Observability** | Prometheus, Grafana, OpenTelemetry |
-| **Infrastructure** | Docker, Docker Compose |
+**Frontend**
+Next.js 15 · React 19 · TypeScript 5.8 · Tailwind CSS v4 · Framer Motion · Recharts
+
+**Backend**
+Go 1.22 · Chi Router · gRPC · Protocol Buffers · FastAPI
+
+**AI & ML**
+Python 3.11+ · SentenceTransformers · NumPy · SciPy · scikit-learn
+
+**Data**
+PostgreSQL 15 · pgvector · Prisma ORM · ChromaDB (pluggable)
+
+**Observability**
+Prometheus · Grafana · OpenTelemetry
+
+**Infrastructure**
+Docker · Docker Compose
 
 ---
 
@@ -138,48 +172,15 @@ flowchart TD
 
 ```
 kairos/
-├── apps/
-│   └── portal/                    # Next.js 15 frontend
-│       ├── src/
-│       │   ├── app/               # App router (pages & API routes)
-│       │   │   ├── (marketing)/   # Public marketing pages
-│       │   │   ├── app/           # Authenticated research workbench
-│       │   │   └── api/           # API endpoints
-│       │   ├── components/        # React components
-│       │   │   ├── app/           # App-specific components
-│       │   │   ├── marketing/     # Marketing page components
-│       │   │   ├── research/      # Research UI components
-│       │   │   └── ui/            # Design system primitives
-│       │   └── lib/               # Utilities, AI subsystem
-│       │       ├── ai/            # AI providers, chat, embeddings
-│       │       ├── copilot/       # Research copilot engine
-│       │       ├── evaluation/    # Metrics, benchmarks, statistics
-│       │       ├── retrieval/     # Search strategies, debugger
-│       │       └── telemetry/     # Analytics, health, metrics
-│       └── prisma/                # Database schema
-├── gateway/                       # Go API gateway
-│   ├── api/                       # HTTP handlers
-│   ├── middleware/                 # Auth, rate limiting, tracing
-│   ├── queue/                     # Ingestion queue with worker pool
-│   ├── cache/                     # Semantic + LRU cache
-│   └── metrics/                   # Prometheus metrics
-├── intelligence/                  # Python intelligence engine
-│   ├── retrieval/                 # BM25, Hybrid, Complex, Multi-hop
-│   ├── embeddings/                # SentenceTransformers + cache
-│   ├── ingestion/                 # Document loading, chunking, pipeline
-│   ├── cache/                     # Retrieval + embedding cache
-│   ├── metrics/                   # Prometheus metrics (17 histograms)
-│   ├── telemetry/                 # OpenTelemetry tracing
-│   └── logging/                   # Structured JSON logging
-├── benchmarks/                    # Evaluation framework
-│   ├── load_test/                 # Concurrency load testing
-│   ├── memory_profile/            # Memory profiling
-│   └── rag_evaluation/            # BM25/Dense/Hybrid comparison
-├── sdk/                           # Python SDK
-├── tests/                         # 1,800+ tests
-├── docker/                        # Multi-stage Dockerfiles
-├── docs/                          # Documentation
-└── proto/                         # gRPC contracts
+├── apps/portal/          # Next.js 15 frontend (React, TypeScript, Tailwind)
+├── gateway/              # Go API gateway (Chi, gRPC, worker pool)
+├── intelligence/         # Python engine (retrieval, embeddings, ingestion)
+├── benchmarks/           # Evaluation framework (load tests, RAG evaluation)
+├── sdk/                  # Python SDK
+├── tests/                # 1,800+ tests
+├── docker/               # Multi-stage Dockerfiles
+├── docs/                 # Documentation
+└── proto/                # gRPC contracts
 ```
 
 ---
@@ -188,15 +189,11 @@ kairos/
 
 ### 1. Upload Documents
 
-Upload PDFs, Word documents, plain text, or markdown files into a Knowledge Base. Documents are automatically chunked using one of 5 strategies (fixed-size, structural, semantic, paragraph, or heading-based) and embedded into a vector store.
+Upload PDFs, plain text, or markdown. Documents are chunked using one of 5 strategies (fixed-size, structural, semantic, paragraph, heading-based) and embedded into a vector store.
 
 ### 2. Build Experiments
 
-Configure retrieval experiments with different parameters:
-- **Embedding models** — OpenAI, Gemini, or local SentenceTransformers
-- **Retrieval strategies** — Vector, BM25, hybrid, or reranked
-- **Chunking configurations** — Size, overlap, and strategy
-- **Top-K values** — How many chunks to retrieve
+Configure retrieval experiments with different embedding models (OpenAI, Gemini, local), retrieval strategies (vector, BM25, hybrid, reranked), chunking configurations, and top-K values.
 
 ### 3. Run Benchmarks
 
@@ -204,31 +201,17 @@ Execute benchmark campaigns against labeled datasets. Each run captures full con
 
 ### 4. Evaluate with Statistical Rigor
 
-Kairos computes 12+ IR metrics per question:
-- **Retrieval** — Recall@K, Precision@K, MRR, nDCG, Hit Rate, MAP, F1@K
-- **Generation** — Faithfulness, Answer Relevance, Context Precision, Context Recall
-- **Statistics** — Confidence intervals, p-values, effect sizes (Cohen's d, Cliff's delta)
+Compute 12+ IR metrics per question — Recall@K, Precision@K, MRR, nDCG, Hit Rate, MAP, F1@K — plus generation metrics (Faithfulness, Answer Relevance, Context Precision, Context Recall) with confidence intervals and effect sizes.
 
 ### 5. Chat with Your Documents
 
-Use the RAG Chat interface to ask questions and see exactly how answers are constructed. Each response includes inline citations, retrieved chunks, similarity scores, and a full pipeline trace.
-
----
-
-## Supported Document Formats
-
-| Format | Extension | Parser |
-|--------|-----------|--------|
-| PDF | `.pdf` | pypdf |
-| Plain Text | `.txt` | Native UTF-8 |
-| Markdown | `.md` | Native |
-| CSV | `.csv` | csv-parse |
+Use RAG Chat to ask questions and see exactly how answers are constructed, with inline citations, retrieved chunks, similarity scores, and a full pipeline trace.
 
 ---
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
+### Docker (Recommended)
 
 ```bash
 git clone https://github.com/kairos-ai/kairos.git
@@ -238,45 +221,36 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Visit [http://localhost:8080](http://localhost:8080)
+| Service | URL |
+|---------|-----|
+| Portal | http://localhost:8080 |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
 
-### Option 2: Manual Setup
+### Manual Setup
 
-**Prerequisites:**
-- Node.js 20+
-- Python 3.11+
-- Go 1.22+
-- PostgreSQL 15+ (with pgvector extension)
+**Prerequisites:** Node.js 20+, Python 3.11+, Go 1.22+, PostgreSQL 15+ (with pgvector)
 
 ```bash
 git clone https://github.com/kairos-ai/kairos.git
 cd kairos
 
 # Frontend
-cd apps/portal
-cp .env.example .env
-npm install
-npx prisma generate
-npx prisma db push
-npm run dev
+cd apps/portal && cp .env.example .env
+npm install && npx prisma generate && npx prisma db push && npm run dev
 
 # Intelligence Engine (new terminal)
-cd ../../
-pip install -r requirements.txt
-python -m intelligence.main
+cd ../../ && pip install -r requirements.txt && python -m intelligence.main
 
 # Gateway (new terminal)
-cd gateway
-go run main.go
+cd gateway && go run main.go
 ```
 
 ---
 
 ## Deployment
 
-### Docker Compose
-
-The full stack runs via Docker Compose with 8 services:
+### Docker Compose Services
 
 | Service | Port | Description |
 |---------|------|-------------|
@@ -366,7 +340,7 @@ See [`.env.example`](.env.example) for the full configuration reference.
 
 ## API Reference
 
-### Gateway Endpoints (port 8080)
+### Gateway (port 8080)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -388,7 +362,7 @@ See [`.env.example`](.env.example) for the full configuration reference.
 
 ---
 
-## Benchmarks
+## Benchmarks & Metrics
 
 ### Retrieval Metrics
 
@@ -423,35 +397,66 @@ See [`.env.example`](.env.example) for the full configuration reference.
 
 ---
 
+## Performance Highlights
+
+Kairos includes several performance optimizations built into the pipeline:
+
+- **Persistent BM25 indexing** — avoids re-indexing on every startup
+- **Go worker pool** — parallelized ingestion with configurable concurrency
+- **Retrieval cache** — semantic + LRU caching for repeated queries
+- **Batch embedding** — vectorized embedding generation for throughput
+- **Optimized chunker** — streaming document processing with memory efficiency
+
+---
+
+## Who Is This For?
+
+- **Researchers** — rigorous evaluation framework with statistical tests and reproducible experiments
+- **ML Engineers** — production-ready RAG pipeline with monitoring and observability
+- **RAG Developers** — full visibility into retrieval and generation decisions
+- **Students** — learn how RAG pipelines work with interactive exploration
+- **Open Source Contributors** — well-structured codebase across Go, Python, and TypeScript
+
+---
+
 ## Roadmap
 
+### Near-term
 - [ ] HNSW indexing for faster vector search
 - [ ] Streaming RAG responses
 - [ ] Multi-tenant support
+
+### Future
 - [ ] Custom embedding model training
 - [ ] Automated hyperparameter optimization
 - [ ] Integration with LangChain and LlamaIndex
+
+### Research Ideas
 - [ ] Real-time collaboration on experiments
 - [ ] Export to Jupyter notebooks
 
 ---
 
+## Supported Formats
+
+| Format | Extension | Parser |
+|--------|-----------|--------|
+| PDF | `.pdf` | pypdf |
+| Plain Text | `.txt` | Native UTF-8 |
+| Markdown | `.md` | Native |
+| CSV | `.csv` | csv-parse |
+
+---
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Development setup
-- Code style guide
-- Pull request process
-- Architecture overview
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style guide, pull request process, and architecture overview.
 
 ---
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for:
-- Vulnerability reporting
-- Security best practices
-- Supported versions
+See [SECURITY.md](SECURITY.md) for vulnerability reporting, security best practices, and supported versions.
 
 ---
 
@@ -464,7 +469,3 @@ MIT License — see [LICENSE](LICENSE) for details.
 <p align="center">
   Built with care for the RAG research community.
 </p>
-
-## Support
-
-If you found Kairos useful, consider giving the repository a ⭐ on GitHub.
