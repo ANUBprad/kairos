@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/screenshots/hero.png" alt="Kairos" width="0" height="0" />
+  <img src="assets/kai.png" alt="Kairos Logo" width="180">
 </p>
 
 <h1 align="center">Kairos</h1>
@@ -223,30 +223,6 @@ Use the RAG Chat interface to ask questions and see exactly how answers are cons
 | Plain Text | `.txt` | Native UTF-8 |
 | Markdown | `.md` | Native |
 | CSV | `.csv` | csv-parse |
-
----
-
-## Screenshots
-
-<p align="center">
-  <img src="assets/home.png" alt="Kairos Home" width="80%" />
-</p>
-
-<p align="center">
-  <img src="assets/research.png" alt="Research Dashboard" width="80%" />
-</p>
-
-<p align="center">
-  <img src="assets/evaluation.png" alt="Evaluation Dashboard" width="80%" />
-</p>
-
-<p align="center">
-  <img src="assets/rag-chat.png" alt="RAG Chat" width="80%" />
-</p>
-
-<p align="center">
-  <img src="assets/benchmark.png" alt="Benchmark Explorer" width="80%" />
-</p>
 
 ---
 
