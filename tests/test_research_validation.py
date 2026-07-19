@@ -440,14 +440,14 @@ class TestScoring:
 
     def test_aggregate_scores_single(self) -> None:
         results = [JudgeResult("d", 0.8, Judgment.PASS)]
-        assert aggregate_scores(results) == 0.8
+        assert aggregate_scores(results) == pytest.approx(0.8)
 
     def test_aggregate_scores_multiple(self) -> None:
         results = [
             JudgeResult("d1", 0.8, Judgment.PASS),
             JudgeResult("d2", 0.6, Judgment.WARN),
         ]
-        assert aggregate_scores(results) == 0.7
+        assert aggregate_scores(results) == pytest.approx(0.7)
 
     def test_weight_scores_default_weights(self) -> None:
         results = [
@@ -455,7 +455,7 @@ class TestScoring:
             JudgeResult("d2", 0.6, Judgment.WARN),
         ]
         score = weight_scores(results, {})
-        assert score == 0.7
+        assert score == pytest.approx(0.7)
 
     def test_weight_scores_custom(self) -> None:
         results = [
@@ -463,7 +463,7 @@ class TestScoring:
             JudgeResult("d2", 0.0, Judgment.FAIL),
         ]
         score = weight_scores(results, {"d1": 3.0, "d2": 1.0})
-        assert score == 0.75
+        assert score == pytest.approx(0.75)
 
     def test_weight_scores_zero_total(self) -> None:
         assert weight_scores([], {}) == 0.0
@@ -665,7 +665,7 @@ class TestE2EDimensionScores:
         d = E2EDimensionScores(
             faithfulness=1.0, relevance=0.5, hallucination=0.5, grounding=0.0
         )
-        assert d.average == 0.5
+        assert d.average == pytest.approx(0.5)
 
 
 # ---------------------------------------------------------------------------
@@ -888,9 +888,9 @@ class TestE2EBenchmarkRunner:
         )
         result = runner._aggregate([qr1, qr2, qr3], "mode", "d")
         assert result.num_queries == 3
-        assert result.pass_rate == 1.0 / 3.0
-        assert result.fail_rate == 1.0 / 3.0
-        assert result.warn_rate == 1.0 / 3.0
+        assert result.pass_rate == pytest.approx(1.0 / 3.0)
+        assert result.fail_rate == pytest.approx(1.0 / 3.0)
+        assert result.warn_rate == pytest.approx(1.0 / 3.0)
 
     def test_aggregate_with_dimension_scores(self) -> None:
         runner = E2EBenchmarkRunner()
@@ -910,7 +910,7 @@ class TestE2EBenchmarkRunner:
         result = runner._aggregate([qr], "mode", "d")
         assert result.dimension_averages is not None
         assert result.dimension_averages.faithfulness == 0.9
-        assert result.dimension_averages.average == 0.875
+        assert result.dimension_averages.average == pytest.approx(0.875)
 
     def test_aggregate_success_rate(self) -> None:
         runner = E2EBenchmarkRunner()
@@ -2119,7 +2119,7 @@ class TestScoringEdgeCases:
 
     def test_aggregate_scores_large(self) -> None:
         results = [JudgeResult(f"d{i}", 0.5, Judgment.WARN) for i in range(100)]
-        assert aggregate_scores(results) == 0.5
+        assert aggregate_scores(results) == pytest.approx(0.5)
 
     def test_score_to_rating_boundary(self) -> None:
         assert score_to_rating(0.9) == "excellent"

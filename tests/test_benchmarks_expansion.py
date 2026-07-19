@@ -553,11 +553,11 @@ class TestBenchmarkResult:
             per_query_precision=[0.4, 0.5, 0.6],
             per_query_latency_ms=[100.0, 200.0, 300.0],
         )
-        assert res.average_recall == 0.6
-        assert res.average_precision == 0.5
-        assert res.average_latency_ms == 200.0
-        assert res.success_rate == 0.9  # 10 - 1 timeout = 9 successes → 90%
-        assert res.fallback_rate == 0.2  # 2 / 10
+        assert res.average_recall == pytest.approx(0.6)
+        assert res.average_precision == pytest.approx(0.5)
+        assert res.average_latency_ms == pytest.approx(200.0)
+        assert res.success_rate == pytest.approx(0.9)  # 10 - 1 timeout = 9 successes → 90%
+        assert res.fallback_rate == pytest.approx(0.2)  # 2 / 10
 
     def test_empty_per_query(self):
         res = BenchmarkResult(dataset_name="e", query_count=0)
@@ -616,8 +616,8 @@ class TestAggregateResults:
         agg = aggregate_results(results)
         assert agg["dataset_count"] == 1
         assert agg["total_queries"] == 10
-        assert agg["average_recall"] == 0.55
-        assert agg["average_precision"] == 0.45
+        assert agg["average_recall"] == pytest.approx(0.55)
+        assert agg["average_precision"] == pytest.approx(0.45)
 
     def test_multiple(self):
         results = [
@@ -649,8 +649,8 @@ class TestAggregateResults:
         agg = aggregate_results(results)
         assert agg["dataset_count"] == 2
         assert agg["total_queries"] == 30
-        assert agg["average_recall"] == 0.6
-        assert agg["average_latency_ms"] == 150.0
+        assert agg["average_recall"] == pytest.approx(0.6)
+        assert agg["average_latency_ms"] == pytest.approx(150.0)
 
     def test_all_none_recall(self):
         results = [
