@@ -556,7 +556,9 @@ class TestBenchmarkResult:
         assert res.average_recall == pytest.approx(0.6)
         assert res.average_precision == pytest.approx(0.5)
         assert res.average_latency_ms == pytest.approx(200.0)
-        assert res.success_rate == pytest.approx(0.9)  # 10 - 1 timeout = 9 successes → 90%
+        assert res.success_rate == pytest.approx(
+            0.9
+        )  # 10 - 1 timeout = 9 successes → 90%
         assert res.fallback_rate == pytest.approx(0.2)  # 2 / 10
 
     def test_empty_per_query(self):
