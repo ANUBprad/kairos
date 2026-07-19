@@ -372,14 +372,18 @@ class TestAPIApp:
         assert app1 is app2
 
     def test_app_has_health_routes(self) -> None:
+        from fastapi.routing import iter_route_contexts
+
         app = create_app()
-        routes = [r.path for r in app.routes]
+        routes = [ctx.path for ctx in iter_route_contexts(app.routes)]
         assert "/health" in routes
         assert "/health/ready" in routes
 
     def test_app_has_config_routes(self) -> None:
+        from fastapi.routing import iter_route_contexts
+
         app = create_app()
-        routes = [r.path for r in app.routes]
+        routes = [ctx.path for ctx in iter_route_contexts(app.routes)]
         assert "/api/v1/config" in routes
 
     def test_health_endpoint_returns_ok(self) -> None:

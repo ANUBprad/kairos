@@ -5,7 +5,6 @@ from typing import Optional
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.routing import APIRoute
 
 from intelligence.api.health.endpoints import router as health_router
 from intelligence.api.routes.config import router as config_router
@@ -18,35 +17,6 @@ from intelligence.api.middleware.rate_limit import RateLimitMiddleware
 from intelligence.config.settings import Settings, get_settings
 
 _app_instance: Optional[FastAPI] = None
-
-
-def _register_router(
-    app: FastAPI,
-    router: object,
-    prefix: str,
-    tags: Optional[list[str]] = None,
-) -> None:
-    """Register an APIRouter's routes directly on the app.
-
-    FastAPI 0.115+ wraps ``include_router`` output in opaque
-    ``_IncludedRouter`` objects that lack a ``.path`` attribute.
-    This helper bypasses that wrapper by copying each route directly
-    onto the app's router with the full prefixed path, preserving
-    the ``endpoint``, ``methods``, ``name``, and ``tags`` attributes
-    that FastAPI needs for dispatch and OpenAPI generation.
-    """
-    for route in getattr(router, "routes", []):
-        if not isinstance(route, APIRoute):
-            continue
-        app.router.routes.append(
-            APIRoute(
-                path=prefix + route.path,
-                endpoint=route.endpoint,
-                methods=route.methods,
-                name=route.name,
-                tags=tags or [],
-            )
-        )
 
 
 def create_app(settings: Optional[Settings] = None) -> FastAPI:
@@ -82,13 +52,15 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         allow_headers=["*"],
     )
 
-    _register_router(app, health_router, "/health", tags=["Health"])
-    _register_router(app, config_router, "/api/v1/config", tags=["Configuration"])
-    _register_router(
-        app, observability_router, "/api/v1/observability", tags=["Observability"]
+    app.include_router(health_router, prefix="/health", tags=["Health"])
+    app.include_router(config_router, prefix="/api/v1/config", tags=["Configuration"])
+    app.include_router(
+        observability_router, prefix="/api/v1/observability", tags=["Observability"]
     )
-    _register_router(app, evaluation_router, "/api/v1/evaluation", tags=["Evaluation"])
-    _register_router(app, artifacts_router, "/api/v1/artifacts", tags=["Artifacts"])
+    app.include_router(
+        evaluation_router, prefix="/api/v1/evaluation", tags=["Evaluation"]
+    )
+    app.include_router(artifacts_router, prefix="/api/v1/artifacts", tags=["Artifacts"])
 
     _app_instance = app
     return app
