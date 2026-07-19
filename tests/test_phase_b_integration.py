@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -142,7 +142,6 @@ class TestEmbeddingCache:
 
         cache = EmbeddingCache(maxsize=100, ttl_seconds=1)
         cache.set("key", [1.0])
-        import time
         time.sleep(1.1)
         result = cache.get("key")
         assert result is None
@@ -225,11 +224,13 @@ class TestBM25Index:
         from intelligence.retrieval.persistent_bm25 import PersistentBM25Index
 
         idx = PersistentBM25Index()
-        idx.add_documents([
-            ("doc1", "machine learning is a subset of AI"),
-            ("doc2", "deep learning uses neural networks"),
-            ("doc3", "natural language processing handles text"),
-        ])
+        idx.add_documents(
+            [
+                ("doc1", "machine learning is a subset of AI"),
+                ("doc2", "deep learning uses neural networks"),
+                ("doc3", "natural language processing handles text"),
+            ]
+        )
         results = idx.query("machine learning", top_k=2)
         assert len(results) <= 2
         assert results[0][0] == "doc1"

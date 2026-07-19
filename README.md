@@ -15,7 +15,7 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="#"><img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build Status" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/tests-275%2B-brightgreen.svg" alt="Tests" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/tests-1%2C800%2B-brightgreen.svg" alt="Tests" /></a>
   <a href="#"><img src="https://img.shields.io/badge/python-3.11+-3776AB.svg" alt="Python 3.11+" /></a>
   <a href="#"><img src="https://img.shields.io/badge/go-1.22+-00ADD8.svg" alt="Go 1.22+" /></a>
   <a href="#"><img src="https://img.shields.io/badge/next.js-15-000000" alt="Next.js 15" /></a>
@@ -176,7 +176,7 @@ kairos/
 │   ├── memory_profile/            # Memory profiling
 │   └── rag_evaluation/            # BM25/Dense/Hybrid comparison
 ├── sdk/                           # Python SDK
-├── tests/                         # 275+ tests
+├── tests/                         # 1,800+ tests
 ├── docker/                        # Multi-stage Dockerfiles
 ├── docs/                          # Documentation
 └── proto/                         # gRPC contracts
@@ -488,3 +488,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 <p align="center">
   Built with care for the RAG research community.
 </p>
+
+## Support
+
+If you found Kairos useful, consider giving the repository a ⭐ on GitHub.

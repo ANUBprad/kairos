@@ -35,7 +35,7 @@ Kairos v1.0.0-rc1 is the first production-ready release candidate. This release 
 
 ### Testing
 
-- 275+ automated tests
+- 1,800+ automated tests
 - Integration tests for document loading, caching, BM25, chunking, pipelines
 - Stress tests for concurrent BM25 access, cache contention, thread safety
 - Parser regression tests for edge cases

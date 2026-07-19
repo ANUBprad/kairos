@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
-import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -27,7 +24,10 @@ class TestBM25Stress:
 
         def add_docs(start, end):
             try:
-                docs = [(f"doc_{i}", f"document number {i} about topic {i % 10}") for i in range(start, end)]
+                docs = [
+                    (f"doc_{i}", f"document number {i} about topic {i % 10}")
+                    for i in range(start, end)
+                ]
                 idx.add_documents(docs)
             except Exception as e:
                 errors.append(str(e))
@@ -127,7 +127,7 @@ class TestRetrievalCacheStress:
 
         cache = RetrievalCache(maxsize=10, ttl_seconds=300)
         for i in range(1000):
-            cache.put(f"ns", f"query_{i}", 5, 1, False, False, [f"chunk_{i}"])
+            cache.put("ns", f"query_{i}", 5, 1, False, False, [f"chunk_{i}"])
         assert cache.stats()["size"] <= 10
 
 
@@ -197,10 +197,7 @@ class TestMemoryPressure:
         from intelligence.retrieval.persistent_bm25 import PersistentBM25Index
 
         idx = PersistentBM25Index()
-        docs = [
-            (f"doc_{i}", f"This is document {i} " * 50)
-            for i in range(2000)
-        ]
+        docs = [(f"doc_{i}", f"This is document {i} " * 50) for i in range(2000)]
         idx.add_documents(docs)
         assert idx.num_documents == 2000
         results = idx.query("document", top_k=10)

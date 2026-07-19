@@ -50,10 +50,10 @@ class TestComputeFailureRates:
             total_queries=20,
         )
         rates = compute_failure_rates(record)
-        assert rates["empty_retrieval_rate"] == 0.1
-        assert rates["timeout_rate"] == 0.0
-        assert rates["planner_fallback_rate"] == 0.15
-        assert rates["generation_failure_rate"] == 0.05
+        assert rates["empty_retrieval_rate"] == pytest.approx(0.1)
+        assert rates["timeout_rate"] == pytest.approx(0.0)
+        assert rates["planner_fallback_rate"] == pytest.approx(0.15)
+        assert rates["generation_failure_rate"] == pytest.approx(0.05)
         assert rates["overall_failure_rate"] == pytest.approx(0.3)
 
     def test_no_failures(self) -> None:

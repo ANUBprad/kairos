@@ -15,7 +15,6 @@ import threading
 import time
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,9 @@ class PersistentBM25Index:
     5. Thread-safe for concurrent access
     """
 
-    def __init__(self, config: BM25Config | None = None, storage_path: str | None = None):
+    def __init__(
+        self, config: BM25Config | None = None, storage_path: str | None = None
+    ):
         self._config = config or BM25Config()
         self._storage_path = storage_path
         self._lock = threading.RLock()
@@ -91,7 +92,9 @@ class PersistentBM25Index:
                 self._remove_document_internal(doc_id)
 
             tokens = _tokenize(text)
-            filtered_tokens = [t for t in tokens if len(t) >= self._config.min_token_length]
+            filtered_tokens = [
+                t for t in tokens if len(t) >= self._config.min_token_length
+            ]
             token_counts = Counter(filtered_tokens)
 
             entry = DocumentEntry(
@@ -109,7 +112,9 @@ class PersistentBM25Index:
             for token, count in token_counts.items():
                 self._index[token][doc_id] = count
 
-            self._avg_doc_length = self._total_tokens / self._total_docs if self._total_docs > 0 else 0.0
+            self._avg_doc_length = (
+                self._total_tokens / self._total_docs if self._total_docs > 0 else 0.0
+            )
             self._dirty = True
 
     def add_documents(self, doc_id_texts: list[tuple[str, str]]) -> None:
@@ -120,7 +125,9 @@ class PersistentBM25Index:
                     self._remove_document_internal(doc_id)
 
                 tokens = _tokenize(text)
-                filtered_tokens = [t for t in tokens if len(t) >= self._config.min_token_length]
+                filtered_tokens = [
+                    t for t in tokens if len(t) >= self._config.min_token_length
+                ]
                 token_counts = Counter(filtered_tokens)
 
                 entry = DocumentEntry(
@@ -138,7 +145,9 @@ class PersistentBM25Index:
                 for token, count in token_counts.items():
                     self._index[token][doc_id] = count
 
-            self._avg_doc_length = self._total_tokens / self._total_docs if self._total_docs > 0 else 0.0
+            self._avg_doc_length = (
+                self._total_tokens / self._total_docs if self._total_docs > 0 else 0.0
+            )
             self._dirty = True
 
     def remove_document(self, doc_id: str) -> bool:
@@ -161,7 +170,9 @@ class PersistentBM25Index:
                 if not self._index[token]:
                     del self._index[token]
 
-        self._avg_doc_length = self._total_tokens / self._total_docs if self._total_docs > 0 else 0.0
+        self._avg_doc_length = (
+            self._total_tokens / self._total_docs if self._total_docs > 0 else 0.0
+        )
         self._dirty = True
         return True
 
@@ -176,7 +187,9 @@ class PersistentBM25Index:
                 return []
 
             query_tokens = _tokenize(query_text)
-            query_tokens = [t for t in query_tokens if len(t) >= self._config.min_token_length]
+            query_tokens = [
+                t for t in query_tokens if len(t) >= self._config.min_token_length
+            ]
 
             if not query_tokens:
                 return []
@@ -197,7 +210,11 @@ class PersistentBM25Index:
                 for doc_id, tf in self._index[token].items():
                     doc_len = self._documents[doc_id].doc_length
                     numerator = tf * (k1 + 1)
-                    denominator = tf + k1 * (1 - b + b * doc_len / avgdl) if avgdl > 0 else tf + k1
+                    denominator = (
+                        tf + k1 * (1 - b + b * doc_len / avgdl)
+                        if avgdl > 0
+                        else tf + k1
+                    )
                     scores[doc_id] += idf * (numerator / denominator)
 
             ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -212,7 +229,11 @@ class PersistentBM25Index:
     def get_documents_by_ids(self, doc_ids: list[str]) -> list[str]:
         """Retrieve multiple documents by ID, preserving order."""
         with self._lock:
-            return [self._documents[doc_id].text for doc_id in doc_ids if doc_id in self._documents]
+            return [
+                self._documents[doc_id].text
+                for doc_id in doc_ids
+                if doc_id in self._documents
+            ]
 
     def save_to_disk(self, path: str | None = None) -> None:
         """Persist the index to disk as JSON."""
@@ -231,8 +252,7 @@ class PersistentBM25Index:
                 "total_tokens": self._total_tokens,
                 "avg_doc_length": self._avg_doc_length,
                 "documents": {
-                    doc_id: entry.text
-                    for doc_id, entry in self._documents.items()
+                    doc_id: entry.text for doc_id, entry in self._documents.items()
                 },
             }
 
@@ -241,7 +261,9 @@ class PersistentBM25Index:
                 json.dump(data, f)
 
             self._dirty = False
-            logger.info("BM25 index saved to %s (%d documents)", filepath, self._total_docs)
+            logger.info(
+                "BM25 index saved to %s (%d documents)", filepath, self._total_docs
+            )
 
     def _load_from_disk(self, path: str | None = None) -> None:
         """Load the index from a JSON file."""
@@ -265,7 +287,9 @@ class PersistentBM25Index:
         documents = data.get("documents", {})
         for doc_id, text in documents.items():
             tokens = _tokenize(text)
-            filtered_tokens = [t for t in tokens if len(t) >= self._config.min_token_length]
+            filtered_tokens = [
+                t for t in tokens if len(t) >= self._config.min_token_length
+            ]
             token_counts = Counter(filtered_tokens)
             entry = DocumentEntry(
                 doc_id=doc_id,
@@ -278,4 +302,6 @@ class PersistentBM25Index:
             for token, count in token_counts.items():
                 self._index[token][doc_id] = count
 
-        logger.info("BM25 index loaded from %s (%d documents)", filepath, self._total_docs)
+        logger.info(
+            "BM25 index loaded from %s (%d documents)", filepath, self._total_docs
+        )

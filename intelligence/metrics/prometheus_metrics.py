@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 import grpc
-from prometheus_client import Counter, Gauge, Histogram, Summary, start_http_server
+from prometheus_client import Counter, Gauge, Histogram, start_http_server
 
 logger = logging.getLogger(__name__)
 
