@@ -373,13 +373,13 @@ class TestAPIApp:
 
     def test_app_has_health_routes(self) -> None:
         app = create_app()
-        routes = [r.path for r in app.routes if hasattr(r, "path")]
+        routes = [r.path for r in app.routes]
         assert "/health" in routes
         assert "/health/ready" in routes
 
     def test_app_has_config_routes(self) -> None:
         app = create_app()
-        routes = [r.path for r in app.routes if hasattr(r, "path")]
+        routes = [r.path for r in app.routes]
         assert "/api/v1/config" in routes
 
     def test_health_endpoint_returns_ok(self) -> None:

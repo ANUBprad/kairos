@@ -14,7 +14,9 @@ class SimpleRetriever(BaseRetriever):
         self._bm25_indices: dict[str, PersistentBM25Index] = {}
         self._corpora_versions: dict[str, int] = {}
 
-    def _get_or_build_index(self, namespace: str, all_docs: list[str]) -> PersistentBM25Index:
+    def _get_or_build_index(
+        self, namespace: str, all_docs: list[str]
+    ) -> PersistentBM25Index:
         """Get cached BM25 index or build from corpus, with incremental updates."""
         corpus_version = self._corpora_versions.get(namespace, 0)
         current_version = self._get_corpus_version(namespace)

@@ -224,11 +224,13 @@ class TestBM25Index:
         from intelligence.retrieval.persistent_bm25 import PersistentBM25Index
 
         idx = PersistentBM25Index()
-        idx.add_documents([
-            ("doc1", "machine learning is a subset of AI"),
-            ("doc2", "deep learning uses neural networks"),
-            ("doc3", "natural language processing handles text"),
-        ])
+        idx.add_documents(
+            [
+                ("doc1", "machine learning is a subset of AI"),
+                ("doc2", "deep learning uses neural networks"),
+                ("doc3", "natural language processing handles text"),
+            ]
+        )
         results = idx.query("machine learning", top_k=2)
         assert len(results) <= 2
         assert results[0][0] == "doc1"

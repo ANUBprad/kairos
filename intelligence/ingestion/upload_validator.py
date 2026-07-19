@@ -83,7 +83,9 @@ def validate_upload(
     if detected != claimed_mime:
         logger.warning(
             "MIME mismatch: claimed=%s detected=%s filename=%s",
-            claimed_mime, detected, filename,
+            claimed_mime,
+            detected,
+            filename,
         )
 
     return ValidationResult(valid=True, mime_type=detected)

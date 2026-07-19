@@ -40,8 +40,17 @@ class JSONFormatter(logging.Formatter):
                 "message": str(record.exc_info[1]),
             }
 
-        for key in ("method", "status", "duration", "path", "namespace",
-                     "retrieval_type", "top_k", "chunk_count", "error"):
+        for key in (
+            "method",
+            "status",
+            "duration",
+            "path",
+            "namespace",
+            "retrieval_type",
+            "top_k",
+            "chunk_count",
+            "error",
+        ):
             val = getattr(record, key, None)
             if val is not None:
                 log_entry[key] = val

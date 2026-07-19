@@ -248,7 +248,9 @@ class TestExamples:
 
     def test_all_examples_have_readme(self) -> None:
         examples = ["simple_rag", "adaptive_rag", "enterprise_search", "multi_hop_qa"]
-        existing = [ex for ex in examples if (ROOT / "examples" / ex / "README.md").exists()]
+        existing = [
+            ex for ex in examples if (ROOT / "examples" / ex / "README.md").exists()
+        ]
         if not existing:
             pytest.skip("No example README.md files exist (removed during P12)")
         for ex in existing:

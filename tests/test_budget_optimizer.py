@@ -213,10 +213,26 @@ class TestBudgetDatasetGenerator:
         self._write_calibration(
             calib,
             [
-                {"query_id": "Q1", "confidence": 0.9, "success": True, "latency_ms": 50,
-                 "retrieval_type": "HYBRID", "top_k": 3, "rerank": False, "decompose": False},
-                {"query_id": "Q2", "confidence": 0.6, "success": False, "latency_ms": 120,
-                 "retrieval_type": "HYBRID", "top_k": 5, "rerank": True, "decompose": False},
+                {
+                    "query_id": "Q1",
+                    "confidence": 0.9,
+                    "success": True,
+                    "latency_ms": 50,
+                    "retrieval_type": "HYBRID",
+                    "top_k": 3,
+                    "rerank": False,
+                    "decompose": False,
+                },
+                {
+                    "query_id": "Q2",
+                    "confidence": 0.6,
+                    "success": False,
+                    "latency_ms": 120,
+                    "retrieval_type": "HYBRID",
+                    "top_k": 5,
+                    "rerank": True,
+                    "decompose": False,
+                },
             ],
         )
         gen = BudgetDatasetGenerator()
@@ -227,8 +243,16 @@ class TestBudgetDatasetGenerator:
     def test_generate_with_augment(self, tmp_path):
         calib = tmp_path / "calibration.jsonl"
         base = [
-            {"query_id": f"Q{i}", "confidence": c, "success": s, "latency_ms": 50 + i * 10,
-             "retrieval_type": "HYBRID", "top_k": 5, "rerank": False, "decompose": False}
+            {
+                "query_id": f"Q{i}",
+                "confidence": c,
+                "success": s,
+                "latency_ms": 50 + i * 10,
+                "retrieval_type": "HYBRID",
+                "top_k": 5,
+                "rerank": False,
+                "decompose": False,
+            }
             for i, (c, s) in enumerate([(0.9, True), (0.6, False), (0.3, True)])
         ]
         self._write_calibration(calib, base)
@@ -240,8 +264,18 @@ class TestBudgetDatasetGenerator:
         calib = tmp_path / "calibration.jsonl"
         self._write_calibration(
             calib,
-            [{"query_id": "Q1", "confidence": 0.8, "success": True, "latency_ms": 60,
-              "retrieval_type": "HYBRID", "top_k": 3, "rerank": False, "decompose": False}],
+            [
+                {
+                    "query_id": "Q1",
+                    "confidence": 0.8,
+                    "success": True,
+                    "latency_ms": 60,
+                    "retrieval_type": "HYBRID",
+                    "top_k": 3,
+                    "rerank": False,
+                    "decompose": False,
+                }
+            ],
         )
         out = tmp_path / "output.jsonl"
         gen = BudgetDatasetGenerator()
@@ -266,8 +300,18 @@ class TestBudgetDatasetGenerator:
         calib = tmp_path / "calibration.jsonl"
         self._write_calibration(
             calib,
-            [{"query_id": "Q1", "confidence": 0.9, "success": True, "latency_ms": 50,
-              "retrieval_type": "HYBRID", "top_k": 3, "rerank": False, "decompose": False}],
+            [
+                {
+                    "query_id": "Q1",
+                    "confidence": 0.9,
+                    "success": True,
+                    "latency_ms": 50,
+                    "retrieval_type": "HYBRID",
+                    "top_k": 3,
+                    "rerank": False,
+                    "decompose": False,
+                }
+            ],
         )
         gen1 = BudgetDatasetGenerator(seed=42)
         gen2 = BudgetDatasetGenerator(seed=42)

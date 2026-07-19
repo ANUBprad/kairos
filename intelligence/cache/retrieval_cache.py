@@ -127,17 +127,16 @@ class RetrievalCache:
         count = 0
 
         with self._lock:
-            keys_to_remove = [
-                k for k, v in self._cache.items()
-                if v[2] == namespace
-            ]
+            keys_to_remove = [k for k, v in self._cache.items() if v[2] == namespace]
             for key in keys_to_remove:
                 del self._cache[key]
                 count += 1
                 self._metrics.invalidations += 1
 
         if count > 0:
-            logger.info("Invalidated %d cache entries for namespace=%s", count, namespace)
+            logger.info(
+                "Invalidated %d cache entries for namespace=%s", count, namespace
+            )
         return count
 
     def clear(self) -> None:

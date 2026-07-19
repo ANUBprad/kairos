@@ -24,7 +24,10 @@ class TestBM25Stress:
 
         def add_docs(start, end):
             try:
-                docs = [(f"doc_{i}", f"document number {i} about topic {i % 10}") for i in range(start, end)]
+                docs = [
+                    (f"doc_{i}", f"document number {i} about topic {i % 10}")
+                    for i in range(start, end)
+                ]
                 idx.add_documents(docs)
             except Exception as e:
                 errors.append(str(e))
@@ -194,10 +197,7 @@ class TestMemoryPressure:
         from intelligence.retrieval.persistent_bm25 import PersistentBM25Index
 
         idx = PersistentBM25Index()
-        docs = [
-            (f"doc_{i}", f"This is document {i} " * 50)
-            for i in range(2000)
-        ]
+        docs = [(f"doc_{i}", f"This is document {i} " * 50) for i in range(2000)]
         idx.add_documents(docs)
         assert idx.num_documents == 2000
         results = idx.query("document", top_k=10)

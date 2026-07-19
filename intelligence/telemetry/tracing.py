@@ -70,9 +70,7 @@ class Tracer:
                     yield span
                 except Exception as e:
                     span.status = "ERROR"
-                    span.events.append(
-                        {"name": "exception", "message": str(e)}
-                    )
+                    span.events.append({"name": "exception", "message": str(e)})
                     otel_span.record_exception(e)
                     raise
                 finally:
