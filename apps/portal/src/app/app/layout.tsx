@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AppSidebar } from "@/components/app/sidebar";
 import { AppHeader } from "@/components/app/app-header";
 import { PageTransition } from "@/components/shared/page-transition";
+import { KeyboardShortcuts } from "@/components/app/dashboard/keyboard-shortcuts";
 
 export const metadata = {
   title: { template: "%s | Kairos", default: "Research Platform | Kairos" },
@@ -36,6 +37,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen bg-bg">
+      <KeyboardShortcuts />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:bg-background focus:px-4 focus:py-2 focus:rounded-lg focus:border focus:border-border"

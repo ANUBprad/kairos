@@ -20,6 +20,9 @@ import {
   FileText,
   FlaskConical,
   NotebookPen,
+  Upload,
+  Plus,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,32 +32,47 @@ interface CommandItem {
   id: string;
   label: string;
   description?: string;
-  href: string;
+  href?: string;
+  action?: string;
   icon: LucideIcon;
   category: string;
   keywords: string[];
+  shortcut?: string;
 }
 
-const COMMANDS: CommandItem[] = [
+const NAVIGATION_COMMANDS: CommandItem[] = [
   { id: "overview", label: "Overview", href: "/app", icon: LayoutDashboard, category: "Navigation", keywords: ["dashboard", "home", "overview"] },
-  { id: "research", label: "Research Dashboard", href: "/app/research", icon: Microscope, category: "Research", keywords: ["research", "dashboard", "metrics", "analysis"] },
-  { id: "copilot", label: "AI Copilot", href: "/app/copilot", icon: Sparkles, category: "Research", keywords: ["copilot", "ai", "assistant", "recommendations"] },
-  { id: "lineage", label: "Experiment Lineage", href: "/app/lineage", icon: GitBranch, category: "Research", keywords: ["lineage", "history", "versions", "provenance"] },
-  { id: "planner", label: "Experiment Planner", href: "/app/planner", icon: Lightbulb, category: "Research", keywords: ["planner", "plan", "experiment", "suggest"] },
-  { id: "documents", label: "Document Repository", href: "/app/knowledge-bases", icon: FolderOpen, category: "Build", keywords: ["documents", "knowledge", "base", "upload"] },
-  { id: "chunking", label: "Chunking Studio", href: "/app/chunking-studio", icon: Code2, category: "Build", keywords: ["chunking", "split", "text", "chunks"] },
-  { id: "retrieval-lab", label: "Retrieval Lab", href: "/app/retrieval-lab", icon: FlaskConical, category: "Evaluate", keywords: ["retrieval", "lab", "test", "search"] },
-  { id: "evaluation", label: "Evaluation", href: "/app/evaluation", icon: BarChart3, category: "Evaluate", keywords: ["evaluation", "metrics", "benchmark", "recall", "ndcg"] },
-  { id: "chat", label: "RAG Chat", href: "/app/rag-chat", icon: Bot, category: "Explain", keywords: ["chat", "conversation", "rag", "ask"] },
-  { id: "debugger", label: "Retrieval Debugger", href: "/app/rag-chat#debug", icon: Eye, category: "Explain", keywords: ["debug", "trace", "debugger", "inspect"] },
-  { id: "architecture", label: "Architecture", href: "/app/architecture", icon: BookOpen, category: "Learn", keywords: ["architecture", "design", "system"] },
-  { id: "guide", label: "Project Guide", href: "/app/project-guide", icon: GraduationCap, category: "Learn", keywords: ["guide", "tutorial", "learn", "getting started"] },
-  { id: "settings", label: "Configuration", href: "/app/settings", icon: SlidersHorizontal, category: "System", keywords: ["settings", "config", "preferences"] },
-  { id: "notebook", label: "Research Notebook", href: "/app/notebook", icon: NotebookPen, category: "Research", keywords: ["notebook", "notes", "journal", "markdown"] },
-  { id: "benchmark-explorer", label: "Benchmark Explorer", href: "/app/benchmark-explorer", icon: FlaskConical, category: "Evaluate", keywords: ["benchmark", "explorer", "compare", "scatter"] },
-  { id: "experiment-builder", label: "Experiment Builder", href: "/app/experiment-builder", icon: GitBranch, category: "Build", keywords: ["experiment", "builder", "workflow", "pipeline"] },
-  { id: "publication", label: "Publication Mode", href: "/app/publication", icon: FileText, category: "Research", keywords: ["publication", "export", "paper", "report", "pdf"] },
+  { id: "research", label: "Research Dashboard", href: "/app/research", icon: Microscope, category: "Navigation", keywords: ["research", "dashboard", "metrics", "analysis"] },
+  { id: "copilot", label: "AI Copilot", href: "/app/copilot", icon: Sparkles, category: "Navigation", keywords: ["copilot", "ai", "assistant", "recommendations"] },
+  { id: "notebook", label: "Research Notebook", href: "/app/notebook", icon: NotebookPen, category: "Navigation", keywords: ["notebook", "notes", "journal", "markdown"] },
+  { id: "lineage", label: "Experiment Lineage", href: "/app/lineage", icon: GitBranch, category: "Navigation", keywords: ["lineage", "history", "versions", "provenance"] },
+  { id: "planner", label: "Experiment Planner", href: "/app/planner", icon: Lightbulb, category: "Navigation", keywords: ["planner", "plan", "experiment", "suggest"] },
+  { id: "publication", label: "Publication Mode", href: "/app/publication", icon: FileText, category: "Navigation", keywords: ["publication", "export", "paper", "report", "pdf"] },
+  { id: "documents", label: "Document Repository", href: "/app/knowledge-bases", icon: FolderOpen, category: "Navigation", keywords: ["documents", "knowledge", "base", "upload"] },
+  { id: "chunking", label: "Chunking Studio", href: "/app/chunking-studio", icon: Code2, category: "Navigation", keywords: ["chunking", "split", "text", "chunks"] },
+  { id: "experiment-builder", label: "Experiment Builder", href: "/app/experiment-builder", icon: FlaskConical, category: "Navigation", keywords: ["experiment", "builder", "workflow", "pipeline"] },
+  { id: "retrieval-lab", label: "Retrieval Lab", href: "/app/retrieval-lab", icon: FlaskConical, category: "Navigation", keywords: ["retrieval", "lab", "test", "search"] },
+  { id: "advanced-retrieval", label: "Advanced Retrieval", href: "/app/advanced-retrieval", icon: GitBranch, category: "Navigation", keywords: ["advanced", "retrieval", "hybrid", "bm25"] },
+  { id: "evaluation", label: "Evaluation", href: "/app/evaluation", icon: BarChart3, category: "Navigation", keywords: ["evaluation", "metrics", "benchmark", "recall", "ndcg"] },
+  { id: "benchmark-explorer", label: "Benchmark Explorer", href: "/app/benchmark-explorer", icon: FlaskConical, category: "Navigation", keywords: ["benchmark", "explorer", "compare", "scatter"] },
+  { id: "chat", label: "RAG Chat", href: "/app/rag-chat", icon: Bot, category: "Navigation", keywords: ["chat", "conversation", "rag", "ask"] },
+  { id: "debugger", label: "Retrieval Debugger", href: "/app/rag-chat#debug", icon: Eye, category: "Navigation", keywords: ["debug", "trace", "debugger", "inspect"] },
+  { id: "architecture", label: "Architecture", href: "/app/architecture", icon: BookOpen, category: "Navigation", keywords: ["architecture", "design", "system"] },
+  { id: "guide", label: "Project Guide", href: "/app/project-guide", icon: GraduationCap, category: "Navigation", keywords: ["guide", "tutorial", "learn", "getting started"] },
+  { id: "settings", label: "Configuration", href: "/app/settings", icon: SlidersHorizontal, category: "Navigation", keywords: ["settings", "config", "preferences"] },
 ];
+
+const ACTION_COMMANDS: CommandItem[] = [
+  { id: "upload", label: "Upload Document", description: "Add files to a knowledge base", href: "/app/knowledge-bases", action: "upload", icon: Upload, category: "Actions", keywords: ["upload", "file", "document", "add"], shortcut: "U" },
+  { id: "create-kb", label: "Create Knowledge Base", description: "Start a new knowledge base", href: "/app/knowledge-bases", action: "create-kb", icon: Plus, category: "Actions", keywords: ["create", "knowledge", "base", "new"], shortcut: "N" },
+  { id: "new-chat", label: "Open RAG Chat", description: "Ask questions about your documents", href: "/app/rag-chat", action: "new-chat", icon: MessageSquare, category: "Actions", keywords: ["chat", "ask", "question", "rag"], shortcut: "R" },
+  { id: "new-experiment", label: "New Experiment", description: "Build and test a retrieval pipeline", href: "/app/experiment-builder", action: "new-experiment", icon: FlaskConical, category: "Actions", keywords: ["experiment", "new", "build", "test"] },
+  { id: "run-evaluation", label: "Run Evaluation", description: "Benchmark retrieval performance", href: "/app/evaluation", action: "run-evaluation", icon: BarChart3, category: "Actions", keywords: ["evaluation", "benchmark", "metrics"], shortcut: "E" },
+  { id: "ask-copilot", label: "Ask Copilot", description: "Get AI-powered research insights", href: "/app/copilot", action: "ask-copilot", icon: Sparkles, category: "Actions", keywords: ["copilot", "ai", "help", "insight"] },
+  { id: "open-lab", label: "Open Retrieval Lab", description: "Test retrieval configurations", href: "/app/retrieval-lab", action: "open-lab", icon: FlaskConical, category: "Actions", keywords: ["retrieval", "lab", "test"] },
+];
+
+const ALL_COMMANDS = [...NAVIGATION_COMMANDS, ...ACTION_COMMANDS];
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -65,7 +83,7 @@ export function CommandPalette() {
   const { registerShortcut, unregisterShortcut } = useWorkspace();
 
   const filtered = useMemo(() => {
-    return COMMANDS.filter((cmd) => {
+    return ALL_COMMANDS.filter((cmd) => {
       if (!query) return true;
       const q = query.toLowerCase();
       return (
@@ -91,7 +109,9 @@ export function CommandPalette() {
     (cmd: CommandItem) => {
       setOpen(false);
       setQuery("");
-      router.push(cmd.href);
+      if (cmd.href) {
+        router.push(cmd.href);
+      }
     },
     [router]
   );
@@ -142,33 +162,40 @@ export function CommandPalette() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] sm:pt-[15vh] px-4">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] sm:pt-[15vh] px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
+    >
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => {
           setOpen(false);
           setQuery("");
         }}
+        aria-hidden="true"
       />
       <div className="relative w-full max-w-xl rounded-xl border border-border bg-surface shadow-xl overflow-hidden max-sm:mx-0">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <Search size={18} className="text-text-tertiary shrink-0" />
+          <Search size={18} className="text-text-tertiary shrink-0" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search pages, commands..."
+            placeholder="Search pages and actions..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none"
+            aria-label="Search commands"
           />
           <kbd className="rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] font-medium text-text-tertiary">
             ESC
           </kbd>
         </div>
-        <div className="max-h-80 overflow-y-auto p-2">
+        <div className="max-h-80 overflow-y-auto p-2" role="listbox">
           {Object.entries(grouped).map(([category, items]) => (
-            <div key={category} className="mb-2">
+            <div key={category} className="mb-2" role="group" aria-label={category}>
               <p className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-tertiary/60">
                 {category}
               </p>
@@ -179,6 +206,8 @@ export function CommandPalette() {
                   <button
                     key={cmd.id}
                     onClick={() => executeCommand(cmd)}
+                    role="option"
+                    aria-selected={globalIndex === selectedIndex}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                       globalIndex === selectedIndex
@@ -186,7 +215,7 @@ export function CommandPalette() {
                         : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
                     )}
                   >
-                    <Icon size={16} className="shrink-0" />
+                    <Icon size={16} className="shrink-0" aria-hidden="true" />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{cmd.label}</p>
                       {cmd.description && (
@@ -195,6 +224,11 @@ export function CommandPalette() {
                         </p>
                       )}
                     </div>
+                    {cmd.shortcut && (
+                      <kbd className="rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] font-mono text-text-tertiary shrink-0">
+                        {cmd.shortcut}
+                      </kbd>
+                    )}
                   </button>
                 );
               })}
@@ -206,7 +240,7 @@ export function CommandPalette() {
             </p>
           )}
         </div>
-        <div className="border-t border-border px-4 py-2 text-[10px] text-text-tertiary flex gap-4">
+        <div className="border-t border-border px-4 py-2 text-[10px] text-text-tertiary flex gap-4" aria-hidden="true">
           <span>
             <kbd className="rounded border border-border bg-bg px-1 py-0.5">↑↓</kbd> navigate
           </span>

@@ -16,7 +16,7 @@
 
   --color-text-primary: #F0F0F0;
   --color-text-secondary: #8B8B8B;
-  --color-text-tertiary: #5C5C5C;
+  --color-text-tertiary: #6B6B6B;
 
   --color-success: #22C55E;
   --color-success-bg: #052E16;
@@ -55,7 +55,7 @@
 
   --color-text-primary: #212529;
   --color-text-secondary: #495057;
-  --color-text-tertiary: #868E96;
+  --color-text-tertiary: #717171;
 
   --color-success-bg: #F0FDF4;
   --color-brand-muted: rgba(255, 90, 10, 0.08);
@@ -290,6 +290,58 @@
 /* Remove focus ring for mouse users */
 *:focus:not(:focus-visible) {
   outline: none;
+}
+
+/* Scroll-driven landing page utilities */
+@utility line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 90, 10, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(255, 90, 10, 0.15); }
+}
+
+@keyframes float-drift {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  25% { transform: translateY(-4px) translateX(2px); }
+  50% { transform: translateY(-2px) translateX(-1px); }
+  75% { transform: translateY(-6px) translateX(1px); }
+}
+
+@utility animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@utility animate-float-drift {
+  animation: float-drift 6s ease-in-out infinite;
+}
+
+/* Smooth scroll for Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* Section transitions */
+.section-enter {
+  will-change: transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
