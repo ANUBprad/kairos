@@ -73,6 +73,7 @@ async function assertDocAccess(docId: string, userId: string) {
       name: true,
       fileType: true,
       size: true,
+      fileHash: true,
       status: true,
       storageUrl: true,
       storageKey: true,
@@ -83,7 +84,7 @@ async function assertDocAccess(docId: string, userId: string) {
       createdAt: true,
       updatedAt: true,
       uploadedBy: { select: { id: true, name: true, image: true } },
-      _count: { select: { chunks: true } },
+      _count: { select: { chunks: true, versions: true, activities: true } },
     },
   });
 
@@ -684,4 +685,79 @@ export async function getDocumentPreviewContent(docId: string) {
     createdAt: doc.createdAt.toISOString(),
     size: doc.size,
   };
+}
+
+export async function getDocumentDetails(docId: string) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const doc = await assertDocAccess(docId, session.user.id);
+
+  const [chunks, versions, activities] = await Promise.all([
+    prisma.documentChunk.findMany({
+      where: { documentId: docId },
+      orderBy: { index: "asc" },
+      include: {
+        embedding: {
+          select: { id: true, model: true, dimensions: true, status: true, createdAt: true },
+        },
+      },
+    }),
+    prisma.documentVersion.findMany({
+      where: { documentId: docId },
+      orderBy: { version: "desc" },
+      include: {
+        uploadedBy: { select: { id: true, name: true, image: true } },
+      },
+    }),
+    prisma.documentActivity.findMany({
+      where: { documentId: docId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        user: { select: { id: true, name: true, image: true } },
+      },
+    }),
+  ]);
+
+  const kb = await prisma.knowledgeBase.findUnique({
+    where: { id: doc.knowledgeBaseId },
+    select: { id: true, name: true, projectId: true },
+  });
+
+  return {
+    ...doc,
+    metadata: doc.metadata as Record<string, unknown> | null,
+    knowledgeBase: kb || { id: doc.knowledgeBaseId, name: "Unknown", projectId: "" },
+    chunks: chunks.map((c) => ({
+      ...c,
+      metadata: c.metadata as Record<string, unknown> | null,
+    })),
+    versions: versions.map((v) => ({
+      ...v,
+      metadata: v.metadata as Record<string, unknown> | null,
+    })),
+    activities: activities.map((a) => ({
+      ...a,
+      details: a.details as Record<string, unknown> | null,
+    })),
+  };
+}
+
+export async function updateDocumentMetadata(docId: string, metadata: Record<string, unknown>) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  await assertDocAccess(docId, session.user.id);
+
+  const updated = await prisma.document.update({
+    where: { id: docId },
+    data: { metadata: metadata as never },
+    select: { id: true, metadata: true },
+  });
+
+  await logActivity(docId, session.user.id, "METADATA_UPDATED", { fields: Object.keys(metadata) });
+  revalidatePath(`/app/knowledge-bases`);
+
+  return updated;
 }

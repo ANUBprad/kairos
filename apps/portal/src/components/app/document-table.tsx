@@ -404,6 +404,9 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
               <th className="hidden px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-text-tertiary lg:table-cell">
                 Uploaded By
               </th>
+              <th className="hidden px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-text-tertiary md:table-cell">
+                Chunks
+              </th>
               <th
                 className="hidden cursor-pointer px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-text-tertiary lg:table-cell"
                 onClick={() => toggleSort("createdAt")}
@@ -446,15 +449,21 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                 </td>
                 <td className="px-3 py-3.5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10">
+                    <Link
+                      href={`/app/knowledge-bases/${kbId}/${doc.id}`}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 hover:bg-brand/20 transition-colors"
+                    >
                       <File size={15} className="text-brand" />
-                    </div>
+                    </Link>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-text-primary">
+                      <Link
+                        href={`/app/knowledge-bases/${kbId}/${doc.id}`}
+                        className="truncate text-sm font-medium text-text-primary hover:text-brand transition-colors"
+                      >
                         {doc.name}
-                      </p>
+                      </Link>
                       <p className="text-xs text-text-tertiary sm:hidden">
-                        {doc.fileType.toUpperCase()} &middot; {formatSize(doc.size)}
+                        {doc.fileType.toUpperCase()} &middot; {formatSize(doc.size)} &middot; {doc._count.chunks} chunks
                       </p>
                     </div>
                   </div>
@@ -470,6 +479,11 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                 <td className="hidden px-3 py-3.5 lg:table-cell">
                   <span className="text-sm text-text-secondary">
                     {doc.uploadedBy?.name || "Unknown"}
+                  </span>
+                </td>
+                <td className="hidden px-3 py-3.5 md:table-cell">
+                  <span className="text-sm font-mono text-text-secondary tabular-nums">
+                    {doc._count.chunks}
                   </span>
                 </td>
                 <td className="hidden px-3 py-3.5 lg:table-cell">
@@ -493,12 +507,20 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(null)} />
                         <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-border bg-surface p-1 shadow-xl">
+                          <Link
+                            href={`/app/knowledge-bases/${kbId}/${doc.id}`}
+                            onClick={() => setMenuOpen(null)}
+                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                          >
+                            <Eye size={15} />
+                            View Details
+                          </Link>
                           <button
                             onClick={() => { setPreviewId(doc.id); setMenuOpen(null); }}
                             className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
                           >
-                            <Eye size={15} />
-                            Preview
+                            <FileText size={15} />
+                            Preview Content
                           </button>
                           <button
                             onClick={() => { setRenameTarget(doc); setMenuOpen(null); }}

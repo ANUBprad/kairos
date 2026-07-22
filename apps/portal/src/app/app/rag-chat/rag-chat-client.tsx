@@ -19,11 +19,13 @@ import {
   Terminal,
   GitBranch,
   ArrowDown,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RetrievalDebugger } from "@/components/app/retrieval-debugger";
+import { ExplainabilityInspector } from "@/components/app/explainability/explainability-inspector";
 import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 import { toast } from "sonner";
 
@@ -120,6 +122,7 @@ export function RagChat({ kbs }: Props) {
   const [showPrompt, setShowPrompt] = useState<string | null>(null);
   const [showTimeline, setShowTimeline] = useState<string | null>(null);
   const [showDebugger, setShowDebugger] = useState<string | null>(null);
+  const [showExplainability, setShowExplainability] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -691,6 +694,30 @@ export function RagChat({ kbs }: Props) {
                             answerText={msg.content}
                           />
                         )}
+
+                        <div className="space-y-1">
+                          <button
+                            onClick={() => setShowExplainability(showExplainability === msg.id ? null : msg.id)}
+                            className="flex items-center gap-2 text-xs text-text-secondary bg-bg/50 rounded-lg p-2.5 border border-border w-full hover:bg-bg transition-colors"
+                          >
+                            <Sparkles size={12} className="text-brand" />
+                            <span>Explainability Inspector</span>
+                            <span className="text-text-tertiary ml-auto">Full RAG explanation</span>
+                          </button>
+                          {showExplainability === msg.id && (
+                            <div className="rounded-lg border border-border bg-bg p-3">
+                              <ExplainabilityInspector
+                                pipeline={msg.pipeline}
+                                citations={msg.citations}
+                                answerText={msg.content}
+                                onFollowUpSelect={(q) => {
+                                  setInput(q);
+                                  inputRef.current?.focus();
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </Card>
                   )}
