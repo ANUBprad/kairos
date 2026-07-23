@@ -34,6 +34,8 @@ model User {
   documentVersions DocumentVersion[]
   documentActivity DocumentActivity[]
   conversations    Conversation[]
+  experiments      Experiment[]
+  benchmarkRuns    BenchmarkRun[]
 }
 
 model Session {
@@ -364,9 +366,30 @@ model Experiment {
   id          String  @id @default(cuid())
   name        String  @db.VarChar(255)
   description String? @db.Text
+  tags        String[] @default([])
+  isFavorite  Boolean @default(false)
+  isArchived  Boolean @default(false)
 
   knowledgeBaseId String
   knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  datasetId String?
+  dataset   BenchmarkDataset? @relation(fields: [datasetId], references: [id], onDelete: SetNull)
+
+  embeddingModel      String  @default("text-embedding-3-small")
+  retriever           String  @default("vector")
+  reranker            String  @default("none")
+  llm                 String  @default("gpt-4o-mini")
+  promptTemplate      String  @default("default")
+  chunkStrategy       String  @default("fixed")
+  chunkSize           Int     @default(512)
+  chunkOverlap        Int     @default(50)
+  topK                Int     @default(10)
+  similarityThreshold Float   @default(0.7)
+  retrievalMode       String  @default("vector")
 
   configA Json
   configB Json?
@@ -374,21 +397,28 @@ model Experiment {
   status String  @default("draft")
   winner String?
 
-  runs ExperimentRun[]
+  runs      ExperimentRun[]
+  artifacts ExperimentArtifact[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([knowledgeBaseId])
+  @@index([createdById])
+  @@index([datasetId])
+  @@index([status])
+  @@index([knowledgeBaseId, status])
 }
 
 model ExperimentRun {
-  id              String @id @default(cuid())
+  id              String  @id @default(cuid())
   configSnapshot  Json
-  query           String @db.Text
+  query           String  @db.Text
   retrievedChunks Json
   metrics         Json?
   debug           Json?
+  status          String  @default("completed")
+  error           String? @db.Text
 
   latencyEmbedding    Float?
   latencyVectorSearch Float?
@@ -398,6 +428,7 @@ model ExperimentRun {
 
   chunkCount Int?
   tokensUsed Int?
+  cost       Float?
 
   embeddingModel String?
   retrievalMode  String?
@@ -408,10 +439,32 @@ model ExperimentRun {
   knowledgeBaseId String
   knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
 
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
   createdAt DateTime @default(now())
 
   @@index([experimentId])
   @@index([knowledgeBaseId])
+  @@index([status])
+}
+
+model ExperimentArtifact {
+  id       String  @id @default(cuid())
+  type     String  @db.VarChar(64)
+  name     String  @db.VarChar(255)
+  mimeType String  @db.VarChar(128)
+  size     Int
+  data     Json?
+  storageKey String? @db.VarChar(512)
+
+  experimentId String
+  experiment   Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([experimentId])
+  @@index([experimentId, type])
 }
 
 /// Benchmark Datasets
@@ -421,17 +474,26 @@ model BenchmarkDataset {
   name        String  @db.VarChar(255)
   description String? @db.Text
   source      String? @db.VarChar(128)
+  tags        String[] @default([])
+  version     Int     @default(1)
 
   knowledgeBaseId String?
   knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: SetNull)
 
+  parentVersionId String?
+  parentVersion   BenchmarkDataset? @relation("DatasetVersion", fields: [parentVersionId], references: [id], onDelete: SetNull)
+  childVersions   BenchmarkDataset[] @relation("DatasetVersion")
+
   questions    BenchmarkQuestion[]
   runs         BenchmarkRun[]
+  experiments  Experiment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([knowledgeBaseId])
+  @@index([parentVersionId])
+  @@index([version])
 }
 
 model BenchmarkQuestion {
@@ -495,6 +557,9 @@ model BenchmarkRun {
   datasetId String
   dataset   BenchmarkDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
 
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
   results BenchmarkResult[]
 
   startedAt   DateTime  @default(now())
@@ -504,6 +569,7 @@ model BenchmarkRun {
   updatedAt DateTime @updatedAt
 
   @@index([datasetId])
+  @@index([createdById])
 }
 
 /// Activity / Audit Logs
