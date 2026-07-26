@@ -43,14 +43,16 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     if settings.api_secret:
         app.add_middleware(AuthMiddleware)
 
-    allowed_origins = settings.api_cors_origins or ["*"]
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # CORS: never default to wildcard. If no origins configured, deny all cross-origin.
+    allowed_origins = settings.api_cors_origins if settings.api_cors_origins else []
+    if allowed_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=allowed_origins,
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["*"],
+        )
 
     app.include_router(health_router, prefix="/health", tags=["Health"])
     app.include_router(config_router, prefix="/api/v1/config", tags=["Configuration"])

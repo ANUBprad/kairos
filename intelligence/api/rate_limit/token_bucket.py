@@ -23,7 +23,7 @@ class TokenBucket:
         self._tokens = min(self._capacity, self._tokens + elapsed * self._refill_rate)
         self._last_refill = now
 
-    def consume(self, key: str = "") -> bool:
+    def consume(self) -> bool:
         with self._lock:
             self._refill()
             if self._tokens >= 1.0:
@@ -43,20 +43,41 @@ class TokenBucket:
 
 
 class TokenBucketStore:
+    """Per-key token bucket store. Each unique key gets its own bucket."""
+
     def __init__(self, capacity: int, refill_rate: float) -> None:
         self._capacity = capacity
         self._refill_rate = refill_rate
         self._buckets: Dict[str, TokenBucket] = {}
         self._lock = Lock()
+        self._last_cleanup = time.monotonic()
+        self._cleanup_interval = 60.0  # Clean up stale buckets every 60 seconds
 
     def get_or_create(self, key: str) -> TokenBucket:
         with self._lock:
+            self._maybe_cleanup()
             if key not in self._buckets:
                 self._buckets[key] = TokenBucket(self._capacity, self._refill_rate)
             return self._buckets[key]
 
     def consume(self, key: str) -> bool:
         return self.get_or_create(key).consume()
+
+    def _maybe_cleanup(self) -> None:
+        """Remove stale buckets to prevent unbounded memory growth."""
+        now = time.monotonic()
+        if now - self._last_cleanup < self._cleanup_interval:
+            return
+        self._last_cleanup = now
+
+        # Remove buckets that haven't been used in 5 minutes
+        stale_threshold = now - 300.0
+        stale_keys = [
+            k for k, v in self._buckets.items()
+            if v._last_refill < stale_threshold
+        ]
+        for k in stale_keys:
+            del self._buckets[k]
 
     def clear(self) -> None:
         with self._lock:

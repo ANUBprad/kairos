@@ -25,8 +25,6 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 		err := file.Close()
 		if err != nil {
 			slog.Error("Unable to close file", "ERROR", err)
-			httpWriter.RespondWithError(w, 500, "Unable to process file. Plz try again later")
-			return
 		}
 	}(file)
 
@@ -44,10 +42,18 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	contentBytes, err := io.ReadAll(file)
+	// Use LimitReader to prevent reading entire file into memory unboundedly
+	maxBytes := int64(ingester.maxSize) * 1024 * 1024
+	limitedReader := io.LimitReader(file, maxBytes+1)
+	contentBytes, err := io.ReadAll(limitedReader)
 	if err != nil {
 		slog.Error("Couldn't read file content", "ERROR", err)
 		httpWriter.RespondWithError(w, 500, "Unable to read file content")
+		return
+	}
+
+	if int64(len(contentBytes)) > maxBytes {
+		httpWriter.RespondWithError(w, 413, "File size too large")
 		return
 	}
 
@@ -66,7 +72,7 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 	chunkingStrat, err := strconv.Atoi(val)
 	if err != nil {
 		slog.Error("Wrong chunking strategy received", "Chunking Strat", val, "ERROR", err)
-		httpWriter.RespondWithError(w, 400, "Plz select correct chunking strategy")
+		httpWriter.RespondWithError(w, 400, "Invalid chunking strategy")
 		return
 	}
 	ctx := r.Context()
@@ -111,6 +117,8 @@ func sanitizeFilename(name string) string {
 	if name == "" {
 		return "unnamed"
 	}
+	// Strip path separators to prevent path traversal
+	name = strings.TrimLeft(name, "./\\")
 	name = strings.TrimLeft(name, ".")
 	name = unsafeCharsRegex.ReplaceAllString(name, "_")
 	if len(name) > 255 {

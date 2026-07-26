@@ -6,7 +6,7 @@ import {
 } from "@/lib/ai/memory";
 import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { ensureDemoUser } from "@/lib/server/demo-user";
+import { getServerSession } from "@/lib/server/auth-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -18,21 +18,25 @@ export async function GET(
 ) {
   const start = performance.now();
   try {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    const userId = await ensureDemoUser();
     const conversation = await getConversation(id);
 
-    if (!conversation || conversation.userId !== userId) {
+    if (!conversation || conversation.userId !== session.user.id) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
     const duration = Math.round(performance.now() - start);
-    logger.info("Get conversation", { userId, duration });
+    logger.info("Get conversation", { userId: session.user.id, duration });
     return NextResponse.json({ conversation });
   } catch (err) {
     const duration = Math.round(performance.now() - start);
@@ -48,17 +52,21 @@ export async function DELETE(
 ) {
   const start = performance.now();
   try {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!UUID_REGEX.test(id)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
-    const userId = await ensureDemoUser();
-    await deleteConversation(id, userId);
+    await deleteConversation(id, session.user.id);
 
     const duration = Math.round(performance.now() - start);
-    logger.info("Delete conversation", { userId, duration });
+    logger.info("Delete conversation", { userId: session.user.id, duration });
     return NextResponse.json({ success: true });
   } catch (err) {
     const duration = Math.round(performance.now() - start);
@@ -74,6 +82,11 @@ export async function PATCH(
 ) {
   const start = performance.now();
   try {
+    const session = await getServerSession();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     if (!UUID_REGEX.test(id)) {
@@ -97,11 +110,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Title too long" }, { status: 400 });
     }
 
-    const userId = await ensureDemoUser();
-    await updateConversationTitle(id, title, userId);
+    await updateConversationTitle(id, title, session.user.id);
 
     const duration = Math.round(performance.now() - start);
-    logger.info("Update conversation", { userId, duration });
+    logger.info("Update conversation", { userId: session.user.id, duration });
     return NextResponse.json({ success: true });
   } catch (err) {
     const duration = Math.round(performance.now() - start);

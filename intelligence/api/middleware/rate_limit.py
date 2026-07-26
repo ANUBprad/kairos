@@ -6,7 +6,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from intelligence.api.rate_limit.token_bucket import TokenBucket
+from intelligence.api.rate_limit.token_bucket import TokenBucketStore
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -18,7 +18,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         exclude_paths: set | None = None,
     ) -> None:
         super().__init__(app)
-        self._bucket = TokenBucket(capacity=burst, refill_rate=rate_per_minute / 60.0)
+        self._store = TokenBucketStore(capacity=burst, refill_rate=rate_per_minute / 60.0)
         self._exclude_paths = exclude_paths or {
             "/health",
             "/docs",
@@ -36,7 +36,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if request.client
             else "unknown"
         )
-        if not self._bucket.consume(client_key):
+        if not self._store.consume(client_key):
             return JSONResponse(
                 status_code=429,
                 content={"detail": "Rate limit exceeded", "retry_after": 1.0},

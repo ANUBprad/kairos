@@ -13,6 +13,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+def _parse_bool(value: str) -> bool:
+    """Parse a boolean from environment variable. Accepts 'true', '1', 'yes' (case-insensitive)."""
+    return value.strip().lower() in ("true", "1", "yes")
+
+
 @dataclass
 class ServerConfig:
     """All server configuration sourced from environment variables.
@@ -68,7 +73,7 @@ class ServerConfig:
             chunk_size=int(os.getenv("KAIROS_CHUNK_SIZE", "1024")),
             overlap=int(os.getenv("KAIROS_OVERLAP", "150")),
             llm_provider=os.getenv("KAIROS_LLM_PROVIDER"),
-            deployment=os.getenv("KAIROS_DEPLOYMENT") == "True",
+            deployment=_parse_bool(os.getenv("KAIROS_DEPLOYMENT", "False")),
             mmr_retrieval_lambda=float(os.getenv("KAIROS_MMR_RETRIEVAL_LAMBDA", "0.5")),
             gemini_api_key=os.getenv("GEMINI_API_KEY"),
             gemini_model_name=os.getenv("KAIROS_GEMINI_MODEL_NAME"),
@@ -82,8 +87,7 @@ class ServerConfig:
             small_groq_model=os.getenv("KAIROS_SMALL_GROQ_MODEL"),
             cache_maxsize=int(os.getenv("KAIROS_CACHE_MAXSIZE", "4096")),
             cache_ttl_seconds=int(os.getenv("KAIROS_CACHE_TTL_SECONDS", "300")),
-            health_check_enabled=os.getenv("KAIROS_HEALTH_CHECK_ENABLED", "True")
-            == "True",
+            health_check_enabled=_parse_bool(os.getenv("KAIROS_HEALTH_CHECK_ENABLED", "True")),
             provider_timeout_seconds=float(
                 os.getenv("KAIROS_PROVIDER_TIMEOUT_SECONDS", "30.0")
             ),
@@ -93,7 +97,7 @@ class ServerConfig:
             circuit_breaker_recovery_timeout=float(
                 os.getenv("KAIROS_CIRCUIT_BREAKER_RECOVERY_TIMEOUT", "30.0")
             ),
-            metrics_enabled=os.getenv("KAIROS_METRICS_ENABLED", "True") == "True",
+            metrics_enabled=_parse_bool(os.getenv("KAIROS_METRICS_ENABLED", "True")),
             metrics_port=int(os.getenv("KAIROS_METRICS_PORT", "8001")),
         )
 
@@ -156,9 +160,7 @@ def validate_env(cfg: ServerConfig) -> list[str]:
                 "KAIROS_OLLAMA_MODEL_NAME is required when KAIROS_LLM_PROVIDER=ollama"
             )
         if not cfg.ollama_url:
-            errors.append(
-                "KAIROS_OLLAMA_URL is required when KAIROS_LLM_PROVIDER=ollama"
-            )
+            errors.append("KAIROS_OLLAMA_URL is required when KAIROS_LLM_PROVIDER=ollama")
         return errors
 
     if cfg.large_groq_model and cfg.small_groq_model:

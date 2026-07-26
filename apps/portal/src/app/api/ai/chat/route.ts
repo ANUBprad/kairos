@@ -16,6 +16,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
 
   const rl = rateLimit(`chat:${session.user.id}`, RATE_LIMITS.chat);
   if (!rl.allowed) {

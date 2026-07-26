@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
-import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
+import { getServerSession } from "@/lib/server/auth-utils";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const rl = rateLimit(`settings:demo-user`, RATE_LIMITS.api);
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Rate limit exceeded" },
-      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.api) },
-    );
+  const session = await getServerSession();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   const config: Record<string, { available: boolean; models: string[] }> = {

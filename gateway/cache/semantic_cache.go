@@ -31,9 +31,15 @@ func CalcCosineSim(queryEmbed, cacheEmbed []float32) (float32, error) {
 		cacheSum += cacheEmbed[i] * cacheEmbed[i]
 	}
 
-	queryMag, cacheMag := math.Sqrt(float64(querySum)), math.Sqrt(float64(cacheSum))
+	queryMag := math.Sqrt(float64(querySum))
+	cacheMag := math.Sqrt(float64(cacheSum))
 
-	cosSim := dotProd / float32((queryMag * cacheMag))
+	// Guard against zero-magnitude vectors
+	if queryMag == 0 || cacheMag == 0 {
+		return 0, nil
+	}
+
+	cosSim := dotProd / float32(queryMag*cacheMag)
 	return cosSim, nil
 }
 

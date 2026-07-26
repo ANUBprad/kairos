@@ -11,12 +11,8 @@ router = APIRouter()
 
 @router.get("/directories")
 async def list_artifact_directories() -> Dict[str, str]:
-    settings = get_settings()
     return {
-        "artifacts_dir": settings.artifacts_dir,
-        "model_registry_dir": settings.model_registry_dir,
-        "experiment_registry_dir": settings.experiment_registry_dir,
-        "report_output_dir": settings.report_output_dir,
+        "message": "Artifact directory information is not available via API",
     }
 
 
@@ -30,13 +26,12 @@ async def list_models() -> List[Dict[str, object]]:
     for entry in sorted(models_dir.iterdir()):
         if entry.is_dir():
             results.append(
-                {"name": entry.name, "path": str(entry), "type": "directory"}
+                {"name": entry.name, "type": "directory"}
             )
         elif entry.suffix in (".bin", ".pt", ".pth", ".onnx", ".gguf"):
             results.append(
                 {
                     "name": entry.name,
-                    "path": str(entry),
                     "size_bytes": entry.stat().st_size,
                     "type": "file",
                 }
@@ -56,7 +51,6 @@ async def list_experiments() -> List[Dict[str, object]]:
             results.append(
                 {
                     "name": entry.stem,
-                    "path": str(entry),
                     "size_bytes": entry.stat().st_size,
                 }
             )
@@ -75,7 +69,6 @@ async def list_reports() -> List[Dict[str, object]]:
             results.append(
                 {
                     "name": entry.name,
-                    "path": str(entry),
                     "size_bytes": entry.stat().st_size,
                 }
             )

@@ -3,7 +3,6 @@ package middleware
 import (
 	"Kairos/gateway/config"
 	"Kairos/gateway/httpWriter"
-	"Kairos/gateway/metrics"
 	"net/http"
 	"strconv"
 	"sync"
@@ -18,11 +17,20 @@ func RateLimit(envVar *config.Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-			namespace := ctx.Value(httpWriter.NamespaceKey{}).(string)
+			namespace, ok := ctx.Value(httpWriter.NamespaceKey{}).(string)
+			if !ok || namespace == "" {
+				httpWriter.RespondWithError(w, 400, "Missing namespace")
+				return
+			}
 
 			val, _ := clients.LoadOrStore(namespace, rate.NewLimiter(rate.Limit(rateLimitVal), burstVal))
 
-			clientLimiter := val.(*rate.Limiter)
+			clientLimiter, ok := val.(*rate.Limiter)
+			if !ok {
+				httpWriter.RespondWithError(w, 500, "Internal rate limiter error")
+				return
+			}
+
 			reservation := clientLimiter.Reserve()
 			if reservation.Delay() > 0 {
 				reservation.Cancel()

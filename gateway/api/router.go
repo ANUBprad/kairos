@@ -21,7 +21,8 @@ func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, 
 
 	corsOrigins := envVar.CORSOrigins
 	if len(corsOrigins) == 0 {
-		corsOrigins = []string{"*"}
+		// Default to empty (no cross-origin requests allowed) instead of wildcard
+		corsOrigins = []string{}
 	}
 
 	mainRouter.Use(cors.Handler(cors.Options{

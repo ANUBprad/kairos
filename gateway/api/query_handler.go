@@ -5,11 +5,14 @@ import (
 	"Kairos/gateway/intelligence"
 	"Kairos/gateway/metrics"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 )
+
+const maxQueryBodySize = 1 << 20 // 1 MB
 
 func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
@@ -20,11 +23,18 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Limit request body size
+	r.Body = http.MaxBytesReader(w, r.Body, maxQueryBodySize)
+
 	var queryReq struct {
 		Query string `json:"query"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&queryReq); err != nil {
-		httpWriter.RespondWithError(w, 400, "Invalid request body")
+		if err == io.EOF {
+			httpWriter.RespondWithError(w, 400, "Empty request body")
+		} else {
+			httpWriter.RespondWithError(w, 400, "Invalid request body")
+		}
 		return
 	}
 
@@ -41,7 +51,7 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 	queryEmbed, err := intelligence.ComputeEmbeddings(qHandler.intelClient, query)
 
 	if err != nil {
-		httpWriter.RespondWithError(w, 502, "Unable to connect with the gateway")
+		httpWriter.RespondWithError(w, 502, "Unable to compute embeddings")
 		slog.Error("Unable to calc embeddings", "ERROR", err)
 		return
 	}
@@ -51,7 +61,7 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		metrics.CacheMisses.WithLabelValues(namespace).Inc()
 		queryDetails, err := intelligence.ClassifyQuery(qHandler.intelClient, query, namespace)
 		if err != nil {
-			httpWriter.RespondWithError(w, 502, "Unable to connect with gateway")
+			httpWriter.RespondWithError(w, 502, "Unable to classify query")
 			slog.Error("Unable to reach ClassifyQuery", "ERROR", err)
 			return
 		}
@@ -59,7 +69,7 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 
 		retrieval, err := intelligence.ExecuteRetrieval(qHandler.intelClient, query, queryConfig, namespace)
 		if err != nil {
-			httpWriter.RespondWithError(w, 502, "Unable to connect with gateway")
+			httpWriter.RespondWithError(w, 502, "Unable to retrieve data")
 			slog.Error("Unable to reach Retrieve data", "ERROR", err)
 			return
 		}
@@ -74,7 +84,7 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		finalResponse, err := intelligence.GenerateResponse(qHandler.intelClient, namespace, query, retrievedChunks)
 
 		if err != nil {
-			httpWriter.RespondWithError(w, 502, "Unable to connect with gateway")
+			httpWriter.RespondWithError(w, 502, "Unable to generate response")
 			slog.Error("Unable to fetch Response", "ERROR", err)
 			return
 		}

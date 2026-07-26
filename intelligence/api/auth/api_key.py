@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import os
 import logging
+import os
 from typing import Optional, Set
 
 from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
-from intelligence.config.secrets import SecretProvider, get_secret_provider
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +13,12 @@ _ENVIRONMENT = os.environ.get("KAIROS_ENVIRONMENT", "development")
 
 
 class APIKeyValidator:
-    def __init__(self, secret_provider: Optional[SecretProvider] = None) -> None:
-        self._provider = secret_provider or get_secret_provider()
+    def __init__(self) -> None:
         self._valid_keys: Set[str] = set()
         self._reload()
 
     def _reload(self) -> None:
-        api_key = self._provider.get("KAIROS_API_SECRET")
+        api_key = os.environ.get("KAIROS_API_SECRET", "")
         if api_key:
             self._valid_keys = {api_key}
         else:
@@ -33,14 +30,29 @@ class APIKeyValidator:
                 )
 
     def is_valid(self, api_key: str) -> bool:
+        if not api_key or not api_key.strip():
+            return False
+
         if not self._valid_keys:
             if _ENVIRONMENT == "development":
                 return True
             return False
-        return api_key in self._valid_keys
+
+        # Constant-time comparison using hmac
+        import hmac
+        key_bytes = api_key.strip().encode("utf-8")
+
+        for valid_key in self._valid_keys:
+            valid_bytes = valid_key.encode("utf-8")
+            if len(key_bytes) == len(valid_bytes) and hmac.compare_digest(key_bytes, valid_bytes):
+                return True
+
+        return False
 
     def add_key(self, key: str) -> None:
-        self._valid_keys.add(key)
+        """Add a valid API key. Used for testing and dynamic key management."""
+        if key and key.strip():
+            self._valid_keys.add(key.strip())
 
     def reload(self) -> None:
         self._reload()

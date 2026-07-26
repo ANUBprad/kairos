@@ -365,6 +365,8 @@ class TestAPIApp:
         app = create_app(settings)
         assert app is not None
         assert app.docs_url is None
+        # Reset to avoid affecting other tests
+        api_app._app_instance = None
 
     def test_get_app_singleton(self) -> None:
         app1 = get_app()
@@ -517,8 +519,8 @@ class TestTokenBucket:
         assert bucket.capacity == 50
 
     def test_consume_with_key(self) -> None:
-        bucket = TokenBucket(capacity=5, refill_rate=10)
-        assert bucket.consume(key="client-1") is True
+        store = TokenBucketStore(capacity=5, refill_rate=10)
+        assert store.consume("client-1") is True
 
 
 class TestTokenBucketStore:
@@ -733,7 +735,8 @@ class TestArtifactRoutes:
         response = client.get("/api/v1/artifacts/directories")
         assert response.status_code == 200
         data = response.json()
-        assert "artifacts_dir" in data
+        # Security: internal paths are no longer exposed via API
+        assert "message" in data
 
     def test_models_empty_dir(self) -> None:
         app = create_app()

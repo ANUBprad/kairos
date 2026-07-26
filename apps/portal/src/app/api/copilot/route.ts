@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { runCopilot } from "@/lib/copilot";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
+import { getServerSession } from "@/lib/server/auth-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const rl = rateLimit(`copilot:demo-user`, RATE_LIMITS.copilot);
+  const session = await getServerSession();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const rl = rateLimit(`copilot:${session.user.id}`, RATE_LIMITS.copilot);
   if (!rl.allowed) {
     return NextResponse.json(
       { error: "Rate limit exceeded" },
@@ -28,21 +34,21 @@ export async function POST(request: NextRequest) {
   if (!query) {
     return NextResponse.json(
       { error: "Missing required field: query" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   if (query.length > 10000) {
     return NextResponse.json(
       { error: "Query is too long" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   if (benchmarkRuns.length > 50) {
     return NextResponse.json(
       { error: "Too many benchmark runs" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -68,7 +74,7 @@ export async function POST(request: NextRequest) {
     const sanitized = sanitizeError(error);
     return NextResponse.json(
       { error: "Failed to process request", errorId: sanitized.errorId },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
