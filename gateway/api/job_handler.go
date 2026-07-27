@@ -17,19 +17,18 @@ func (jobHandler *JobHandler) UserJobHandler(w http.ResponseWriter, r *http.Requ
 		httpWriter.RespondWithError(w, 400, "Not a valid UUID")
 		return
 	}
-	job, err := jobHandler.tracker.GetJob(jobID)
+	status, jobErr, err := jobHandler.tracker.GetJobSnapshot(jobID)
 	if err != nil {
 		slog.Error("Couldn't get status", "Job ID", jobID, "ERROR", err)
 		httpWriter.RespondWithError(w, 404, "Job not found")
 		return
 	}
-	jobErr := job.GetJobError()
-	if jobErr != "" {
+	if jobErr == "" && status == Failed {
 		jobErr = "Ingestion processing failed"
 	}
 	response := docHandlerResponse{
 		JobId:     jobID,
-		JobStatus: job.GetStatus(),
+		JobStatus: status,
 		Error:     jobErr,
 	}
 	httpWriter.RespondWithJSON(w, 200, response)

@@ -93,8 +93,9 @@ class Evaluator:
     ) -> AggregateEvaluation:
         from intelligence.evaluation.ranking_metrics import (
             reciprocal_rank,
+            precision_at_k,
+            recall_at_k,
         )
-        from benchmarks.metrics import precision_at_k, recall_at_k
 
         n = len(retrieved)
         if n == 0:

@@ -1,8 +1,12 @@
+import logging
+
 from google import genai
 from pydantic import BaseModel
 from openai import OpenAI
 from pathlib import Path
 from typing import Literal, Union
+
+logger = logging.getLogger(__name__)
 
 
 class ResponseSchema(BaseModel):
@@ -44,12 +48,14 @@ class ClassifyQuery:
                     },
                 )
 
-            except Exception:
+            except Exception as e:
+                logger.warning("Gemini classification failed, defaulting to simple: %s", e)
                 return ResponseSchema(query_type="simple", domain=None)
 
             try:
                 classified_query: ResponseSchema = response.parsed
-            except Exception:
+            except Exception as e:
+                logger.warning("Gemini response parse failed, defaulting to simple: %s", e)
                 return ResponseSchema(query_type="simple", domain=None)
             return classified_query
 
@@ -61,13 +67,15 @@ class ClassifyQuery:
                     messages=[{"role": "user", "content": complete_prompt}],
                 )
 
-            except Exception:
+            except Exception as e:
+                logger.warning("OpenAI classification failed, defaulting to simple: %s", e)
                 return ResponseSchema(query_type="simple", domain=None)
 
             try:
                 response_json = response.choices[0].message.content
                 return ResponseSchema.model_validate_json(response_json)
-            except Exception:
+            except Exception as e:
+                logger.warning("OpenAI response parse failed, defaulting to simple: %s", e)
                 return ResponseSchema(query_type="simple", domain=None)
         else:
             return ResponseSchema(query_type="simple", domain=None)

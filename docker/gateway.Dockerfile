@@ -11,4 +11,5 @@ FROM gcr.io/distroless/static-debian12
 COPY --from=builder /app/kairos-gateway /app/kairos-gateway
 COPY --from=builder /app/templates /app/templates
 COPY --from=builder /app/static /app/static
+USER nonroot:nonroot
 ENTRYPOINT ["/app/kairos-gateway"]

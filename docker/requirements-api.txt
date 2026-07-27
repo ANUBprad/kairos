@@ -1,0 +1,10 @@
+# API service dependencies
+grpcio>=1.62.0
+protobuf>=6.33.0
+python-dotenv>=1.0.0
+pydantic>=2.7.0
+pydantic-settings>=2.1.0
+fastapi>=0.111.0
+uvicorn>=0.30.0
+starlette>=0.37.0
+prometheus-client>=0.20.0

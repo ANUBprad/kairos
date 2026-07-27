@@ -49,7 +49,10 @@ class SimpleRetriever(BaseRetriever):
     def retrieve_top_k(self, namespace: str, top_k: int, query: str) -> list[str]:
         query_embed = self.embedder.embed(query)
         dense_result = self.store.query(namespace, top_k, query_embed)
-        dense_chunks = dense_result["documents"][0]
+        dense_documents = dense_result.get("documents")
+        if not dense_documents or not dense_documents[0]:
+            return []
+        dense_chunks = dense_documents[0]
         dense_chunks = [chunk for chunk in dense_chunks if len(chunk.strip()) > 30]
 
         all_chunks_result = self.store.get_all_chunks(namespace)

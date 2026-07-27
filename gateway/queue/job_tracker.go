@@ -1,7 +1,9 @@
 package queue
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -34,6 +36,25 @@ func NewJobTracker() *JobTracker {
 	return &JobTracker{jobsMap: jobMap, mutex: &mutex}
 }
 
+// StartEviction launches a background goroutine that periodically evicts expired jobs.
+func (tracker *JobTracker) StartEviction(ctx context.Context, ttl time.Duration, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				evicted := tracker.EvictExpired(ttl)
+				if evicted > 0 {
+					slog.Info("Evicted expired jobs", "count", evicted)
+				}
+			}
+		}
+	}()
+}
+
 func (tracker *JobTracker) CreateJob() (uuid.UUID, error) {
 	tracker.mutex.Lock()
 	defer tracker.mutex.Unlock()
@@ -58,6 +79,17 @@ func (tracker *JobTracker) UpdateStatus(id uuid.UUID, stat Status, errMsg string
 	}
 	job.jobStatus = stat
 	job.jobError = errMsg
+}
+
+// GetJobSnapshot returns a thread-safe snapshot of the job's status and error.
+func (tracker *JobTracker) GetJobSnapshot(id uuid.UUID) (Status, string, error) {
+	tracker.mutex.RLock()
+	defer tracker.mutex.RUnlock()
+	job := tracker.jobsMap[id]
+	if job == nil {
+		return Failed, "", errors.New("job not found")
+	}
+	return job.jobStatus, job.jobError, nil
 }
 
 func (tracker *JobTracker) GetJob(id uuid.UUID) (*jobEntry, error) {

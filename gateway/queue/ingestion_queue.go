@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -18,12 +19,13 @@ type jobChannelStruct struct {
 }
 
 type IngestionQueue struct {
-	tracker     *JobTracker
-	intelClient pb.IntelligenceServiceClient
-	jobCh       chan jobChannelStruct
-	workerCount int
-	wg          sync.WaitGroup
-	cancel      context.CancelFunc
+	tracker      *JobTracker
+	intelClient  pb.IntelligenceServiceClient
+	jobCh        chan jobChannelStruct
+	workerCount  int
+	wg           sync.WaitGroup
+	cancel       context.CancelFunc
+	shutdownOnce sync.Once
 }
 
 func NewIngestionQueue(ctx context.Context, tracker *JobTracker, client pb.IntelligenceServiceClient) *IngestionQueue {
@@ -40,6 +42,8 @@ func NewIngestionQueueWithWorkers(ctx context.Context, tracker *JobTracker, clie
 		workerCount: workers,
 		cancel:      cancel,
 	}
+
+	metrics.WorkerPoolSize.Set(float64(workers))
 
 	for i := 0; i < workers; i++ {
 		q.wg.Add(1)
@@ -80,15 +84,22 @@ func (q *IngestionQueue) processJob(ctx context.Context, job jobChannelStruct, w
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
 			backoff := time.Duration(1<<uint(attempt-1)) * time.Second
+			// Add jitter to prevent thundering herd on retries
+			jitter := time.Duration(rand.Int63n(int64(backoff) / 2))
+			backoff = backoff + jitter
+
+			metrics.IngestionRetries.WithLabelValues("").Inc()
 			slog.Info("Retrying ingestion job",
 				"job_id", job.jobId,
 				"attempt", attempt,
 				"backoff", backoff,
 				"worker_id", workerID,
 			)
+			timer := time.NewTimer(backoff)
 			select {
-			case <-time.After(backoff):
+			case <-timer.C:
 			case <-ctx.Done():
+				timer.Stop()
 				metrics.ActiveIngestionJobs.Dec()
 				tracker.UpdateStatus(job.jobId, Failed, "cancelled during retry")
 				return
@@ -98,8 +109,9 @@ func (q *IngestionQueue) processJob(ctx context.Context, job jobChannelStruct, w
 		_, err := q.intelClient.IngestDocument(ctx, job.jobDetails)
 		if err == nil {
 			metrics.ActiveIngestionJobs.Dec()
-			tracker.UpdateStatus(job.jobId, Completed, "")
 			duration := time.Since(start)
+			metrics.IngestionJobDuration.WithLabelValues("completed").Observe(duration.Seconds())
+			tracker.UpdateStatus(job.jobId, Completed, "")
 			slog.Info("Ingestion job completed",
 				"job_id", job.jobId,
 				"duration", duration.String(),
@@ -117,6 +129,9 @@ func (q *IngestionQueue) processJob(ctx context.Context, job jobChannelStruct, w
 	}
 
 	metrics.ActiveIngestionJobs.Dec()
+	duration := time.Since(start)
+	metrics.IngestionJobDuration.WithLabelValues("failed").Observe(duration.Seconds())
+	metrics.IngestionJobFailures.WithLabelValues("max_retries").Inc()
 	tracker.UpdateStatus(job.jobId, Failed, lastErr.Error())
 	slog.Error("Ingestion job failed after retries",
 		"job_id", job.jobId,
@@ -139,9 +154,10 @@ func (q *IngestionQueue) Enqueue(id uuid.UUID, details *pb.IngestDocumentRequest
 }
 
 func (q *IngestionQueue) Shutdown() {
-	slog.Info("Shutting down ingestion queue", "worker_count", q.workerCount)
-	q.cancel()
-	q.wg.Wait()
-	close(q.jobCh)
-	slog.Info("Ingestion queue shut down cleanly")
+	q.shutdownOnce.Do(func() {
+		slog.Info("Shutting down ingestion queue", "worker_count", q.workerCount)
+		close(q.jobCh)
+		q.wg.Wait()
+		slog.Info("Ingestion queue shut down cleanly")
+	})
 }

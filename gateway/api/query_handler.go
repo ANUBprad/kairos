@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"context"
 )
 
 const maxQueryBodySize = 1 << 20 // 1 MB
@@ -22,6 +24,10 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		httpWriter.RespondWithError(w, 400, "Missing namespace")
 		return
 	}
+
+	// End-to-end request timeout (under the HTTP server's 60s WriteTimeout)
+	ctx, cancel := context.WithTimeout(ctx, 55*time.Second)
+	defer cancel()
 
 	// Limit request body size
 	r.Body = http.MaxBytesReader(w, r.Body, maxQueryBodySize)
@@ -48,10 +54,14 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	queryEmbed, err := intelligence.ComputeEmbeddings(qHandler.intelClient, query)
+	queryEmbed, err := intelligence.ComputeEmbeddings(ctx, qHandler.intelClient, query)
 
 	if err != nil {
-		httpWriter.RespondWithError(w, 502, "Unable to compute embeddings")
+		if ctx.Err() != nil {
+			httpWriter.RespondWithError(w, 504, "Request timed out")
+		} else {
+			httpWriter.RespondWithError(w, 502, "Unable to compute embeddings")
+		}
 		slog.Error("Unable to calc embeddings", "ERROR", err)
 		return
 	}
@@ -59,17 +69,25 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 	response, ok := qHandler.semCache.Get(namespace, queryEmbed)
 	if !ok { // cache miss
 		metrics.CacheMisses.WithLabelValues(namespace).Inc()
-		queryDetails, err := intelligence.ClassifyQuery(qHandler.intelClient, query, namespace)
+		queryDetails, err := intelligence.ClassifyQuery(ctx, qHandler.intelClient, query, namespace)
 		if err != nil {
-			httpWriter.RespondWithError(w, 502, "Unable to classify query")
+			if ctx.Err() != nil {
+				httpWriter.RespondWithError(w, 504, "Request timed out")
+			} else {
+				httpWriter.RespondWithError(w, 502, "Unable to classify query")
+			}
 			slog.Error("Unable to reach ClassifyQuery", "ERROR", err)
 			return
 		}
 		queryConfig := queryDetails.Config
 
-		retrieval, err := intelligence.ExecuteRetrieval(qHandler.intelClient, query, queryConfig, namespace)
+		retrieval, err := intelligence.ExecuteRetrieval(ctx, qHandler.intelClient, query, queryConfig, namespace)
 		if err != nil {
-			httpWriter.RespondWithError(w, 502, "Unable to retrieve data")
+			if ctx.Err() != nil {
+				httpWriter.RespondWithError(w, 504, "Request timed out")
+			} else {
+				httpWriter.RespondWithError(w, 502, "Unable to retrieve data")
+			}
 			slog.Error("Unable to reach Retrieve data", "ERROR", err)
 			return
 		}
@@ -81,10 +99,14 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 		}
 		retrievedChunks := retrieval.RetrievedChunk
 
-		finalResponse, err := intelligence.GenerateResponse(qHandler.intelClient, namespace, query, retrievedChunks)
+		finalResponse, err := intelligence.GenerateResponse(ctx, qHandler.intelClient, namespace, query, retrievedChunks)
 
 		if err != nil {
-			httpWriter.RespondWithError(w, 502, "Unable to generate response")
+			if ctx.Err() != nil {
+				httpWriter.RespondWithError(w, 504, "Request timed out")
+			} else {
+				httpWriter.RespondWithError(w, 502, "Unable to generate response")
+			}
 			slog.Error("Unable to fetch Response", "ERROR", err)
 			return
 		}

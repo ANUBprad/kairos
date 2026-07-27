@@ -14,6 +14,8 @@ def calculate_cosine_similarity(embed_a: list[float], embed_b: list[float]):
         b_sq_sum += embed_b[i] ** 2
 
     a_mag, b_mag = sqrt(a_sq_sum), sqrt(b_sq_sum)
+    if a_mag == 0 or b_mag == 0:
+        return 0.0
     cosine_sim = dot_prod / (a_mag * b_mag)
     return cosine_sim
 
@@ -28,6 +30,9 @@ class Chunker:
         )
 
     def chunk(self, text: str, strategy: int) -> list[str]:
+        if not text or not text.strip():
+            return [text] if text else []
+
         if strategy == 0 or strategy == 1:
             return self._fixed_size(text)
 
@@ -44,10 +49,20 @@ class Chunker:
         return self.text_splitter.chunks(text)
 
     def _structural(self, text: str):
-        return text.split("\f")  # Splitting the text according to each page content.
+        chunks = text.split("\f")
+        # Apply secondary size-based split to prevent unbounded single chunks
+        result = []
+        for chunk in chunks:
+            if len(chunk) > self.chunk_size:
+                result.extend(self.text_splitter.chunks(chunk))
+            else:
+                result.append(chunk)
+        return result
 
     def _semantic(self, text: str):
         sentences = text.split(". ")
+        if not sentences:
+            return [text]
         embeddings = self.embedder.embed_batch(sentences)
         chunks = []
         chunk = [sentences[0]]

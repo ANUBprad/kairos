@@ -5,7 +5,7 @@ import "github.com/prometheus/client_golang/prometheus"
 var (
 	CacheHits = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "kairos_cache_hits_total",
+			Name: "kairos_gateway_cache_hits_total",
 			Help: "Total number of semantic cache hits",
 		},
 		[]string{"namespace"},
@@ -13,7 +13,7 @@ var (
 
 	CacheMisses = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "kairos_cache_misses_total",
+			Name: "kairos_gateway_cache_misses_total",
 			Help: "Total number of semantic cache misses",
 		},
 		[]string{"namespace"},
@@ -21,7 +21,7 @@ var (
 
 	QueryLatency = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "kairos_query_latency_seconds",
+			Name:    "kairos_gateway_query_latency_seconds",
 			Help:    "Query latency in seconds by retrieval tier",
 			Buckets: []float64{0.1, 0.25, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0, 20.0},
 		},
@@ -30,7 +30,7 @@ var (
 
 	TokenUsage = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "kairos_token_usage_total",
+			Name: "kairos_gateway_token_usage_total",
 			Help: "Total number of tokens used per namespace and model",
 		},
 		[]string{"namespace", "model"},
@@ -38,7 +38,7 @@ var (
 
 	IngestionThroughput = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "kairos_ingestion_documents_total",
+			Name: "kairos_gateway_ingestion_documents_total",
 			Help: "Total number of documents ingested per namespace",
 		},
 		[]string{"namespace"},
@@ -46,14 +46,14 @@ var (
 
 	ActiveIngestionJobs = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "kairos_active_ingestion_jobs",
+			Name: "kairos_gateway_active_ingestion_jobs",
 			Help: "Current number of active ingestion jobs",
 		},
 	)
 
 	RateLimitRejections = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "kairos_rate_limit_rejections_total",
+			Name: "kairos_gateway_rate_limit_rejections_total",
 			Help: "Total number of rate limit rejections per namespace",
 		},
 		[]string{"namespace"},
@@ -61,7 +61,7 @@ var (
 
 	IngestionRetries = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "kairos_ingestion_retries_total",
+			Name: "kairos_gateway_ingestion_retries_total",
 			Help: "Total number of ingestion retries",
 		},
 		[]string{"namespace"},
@@ -69,7 +69,7 @@ var (
 
 	IngestionJobDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "kairos_ingestion_job_duration_seconds",
+			Name:    "kairos_gateway_ingestion_job_duration_seconds",
 			Help:    "Duration of completed ingestion jobs",
 			Buckets: []float64{0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0},
 		},
@@ -78,7 +78,7 @@ var (
 
 	IngestionJobFailures = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "kairos_ingestion_job_failures_total",
+			Name: "kairos_gateway_ingestion_job_failures_total",
 			Help: "Total number of failed ingestion jobs",
 		},
 		[]string{"reason"},
@@ -86,7 +86,7 @@ var (
 
 	WorkerPoolSize = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "kairos_worker_pool_size",
+			Name: "kairos_gateway_worker_pool_size",
 			Help: "Number of active ingestion workers",
 		},
 	)

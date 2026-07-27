@@ -108,16 +108,22 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
             return rag_pb2.ExecuteRetrievalResponse(retrieval_status=False)
 
     def GenerateResponse(self, request, context):
-        result = self._engine.generate_response(
-            query=request.user_query,
-            chunks=[chunk.text for chunk in request.retrieved_chunk],
-        )
-        return rag_pb2.GeneratedResponse(
-            response=result["response"],
-            prompt_tokens=result["prompt_tokens"],
-            completion_tokens=result["completion_tokens"],
-            model=result["model"],
-        )
+        try:
+            result = self._engine.generate_response(
+                query=request.user_query,
+                chunks=[chunk.text for chunk in request.retrieved_chunk],
+            )
+            return rag_pb2.GeneratedResponse(
+                response=result["response"],
+                prompt_tokens=result["prompt_tokens"],
+                completion_tokens=result["completion_tokens"],
+                model=result["model"],
+            )
+        except Exception as e:
+            logger.error("GenerateResponse failed: %s", e)
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details("Internal response generation error")
+            return rag_pb2.GeneratedResponse()
 
     def IngestDocument(self, request, context):
         try:

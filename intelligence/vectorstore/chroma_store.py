@@ -5,7 +5,7 @@ class ChromaStore:
     def __init__(self, host: str, port: int):
         self.HOST = host
         self.PORT = port
-        self.client = HttpClient(host=self.HOST, port=self.PORT)
+        self.client = HttpClient(host=self.HOST, port=self.PORT, timeout=30)
 
     def upsert(self, namespace: str, chunks: list, embeddings: list, filename: str):
         collection = self.client.get_or_create_collection(name=namespace)
@@ -42,4 +42,6 @@ class ChromaStore:
     def get_all_chunks(self, namespace: str):
         collection = self.client.get_collection(name=namespace)
         all_chunks = collection.get()
+        if not all_chunks.get("documents"):
+            return []
         return all_chunks["documents"][0]

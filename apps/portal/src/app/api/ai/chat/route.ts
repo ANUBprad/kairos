@@ -95,9 +95,31 @@ export async function POST(request: NextRequest) {
   }
 
   const encoder = new TextEncoder();
+  const abortController = new AbortController();
+
+  // Server-side timeout: close stream after 120 seconds max
+  const streamTimeout = setTimeout(() => {
+    abortController.abort();
+  }, 120_000);
+
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+
   const stream = new ReadableStream({
     async start(controller) {
+      // SSE heartbeat to prevent proxy/load balancer timeouts
+      heartbeatInterval = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(`: heartbeat\n\n`));
+        } catch {
+          // Stream already closed
+        }
+      }, 15_000);
+
       try {
+        // Check if client disconnected before we start
+        if (abortController.signal.aborted) {
+          return;
+        }
         let trace: Awaited<ReturnType<typeof executeRetrievalWithTrace>> | null = null;
 
         if (explainable) {
@@ -269,10 +291,25 @@ ${contextStr || "No relevant documents found."}`;
       } catch (err) {
         const sanitized = sanitizeError(err);
         const errorData = JSON.stringify({ type: "error", content: "An error occurred while processing your request", errorId: sanitized.errorId });
-        controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+        try {
+          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+        } catch {
+          // Stream already closed
+        }
       } finally {
-        controller.close();
+        clearInterval(heartbeatInterval);
+        clearTimeout(streamTimeout);
+        try {
+          controller.close();
+        } catch {
+          // Stream already closed
+        }
       }
+    },
+    cancel() {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      clearTimeout(streamTimeout);
+      abortController.abort();
     },
   });
 

@@ -54,7 +54,7 @@ class IngestionPipeline:
             metrics.parsing_ms = (time.monotonic() - stage_start) * 1000
             metrics.text_length = len(text_content)
         except Exception as e:
-            raise ValueError(f"Document Loading failed: {e}")
+            raise ValueError(f"Document Loading failed: {e}") from e
 
         try:
             stage_start = time.monotonic()
@@ -62,21 +62,21 @@ class IngestionPipeline:
             metrics.chunking_ms = (time.monotonic() - stage_start) * 1000
             metrics.chunk_count = len(chunks)
         except Exception as e:
-            raise ValueError(f"Document Chunking failed: {e}")
+            raise ValueError(f"Document Chunking failed: {e}") from e
 
         try:
             stage_start = time.monotonic()
             embeddings = self.embedder.embed_batch(chunks)
             metrics.embedding_ms = (time.monotonic() - stage_start) * 1000
         except Exception as e:
-            raise ValueError(f"Document embedding generation failed: {e}")
+            raise ValueError(f"Document embedding generation failed: {e}") from e
 
         try:
             stage_start = time.monotonic()
             self.store.upsert(namespace, chunks, embeddings, filename)
             metrics.indexing_ms = (time.monotonic() - stage_start) * 1000
         except Exception as e:
-            raise ValueError(f"Vector store indexing failed: {e}")
+            raise ValueError(f"Vector store indexing failed: {e}") from e
 
         metrics.total_ms = (time.monotonic() - pipeline_start) * 1000
 

@@ -45,6 +45,8 @@ class TokenBucket:
 class TokenBucketStore:
     """Per-key token bucket store. Each unique key gets its own bucket."""
 
+    MAX_BUCKETS = 10000
+
     def __init__(self, capacity: int, refill_rate: float) -> None:
         self._capacity = capacity
         self._refill_rate = refill_rate
@@ -57,11 +59,19 @@ class TokenBucketStore:
         with self._lock:
             self._maybe_cleanup()
             if key not in self._buckets:
+                # DDoS protection: reject new buckets if at capacity
+                if len(self._buckets) >= self.MAX_BUCKETS:
+                    # Return a dummy bucket that always rejects
+                    raise RuntimeError("Rate limiter at capacity")
                 self._buckets[key] = TokenBucket(self._capacity, self._refill_rate)
             return self._buckets[key]
 
     def consume(self, key: str) -> bool:
-        return self.get_or_create(key).consume()
+        try:
+            return self.get_or_create(key).consume()
+        except RuntimeError:
+            # At capacity, reject
+            return False
 
     def _maybe_cleanup(self) -> None:
         """Remove stale buckets to prevent unbounded memory growth."""

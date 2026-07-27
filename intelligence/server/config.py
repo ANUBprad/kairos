@@ -4,13 +4,17 @@ Provides :class:`ServerConfig` (typed dataclass populated from environment
 variables with sensible development defaults) and :func:`validate_env` that
 checks all required variables based on the chosen LLM provider, failing fast
 with a single clear message before any infrastructure is created.
+
+This module delegates to the Settings singleton from config.settings for
+environment variable reading, ensuring a single source of truth.
 """
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from typing import Optional
+
+from intelligence.config.settings import Settings, get_settings
 
 
 def _parse_bool(value: str) -> bool:
@@ -25,6 +29,9 @@ class ServerConfig:
     Scalar fields carry a sensible local-development default where one
     exists.  Provider-specific credential fields default to ``None`` and
     must be set by the user for the chosen LLM path.
+
+    This class delegates to the Settings singleton for actual environment
+    variable reading, ensuring consistent configuration across the system.
     """
 
     intelligence_port: int = 50051
@@ -65,40 +72,40 @@ class ServerConfig:
 
     @classmethod
     def from_env(cls) -> ServerConfig:
+        """Create ServerConfig by delegating to the Settings singleton.
+
+        This ensures all environment variables are read through a single
+        source of truth (the Settings class from config.settings).
+        """
+        settings = get_settings()
         return cls(
-            intelligence_port=int(os.getenv("INTELLIGENCE_PORT", "50051")),
-            chroma_store_host=os.getenv("CHROMA_STORE_HOST", "localhost"),
-            chroma_store_port=int(os.getenv("CHROMA_STORE_PORT", "8000")),
-            embedding_model=os.getenv("KAIROS_EMBEDDING_MODEL", "local"),
-            chunk_size=int(os.getenv("KAIROS_CHUNK_SIZE", "1024")),
-            overlap=int(os.getenv("KAIROS_OVERLAP", "150")),
-            llm_provider=os.getenv("KAIROS_LLM_PROVIDER"),
-            deployment=_parse_bool(os.getenv("KAIROS_DEPLOYMENT", "False")),
-            mmr_retrieval_lambda=float(os.getenv("KAIROS_MMR_RETRIEVAL_LAMBDA", "0.5")),
-            gemini_api_key=os.getenv("GEMINI_API_KEY"),
-            gemini_model_name=os.getenv("KAIROS_GEMINI_MODEL_NAME"),
-            openai_api_key=os.getenv("OPENAI_API_KEY"),
-            openai_model_name=os.getenv("KAIROS_OPENAI_MODEL_NAME"),
-            ollama_model_name=os.getenv("KAIROS_OLLAMA_MODEL_NAME"),
-            ollama_url=os.getenv("KAIROS_OLLAMA_URL"),
-            groq_api_key=os.getenv("GROQ_API_KEY"),
-            groq_base_url=os.getenv("GROQ_BASE_URL"),
-            large_groq_model=os.getenv("KAIROS_LARGE_GROQ_MODEL"),
-            small_groq_model=os.getenv("KAIROS_SMALL_GROQ_MODEL"),
-            cache_maxsize=int(os.getenv("KAIROS_CACHE_MAXSIZE", "4096")),
-            cache_ttl_seconds=int(os.getenv("KAIROS_CACHE_TTL_SECONDS", "300")),
-            health_check_enabled=_parse_bool(os.getenv("KAIROS_HEALTH_CHECK_ENABLED", "True")),
-            provider_timeout_seconds=float(
-                os.getenv("KAIROS_PROVIDER_TIMEOUT_SECONDS", "30.0")
-            ),
-            circuit_breaker_failure_threshold=int(
-                os.getenv("KAIROS_CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5")
-            ),
-            circuit_breaker_recovery_timeout=float(
-                os.getenv("KAIROS_CIRCUIT_BREAKER_RECOVERY_TIMEOUT", "30.0")
-            ),
-            metrics_enabled=_parse_bool(os.getenv("KAIROS_METRICS_ENABLED", "True")),
-            metrics_port=int(os.getenv("KAIROS_METRICS_PORT", "8001")),
+            intelligence_port=settings.intelligence_port,
+            chroma_store_host=settings.chroma_store_host,
+            chroma_store_port=settings.chroma_store_port,
+            embedding_model=settings.embedding_model,
+            chunk_size=settings.chunk_size,
+            overlap=settings.overlap,
+            llm_provider=settings.llm_provider,
+            deployment=settings.deployment,
+            mmr_retrieval_lambda=settings.mmr_retrieval_lambda,
+            gemini_api_key=settings.gemini_api_key,
+            gemini_model_name=settings.gemini_model_name,
+            openai_api_key=settings.openai_api_key,
+            openai_model_name=settings.openai_model_name,
+            ollama_model_name=settings.ollama_model_name,
+            ollama_url=settings.ollama_url,
+            groq_api_key=settings.groq_api_key,
+            groq_base_url=settings.groq_base_url,
+            large_groq_model=settings.large_groq_model,
+            small_groq_model=settings.small_groq_model,
+            cache_maxsize=settings.cache_maxsize,
+            cache_ttl_seconds=settings.cache_ttl_seconds,
+            health_check_enabled=settings.health_check_enabled,
+            provider_timeout_seconds=settings.provider_timeout_seconds,
+            circuit_breaker_failure_threshold=settings.circuit_breaker_failure_threshold,
+            circuit_breaker_recovery_timeout=settings.circuit_breaker_recovery_timeout,
+            metrics_enabled=settings.metrics_enabled,
+            metrics_port=settings.metrics_port,
         )
 
 

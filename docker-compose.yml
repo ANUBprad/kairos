@@ -17,6 +17,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+    networks:
+      - kairos
 
   intelligence:
     build:
@@ -42,6 +44,8 @@ services:
     depends_on:
       chromadb:
         condition: service_healthy
+    networks:
+      - kairos
 
   api:
     build:
@@ -70,6 +74,8 @@ services:
     depends_on:
       intelligence:
         condition: service_healthy
+    networks:
+      - kairos
 
   internal-dashboard:
     build:
@@ -101,6 +107,8 @@ services:
     labels:
       - "kairos.component=internal-dashboard"
       - "kairos.description=Internal Developer Dashboard (not for public deployment)"
+    networks:
+      - kairos
 
   worker:
     build:
@@ -125,6 +133,8 @@ services:
     depends_on:
       chromadb:
         condition: service_healthy
+    networks:
+      - kairos
 
   gateway:
     build:
@@ -151,6 +161,8 @@ services:
     depends_on:
       intelligence:
         condition: service_healthy
+    networks:
+      - kairos
 
   prometheus:
     image: prom/prometheus:v2.51.0
@@ -173,6 +185,8 @@ services:
       start_period: 15s
     depends_on:
       - gateway
+    networks:
+      - kairos
 
   grafana:
     image: grafana/grafana:10.4.2
@@ -201,8 +215,15 @@ services:
       start_period: 30s
     depends_on:
       - prometheus
+    networks:
+      - kairos
 
 volumes:
   chroma_data:
   prometheus_data:
   grafana_data:
+
+networks:
+  kairos:
+    driver: bridge
+    name: kairos-network

@@ -2,6 +2,7 @@ package intelligence
 
 import (
 	"Kairos/gateway/config"
+	"Kairos/gateway/middleware"
 	pb "Kairos/generated/go/proto"
 	"context"
 	"log/slog"
@@ -9,7 +10,18 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
+
+// injectTraceContext adds the X-Trace-ID from the HTTP request context to gRPC metadata
+// so it propagates across service boundaries for distributed tracing.
+func injectTraceContext(ctx context.Context) context.Context {
+	traceID := middleware.GetTraceID(ctx)
+	if traceID == "" {
+		return ctx
+	}
+	return metadata.AppendToOutgoingContext(ctx, "x-trace-id", traceID)
+}
 
 func ConnectToPython(envVar *config.Config) (pb.IntelligenceServiceClient, *grpc.ClientConn, error) {
 
@@ -29,9 +41,10 @@ func ConnectToPython(envVar *config.Config) (pb.IntelligenceServiceClient, *grpc
 	return client, conn, nil
 }
 
-func ClassifyQuery(client pb.IntelligenceServiceClient, query string, namespace string) (*pb.ClassifyQueryResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+func ClassifyQuery(ctx context.Context, client pb.IntelligenceServiceClient, query string, namespace string) (*pb.ClassifyQueryResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	ctx = injectTraceContext(ctx)
 
 	req := &pb.ClassifyQueryRequest{
 		UserQuery: query,
@@ -46,9 +59,10 @@ func ClassifyQuery(client pb.IntelligenceServiceClient, query string, namespace 
 	return res, nil
 }
 
-func ComputeEmbeddings(client pb.IntelligenceServiceClient, query string) ([]float32, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+func ComputeEmbeddings(ctx context.Context, client pb.IntelligenceServiceClient, query string) ([]float32, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	ctx = injectTraceContext(ctx)
 
 	req := &pb.ComputeEmbeddingRequest{
 		UserQuery: query,
@@ -63,9 +77,10 @@ func ComputeEmbeddings(client pb.IntelligenceServiceClient, query string) ([]flo
 	return res.VectorEmbeddings, nil
 }
 
-func ExecuteRetrieval(client pb.IntelligenceServiceClient, query string, config *pb.RetrievalConfig, namespace string) (*pb.ExecuteRetrievalResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+func ExecuteRetrieval(ctx context.Context, client pb.IntelligenceServiceClient, query string, config *pb.RetrievalConfig, namespace string) (*pb.ExecuteRetrievalResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	ctx = injectTraceContext(ctx)
 
 	req := &pb.ExecuteRetrievalRequest{
 		UserQuery:      query,
@@ -82,9 +97,10 @@ func ExecuteRetrieval(client pb.IntelligenceServiceClient, query string, config 
 	return res, nil
 }
 
-func GenerateResponse(client pb.IntelligenceServiceClient, namespace string, query string, retrieved_chunk []*pb.RetrievedChunk) (*pb.GeneratedResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*90)
+func GenerateResponse(ctx context.Context, client pb.IntelligenceServiceClient, namespace string, query string, retrieved_chunk []*pb.RetrievedChunk) (*pb.GeneratedResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
+	ctx = injectTraceContext(ctx)
 
 	req := &pb.GenerateResponseRequest{
 		Namespace:      namespace,
@@ -101,9 +117,10 @@ func GenerateResponse(client pb.IntelligenceServiceClient, namespace string, que
 	return res, nil
 }
 
-func IngestDocument(client pb.IntelligenceServiceClient, mime_type string, chunking_strat int32, namespace string, filename string, content []byte) (*pb.IngestDocumentResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+func IngestDocument(ctx context.Context, client pb.IntelligenceServiceClient, mime_type string, chunking_strat int32, namespace string, filename string, content []byte) (*pb.IngestDocumentResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
+	ctx = injectTraceContext(ctx)
 
 	req := &pb.IngestDocumentRequest{
 		DocContent:       content,

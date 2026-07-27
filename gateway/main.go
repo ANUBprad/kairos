@@ -48,6 +48,11 @@ func main() {
 		slog.Info("Router Initialized Successfully.....")
 	}
 
+	// Start job tracker eviction (every 5 minutes, expire jobs older than 1 hour)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tracker.StartEviction(ctx, 1*time.Hour, 5*time.Minute)
+
 	port := envVar.Gateway.Port
 	host := envVar.Gateway.Host
 	address := host + ":" + port
@@ -76,19 +81,26 @@ func main() {
 
 	slog.Info("Shutting Down server......")
 
-	inQueue.Shutdown()
+	// Correct shutdown ordering:
+	// 1. Stop accepting new HTTP requests, drain in-flight
+	// 2. Shut down ingestion queue (drain workers)
+	// 3. Close gRPC connection
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		slog.Error("Forced Shutdown", "ERROR", err)
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		slog.Error("Forced HTTP Shutdown", "ERROR", err)
 	}
+
+	inQueue.Shutdown()
 
 	err := conn.Close()
 	if err != nil {
 		slog.Error("Couldn't close intelligence client server", "ERROR", err)
 	}
+
+	// Cancel the eviction context
+	cancel()
 
 	slog.Info("Server stopped")
 }

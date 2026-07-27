@@ -25,6 +25,8 @@ func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, 
 		corsOrigins = []string{}
 	}
 
+	// Panic recovery MUST be first middleware to catch panics in all downstream handlers
+	mainRouter.Use(middleware.Recover)
 	mainRouter.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   corsOrigins,
 		AllowedHeaders:   []string{"Content-Type", "X-Secret", "X-Namespace", "X-Trace-ID"},

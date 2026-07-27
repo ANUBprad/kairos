@@ -5,7 +5,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const health = await getHealthStatus();
+    const health = await Promise.race([
+      getHealthStatus(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Readiness check timed out")), 10_000),
+      ),
+    ]);
     const isReady = health.status !== "unhealthy";
     return NextResponse.json(
       { status: isReady ? "ready" : "not_ready", checks: health.checks },

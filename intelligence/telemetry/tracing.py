@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -35,6 +36,7 @@ class Tracer:
     def __init__(self, service_name: str = "kairos-intelligence"):
         self._service_name = service_name
         self._spans: list[Span] = []
+        self._lock = threading.Lock()
         self._otel_available = False
         self._tracer = None
 
@@ -75,7 +77,8 @@ class Tracer:
                     raise
                 finally:
                     span.end_time = time.monotonic()
-                    self._spans.append(span)
+                    with self._lock:
+                        self._spans.append(span)
         else:
             try:
                 yield span
@@ -85,7 +88,8 @@ class Tracer:
                 raise
             finally:
                 span.end_time = time.monotonic()
-                self._spans.append(span)
+                with self._lock:
+                    self._spans.append(span)
                 logger.info(
                     "Span completed",
                     extra={
@@ -97,17 +101,20 @@ class Tracer:
                 )
 
     def get_spans(self) -> list[Span]:
-        return list(self._spans)
+        with self._lock:
+            return list(self._spans)
 
     def get_stats(self) -> dict:
-        if not self._spans:
+        with self._lock:
+            spans = list(self._spans)
+        if not spans:
             return {"total_spans": 0}
 
-        durations = [s.duration_ms for s in self._spans]
-        errors = sum(1 for s in self._spans if s.status == "ERROR")
+        durations = [s.duration_ms for s in spans]
+        errors = sum(1 for s in spans if s.status == "ERROR")
 
         return {
-            "total_spans": len(self._spans),
+            "total_spans": len(spans),
             "error_spans": errors,
             "avg_duration_ms": sum(durations) / len(durations),
             "max_duration_ms": max(durations),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
@@ -42,6 +43,7 @@ class EventLogger:
     def __init__(self) -> None:
         self._sinks: List[Callable[[Event], None]] = []
         self._pending: List[Event] = []
+        self._lock = threading.Lock()
 
     def add_sink(self, sink: Callable[[Event], None]) -> None:
         self._sinks.append(sink)
@@ -61,7 +63,8 @@ class EventLogger:
             trace_id=trace_id,
             span_id=span_id,
         )
-        self._pending.append(event)
+        with self._lock:
+            self._pending.append(event)
         for sink in self._sinks:
             try:
                 sink(event)
@@ -73,13 +76,15 @@ class EventLogger:
         return event
 
     def flush(self) -> List[Event]:
-        pending = list(self._pending)
-        self._pending.clear()
+        with self._lock:
+            pending = list(self._pending)
+            self._pending.clear()
         return pending
 
     @property
     def pending_count(self) -> int:
-        return len(self._pending)
+        with self._lock:
+            return len(self._pending)
 
 
 _default_logger = EventLogger()

@@ -130,3 +130,39 @@ def hit_rate(
         if any(doc in rel for doc in truncated):
             hits += 1
     return hits / len(queries)
+
+
+def precision_at_k(relevant: Set[str], retrieved: Sequence[str], k: Optional[int] = None) -> float:
+    """Precision@k: fraction of top-k retrieved documents that are relevant.
+
+    Args:
+        relevant:   Set of relevant document identifiers.
+        retrieved:  Ordered list of retrieved document identifiers.
+        k:          Truncation point (default: use all retrieved docs).
+
+    Returns:
+        Precision score (0.0 to 1.0).
+    """
+    if not retrieved or not relevant:
+        return 0.0
+    truncated = retrieved[:k] if k is not None else retrieved
+    hits = sum(1 for doc in truncated if doc in relevant)
+    return hits / len(truncated)
+
+
+def recall_at_k(relevant: Set[str], retrieved: Sequence[str], k: Optional[int] = None) -> float:
+    """Recall@k: fraction of relevant documents found in top-k retrieved.
+
+    Args:
+        relevant:   Set of relevant document identifiers.
+        retrieved:  Ordered list of retrieved document identifiers.
+        k:          Truncation point (default: use all retrieved docs).
+
+    Returns:
+        Recall score (0.0 to 1.0).
+    """
+    if not relevant:
+        return 0.0
+    truncated = retrieved[:k] if k is not None else retrieved
+    hits = sum(1 for doc in truncated if doc in relevant)
+    return hits / len(relevant)
