@@ -309,7 +309,7 @@ def serve():
     interceptor = MetricsInterceptor() if cfg.metrics_enabled else None
     interceptors = [interceptor] if interceptor else []
     server = grpc.server(
-        futures.ThreadPoolExecutor(max_workers=10),
+        futures.ThreadPoolExecutor(max_workers=50),
         interceptors=interceptors,
     )
 

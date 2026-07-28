@@ -40,17 +40,15 @@ class PerformanceMonitor:
     def __init__(self, window_size: int = 1000) -> None:
         self._window_size = window_size
         self._lock = threading.Lock()
-        self._latencies: List[float] = []
+        self._latencies: deque[float] = deque(maxlen=window_size)
         self._successes: int = 0
         self._failures: int = 0
         self._total: int = 0
-        self._timestamps: deque = deque(maxlen=window_size)
+        self._timestamps: deque[float] = deque(maxlen=window_size)
 
     def record_request(self, latency_ms: float, success: bool) -> None:
         with self._lock:
             self._latencies.append(latency_ms)
-            if len(self._latencies) > self._window_size:
-                self._latencies = self._latencies[-self._window_size :]
             if success:
                 self._successes += 1
             else:
@@ -61,8 +59,6 @@ class PerformanceMonitor:
     def record_latency(self, latency_ms: float) -> None:
         with self._lock:
             self._latencies.append(latency_ms)
-            if len(self._latencies) > self._window_size:
-                self._latencies = self._latencies[-self._window_size :]
 
     def record_success(self) -> None:
         with self._lock:
@@ -87,7 +83,6 @@ class PerformanceMonitor:
 
         ls = self._compute_latency_stats(latencies)
 
-        # Throughput (requests per second over window)
         throughput = 0.0
         if len(timestamps) >= 2:
             span = timestamps[-1] - timestamps[0]

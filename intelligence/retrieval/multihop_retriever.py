@@ -31,6 +31,7 @@ class MultiHopRetriever(BaseRetriever):
     def retrieve_top_k(self, namespace: str, top_k: int, query: str):
         original_query = query
         curr_query = query
+        max_total_chunks = top_k * 3
 
         query_embed = self.embedder.embed(original_query)
         query_retrieval = self.store.query(namespace, top_k, query_embed)
@@ -59,7 +60,7 @@ class MultiHopRetriever(BaseRetriever):
                 current_query=curr_query,
                 hop_count=hop_count,
                 max_hops=self.num_hops,
-                data="\n".join(all_chunks),
+                data="\n".join(all_chunks[:max_total_chunks]),
             )
 
             try:
@@ -70,6 +71,9 @@ class MultiHopRetriever(BaseRetriever):
                 )
 
             if hop_data.is_enough:
+                break
+
+            if len(all_chunks) >= max_total_chunks:
                 break
 
             hop_query_embed = self.embedder.embed(hop_data.next_question)
@@ -86,7 +90,7 @@ class MultiHopRetriever(BaseRetriever):
                 seen.add(chunk)
                 cleaned_chunks.append(chunk)
 
-        return cleaned_chunks
+        return cleaned_chunks[:max_total_chunks]
 
     def _llm_response(self, prompt: str):
         if self.llm_provider == "gemini":

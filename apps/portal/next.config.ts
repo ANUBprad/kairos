@@ -8,11 +8,11 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-XSS-Protection", value: "1; mode=block" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), browsing-topics=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(self), gamepad=(), geolocation=(self), gyroscope=(), layout-animations=(self), legacy-image-formats=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), oversized-images=(self), payment=(), picture-in-picture=(self), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(self), usb=(), web-share=(), xr-spatial-tracking=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), browsing-topics=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(self), gamepad=(), gyroscope=(), layout-animations=(self), legacy-image-formats=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), oversized-images=(self), payment=(), picture-in-picture=(self), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(self), usb=(), web-share=(), xr-spatial-tracking=()" },
   ...(isProduction
     ? [
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://us.i.posthog.com https://*.i.posthog.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: https://vitals.vercel-insights.com https://us.i.posthog.com https://*.i.posthog.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://us.i.posthog.com https://*.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: wss: https://vitals.vercel-insights.com https://us.i.posthog.com https://*.i.posthog.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'" },
       ]
     : []),
 ];
@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd(), "../.."),
   images: {
     formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 300,
     remotePatterns: [
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
@@ -42,7 +43,15 @@ const nextConfig: NextConfig = {
   ],
   poweredByHeader: false,
   experimental: {
-    optimizePackageImports: ['recharts', 'lucide-react', 'date-fns', '@radix-ui/react-icons'],
+    optimizePackageImports: [
+      'recharts',
+      'lucide-react',
+      'date-fns',
+      '@radix-ui/react-icons',
+      'framer-motion',
+      '@hookform/resolvers',
+      'zod',
+    ],
   },
   output: 'standalone',
 };

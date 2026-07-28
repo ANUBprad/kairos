@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time as _time
 from typing import Union
 
 from intelligence.classifier.query_classifier import ClassifyQuery
@@ -20,6 +21,8 @@ from intelligence.metrics.prometheus_metrics import (
 )
 from intelligence.retrieval.simple_retriever import SimpleRetriever
 from intelligence.telemetry.collector import TelemetryCollector
+
+import rag_pb2 as _pb
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +74,6 @@ class RetrievalEngine:
             "rerank": decision.config["rerank"],
             "decompose": decision.config["decompose"],
         }
-        import rag_pb2 as _pb2
 
         _rt = decision.config["retrieval_type"]
         _cb = (
@@ -85,8 +87,8 @@ class RetrievalEngine:
             query_type=decision.query_type.upper(),
             confidence_band=_cb,
         ).inc()
-        retrieval_type = _pb2.RetrievalType.Value(_rt)
-        query_type = _pb2.QueryType.Value(decision.query_type.upper())
+        retrieval_type = _pb.RetrievalType.Value(_rt)
+        query_type = _pb.QueryType.Value(decision.query_type.upper())
 
         if self._telemetry:
             self._telemetry.record_retrieval(
@@ -118,8 +120,6 @@ class RetrievalEngine:
         rerank: bool = False,
         decompose: bool = False,
     ) -> tuple[list[str], int]:
-        import rag_pb2 as _pb
-
         if retrieval_type in (
             _pb.RetrievalType.HYBRID,
             _pb.RetrievalType.RETRIEVAL_TYPE_UNSPECIFIED,
@@ -149,9 +149,6 @@ class RetrievalEngine:
         rerank: bool = False,
         decompose: bool = False,
     ) -> dict:
-        import time as _time
-        import rag_pb2 as _pb
-
         _start = _time.monotonic()
         chunks, used_type = self.retrieve(
             namespace,
@@ -260,8 +257,6 @@ class RetrievalEngine:
 
     @staticmethod
     def _tier_to_pb_type(tier: str) -> int:
-        import rag_pb2 as _pb
-
         mapping = {
             "simple": _pb.RetrievalType.HYBRID,
             "complex": _pb.RetrievalType.MULTI_VECTOR,

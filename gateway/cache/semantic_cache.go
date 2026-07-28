@@ -6,7 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"math"
-	"strings"
+	"sync"
 	"sync/atomic"
 )
 
@@ -16,6 +16,9 @@ type SemanticCache struct {
 	simThreshold float32
 	hits         int64
 	misses       int64
+	// Namespace-partitioned index for O(1) namespace filtering
+	namespaceIndex map[string]map[string]struct{}
+	indexMu        sync.RWMutex
 }
 
 func CalcCosineSim(queryEmbed, cacheEmbed []float32) (float32, error) {
@@ -34,7 +37,6 @@ func CalcCosineSim(queryEmbed, cacheEmbed []float32) (float32, error) {
 	queryMag := math.Sqrt(float64(querySum))
 	cacheMag := math.Sqrt(float64(cacheSum))
 
-	// Guard against zero-magnitude vectors
 	if queryMag == 0 || cacheMag == 0 {
 		return 0, nil
 	}
@@ -45,9 +47,10 @@ func CalcCosineSim(queryEmbed, cacheEmbed []float32) (float32, error) {
 
 func NewSemanticCache(store *LRUStore, embedCache *EmbeddingCache, threshold float32) *SemanticCache {
 	return &SemanticCache{
-		embedCache:   embedCache,
-		cacheStore:   store,
-		simThreshold: threshold,
+		embedCache:     embedCache,
+		cacheStore:     store,
+		simThreshold:   threshold,
+		namespaceIndex: make(map[string]map[string]struct{}),
 	}
 }
 
@@ -57,17 +60,27 @@ func (semCache *SemanticCache) Set(namespace, query string, embedding []float32,
 	key := namespace + ":" + encodedQuery
 	semCache.cacheStore.Set(key, response)
 	semCache.embedCache.Set(key, embedding)
+
+	semCache.indexMu.Lock()
+	if semCache.namespaceIndex[namespace] == nil {
+		semCache.namespaceIndex[namespace] = make(map[string]struct{})
+	}
+	semCache.namespaceIndex[namespace][key] = struct{}{}
+	semCache.indexMu.Unlock()
 }
 
 func (semCache *SemanticCache) Get(namespace string, embedding []float32) (string, bool) {
-	keys := semCache.embedCache.GetKeys()
+	semCache.indexMu.RLock()
+	keys := make([]string, 0, len(semCache.namespaceIndex[namespace]))
+	for key := range semCache.namespaceIndex[namespace] {
+		keys = append(keys, key)
+	}
+	semCache.indexMu.RUnlock()
+
 	response := ""
 	var maxSim float32 = -1.0
 
 	for _, key := range keys {
-		if !strings.HasPrefix(key, namespace+":") {
-			continue
-		}
 		vec, ok := semCache.embedCache.Get(key)
 		if !ok {
 			continue

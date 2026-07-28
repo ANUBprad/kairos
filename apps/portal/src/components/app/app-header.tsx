@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Search,
-  Bell,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { UserMenu } from "@/components/app/user-menu";
 import { Breadcrumbs } from "@/components/app/breadcrumbs";
+import { NotificationCenter } from "@/components/enterprise/notification-center";
 
 interface AppHeaderProps {
   email: string;
@@ -16,8 +13,6 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ email, name, image, organizationName }: AppHeaderProps) {
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 sm:gap-4 border-b border-border bg-bg/80 px-4 sm:px-6 backdrop-blur-md">
       {/* Left: Breadcrumbs */}
@@ -45,39 +40,7 @@ export function AppHeader({ email, name, image, organizationName }: AppHeaderPro
         </button>
 
         {/* Notifications */}
-        <div className="relative">
-          <button
-            onClick={() => setNotificationsOpen(!notificationsOpen)}
-            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text-tertiary hover:bg-surface-hover hover:text-text-secondary transition-colors"
-            aria-label="Notifications"
-            aria-expanded={notificationsOpen}
-          >
-            <Bell size={16} />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand" aria-hidden="true" />
-          </button>
-
-          {notificationsOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setNotificationsOpen(false)}
-              />
-              <div className="absolute right-0 top-full mt-2 w-80 z-50 rounded-xl border border-border bg-surface shadow-xl overflow-hidden">
-                <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                  <span className="text-sm font-semibold text-text-primary">Notifications</span>
-                  <span className="text-[10px] text-text-tertiary">No new notifications</span>
-                </div>
-                <div className="p-8 text-center">
-                  <Bell size={24} className="mx-auto text-text-tertiary mb-2" />
-                  <p className="text-sm text-text-tertiary">All caught up!</p>
-                  <p className="text-xs text-text-tertiary mt-1">
-                    Activity from your research will appear here.
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+        <NotificationCenter />
 
         {/* Keyboard shortcut hint */}
         <div className="hidden lg:flex items-center gap-1.5 ml-1">

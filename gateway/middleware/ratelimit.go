@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -17,10 +18,10 @@ const maxTrackedNamespaces = 10000
 func RateLimit(envVar *config.Config) func(http.Handler) http.Handler {
 	clients := sync.Map{}
 	lastSeen := sync.Map{}
+	var namespaceCount atomic.Int64
 	rateLimitVal := envVar.RateLimit
 	burstVal := envVar.BurstLimit
 
-	// Background cleanup of stale rate limiter entries
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
@@ -31,6 +32,7 @@ func RateLimit(envVar *config.Config) func(http.Handler) http.Handler {
 					if lastTime, ok := last.(time.Time); ok && lastTime.Before(staleThreshold) {
 						clients.Delete(key)
 						lastSeen.Delete(key)
+						namespaceCount.Add(-1)
 					}
 				}
 				return true
@@ -47,21 +49,17 @@ func RateLimit(envVar *config.Config) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Check if we're tracking too many namespaces (DDoS protection)
-			count := 0
-			clients.Range(func(_, _ interface{}) bool {
-				count++
-				return count < maxTrackedNamespaces
-			})
-			if count >= maxTrackedNamespaces {
-				// If namespace is new and we're at capacity, reject
+			if namespaceCount.Load() >= maxTrackedNamespaces {
 				if _, loaded := clients.Load(namespace); !loaded {
 					httpWriter.RespondWithError(w, 503, "Rate limiter at capacity")
 					return
 				}
 			}
 
-			val, _ := clients.LoadOrStore(namespace, rate.NewLimiter(rate.Limit(rateLimitVal), burstVal))
+			val, loaded := clients.LoadOrStore(namespace, rate.NewLimiter(rate.Limit(rateLimitVal), burstVal))
+			if !loaded {
+				namespaceCount.Add(1)
+			}
 			lastSeen.Store(namespace, time.Now())
 
 			clientLimiter, ok := val.(*rate.Limiter)

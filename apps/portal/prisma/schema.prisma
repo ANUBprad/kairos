@@ -36,6 +36,14 @@ model User {
   conversations    Conversation[]
   experiments      Experiment[]
   benchmarkRuns    BenchmarkRun[]
+
+  apiKeys          ApiKey[]
+  notifications    Notification[]
+  invitationsSent  Invitation[]       @relation("InvitationInviter")
+  shareLinks       ShareLink[]
+  auditLogs        AuditLog[]
+
+  @@index([email])
 }
 
 model Session {
@@ -106,8 +114,13 @@ model Organization {
   ownerId String
   owner   User   @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
 
-  members  Member[]
-  projects Project[]
+  members     Member[]
+  projects    Project[]
+  apiKeys     ApiKey[]
+  invitations Invitation[]
+  shareLinks  ShareLink[]
+  settings    WorkspaceSettings[]
+  auditLogs   AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -589,6 +602,159 @@ model ActivityLog {
   createdAt DateTime @default(now())
 
   @@index([userId, action])
+}
+
+/// Enterprise: API Keys
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(255)
+  keyHash     String   @unique @db.VarChar(255)
+  keyPrefix   String   @db.VarChar(8)
+  scopes      String[] @default(["read", "write"])
+  enabled     Boolean  @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([keyHash])
+}
+
+/// Enterprise: Invitations
+
+model Invitation {
+  id         String   @id @default(cuid())
+  email      String   @db.VarChar(255)
+  role       MemberRole @default(MEMBER)
+  status     InvitationStatus @default(PENDING)
+  token      String   @unique @db.VarChar(255)
+  expiresAt  DateTime
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  invitedById String
+  invitedBy   User   @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  acceptedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, email])
+  @@index([organizationId])
+  @@index([email])
+  @@index([token])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+/// Enterprise: Notifications
+
+model Notification {
+  id      String @id @default(cuid())
+  type    String @db.VarChar(64)
+  title   String @db.VarChar(255)
+  message String @db.Text
+  read    Boolean @default(false)
+  metadata Json?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+/// Enterprise: Resource Sharing
+
+model ShareLink {
+  id         String   @id @default(cuid())
+  token      String   @unique @db.VarChar(255)
+  resourceType String @db.VarChar(64)
+  resourceId String   @db.VarChar(255)
+  permission SharePermission @default(VIEW)
+  expiresAt  DateTime?
+  enabled    Boolean  @default(true)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([token])
+  @@index([resourceType, resourceId])
+  @@index([organizationId])
+}
+
+enum SharePermission {
+  VIEW
+  EDIT
+  ADMIN
+}
+
+/// Enterprise: Workspace Settings
+
+model WorkspaceSettings {
+  id      String @id @default(cuid())
+  key     String @db.VarChar(128)
+  value   Json?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+}
+
+/// Enterprise: Extended Audit Log
+
+model AuditLog {
+  id         String  @id @default(cuid())
+  action     String  @db.VarChar(128)
+  resource   String  @db.VarChar(255)
+  resourceId String? @db.VarChar(255)
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  requestId  String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, action])
+  @@index([organizationId, createdAt])
+  @@index([resource, resourceId])
+  @@index([createdAt])
 }
 
 
