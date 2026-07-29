@@ -5,10 +5,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { logger } from "@/lib/logger";
 import { randomBytes } from "crypto";
 import {
-  type MembershipContext,
   createAuditLog,
   getMembership,
 } from "./rbac";

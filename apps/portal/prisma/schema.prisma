@@ -43,6 +43,14 @@ model User {
   shareLinks       ShareLink[]
   auditLogs        AuditLog[]
 
+  ownedPrompts         Prompt[]
+  promptVersions       PromptVersion[]
+  ownedGoldenDatasets  GoldenDataset[]
+  assignedReviews      ReviewQueue[]  @relation("ReviewAssignee")
+  createdReviews       ReviewQueue[]  @relation("ReviewCreator")
+  reviewedReviews      ReviewQueue[]  @relation("ReviewReviewer")
+  reviewComments       ReviewComment[]
+
   @@index([email])
 }
 
@@ -121,6 +129,13 @@ model Organization {
   shareLinks  ShareLink[]
   settings    WorkspaceSettings[]
   auditLogs   AuditLog[]
+
+  promptFolders  PromptFolder[]
+  prompts        Prompt[]
+  goldenDatasets GoldenDataset[]
+  reviewQueue    ReviewQueue[]
+  qualityGates   QualityGate[]
+  leaderboard    LeaderboardEntry[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -755,6 +770,299 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@index([resource, resourceId])
   @@index([createdAt])
+}
+
+/// Evaluation Platform: Prompt Management
+
+model PromptFolder {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String?
+  color       String? @db.VarChar(32)
+  icon        String? @db.VarChar(32)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  parentId String?
+  parent   PromptFolder? @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children PromptFolder[] @relation("FolderTree")
+
+  prompts Prompt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([parentId])
+}
+
+model Prompt {
+  id          String  @id @default(cuid())
+  title       String  @db.VarChar(512)
+  description String? @db.Text
+  tags        String[]
+
+  status  PromptStatus @default(DRAFT)
+  version Int          @default(1)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  folderId String?
+  folder   PromptFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  versions       PromptVersion[]
+  currentVersionId String?
+  currentVersion   PromptVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([folderId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([tags])
+}
+
+enum PromptStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model PromptVersion {
+  id          String  @id @default(cuid())
+  version     Int
+  title       String  @db.VarChar(512)
+  description String? @db.Text
+
+  systemPrompt String @db.Text
+  userPrompt   String @db.Text
+  variables    Json?
+  metadata     Json?
+
+  model        String?  @db.VarChar(128)
+  temperature  Float?
+  maxTokens    Int?
+  topP         Float?
+
+  status PromptVersionStatus @default(DRAFT)
+
+  promptId String
+  prompt   Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  currentVersionOf Prompt[] @relation("CurrentVersion")
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  publishedAt DateTime?
+  archivedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([promptId, version])
+  @@index([promptId])
+  @@index([status])
+}
+
+enum PromptVersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Evaluation Platform: Golden Datasets (extends existing BenchmarkDataset)
+
+model GoldenDataset {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  tags        String[]
+  difficulty  DatasetDifficulty @default(MEDIUM)
+  version     Int              @default(1)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  parentId String?
+  parent   GoldenDataset? @relation("DatasetVersion", fields: [parentId], references: [id], onDelete: SetNull)
+  children GoldenDataset[] @relation("DatasetVersion")
+
+  entries GoldenDatasetEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([difficulty])
+}
+
+enum DatasetDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
+}
+
+model GoldenDatasetEntry {
+  id          String  @id @default(cuid())
+  question    String  @db.Text
+  expectedAnswer   String  @db.Text
+  expectedCitations String[]
+  context     String? @db.Text
+  tags        String[]
+  category    String? @db.VarChar(128)
+  metadata    Json?
+
+  datasetId String
+  dataset   GoldenDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([datasetId])
+  @@index([category])
+  @@index([tags])
+}
+
+/// Evaluation Platform: Human Review
+
+model ReviewQueue {
+  id          String  @id @default(cuid())
+  title       String  @db.VarChar(512)
+  description String? @db.Text
+
+  status  ReviewStatus @default(PENDING)
+  priority ReviewPriority @default(NORMAL)
+  score   Float?
+
+  resourceType String  @db.VarChar(64)
+  resourceId   String  @db.VarChar(255)
+  metadata     Json?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  assigneeId String?
+  assignee   User?   @relation("ReviewAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User   @relation("ReviewCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  reviewerId String?
+  reviewer   User?   @relation("ReviewReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  reviewedAt DateTime?
+
+  comments ReviewComment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([assigneeId])
+  @@index([resourceType, resourceId])
+}
+
+enum ReviewStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  NEEDS_IMPROVEMENT
+}
+
+enum ReviewPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model ReviewComment {
+  id      String @id @default(cuid())
+  content String @db.Text
+
+  reviewId String
+  review   ReviewQueue @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reviewId])
+}
+
+/// Evaluation Platform: Quality Gates
+
+model QualityGate {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  enabled     Boolean @default(true)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  conditions Json
+
+  results QualityGateResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+}
+
+model QualityGateResult {
+  id      String @id @default(cuid())
+  passed  Boolean
+  results Json
+  score   Float?
+
+  gateId String
+  gate   QualityGate @relation(fields: [gateId], references: [id], onDelete: Cascade)
+
+  evaluationRunId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([gateId])
+  @@index([passed])
+}
+
+/// Evaluation Platform: Leaderboard
+
+model LeaderboardEntry {
+  id      String @id @default(cuid())
+  entity  String  @db.VarChar(255)
+  type    String  @db.VarChar(64)
+  score   Float
+  metrics Json
+  rank    Int?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  period String @db.VarChar(32) @default("all")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, type, period])
+  @@index([score(sort: Desc)])
 }
 
 

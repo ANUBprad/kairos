@@ -86,6 +86,24 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    label: "PromptOps",
+    items: [
+      { label: "Prompt Library", href: "/app/prompts", icon: FileText, badge: "New" },
+      { label: "Model Comparison", href: "/app/model-comparison", icon: GitBranch, badge: "New" },
+      { label: "Regression Testing", href: "/app/regression", icon: FlaskConical, badge: "New" },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [
+      { label: "Leaderboards", href: "/app/leaderboards", icon: BarChart3, badge: "New" },
+      { label: "Quality Gates", href: "/app/quality-gates", icon: Bot, badge: "New" },
+      { label: "Analytics", href: "/app/analytics", icon: Lightbulb, badge: "New" },
+      { label: "Golden Datasets", href: "/app/datasets", icon: FolderOpen, badge: "New" },
+      { label: "Review Queue", href: "/app/reviews", icon: Eye, badge: "New" },
+    ],
+  },
+  {
     label: "Explain",
     items: [
       { label: "RAG Chat", href: "/app/rag-chat", icon: Bot },

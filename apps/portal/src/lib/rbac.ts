@@ -174,7 +174,7 @@ export async function getMembershipForResource(
   resourceType: ResourceType,
   resourceId: string
 ): Promise<MembershipContext | null> {
-  let organizationId: string | null = null;
+  let organizationId: string | undefined;
 
   switch (resourceType) {
     case "organization":
@@ -185,7 +185,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { organizationId: true },
       });
-      organizationId = project?.organizationId ?? null;
+      organizationId = project?.organizationId;
       break;
     }
     case "knowledge_base": {
@@ -193,7 +193,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { project: { select: { organizationId: true } } },
       });
-      organizationId = kb?.project?.organizationId ?? null;
+      organizationId = kb?.project?.organizationId;
       break;
     }
     case "document": {
@@ -201,7 +201,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { knowledgeBase: { select: { project: { select: { organizationId: true } } } } },
       });
-      organizationId = doc?.knowledgeBase?.project?.organizationId ?? null;
+      organizationId = doc?.knowledgeBase?.project?.organizationId;
       break;
     }
     case "experiment": {
@@ -209,7 +209,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { knowledgeBase: { select: { project: { select: { organizationId: true } } } } },
       });
-      organizationId = exp?.knowledgeBase?.project?.organizationId ?? null;
+      organizationId = exp?.knowledgeBase?.project?.organizationId;
       break;
     }
     case "dataset": {
@@ -217,7 +217,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { knowledgeBase: { select: { project: { select: { organizationId: true } } } } },
       });
-      organizationId = ds?.knowledgeBase?.project?.organizationId ?? null;
+      organizationId = ds?.knowledgeBase?.project?.organizationId;
       break;
     }
     case "api_key": {
@@ -225,7 +225,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { organizationId: true },
       });
-      organizationId = key?.organizationId ?? null;
+      organizationId = key?.organizationId;
       break;
     }
     case "settings": {
@@ -233,7 +233,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { organizationId: true },
       });
-      organizationId = ws?.organizationId ?? null;
+      organizationId = ws?.organizationId;
       break;
     }
     case "audit_log": {
@@ -241,7 +241,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { organizationId: true },
       });
-      organizationId = al?.organizationId ?? null;
+      organizationId = al?.organizationId;
       break;
     }
     case "share_link": {
@@ -249,7 +249,7 @@ export async function getMembershipForResource(
         where: { id: resourceId },
         select: { organizationId: true },
       });
-      organizationId = sl?.organizationId ?? null;
+      organizationId = sl?.organizationId;
       break;
     }
     default:
