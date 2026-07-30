@@ -51,6 +51,10 @@ model User {
   reviewedReviews      ReviewQueue[]  @relation("ReviewReviewer")
   reviewComments       ReviewComment[]
 
+  traces               Trace[]        @relation("TraceUser")
+  costRecords          CostRecord[]   @relation("CostUser")
+  ownedIncidents       Incident[]     @relation("IncidentOwner")
+
   @@index([email])
 }
 
@@ -136,6 +140,15 @@ model Organization {
   reviewQueue    ReviewQueue[]
   qualityGates   QualityGate[]
   leaderboard    LeaderboardEntry[]
+
+  traces          Trace[]
+  costRecords     CostRecord[]
+  driftAlerts     DriftAlert[]
+  alertRules      AlertRule[]
+  alertEvents     AlertEvent[]
+  incidents       Incident[]
+  providerHealth  ProviderHealth[]
+  pipelineRuns    PipelineRun[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1063,6 +1076,363 @@ model LeaderboardEntry {
 
   @@index([organizationId, type, period])
   @@index([score(sort: Desc)])
+}
+
+/// Observability Platform: Traces
+
+model Trace {
+  id        String   @id @default(cuid())
+  requestId String   @unique @db.VarChar(255)
+  name      String   @db.VarChar(512)
+  status    TraceStatus @default(OK)
+  startTime DateTime
+  endTime   DateTime?
+  durationMs Int?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation("TraceUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  provider    String?  @db.VarChar(64)
+  model       String?  @db.VarChar(128)
+  temperature Float?
+  maxTokens   Int?
+
+  inputTokens  Int?
+  outputTokens Int?
+  totalTokens  Int?
+  cost         Float?
+
+  input  String? @db.Text
+  output String? @db.Text
+
+  metadata Json?
+
+  spans     Span[]
+  events    TraceEvent[]
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, startTime(sort: Desc)])
+  @@index([userId, startTime(sort: Desc)])
+  @@index([provider, model])
+  @@index([status])
+}
+
+enum TraceStatus {
+  OK
+  ERROR
+  TIMEOUT
+  CANCELLED
+}
+
+model Span {
+  id        String   @id @default(cuid())
+  traceId   String
+  trace     Trace    @relation(fields: [traceId], references: [id], onDelete: Cascade)
+  parentSpanId String?
+  name      String   @db.VarChar(256)
+  status    SpanStatus @default(OK)
+  startTime DateTime
+  endTime   DateTime?
+  durationMs Int?
+
+  input  Json?
+  output Json?
+  attributes Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([traceId])
+  @@index([parentSpanId])
+  @@index([name])
+}
+
+enum SpanStatus {
+  OK
+  ERROR
+  UNSET
+}
+
+model TraceEvent {
+  id        String   @id @default(cuid())
+  traceId   String
+  trace     Trace    @relation(fields: [traceId], references: [id], onDelete: Cascade)
+  name      String   @db.VarChar(256)
+  timestamp DateTime
+  attributes Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([traceId])
+}
+
+/// Observability Platform: Cost Tracking
+
+model CostRecord {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  provider  String   @db.VarChar(64)
+  model     String   @db.VarChar(128)
+  operation String   @db.VarChar(64)
+
+  inputTokens  Int     @default(0)
+  outputTokens Int     @default(0)
+  totalTokens  Int     @default(0)
+  cost         Float   @default(0)
+  requestCount Int     @default(0)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation("CostUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@unique([date, provider, model, operation, organizationId])
+  @@index([organizationId, date])
+  @@index([provider, model])
+}
+
+/// Observability Platform: Drift Detection
+
+model DriftAlert {
+  id        String   @id @default(cuid())
+  type      DriftType
+  severity  AlertSeverity @default(WARNING)
+  status    DriftStatus @default(OPEN)
+  metric    String   @db.VarChar(128)
+  currentValue Float
+  baselineValue Float
+  deviationPercent Float
+  message   String   @db.Text
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  resolvedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([organizationId, type, status])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum DriftType {
+  EMBEDDING_DRIFT
+  PROMPT_DRIFT
+  DATASET_DRIFT
+  RETRIEVER_DRIFT
+  MODEL_DRIFT
+  LATENCY_DRIFT
+  QUALITY_DRIFT
+  COST_DRIFT
+}
+
+enum DriftStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  IGNORED
+}
+
+/// Observability Platform: Alert Rules
+
+model AlertRule {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  enabled     Boolean @default(true)
+
+  metric      String  @db.VarChar(128)
+  operator    String  @db.VarChar(16)
+  threshold   Float
+  windowMinutes Int   @default(5)
+
+  severity    AlertSeverity @default(WARNING)
+  cooldownMinutes Int @default(30)
+
+  notifyWebhook String?
+  notifyEmail   String?
+  notifySlack   String?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  events AlertEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, enabled])
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+model AlertEvent {
+  id        String   @id @default(cuid())
+  ruleId    String
+  rule      AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  status    AlertEventStatus @default(FIRING)
+  value     Float
+  message   String   @db.Text
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  firedAt   DateTime
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([ruleId, firedAt(sort: Desc)])
+  @@index([organizationId, status])
+}
+
+enum AlertEventStatus {
+  FIRING
+  RESOLVED
+  ACKNOWLEDGED
+}
+
+/// Observability Platform: Incidents
+
+model Incident {
+  id          String  @id @default(cuid())
+  title       String  @db.VarChar(512)
+  description String? @db.Text
+  severity    IncidentSeverity @default(MINOR)
+  status      IncidentStatus @default(OPEN)
+
+  rootCause     String? @db.Text
+  resolution    String? @db.Text
+  postmortem    String? @db.Text
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  ownerId String?
+  owner   User?   @relation("IncidentOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  affectedRequestCount Int @default(0)
+  linkedAlertIds       String[]
+  linkedTraceIds       String[]
+
+  startedAt  DateTime @default(now())
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([severity, status])
+  @@index([startedAt(sort: Desc)])
+}
+
+enum IncidentSeverity {
+  MINOR
+  MAJOR
+  CRITICAL
+  FATAL
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  IDENTIFIED
+  MONITORING
+  RESOLVED
+  CLOSED
+}
+
+/// Observability Platform: Provider Health
+
+model ProviderHealth {
+  id        String   @id @default(cuid())
+  provider  String   @db.VarChar(64)
+  model     String   @db.VarChar(128)
+  date      DateTime @db.Date
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  totalRequests  Int     @default(0)
+  successCount   Int     @default(0)
+  errorCount     Int     @default(0)
+  timeoutCount   Int     @default(0)
+  avgLatencyMs   Float   @default(0)
+  p50LatencyMs   Float?
+  p95LatencyMs   Float?
+  p99LatencyMs   Float?
+  totalCost      Float   @default(0)
+  totalTokens    Int     @default(0)
+  lastError      String? @db.Text
+  lastErrorAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([provider, model, date])
+  @@index([provider, date])
+  @@index([date])
+}
+
+/// Observability Platform: Pipeline Runs
+
+model PipelineRun {
+  id        String   @id @default(cuid())
+  traceId   String?
+  status    PipelineStatus @default(RUNNING)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  steps PipelineStep[]
+
+  startTime DateTime
+  endTime   DateTime?
+  totalMs   Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, startTime(sort: Desc)])
+  @@index([status])
+}
+
+enum PipelineStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  TIMEOUT
+}
+
+model PipelineStep {
+  id        String   @id @default(cuid())
+  pipelineId String
+  pipeline   PipelineRun @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  name     String  @db.VarChar(128)
+  type     String  @db.VarChar(64)
+  status   PipelineStatus @default(RUNNING)
+  order    Int
+
+  input    Json?
+  output   Json?
+  error    String? @db.Text
+
+  startTime DateTime
+  endTime   DateTime?
+  durationMs Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([pipelineId])
 }
 
 

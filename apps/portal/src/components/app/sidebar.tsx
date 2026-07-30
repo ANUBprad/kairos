@@ -25,6 +25,13 @@ import {
   Command,
   Menu,
   X,
+  Activity,
+  DollarSign,
+  AlertTriangle,
+  Radio,
+  Layers,
+  CircleDot,
+  HardDrive,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -115,6 +122,22 @@ const navSections: NavSection[] = [
     items: [
       { label: "Architecture", href: "/app/architecture", icon: BookOpen },
       { label: "Project Guide", href: "/app/project-guide", icon: GraduationCap },
+    ],
+  },
+  {
+    label: "Observability",
+    items: [
+      { label: "Dashboard", href: "/app/observability", icon: Activity, badge: "New" },
+      { label: "Trace Explorer", href: "/app/observability/traces", icon: Search, badge: "New" },
+      { label: "Live Metrics", href: "/app/observability/live", icon: Radio, badge: "New" },
+      { label: "Session Replay", href: "/app/observability/sessions", icon: Eye, badge: "New" },
+      { label: "Cost Intelligence", href: "/app/observability/costs", icon: DollarSign, badge: "New" },
+      { label: "Provider Health", href: "/app/observability/providers", icon: CircleDot, badge: "New" },
+      { label: "Alerting", href: "/app/observability/alerts", icon: AlertTriangle, badge: "New" },
+      { label: "Drift Detection", href: "/app/observability/drift", icon: Layers, badge: "New" },
+      { label: "Pipeline Inspector", href: "/app/observability/pipeline", icon: GitBranch, badge: "New" },
+      { label: "Incident Center", href: "/app/observability/incidents", icon: AlertTriangle, badge: "New" },
+      { label: "Storage", href: "/app/observability/storage", icon: HardDrive, badge: "New" },
     ],
   },
   {
