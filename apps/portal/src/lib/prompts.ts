@@ -1,11 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { Prisma, PromptStatus } from "@prisma/client";
-
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface PromptFolderInfo {
   id: string;
   name: string;
@@ -94,10 +89,6 @@ export interface ImportPromptData {
   }>;
 }
 
-// ============================================================================
-// Folder CRUD
-// ============================================================================
-
 export async function createFolder(
   organizationId: string,
   input: CreateFolderInput
@@ -182,10 +173,6 @@ export async function deleteFolder(folderId: string): Promise<boolean> {
     throw error;
   }
 }
-
-// ============================================================================
-// Prompt CRUD
-// ============================================================================
 
 export async function createPrompt(
   organizationId: string,
@@ -576,10 +563,6 @@ export async function clonePrompt(
   }
 }
 
-// ============================================================================
-// Version Management
-// ============================================================================
-
 export async function createVersion(
   promptId: string,
   userId: string,
@@ -806,10 +789,6 @@ export async function rollbackToVersion(
     throw error;
   }
 }
-
-// ============================================================================
-// Search & Import/Export
-// ============================================================================
 
 export async function searchPrompts(
   organizationId: string,

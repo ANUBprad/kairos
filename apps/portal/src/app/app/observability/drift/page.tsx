@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kairos/ui/card';
-import { Badge } from '@kairos/ui/badge';
-import { Button } from '@kairos/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@kairos/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kairos/ui/tabs';
-import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CheckCircle } from 'lucide-react';
 import { listDriftAlerts, acknowledgeDriftAlert, resolveDriftAlert, ignoreDriftAlert, driftStats, runDriftDetection } from '@/lib/actions/drift';
 
 export default function DriftPage() {

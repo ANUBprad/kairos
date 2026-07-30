@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, Optional
 
 from intelligence.experiments.models import (
     ExperimentMetrics,

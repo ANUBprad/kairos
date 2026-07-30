@@ -15,10 +15,6 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { Prisma } from "@prisma/client";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export type Permission =
   // Resource permissions
   | "view"
@@ -61,10 +57,6 @@ export type ResourceType =
 
 export type MemberRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
 
-// ============================================================================
-// Role Definitions
-// ============================================================================
-
 const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
   OWNER: [
     "view", "create", "edit", "delete", "share", "export",
@@ -89,43 +81,23 @@ const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
   ],
 };
 
-// ============================================================================
-// Permission Utilities
-// ============================================================================
-
-/**
- * Get all permissions for a given role
- */
 export function getRolePermissions(role: MemberRole): Permission[] {
   return ROLE_PERMISSIONS[role] || [];
 }
 
-/**
- * Check if a role has a specific permission
- */
 export function hasPermission(role: MemberRole, permission: Permission): boolean {
   return getRolePermissions(role).includes(permission);
 }
 
-/**
- * Check if a role has all specified permissions
- */
 export function hasAllPermissions(role: MemberRole, permissions: Permission[]): boolean {
   const rolePermissions = getRolePermissions(role);
   return permissions.every((p) => rolePermissions.includes(p));
 }
 
-/**
- * Check if a role has any of the specified permissions
- */
 export function hasAnyPermission(role: MemberRole, permissions: Permission[]): boolean {
   const rolePermissions = getRolePermissions(role);
   return permissions.some((p) => rolePermissions.includes(p));
 }
-
-// ============================================================================
-// Database Permission Checks
-// ============================================================================
 
 export interface MembershipContext {
   userId: string;
@@ -134,9 +106,6 @@ export interface MembershipContext {
   memberId: string;
 }
 
-/**
- * Get the user's membership in an organization
- */
 export async function getMembership(
   userId: string,
   organizationId: string
@@ -166,9 +135,6 @@ export async function getMembership(
   };
 }
 
-/**
- * Get the user's membership for a resource (via organization hierarchy)
- */
 export async function getMembershipForResource(
   userId: string,
   resourceType: ResourceType,
@@ -260,9 +226,6 @@ export async function getMembershipForResource(
   return getMembership(userId, organizationId);
 }
 
-/**
- * Check if a user has a specific permission for a resource
- */
 export async function checkPermission(
   userId: string,
   resourceType: ResourceType,
@@ -274,9 +237,6 @@ export async function checkPermission(
   return hasPermission(membership.role, permission);
 }
 
-/**
- * Require a permission or throw an error
- */
 export async function requirePermission(
   userId: string,
   resourceType: ResourceType,
@@ -293,9 +253,6 @@ export async function requirePermission(
   return membership;
 }
 
-/**
- * Get the minimum role required for a permission
- */
 export function getRequiredRole(permission: Permission): MemberRole {
   const roles: MemberRole[] = ["VIEWER", "MEMBER", "ADMIN", "OWNER"];
   for (const role of roles) {
@@ -306,9 +263,6 @@ export function getRequiredRole(permission: Permission): MemberRole {
   return "OWNER";
 }
 
-/**
- * Check if the user's role is sufficient for the required role
- */
 export function isRoleSufficient(userRole: MemberRole, requiredRole: MemberRole): boolean {
   const roleHierarchy: Record<MemberRole, number> = {
     VIEWER: 0,
@@ -318,10 +272,6 @@ export function isRoleSufficient(userRole: MemberRole, requiredRole: MemberRole)
   };
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
 }
-
-// ============================================================================
-// Audit Logging
-// ============================================================================
 
 export interface AuditLogEntry {
   action: string;
@@ -333,9 +283,6 @@ export interface AuditLogEntry {
   requestId?: string;
 }
 
-/**
- * Create an audit log entry
- */
 export async function createAuditLog(
   userId: string,
   organizationId: string,
@@ -365,9 +312,6 @@ export async function createAuditLog(
   }
 }
 
-/**
- * Create an activity log entry (backward compatible)
- */
 export async function createActivityLog(
   userId: string,
   action: string,
@@ -398,13 +342,6 @@ export async function createActivityLog(
   }
 }
 
-// ============================================================================
-// RBAC Middleware Helper
-// ============================================================================
-
-/**
- * Middleware helper to check permissions and return membership context
- */
 export async function withPermissionCheck(
   userId: string,
   resourceType: ResourceType,

@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kairos/ui/card';
-import { Badge } from '@kairos/ui/badge';
-import { Button } from '@kairos/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kairos/ui/tabs';
-import { Activity, AlertTriangle, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Activity, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { traceStats } from '@/lib/actions/observability';
 import { costSummary } from '@/lib/actions/cost';
 import { alertStats } from '@/lib/actions/alerts';

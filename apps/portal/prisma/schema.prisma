@@ -147,6 +147,7 @@ model Organization {
   alertRules      AlertRule[]
   alertEvents     AlertEvent[]
   incidents       Incident[]
+  telemetryConfig TelemetryConfig?
   providerHealth  ProviderHealth[]
   pipelineRuns    PipelineRun[]
 
@@ -261,7 +262,6 @@ model Message {
 
   createdAt DateTime @default(now())
 
-  @@index([conversationId])
   @@index([conversationId, createdAt])
 }
 
@@ -311,7 +311,6 @@ model Document {
   updatedAt DateTime @updatedAt
 
   @@unique([knowledgeBaseId, fileHash])
-  @@index([knowledgeBaseId])
   @@index([uploadedById])
   @@index([status])
   @@index([knowledgeBaseId, status])
@@ -331,7 +330,6 @@ model DocumentChunk {
 
   createdAt DateTime @default(now())
 
-  @@index([documentId])
   @@index([documentId, index])
 }
 
@@ -346,7 +344,6 @@ model DocumentEmbedding {
 
   createdAt DateTime @default(now())
 
-  @@index([chunkId])
 }
 
 model DocumentVersion {
@@ -368,7 +365,6 @@ model DocumentVersion {
   createdAt DateTime @default(now())
 
   @@index([documentId, version])
-  @@index([documentId])
 }
 
 model DocumentActivity {
@@ -385,7 +381,6 @@ model DocumentActivity {
   createdAt DateTime @default(now())
 
   @@index([documentId, createdAt])
-  @@index([documentId])
 }
 
 enum DocumentStatus {
@@ -444,7 +439,6 @@ model Experiment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([knowledgeBaseId])
   @@index([createdById])
   @@index([datasetId])
   @@index([status])
@@ -522,8 +516,8 @@ model BenchmarkDataset {
   knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: SetNull)
 
   parentVersionId String?
-  parentVersion   BenchmarkDataset? @relation("DatasetVersion", fields: [parentVersionId], references: [id], onDelete: SetNull)
-  childVersions   BenchmarkDataset[] @relation("DatasetVersion")
+  parentVersion   BenchmarkDataset? @relation("BenchmarkDatasetVersion", fields: [parentVersionId], references: [id], onDelete: SetNull)
+  childVersions   BenchmarkDataset[] @relation("BenchmarkDatasetVersion")
 
   questions    BenchmarkQuestion[]
   runs         BenchmarkRun[]
@@ -655,7 +649,6 @@ model ApiKey {
 
   @@index([userId])
   @@index([organizationId])
-  @@index([keyHash])
 }
 
 /// Enterprise: Invitations
@@ -680,7 +673,6 @@ model Invitation {
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, email])
-  @@index([organizationId])
   @@index([email])
   @@index([token])
 }
@@ -756,7 +748,6 @@ model WorkspaceSettings {
   updatedAt DateTime @updatedAt
 
   @@unique([organizationId, key])
-  @@index([organizationId])
 }
 
 /// Enterprise: Extended Audit Log
@@ -907,8 +898,8 @@ model GoldenDataset {
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   parentId String?
-  parent   GoldenDataset? @relation("DatasetVersion", fields: [parentId], references: [id], onDelete: SetNull)
-  children GoldenDataset[] @relation("DatasetVersion")
+  parent   GoldenDataset? @relation("GoldenDatasetVersion", fields: [parentId], references: [id], onDelete: SetNull)
+  children GoldenDataset[] @relation("GoldenDatasetVersion")
 
   entries GoldenDatasetEntry[]
 
@@ -1321,6 +1312,8 @@ model Incident {
   ownerId String?
   owner   User?   @relation("IncidentOwner", fields: [ownerId], references: [id], onDelete: SetNull)
 
+  events              IncidentEvent[]
+
   affectedRequestCount Int @default(0)
   linkedAlertIds       String[]
   linkedTraceIds       String[]
@@ -1350,6 +1343,18 @@ enum IncidentStatus {
   MONITORING
   RESOLVED
   CLOSED
+}
+
+/// Observability Platform: Incident Timeline Events
+
+model IncidentEvent {
+  id         String   @id @default(cuid())
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  message    String   @db.Text
+  timestamp  DateTime @default(now())
+
+  @@index([incidentId, timestamp])
 }
 
 /// Observability Platform: Provider Health
@@ -1433,6 +1438,22 @@ model PipelineStep {
   createdAt DateTime @default(now())
 
   @@index([pipelineId])
+}
+
+/// Observability Platform: Telemetry Configuration
+
+model TelemetryConfig {
+  organizationId String       @id
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  samplingRate   Float        @default(1.0)
+  retentionDays  Int          @default(90)
+  enableTraces   Boolean      @default(true)
+  enableMetrics  Boolean      @default(true)
+  enableLogs     Boolean      @default(true)
+  maxSpansPerTrace   Int     @default(100)
+  maxEventsPerTrace  Int     @default(50)
+  compressOldTraces  Boolean @default(true)
+  archiveAfterDays   Int     @default(30)
 }
 
 

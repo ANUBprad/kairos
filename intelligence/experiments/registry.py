@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from intelligence.experiments.models import ExperimentMetrics, ExperimentRun, ExperimentStatus
 from intelligence.experiments.persistence import ExperimentStore

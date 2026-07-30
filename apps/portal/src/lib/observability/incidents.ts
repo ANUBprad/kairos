@@ -1,4 +1,4 @@
-import { prisma } from '../db';
+import { prisma } from '@/lib/prisma';
 
 export interface CreateIncidentInput {
   title: string;
@@ -36,7 +36,7 @@ export async function getIncidents(orgId: string, filters?: {
     where,
     include: {
       owner: {
-        select: { id: true, name: true, email: true, avatarUrl: true },
+        select: { id: true, name: true, email: true, image: true },
       },
     },
     orderBy: { startedAt: 'desc' },
@@ -48,7 +48,7 @@ export async function getIncidentById(incidentId: string) {
     where: { id: incidentId },
     include: {
       owner: {
-        select: { id: true, name: true, email: true, avatarUrl: true },
+        select: { id: true, name: true, email: true, image: true },
       },
     },
   });
@@ -127,7 +127,7 @@ export async function getIncidentStats(orgId: string, days: number = 30) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const [total, open, bySeverity, byStatus, avgResolutionTime] = await Promise.all([
+  const [total, open, bySeverity, byStatus] = await Promise.all([
     prisma.incident.count({
       where: { organizationId: orgId, createdAt: { gte: startDate } },
     }),

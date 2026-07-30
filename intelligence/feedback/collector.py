@@ -107,7 +107,7 @@ class FeedbackCollector:
             try:
                 stored = list(self._storage.load())
             except FileNotFoundError:
-                pass
+                logger.warning("Stored feedback data not found")
         combined = stored + pending
         return [
             {
@@ -146,7 +146,7 @@ class FeedbackCollector:
             try:
                 stored = list(self._storage.load())
             except FileNotFoundError:
-                pass
+                logger.warning("Stored feedback data not found")
         all_records = stored + pending
         if not all_records:
             return {}

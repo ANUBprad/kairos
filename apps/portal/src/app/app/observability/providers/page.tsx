@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kairos/ui/card';
-import { Badge } from '@kairos/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@kairos/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { providerHealthSummary, providerErrorList } from '@/lib/actions/provider-health';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kairos/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function ProvidersPage() {
   const [health, setHealth] = useState<any>(null);

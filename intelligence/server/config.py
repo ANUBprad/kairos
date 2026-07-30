@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from intelligence.config.settings import Settings, get_settings
+from intelligence.config.settings import get_settings
 
 
 def _parse_bool(value: str) -> bool:

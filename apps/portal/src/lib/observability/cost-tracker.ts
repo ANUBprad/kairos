@@ -1,4 +1,4 @@
-import { prisma } from '../db';
+import { prisma } from '@/lib/prisma';
 
 export interface CostFilter {
   startDate?: Date;
@@ -60,7 +60,7 @@ export async function getCostSummary(orgId: string, days: number = 30) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const [totalCost, totalTokens, totalRequests, byProvider, byModel, dailyCosts] =
+  const [totalCost, totalTokens, byProvider, byModel, dailyCosts] =
     await Promise.all([
       prisma.costRecord.aggregate({
         where: { organizationId: orgId, date: { gte: startDate } },
@@ -68,7 +68,7 @@ export async function getCostSummary(orgId: string, days: number = 30) {
       }),
       prisma.costRecord.aggregate({
         where: { organizationId: orgId, date: { gte: startDate } },
-        _sum: { inputTokens: true, outputTokens: true },
+        _sum: { inputTokens: true, outputTokens: true, totalTokens: true },
       }),
       prisma.costRecord.groupBy({
         by: ['provider'],

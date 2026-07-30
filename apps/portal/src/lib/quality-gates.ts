@@ -9,10 +9,6 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export type ComparisonOperator = "gt" | "gte" | "lt" | "lte" | "eq" | "neq";
 
 export interface QualityGateCondition {
@@ -57,10 +53,6 @@ export interface GateCheckResult {
   results: ConditionResult[];
   score: number;
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 function evaluateCondition(
   condition: QualityGateCondition,
@@ -137,10 +129,6 @@ function toGateInfo(gate: {
     updatedAt: gate.updatedAt,
   };
 }
-
-// ============================================================================
-// Gate CRUD
-// ============================================================================
 
 export async function createGate(
   organizationId: string,
@@ -231,10 +219,6 @@ export async function toggleGate(
   return toGateInfo(gate);
 }
 
-// ============================================================================
-// Gate Evaluation
-// ============================================================================
-
 export function checkGate(
   gateId: string,
   metrics: Record<string, number>,
@@ -271,10 +255,6 @@ export async function checkAllGates(
     return checkGate(info.id, metrics, info);
   });
 }
-
-// ============================================================================
-// Result Recording & History
-// ============================================================================
 
 export async function recordResult(
   gateId: string,
@@ -328,10 +308,6 @@ export async function getGateResults(
     createdAt: r.createdAt,
   }));
 }
-
-// ============================================================================
-// Aggregate Stats
-// ============================================================================
 
 export interface GateStats {
   totalGates: number;

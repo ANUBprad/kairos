@@ -6,7 +6,6 @@ import (
 	"Kairos/gateway/intelligence"
 	"Kairos/gateway/queue"
 	"context"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -56,7 +55,7 @@ func main() {
 	port := envVar.Gateway.Port
 	host := envVar.Gateway.Host
 	address := host + ":" + port
-	log.Println("Host:Port ", address)
+	slog.Info("Starting server", "address", address)
 
 	server := &http.Server{
 		Handler:      mainRouter,

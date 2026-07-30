@@ -9,10 +9,6 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { Prisma } from "@prisma/client";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export type NotificationType =
   | "experiment.completed"
   | "experiment.failed"
@@ -44,13 +40,6 @@ export interface NotificationInfo {
   createdAt: Date;
 }
 
-// ============================================================================
-// Notification Creation
-// ============================================================================
-
-/**
- * Create a notification for a user
- */
 export async function createNotification(
   userId: string,
   input: CreateNotificationInput
@@ -80,9 +69,6 @@ export async function createNotification(
   }
 }
 
-/**
- * Create notifications for multiple users
- */
 export async function createBulkNotifications(
   userIds: string[],
   input: CreateNotificationInput
@@ -110,13 +96,6 @@ export async function createBulkNotifications(
   }
 }
 
-// ============================================================================
-// Notification Retrieval
-// ============================================================================
-
-/**
- * Get notifications for a user
- */
 export async function getUserNotifications(
   userId: string,
   options: {
@@ -166,22 +145,12 @@ export async function getUserNotifications(
   };
 }
 
-/**
- * Get unread notification count
- */
 export async function getUnreadCount(userId: string): Promise<number> {
   return prisma.notification.count({
     where: { userId, read: false },
   });
 }
 
-// ============================================================================
-// Notification Management
-// ============================================================================
-
-/**
- * Mark a notification as read
- */
 export async function markAsRead(
   userId: string,
   notificationId: string
@@ -197,9 +166,6 @@ export async function markAsRead(
   return result.count > 0;
 }
 
-/**
- * Mark all notifications as read
- */
 export async function markAllAsRead(userId: string): Promise<number> {
   const result = await prisma.notification.updateMany({
     where: {
@@ -212,9 +178,6 @@ export async function markAllAsRead(userId: string): Promise<number> {
   return result.count;
 }
 
-/**
- * Delete a notification
- */
 export async function deleteNotification(
   userId: string,
   notificationId: string
@@ -229,9 +192,6 @@ export async function deleteNotification(
   return result.count > 0;
 }
 
-/**
- * Delete all notifications for a user
- */
 export async function deleteAllNotifications(userId: string): Promise<number> {
   const result = await prisma.notification.deleteMany({
     where: { userId },
@@ -240,13 +200,6 @@ export async function deleteAllNotifications(userId: string): Promise<number> {
   return result.count;
 }
 
-// ============================================================================
-// Convenience Functions
-// ============================================================================
-
-/**
- * Notify when an experiment completes
- */
 export async function notifyExperimentCompleted(
   userId: string,
   experimentId: string,
@@ -260,9 +213,6 @@ export async function notifyExperimentCompleted(
   });
 }
 
-/**
- * Notify when an experiment fails
- */
 export async function notifyExperimentFailed(
   userId: string,
   experimentId: string,
@@ -277,9 +227,6 @@ export async function notifyExperimentFailed(
   });
 }
 
-/**
- * Notify when an upload completes
- */
 export async function notifyUploadCompleted(
   userId: string,
   documentId: string,
@@ -293,9 +240,6 @@ export async function notifyUploadCompleted(
   });
 }
 
-/**
- * Notify when an upload fails
- */
 export async function notifyUploadFailed(
   userId: string,
   documentId: string,
@@ -310,9 +254,6 @@ export async function notifyUploadFailed(
   });
 }
 
-/**
- * Notify when an invitation is received
- */
 export async function notifyInvitationReceived(
   userId: string,
   organizationName: string,
@@ -326,9 +267,6 @@ export async function notifyInvitationReceived(
   });
 }
 
-/**
- * Notify when permissions are updated
- */
 export async function notifyPermissionUpdated(
   userId: string,
   organizationName: string,

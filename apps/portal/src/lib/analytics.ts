@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
 export interface QualityTrend {
   date: string;
   avgScore: number;
@@ -107,16 +105,12 @@ export interface TopPerformer {
   metrics: Record<string, unknown>;
 }
 
-// ─── Options ────────────────────────────────────────────────────────────────
-
 export interface TrendOptions {
   startDate?: Date;
   endDate?: Date;
   entity?: string;
   type?: string;
 }
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function buildDateFilter(startDate?: Date, endDate?: Date) {
   const filter: Record<string, unknown> = {};
@@ -128,8 +122,6 @@ function buildDateFilter(startDate?: Date, endDate?: Date) {
   }
   return filter;
 }
-
-// ─── Functions ──────────────────────────────────────────────────────────────
 
 export async function getQualityTrends(
   organizationId: string,

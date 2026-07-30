@@ -9,10 +9,6 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { Prisma, ReviewStatus, ReviewPriority } from "@prisma/client";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface ReviewQueueInfo {
   id: string;
   title: string;
@@ -63,10 +59,6 @@ export interface ReviewDecision {
   score?: number;
   reason?: string;
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 function mapReview(
   review: {
@@ -125,13 +117,6 @@ async function getReviewOrThrow(reviewId: string) {
   return review;
 }
 
-// ============================================================================
-// Review CRUD
-// ============================================================================
-
-/**
- * Create a new review item
- */
 export async function createReview(
   organizationId: string,
   userId: string,
@@ -164,9 +149,6 @@ export async function createReview(
   return mapReview(review, (review as { _count?: { comments: number } })._count?.comments ?? 0);
 }
 
-/**
- * Get a review by ID with comments
- */
 export async function getReview(
   reviewId: string
 ): Promise<(ReviewQueueInfo & { comments: ReviewCommentInfo[] }) | null> {
@@ -205,9 +187,6 @@ export async function getReview(
   };
 }
 
-/**
- * List reviews for an organization with optional filters
- */
 export async function listReviews(
   organizationId: string,
   options: {
@@ -246,13 +225,6 @@ export async function listReviews(
   };
 }
 
-// ============================================================================
-// Assignment & Status Transitions
-// ============================================================================
-
-/**
- * Assign a reviewer to a review
- */
 export async function assignReview(
   reviewId: string,
   assigneeId: string
@@ -279,9 +251,6 @@ export async function assignReview(
   return mapReview(updated, updated._count.comments);
 }
 
-/**
- * Start reviewing a review item (PENDING -> IN_REVIEW)
- */
 export async function startReview(
   reviewId: string,
   reviewerId: string
@@ -309,9 +278,6 @@ export async function startReview(
   return mapReview(updated, updated._count.comments);
 }
 
-/**
- * Approve a review
- */
 export async function approveReview(
   reviewId: string,
   reviewerId: string,
@@ -345,9 +311,6 @@ export async function approveReview(
   return mapReview(updated, updated._count.comments);
 }
 
-/**
- * Reject a review
- */
 export async function rejectReview(
   reviewId: string,
   reviewerId: string,
@@ -390,9 +353,6 @@ export async function rejectReview(
   return mapReview(updated, updated._count.comments + (reason ? 1 : 0));
 }
 
-/**
- * Mark a review as needing improvement
- */
 export async function markNeedsImprovement(
   reviewId: string,
   reviewerId: string,
@@ -435,13 +395,6 @@ export async function markNeedsImprovement(
   return mapReview(updated, updated._count.comments + 1);
 }
 
-// ============================================================================
-// Comments
-// ============================================================================
-
-/**
- * Add a comment to a review
- */
 export async function addComment(
   reviewId: string,
   authorId: string,
@@ -484,13 +437,6 @@ export async function addComment(
   };
 }
 
-// ============================================================================
-// Statistics & Queries
-// ============================================================================
-
-/**
- * Get review statistics for an organization
- */
 export async function getReviewStats(
   organizationId: string
 ): Promise<{
@@ -537,9 +483,6 @@ export async function getReviewStats(
   };
 }
 
-/**
- * Get reviews assigned to a specific user
- */
 export async function getMyReviews(
   userId: string,
   options: { status?: ReviewStatus; limit?: number; offset?: number } = {}
@@ -570,9 +513,6 @@ export async function getMyReviews(
   };
 }
 
-/**
- * Get review history for a resource
- */
 export async function getReviewHistory(
   resourceType: string,
   resourceId: string

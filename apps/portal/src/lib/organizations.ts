@@ -13,10 +13,6 @@ import {
 import { createNotification } from "./notifications";
 import type { MemberRole } from "@prisma/client";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface OrganizationInfo {
   id: string;
   name: string;
@@ -58,13 +54,6 @@ export interface InviteMemberInput {
   role: MemberRole;
 }
 
-// ============================================================================
-// Organization CRUD
-// ============================================================================
-
-/**
- * Create a new organization
- */
 export async function createOrganization(
   ownerId: string,
   input: CreateOrganizationInput
@@ -126,9 +115,6 @@ export async function createOrganization(
   };
 }
 
-/**
- * Get organization by ID
- */
 export async function getOrganization(
   organizationId: string
 ): Promise<OrganizationInfo | null> {
@@ -158,9 +144,6 @@ export async function getOrganization(
   };
 }
 
-/**
- * Get organization by slug
- */
 export async function getOrganizationBySlug(
   slug: string
 ): Promise<OrganizationInfo | null> {
@@ -190,9 +173,6 @@ export async function getOrganizationBySlug(
   };
 }
 
-/**
- * Update organization
- */
 export async function updateOrganization(
   organizationId: string,
   userId: string,
@@ -235,9 +215,6 @@ export async function updateOrganization(
   };
 }
 
-/**
- * Get all organizations for a user
- */
 export async function getUserOrganizations(
   userId: string
 ): Promise<OrganizationInfo[]> {
@@ -269,13 +246,6 @@ export async function getUserOrganizations(
   }));
 }
 
-// ============================================================================
-// Member Management
-// ============================================================================
-
-/**
- * Get all members of an organization
- */
 export async function getOrganizationMembers(
   organizationId: string
 ): Promise<MemberInfo[]> {
@@ -304,9 +274,6 @@ export async function getOrganizationMembers(
   }));
 }
 
-/**
- * Add a member to an organization
- */
 export async function addMember(
   organizationId: string,
   userId: string,
@@ -354,9 +321,6 @@ export async function addMember(
   });
 }
 
-/**
- * Update a member's role
- */
 export async function updateMemberRole(
   organizationId: string,
   memberId: string,
@@ -397,9 +361,6 @@ export async function updateMemberRole(
   });
 }
 
-/**
- * Remove a member from an organization
- */
 export async function removeMember(
   organizationId: string,
   memberId: string,
@@ -442,20 +403,10 @@ export async function removeMember(
   });
 }
 
-// ============================================================================
-// Invitation Management
-// ============================================================================
-
-/**
- * Generate an invitation token
- */
 function generateInvitationToken(): string {
   return randomBytes(32).toString("hex");
 }
 
-/**
- * Invite a user to an organization
- */
 export async function inviteMember(
   organizationId: string,
   invitedById: string,
@@ -491,7 +442,7 @@ export async function inviteMember(
 
   const token = generateInvitationToken();
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+  expiresAt.setDate(expiresAt.getDate() + 7);
 
   const invitation = await prisma.invitation.create({
     data: {
@@ -534,9 +485,6 @@ export async function inviteMember(
   return { invitationId: invitation.id, token };
 }
 
-/**
- * Accept an invitation
- */
 export async function acceptInvitation(
   token: string,
   userId: string
@@ -591,9 +539,6 @@ export async function acceptInvitation(
   return { organizationId: invitation.organizationId };
 }
 
-/**
- * Revoke an invitation
- */
 export async function revokeInvitation(
   invitationId: string,
   revokedBy: string
@@ -626,9 +571,6 @@ export async function revokeInvitation(
   return true;
 }
 
-/**
- * Get pending invitations for an organization
- */
 export async function getOrganizationInvitations(
   organizationId: string
 ): Promise<Array<{
@@ -656,9 +598,6 @@ export async function getOrganizationInvitations(
   });
 }
 
-/**
- * Get user's pending invitations
- */
 export async function getUserInvitations(
   email: string
 ): Promise<Array<{

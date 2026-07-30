@@ -47,7 +47,7 @@ func LoadEnv() (*Config, error) {
 	err := godotenv.Load()
 
 	if err != nil {
-		slog.Info("Couldn't initialize godotenv. Skipping loading.......", err)
+		slog.Info("Couldn't initialize godotenv, skipping loading", "error", err)
 	}
 
 	var config Config
@@ -88,7 +88,8 @@ func LoadEnv() (*Config, error) {
 	}
 
 	if v := os.Getenv("KAIROS_CACHE_SIMILARITY_THRESHOLD"); v != "" {
-		threshold, parseErr := strconv.ParseFloat(v, 32)
+		var threshold float64
+		threshold, parseErr = strconv.ParseFloat(v, 32)
 		if parseErr != nil {
 			slog.Warn("Invalid KAIROS_CACHE_SIMILARITY_THRESHOLD, using default 0.85", "value", v, "error", parseErr)
 			config.Cache.SimilarityThreshold = 0.85

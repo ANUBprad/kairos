@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kairos/ui/card';
-import { Button } from '@kairos/ui/button';
-import { Input } from '@kairos/ui/input';
-import { Label } from '@kairos/ui/label';
-import { Switch } from '@kairos/ui/switch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { telemetryConfig, updateConfig, archiveTraces, cleanupAlerts, storageStats } from '@/lib/actions/storage';
-import { HardDrive, Archive, Trash2 } from 'lucide-react';
+import { Archive, Trash2 } from 'lucide-react';
 
 export default function StoragePage() {
   const [config, setConfig] = useState<any>(null);

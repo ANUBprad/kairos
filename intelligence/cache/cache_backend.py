@@ -19,7 +19,7 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from threading import RLock
 from typing import Any, Optional
 

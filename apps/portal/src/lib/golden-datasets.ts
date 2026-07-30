@@ -8,10 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { Prisma } from "@prisma/client";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface GoldenDatasetInfo {
   id: string;
   name: string;
@@ -71,10 +67,6 @@ export interface DatasetStats {
   byCategory: Record<string, number>;
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
 function toDatasetInfo(
   dataset: {
     id: string;
@@ -133,13 +125,6 @@ function toEntryInfo(entry: {
   };
 }
 
-// ============================================================================
-// Dataset CRUD
-// ============================================================================
-
-/**
- * Create a new golden dataset
- */
 export async function createDataset(
   organizationId: string,
   userId: string,
@@ -161,9 +146,6 @@ export async function createDataset(
   return toDatasetInfo(dataset, 0);
 }
 
-/**
- * Get a golden dataset with its entries
- */
 export async function getDataset(
   datasetId: string
 ): Promise<{ dataset: GoldenDatasetInfo; entries: GoldenDatasetEntryInfo[] } | null> {
@@ -184,9 +166,6 @@ export async function getDataset(
   };
 }
 
-/**
- * List golden datasets for an organization with optional filters
- */
 export async function listDatasets(
   organizationId: string,
   options: {
@@ -225,9 +204,6 @@ export async function listDatasets(
   return datasets.map((d) => toDatasetInfo(d, d._count.entries));
 }
 
-/**
- * Update golden dataset metadata
- */
 export async function updateDataset(
   datasetId: string,
   input: Partial<CreateDatasetInput>
@@ -252,9 +228,6 @@ export async function updateDataset(
   return toDatasetInfo(dataset, dataset._count.entries);
 }
 
-/**
- * Delete a golden dataset and all its entries
- */
 export async function deleteDataset(datasetId: string): Promise<boolean> {
   try {
     await prisma.goldenDataset.delete({ where: { id: datasetId } });
@@ -265,13 +238,6 @@ export async function deleteDataset(datasetId: string): Promise<boolean> {
   }
 }
 
-// ============================================================================
-// Entry CRUD
-// ============================================================================
-
-/**
- * Add a single entry to a golden dataset
- */
 export async function addEntry(
   datasetId: string,
   input: CreateEntryInput
@@ -292,9 +258,6 @@ export async function addEntry(
   return toEntryInfo(entry);
 }
 
-/**
- * Bulk add entries to a golden dataset
- */
 export async function bulkAddEntries(
   datasetId: string,
   entries: CreateEntryInput[]
@@ -320,9 +283,6 @@ export async function bulkAddEntries(
   return { count: result.count };
 }
 
-/**
- * Update an entry
- */
 export async function updateEntry(
   entryId: string,
   input: Partial<CreateEntryInput>
@@ -345,9 +305,6 @@ export async function updateEntry(
   return toEntryInfo(entry);
 }
 
-/**
- * Delete an entry
- */
 export async function deleteEntry(entryId: string): Promise<boolean> {
   try {
     await prisma.goldenDatasetEntry.delete({ where: { id: entryId } });
@@ -357,13 +314,6 @@ export async function deleteEntry(entryId: string): Promise<boolean> {
   }
 }
 
-// ============================================================================
-// Import / Export
-// ============================================================================
-
-/**
- * Import a golden dataset from JSON input
- */
 export async function importDataset(
   organizationId: string,
   userId: string,
@@ -404,9 +354,6 @@ export async function importDataset(
   return toDatasetInfo(dataset, entryCount);
 }
 
-/**
- * Export a golden dataset as a JSON-serializable object
- */
 export async function exportDataset(
   datasetId: string
 ): Promise<Omit<ImportDatasetInput, "entries"> & { entries: CreateEntryInput[] } | null> {
@@ -438,13 +385,6 @@ export async function exportDataset(
   };
 }
 
-// ============================================================================
-// Versioning
-// ============================================================================
-
-/**
- * Create a new version of a golden dataset (copies all entries)
- */
 export async function createVersion(
   datasetId: string
 ): Promise<GoldenDatasetInfo> {
@@ -502,13 +442,6 @@ export async function createVersion(
   return toDatasetInfo(newDataset, entryCount);
 }
 
-// ============================================================================
-// Validation & Stats
-// ============================================================================
-
-/**
- * Validate all entries in a dataset have required fields
- */
 export async function validateDataset(
   datasetId: string
 ): Promise<{
@@ -542,9 +475,6 @@ export async function validateDataset(
   };
 }
 
-/**
- * Get statistics for a golden dataset
- */
 export async function getDatasetStats(
   datasetId: string
 ): Promise<DatasetStats> {

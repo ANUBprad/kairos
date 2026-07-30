@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kairos/ui/card';
-import { Badge } from '@kairos/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@kairos/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { costSummary, costForecast, costAnomalies } from '@/lib/actions/cost';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kairos/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 
 export default function CostsPage() {

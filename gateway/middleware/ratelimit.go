@@ -69,9 +69,10 @@ func RateLimit(envVar *config.Config) func(http.Handler) http.Handler {
 			}
 
 			reservation := clientLimiter.Reserve()
-			if reservation.Delay() > 0 {
+			delayDur := reservation.Delay()
+			if delayDur > 0 {
 				reservation.Cancel()
-				delay := int(reservation.Delay().Seconds())
+				delay := int(delayDur.Seconds())
 				w.Header().Add(
 					"Retry-After",
 					strconv.Itoa(delay))

@@ -115,6 +115,6 @@ class IngestionPipeline:
             ingestion_chunk_count.observe(metrics.chunk_count)
             ingestion_text_length.observe(metrics.text_length)
         except ImportError:
-            pass
+            logger.warning("Prometheus metrics not available, skipping instrumentation")
 
         return len(chunks)

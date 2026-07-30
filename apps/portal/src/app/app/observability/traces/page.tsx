@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kairos/ui/card';
-import { Badge } from '@kairos/ui/badge';
-import { Button } from '@kairos/ui/button';
-import { Input } from '@kairos/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@kairos/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@kairos/ui/table';
-import { Search, Filter, ChevronDown, Eye } from 'lucide-react';
-import { listTraces, traceStats } from '@/lib/actions/observability';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, Eye } from 'lucide-react';
+import { listTraces } from '@/lib/actions/observability';
 import Link from 'next/link';
 
 export default function TracesPage() {

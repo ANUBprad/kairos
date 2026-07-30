@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@kairos/ui/card';
-import { Badge } from '@kairos/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { traceStats } from '@/lib/actions/observability';
 import { costSummary } from '@/lib/actions/cost';
 import { alertStats } from '@/lib/actions/alerts';

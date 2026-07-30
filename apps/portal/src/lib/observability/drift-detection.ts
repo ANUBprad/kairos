@@ -1,4 +1,4 @@
-import { prisma } from '../db';
+import { prisma } from '@/lib/prisma';
 
 export interface CreateDriftInput {
   type: 'EMBEDDING_DRIFT' | 'PROMPT_DRIFT' | 'DATASET_DRIFT' | 'RETRIEVER_DRIFT' | 'MODEL_DRIFT' | 'LATENCY_DRIFT' | 'QUALITY_DRIFT' | 'COST_DRIFT';
@@ -153,16 +153,16 @@ export async function detectQualityDrift(orgId: string) {
   const [currentWeek, previousWeek] = await Promise.all([
     prisma.experimentRun.aggregate({
       where: { startedAt: { gte: last7 } },
-      _avg: { score: true },
+      _avg: { tokensUsed: true },
     }),
     prisma.experimentRun.aggregate({
       where: { startedAt: { gte: prev7, lt: last7 } },
-      _avg: { score: true },
+      _avg: { tokensUsed: true },
     }),
   ]);
 
-  const currentAvg = currentWeek._avg.score ?? 0;
-  const prevAvg = previousWeek._avg.score ?? 0;
+  const currentAvg = currentWeek._avg.tokensUsed ?? 0;
+  const prevAvg = previousWeek._avg.tokensUsed ?? 0;
 
   if (prevAvg > 0) {
     const deviation = ((currentAvg - prevAvg) / prevAvg) * 100;

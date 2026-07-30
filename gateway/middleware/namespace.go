@@ -6,9 +6,9 @@ import (
 	"regexp"
 )
 
-func Namespace(next http.Handler) http.Handler {
-	alphaNumRegex := regexp.MustCompile(`^[a-zA-Z0-9]+$`)
+var alphaNumRegex = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 
+func Namespace(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		namespace, ok := ctx.Value(httpWriter.NamespaceKey{}).(string)

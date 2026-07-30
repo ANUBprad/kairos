@@ -67,10 +67,6 @@ class RetrievalPlanner:
         planner = RetrievalPlanner(classifier=my_classifier)
         decision = planner.plan("What is the capital of France?")
 
-        # The caller uses the decision to execute retrieval:
-        # retriever = retrievers_by_type[decision.config["retrieval_type"]]
-        # chunks = retriever.retrieve_top_k(ns, decision.config["top_k"], query)
-        # fb = FallbackManager.evaluate(decision.config, len(chunks))
     """
 
     def __init__(

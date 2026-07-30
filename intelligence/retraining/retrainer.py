@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from .model_registry import ModelRegistry, RegistryEntry, compute_dataset_hash
 
@@ -74,7 +77,7 @@ class BudgetRetrainer:
                 try:
                     next_num = int(latest[1:]) + 1
                 except ValueError:
-                    pass
+                    logger.warning("Could not parse latest version number: %s", latest)
             version = f"v{next_num}"
 
         # Save model
