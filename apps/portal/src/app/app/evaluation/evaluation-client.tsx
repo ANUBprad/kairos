@@ -1004,8 +1004,8 @@ function ReportView({ report, onClose }: { report: ReportViewProps; onClose: () 
         <div>
           <div className="text-sm font-medium mb-2">Observations</div>
           <ul className="space-y-1">
-            {report.observations.map((obs, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
+            {report.observations.map((obs) => (
+              <li key={obs} className="flex items-start gap-2 text-sm text-text-secondary">
                 <ChevronRight size={14} className="mt-0.5 shrink-0" />
                 {obs}
               </li>
@@ -1018,8 +1018,8 @@ function ReportView({ report, onClose }: { report: ReportViewProps; onClose: () 
         <div>
           <div className="text-sm font-medium mb-2">Recommendations</div>
           <ul className="space-y-1">
-            {report.recommendations.map((rec, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400">
+            {report.recommendations.map((rec) => (
+              <li key={rec} className="flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400">
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 {rec}
               </li>

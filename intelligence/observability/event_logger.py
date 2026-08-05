@@ -95,8 +95,8 @@ def get_logger() -> EventLogger:
 
 
 def console_sink(event: Event) -> None:
-    """Print event as JSON to stdout."""
-    print(json.dumps(event.to_dict(), default=str))
+    """Emit event as JSON to stdout."""
+    print(json.dumps(event.to_dict(), default=str), flush=True)
 
 
 def file_sink(path: str) -> Callable[[Event], None]:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        populate_by_name=True,
     )
 
     # --- Deployment ---------------------------------------------------
@@ -28,8 +29,15 @@ class Settings(BaseSettings):
     config_dir: str = Field(default="", description="Path to configuration directory")
 
     # --- Server -------------------------------------------------------
-    intelligence_port: int = Field(default=50051, description="gRPC server port")
+    intelligence_port: int = Field(
+        default=50051,
+        validation_alias=AliasChoices("INTELLIGENCE_PORT", "KAIROS_INTELLIGENCE_PORT"),
+        description="gRPC server port",
+    )
     metrics_port: int = Field(default=8001, description="Prometheus metrics port")
+    metrics_enabled: bool = Field(
+        default=True, description="Enable Prometheus metrics collection"
+    )
     health_check_enabled: bool = Field(
         default=True, description="Enable gRPC health check"
     )
@@ -52,8 +60,16 @@ class Settings(BaseSettings):
     )
 
     # --- ChromaDB ----------------------------------------------------
-    chroma_store_host: str = Field(default="localhost", description="ChromaDB host")
-    chroma_store_port: int = Field(default=8000, description="ChromaDB port")
+    chroma_store_host: str = Field(
+        default="localhost",
+        validation_alias=AliasChoices("CHROMA_STORE_HOST", "KAIROS_CHROMA_STORE_HOST"),
+        description="ChromaDB host",
+    )
+    chroma_store_port: int = Field(
+        default=8000,
+        validation_alias=AliasChoices("CHROMA_STORE_PORT", "KAIROS_CHROMA_STORE_PORT"),
+        description="ChromaDB port",
+    )
 
     # --- Embedding ----------------------------------------------------
     embedding_model: str = Field(
@@ -64,11 +80,19 @@ class Settings(BaseSettings):
     llm_provider: Optional[str] = Field(
         default=None, description="LLM provider: gemini, openai, ollama"
     )
-    gemini_api_key: Optional[str] = Field(default=None, description="Gemini API key")
+    gemini_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("GEMINI_API_KEY", "KAIROS_GEMINI_API_KEY"),
+        description="Gemini API key",
+    )
     gemini_model_name: Optional[str] = Field(
         default=None, description="Gemini model name"
     )
-    openai_api_key: Optional[str] = Field(default=None, description="OpenAI API key")
+    openai_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("OPENAI_API_KEY", "KAIROS_OPENAI_API_KEY"),
+        description="OpenAI API key",
+    )
     openai_model_name: Optional[str] = Field(
         default=None, description="OpenAI model name"
     )
@@ -76,8 +100,16 @@ class Settings(BaseSettings):
         default=None, description="Ollama model name"
     )
     ollama_url: Optional[str] = Field(default=None, description="Ollama base URL")
-    groq_api_key: Optional[str] = Field(default=None, description="Groq API key")
-    groq_base_url: Optional[str] = Field(default=None, description="Groq base URL")
+    groq_api_key: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("GROQ_API_KEY", "KAIROS_GROQ_API_KEY"),
+        description="Groq API key",
+    )
+    groq_base_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("GROQ_BASE_URL", "KAIROS_GROQ_BASE_URL"),
+        description="Groq base URL",
+    )
     large_groq_model: Optional[str] = Field(
         default=None, description="Groq large model name"
     )
@@ -143,6 +175,16 @@ class Settings(BaseSettings):
         if v.lower() not in allowed:
             raise ValueError(f"environment must be one of {allowed}, got '{v}'")
         return v.lower()
+
+    @field_validator(
+        "deployment", "health_check_enabled", "metrics_enabled", mode="before"
+    )
+    @classmethod
+    def parse_bool_env(cls, v: object) -> object:
+        """Accept empty string as False (matches legacy _parse_bool behavior)."""
+        if isinstance(v, str) and v.strip() == "":
+            return False
+        return v
 
     @field_validator("log_level")
     @classmethod

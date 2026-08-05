@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
+import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth) return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+
+  const rl = rateLimit(`v1:${auth.organizationId}`, RATE_LIMITS.api);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.api) },
+    );
+  }
+
   const { id } = await params;
 
   if (!UUID_REGEX.test(id)) {
@@ -15,8 +25,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
-    const artifact = await prisma.experimentArtifact.findUnique({
-      where: { id },
+    const artifact = await prisma.experimentArtifact.findFirst({
+      where: { id, experiment: { knowledgeBase: { project: { organizationId: auth.organizationId } } } },
       include: { experiment: { select: { id: true, name: true } } },
     });
 
@@ -29,8 +39,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth) return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+
+  const rl = rateLimit(`v1:${auth.organizationId}`, RATE_LIMITS.api);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.api) },
+    );
+  }
+
   const { id } = await params;
 
   if (!UUID_REGEX.test(id)) {
@@ -38,7 +57,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   }
 
   try {
-    const existing = await prisma.experimentArtifact.findUnique({ where: { id } });
+    const existing = await prisma.experimentArtifact.findFirst({
+      where: { id, experiment: { knowledgeBase: { project: { organizationId: auth.organizationId } } } },
+    });
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     await prisma.experimentArtifact.delete({ where: { id } });

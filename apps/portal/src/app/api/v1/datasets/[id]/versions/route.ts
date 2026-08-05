@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
+import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth) return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+
+  const rl = rateLimit(`v1:${auth.organizationId}`, RATE_LIMITS.api);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.api) },
+    );
+  }
+
   const { id } = await params;
 
   if (!UUID_REGEX.test(id)) {
@@ -22,15 +32,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const parent = await prisma.benchmarkDataset.findUnique({ where: { id } });
+    const parent = await prisma.benchmarkDataset.findFirst({
+      where: { id, knowledgeBase: { project: { organizationId: auth.organizationId } } },
+    });
     if (!parent) return NextResponse.json({ error: "Dataset not found" }, { status: 404 });
 
     const maxVersion = await prisma.benchmarkDataset.aggregate({
-      where: { OR: [{ id }, { parentVersionId: id }] },
+      where: {
+        OR: [
+          { id, knowledgeBase: { project: { organizationId: auth.organizationId } } },
+          { parentVersionId: id, knowledgeBase: { project: { organizationId: auth.organizationId } } },
+        ],
+      },
       _max: { version: true },
     });
 
-    const newVersion = (maxVersion._max.version ?? parent.version) + 1;
+    const maxVersionValue = maxVersion._max?.version ?? parent.version;
+    const newVersion = maxVersionValue + 1;
 
     const questions = await prisma.benchmarkQuestion.findMany({
       where: { datasetId: id },

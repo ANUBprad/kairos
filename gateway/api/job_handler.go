@@ -2,6 +2,7 @@ package api
 
 import (
 	"Kairos/gateway/httpWriter"
+	"Kairos/gateway/queue"
 	"log/slog"
 	"net/http"
 
@@ -23,7 +24,7 @@ func (jobHandler *JobHandler) UserJobHandler(w http.ResponseWriter, r *http.Requ
 		httpWriter.RespondWithError(w, 404, "Job not found")
 		return
 	}
-	if jobErr == "" && status == Failed {
+	if jobErr == "" && status == queue.Failed {
 		jobErr = "Ingestion processing failed"
 	}
 	response := docHandlerResponse{

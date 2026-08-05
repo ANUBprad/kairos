@@ -266,8 +266,8 @@ function GateDetail({
                 Conditions ({gate.conditions.length})
               </h3>
               <div className="space-y-2">
-                {gate.conditions.map((c, i) => (
-                  <ConditionRow key={i} condition={c} />
+                {gate.conditions.map((c) => (
+                  <ConditionRow key={`${c.metric}-${c.operator}-${c.value}`} condition={c} />
                 ))}
               </div>
             </div>
@@ -327,8 +327,8 @@ function GateDetail({
                     </span>
                   </div>
                   <div className="space-y-1">
-                    {testResult.results.map((r, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs">
+                    {testResult.results.map((r) => (
+                      <div key={r.metric} className="flex items-center gap-2 text-xs">
                         {r.passed ? (
                           <CheckCircle2 size={12} className="text-success" />
                         ) : (

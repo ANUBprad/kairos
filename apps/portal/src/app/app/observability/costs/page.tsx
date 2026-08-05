@@ -166,8 +166,8 @@ export default function CostsPage() {
             <CardContent>
               {anomalies.length > 0 ? (
                 <div className="space-y-3">
-                  {anomalies.map((a, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 border rounded-lg">
+                  {anomalies.map((a) => (
+                    <div key={a.date} className="flex items-center gap-3 p-3 border rounded-lg">
                       <AlertTriangle className="h-4 w-4 text-yellow-500" />
                       <div>
                         <p className="text-sm font-medium">

@@ -223,9 +223,11 @@ docker compose up -d
 
 | Service | URL |
 |---------|-----|
-| Portal | http://localhost:8080 |
+| Gateway API | http://localhost:8080 |
 | Grafana | http://localhost:3000 |
 | Prometheus | http://localhost:9090 |
+
+> The web Portal (Next.js) is not part of the compose stack — run it with `npm run dev` in `apps/portal` (defaults to http://localhost:3000).
 
 ### Manual Setup
 

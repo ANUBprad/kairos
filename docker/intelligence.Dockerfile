@@ -1,8 +1,8 @@
 FROM python:3.11-slim AS builder
 WORKDIR /app
-COPY requirements.txt .
+COPY docker/requirements-intelligence.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-compile --default-timeout=1000 -r requirements.txt
+    pip install --no-compile --default-timeout=1000 -r requirements-intelligence.txt
 
 FROM python:3.11-slim
 RUN adduser --disabled-password --gecos "" kairos

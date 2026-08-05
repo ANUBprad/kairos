@@ -2,13 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
+import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME_LENGTH = 255;
 
 export async function GET(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth) return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+
+  const rl = rateLimit(`v1:${auth.organizationId}`, RATE_LIMITS.api);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.api) },
+    );
+  }
 
   try {
     const { searchParams } = new URL(request.url);
@@ -23,7 +32,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid experimentId format" }, { status: 400 });
     }
 
-    const where: Record<string, unknown> = { experimentId };
+    const where: Record<string, unknown> = {
+      experimentId,
+      experiment: { knowledgeBase: { project: { organizationId: auth.organizationId } } },
+    };
     if (type) where.type = type;
 
     const artifacts = await prisma.experimentArtifact.findMany({
@@ -40,8 +52,16 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth) return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+
+  const rl = rateLimit(`v1:${auth.organizationId}`, RATE_LIMITS.api);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.api) },
+    );
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -65,6 +85,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const experiment = await prisma.experiment.findFirst({
+      where: { id: experimentId, knowledgeBase: { project: { organizationId: auth.organizationId } } },
+      select: { id: true },
+    });
+    if (!experiment) {
+      return NextResponse.json({ error: "experimentId is not accessible" }, { status: 403 });
+    }
+
     const artifact = await prisma.experimentArtifact.create({
       data: {
         experimentId,
@@ -82,3 +110,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error", errorId: sanitized.errorId }, { status: 500 });
   }
 }
+
+

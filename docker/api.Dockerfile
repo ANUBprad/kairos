@@ -1,8 +1,8 @@
 FROM python:3.11-slim AS builder
 WORKDIR /app
-COPY requirements.txt .
+COPY docker/requirements-api.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-compile --default-timeout=1000 -r requirements.txt fastapi uvicorn pydantic-settings
+    pip install --no-compile --default-timeout=1000 -r requirements-api.txt
 
 FROM python:3.11-slim
 RUN adduser --disabled-password --gecos "" kairos

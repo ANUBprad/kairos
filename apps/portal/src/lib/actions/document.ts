@@ -397,7 +397,6 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
             ...meta,
             stage: "embed",
             error: errMsg,
-            stack: errStack ?? null,
             timestamp: new Date().toISOString(),
             durationMs: Date.now() - pipelineStart,
           } as never,
@@ -419,7 +418,6 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
     meta.stage = stage;
     meta.error = errMsg;
     meta.errorName = errName;
-    meta.stack = errStack ?? null;
     meta.timestamp = new Date().toISOString();
     meta.durationMs = Date.now() - pipelineStart;
 

@@ -6,13 +6,7 @@ from dataclasses import dataclass, field
 from threading import RLock
 from typing import Callable, Optional
 
-
-@dataclass
-class CacheStats:
-    hits: int = 0
-    misses: int = 0
-    size: int = 0
-    maxsize: int = 0
+from intelligence.cache.cache_backend import CacheStats
 
 
 @dataclass

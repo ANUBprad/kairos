@@ -251,8 +251,8 @@ export function FailureAnalysis({ results, className }: FailureAnalysisProps) {
                 <span className="text-[11px] font-semibold text-brand">Recommendations</span>
               </div>
               <ul className="space-y-1">
-                {cat.recommendations.map((rec, i) => (
-                  <li key={i} className="text-xs text-text-secondary flex items-start gap-1.5">
+                {cat.recommendations.map((rec) => (
+                  <li key={rec} className="text-xs text-text-secondary flex items-start gap-1.5">
                     <span className="text-brand mt-0.5">•</span>
                     {rec}
                   </li>

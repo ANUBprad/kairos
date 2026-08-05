@@ -168,6 +168,24 @@ class TestEnvironments:
 
 
 class TestValidation:
+    @pytest.fixture(autouse=True)
+    def _clean_provider_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        for _k in (
+            "OPENAI_API_KEY",
+            "KAIROS_OPENAI_API_KEY",
+            "GEMINI_API_KEY",
+            "KAIROS_GEMINI_API_KEY",
+            "GROQ_API_KEY",
+            "KAIROS_GROQ_API_KEY",
+            "GROQ_BASE_URL",
+            "KAIROS_GROQ_BASE_URL",
+            "KAIROS_LLM_PROVIDER",
+            "KAIROS_DEPLOYMENT",
+            "KAIROS_LARGE_GROQ_MODEL",
+            "KAIROS_SMALL_GROQ_MODEL",
+        ):
+            monkeypatch.delenv(_k, raising=False)
+
     def test_default_config_valid(self) -> None:
         settings = Settings()
         errors = validate_config(settings)
@@ -366,6 +384,15 @@ class TestAPIApp:
         assert app is not None
         assert app.docs_url is None
         # Reset to avoid affecting other tests
+        api_app._app_instance = None
+
+    def test_create_app_fails_closed_in_production_without_secret(self) -> None:
+        import intelligence.api.app as api_app
+
+        api_app._app_instance = None
+        settings = Settings(environment="production")
+        with pytest.raises(RuntimeError, match="KAIROS_API_SECRET"):
+            create_app(settings)
         api_app._app_instance = None
 
     def test_get_app_singleton(self) -> None:

@@ -479,8 +479,8 @@ function DatasetDetailView({
                   <div>
                     <span className="font-medium text-text-primary">Entry {err.entryId.slice(0, 8)}</span>
                     <ul className="mt-1 text-text-secondary">
-                      {err.issues.map((issue, i) => (
-                        <li key={i}>{issue}</li>
+                      {err.issues.map((issue) => (
+                        <li key={issue}>{issue}</li>
                       ))}
                     </ul>
                   </div>

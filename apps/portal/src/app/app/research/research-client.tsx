@@ -329,11 +329,11 @@ export function ResearchDashboard({
             <CardDescription>Performance trend across evaluations</CardDescription>
           </CardHeader>
           <div className="flex items-end gap-2 h-32">
-            {timelineData.map((d, i) => {
+            {timelineData.map((d) => {
               const maxVal = Math.max(...timelineData.map((x) => x.value), 0.01);
               const h = (d.value / maxVal) * 100;
               return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
                   <div
                     className="w-full rounded-t bg-brand/60 hover:bg-brand transition-opacity"
                     style={{ height: `${Math.max(h, 1)}%` }}
@@ -381,8 +381,8 @@ export function ResearchDashboard({
                     </tr>
                   </thead>
                   <tbody>
-                    {scientificAnalysis.significantImprovements.map((imp, i) => (
-                      <tr key={i} className="border-b border-border/50">
+                    {scientificAnalysis.significantImprovements.map((imp) => (
+                      <tr key={imp.metric} className="border-b border-border/50">
                         <td className="py-2 pr-4 font-medium text-emerald-500">{imp.metric}</td>
                         <td className="py-2 px-4 text-text-secondary">{imp.from}</td>
                         <td className="py-2 px-4 text-text-secondary">{imp.to}</td>
@@ -413,8 +413,8 @@ export function ResearchDashboard({
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-text-primary mb-3">Equivalent Configurations</h3>
               <div className="space-y-2">
-                {scientificAnalysis.equivalentConfigurations.map((eq, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-bg-secondary text-sm">
+                {scientificAnalysis.equivalentConfigurations.map((eq) => (
+                  <div key={eq.metric} className="flex items-center justify-between p-2 rounded-lg bg-bg-secondary text-sm">
                     <span className="font-medium text-text-primary">{eq.metric}</span>
                     <span className="text-text-secondary">
                       {eq.configs.length} configs (no significant differences)
@@ -440,8 +440,8 @@ export function ResearchDashboard({
                     </tr>
                   </thead>
                   <tbody>
-                    {scientificAnalysis.confidenceIntervals.map((ci, i) => (
-                      <tr key={i} className="border-b border-border/50">
+                    {scientificAnalysis.confidenceIntervals.map((ci) => (
+                      <tr key={`${ci.config}-${ci.metric}`} className="border-b border-border/50">
                         <td className="py-2 pr-4 font-medium text-text-primary">{ci.config}</td>
                         <td className="py-2 px-4 text-text-secondary">{ci.metric}</td>
                         <td className="py-2 px-4 text-right font-mono">{ci.mean.toFixed(4)}</td>
@@ -502,8 +502,8 @@ export function ResearchDashboard({
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-text-primary mb-3">Trends</h3>
               <div className="space-y-2">
-                {intelligenceResult.trends.map((trend, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-bg-secondary text-sm">
+                {intelligenceResult.trends.map((trend) => (
+                  <div key={trend.metric} className="flex items-center justify-between p-2 rounded-lg bg-bg-secondary text-sm">
                     <div className="flex items-center gap-2">
                       <TrendingUp size={14} className={
                         trend.direction === "improving" ? "text-emerald-500" :
@@ -530,8 +530,8 @@ export function ResearchDashboard({
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-text-primary mb-3">Root Causes</h3>
               <div className="space-y-2">
-                {intelligenceResult.rootCauses.map((rc, i) => (
-                  <div key={i} className="p-3 rounded-lg bg-bg-secondary">
+                {intelligenceResult.rootCauses.map((rc) => (
+                  <div key={rc.issue} className="p-3 rounded-lg bg-bg-secondary">
                     <p className="text-sm font-medium text-text-primary">{rc.issue}</p>
                     <p className="text-xs text-text-secondary mt-1">{rc.recommendation}</p>
                   </div>
@@ -545,8 +545,8 @@ export function ResearchDashboard({
             <div>
               <h3 className="text-sm font-semibold text-text-primary mb-3">Recommended Experiments</h3>
               <div className="space-y-2">
-                {intelligenceResult.experimentSuggestions.map((sug, i) => (
-                  <div key={i} className="p-3 rounded-lg bg-bg-secondary">
+                {intelligenceResult.experimentSuggestions.map((sug) => (
+                  <div key={sug.title} className="p-3 rounded-lg bg-bg-secondary">
                     <div className="flex items-center gap-2 mb-1">
                       <Target size={14} className="text-brand" />
                       <span className="text-sm font-medium text-text-primary">{sug.title}</span>

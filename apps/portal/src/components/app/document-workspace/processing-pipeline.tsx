@@ -91,8 +91,8 @@ function StageRow({ stage, isLast }: { stage: ProcessingStage; isLast: boolean }
         )}
         {stage.logs && stage.logs.length > 0 && (
           <div className="mt-2 rounded-md bg-bg border border-border p-2">
-            {stage.logs.slice(-3).map((log, i) => (
-              <p key={i} className="text-[11px] font-mono text-text-tertiary leading-relaxed">
+            {stage.logs.slice(-3).map((log) => (
+              <p key={log} className="text-[11px] font-mono text-text-tertiary leading-relaxed">
                 {log}
               </p>
             ))}

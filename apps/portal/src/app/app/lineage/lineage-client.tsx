@@ -489,8 +489,8 @@ export function LineagePage({ runs }: LineagePageProps) {
             <div>
               <h3 className="text-sm font-semibold text-text-primary mb-2">Recommendations</h3>
               <div className="space-y-1">
-                {reproducibilityScore.recommendations.map((rec, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm p-2 rounded bg-bg-secondary">
+                {reproducibilityScore.recommendations.map((rec) => (
+                  <div key={rec} className="flex items-start gap-2 text-sm p-2 rounded bg-bg-secondary">
                     <AlertTriangle size={14} className="text-amber-500 mt-0.5 shrink-0" />
                     <span className="text-text-secondary">{rec}</span>
                   </div>

@@ -203,8 +203,8 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
                 <div className="rounded-lg bg-muted p-3">
                   <div className="text-xs font-medium mb-2">Retrieval Pipeline Trace</div>
                   <div className="space-y-1">
-                    {results.debug.traceSteps.map((step, i) => (
-                      <div key={i} className="flex items-center justify-between text-xs">
+                    {results.debug.traceSteps.map((step) => (
+                      <div key={step.description} className="flex items-center justify-between text-xs">
                         <span className="text-text-secondary">{step.description}</span>
                         <span className="font-mono">{step.durationMs.toFixed(1)}ms</span>
                       </div>

@@ -5,6 +5,7 @@ import (
 	"Kairos/gateway/metrics"
 	"Kairos/gateway/queue"
 	pb "Kairos/generated/go/proto"
+	"errors"
 	"io"
 	"log/slog"
 	"mime/multipart"
@@ -14,11 +15,26 @@ import (
 	"strings"
 )
 
+const multipartOverheadBytes = 1 << 20 // 1 MiB allowance for multipart framing
+
 func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Request) {
+	// Bound the entire request body BEFORE multipart parsing. FormFile parses
+	// the whole body, so without a hard cap an attacker could exhaust memory
+	// regardless of the per-file limit below. header.Size is client-supplied
+	// metadata and must not be trusted for enforcement.
+	maxBytes := int64(ingester.maxSize) * 1024 * 1024
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes+multipartOverheadBytes)
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		slog.Error("Unable to get the file", "ERROR", err)
-		httpWriter.RespondWithError(w, 400, "Uploaded file is malformed")
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			slog.Error("Uploaded file too large", "limit_mb", ingester.maxSize, "ERROR", err)
+			httpWriter.RespondWithError(w, 413, "File size too large")
+		} else {
+			slog.Error("Unable to get the file", "ERROR", err)
+			httpWriter.RespondWithError(w, 400, "Uploaded file is malformed")
+		}
 		return
 	}
 	defer func(file multipart.File) {
@@ -28,13 +44,6 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 		}
 	}(file)
 
-	fileSize := header.Size
-	if header.Size > int64(ingester.maxSize)*1024*1024 {
-		slog.Error("File size too large", "File Size", fileSize)
-		httpWriter.RespondWithError(w, 413, "File size too large")
-		return
-	}
-
 	mimeType := header.Header.Get("Content-Type")
 	if mimeType != "application/pdf" && mimeType != "text/plain" {
 		slog.Error("Unsupported file type", "File Type", mimeType)
@@ -42,8 +51,7 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Use LimitReader to prevent reading entire file into memory unboundedly
-	maxBytes := int64(ingester.maxSize) * 1024 * 1024
+	// Enforce the limit on actual bytes read, never on client-declared size.
 	limitedReader := io.LimitReader(file, maxBytes+1)
 	contentBytes, err := io.ReadAll(limitedReader)
 	if err != nil {
@@ -53,6 +61,7 @@ func (ingester *IngestHandler) IngestUserDoc(w http.ResponseWriter, r *http.Requ
 	}
 
 	if int64(len(contentBytes)) > maxBytes {
+		slog.Error("File size too large", "Actual Size", len(contentBytes), "limit_mb", ingester.maxSize)
 		httpWriter.RespondWithError(w, 413, "File size too large")
 		return
 	}

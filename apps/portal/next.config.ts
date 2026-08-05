@@ -8,11 +8,11 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-XSS-Protection", value: "1; mode=block" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), browsing-topics=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(self), gamepad=(), gyroscope=(), layout-animations=(self), legacy-image-formats=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), oversized-images=(self), payment=(), picture-in-picture=(self), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(self), usb=(), web-share=(), xr-spatial-tracking=()" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), browsing-topics=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(self), gamepad=(), layout-animations=(self), legacy-image-formats=(), midi=(), navigation-override=(), oversized-images=(self), picture-in-picture=(self), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(self), web-share=(), xr-spatial-tracking=()" },
   ...(isProduction
     ? [
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
-        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://us.i.posthog.com https://*.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: wss: https://vitals.vercel-insights.com https://us.i.posthog.com https://*.i.posthog.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'" },
+        { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self' 'unsafe-inline' https://vercel.live https://us.i.posthog.com https://*.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https: wss: https://vitals.vercel-insights.com https://us.i.posthog.com https://*.i.posthog.com; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'" },
       ]
     : []),
 ];
@@ -46,8 +46,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       'recharts',
       'lucide-react',
-      'date-fns',
-      '@radix-ui/react-icons',
       'framer-motion',
       '@hookform/resolvers',
       'zod',

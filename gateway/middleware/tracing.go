@@ -41,10 +41,6 @@ func Tracing(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), traceIDKey{}, traceID)
-		ctx = context.WithValue(ctx, traceStateKey{}, &TraceState{
-			TraceParent: traceParent,
-			Tracestate:  traceState,
-		})
 
 		w.Header().Set("X-Trace-ID", traceID)
 		w.Header().Set(HeaderTraceParent, traceParent)
@@ -63,12 +59,4 @@ func GetTraceID(ctx context.Context) string {
 	return ""
 }
 
-type traceStateKey struct{}
 
-// GetTraceState returns the W3C TraceContext from context
-func GetTraceState(ctx context.Context) *TraceState {
-	if ts, ok := ctx.Value(traceStateKey{}).(*TraceState); ok {
-		return ts
-	}
-	return nil
-}

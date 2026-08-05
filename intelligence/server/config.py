@@ -14,8 +14,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from intelligence.config.settings import get_settings
-
 
 def _parse_bool(value: str) -> bool:
     """Parse a boolean from environment variable. Accepts 'true', '1', 'yes' (case-insensitive)."""
@@ -72,12 +70,15 @@ class ServerConfig:
 
     @classmethod
     def from_env(cls) -> ServerConfig:
-        """Create ServerConfig by delegating to the Settings singleton.
+        """Create ServerConfig by reading the current environment.
 
-        This ensures all environment variables are read through a single
-        source of truth (the Settings class from config.settings).
+        A fresh :class:`Settings` is constructed so that environment variable
+        overrides are always honored; all env reading still flows through the
+        Settings class as a single source of truth.
         """
-        settings = get_settings()
+        from intelligence.config.settings import Settings
+
+        settings = Settings()
         return cls(
             intelligence_port=settings.intelligence_port,
             chroma_store_host=settings.chroma_store_host,

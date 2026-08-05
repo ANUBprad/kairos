@@ -34,10 +34,6 @@ func (store *LRUStore) Get(key string) (any, bool) {
 	return value, true
 }
 
-func (store *LRUStore) Remove(key string) {
-	store.cache.Remove(key)
-}
-
 func (store *LRUStore) Len() int {
 	return store.cache.Len()
 }

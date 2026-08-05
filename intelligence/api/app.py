@@ -14,6 +14,7 @@ from intelligence.api.routes.artifacts import router as artifacts_router
 from intelligence.api.middleware.auth import AuthMiddleware
 from intelligence.api.middleware.logging import LoggingMiddleware
 from intelligence.api.middleware.rate_limit import RateLimitMiddleware
+from intelligence.config.environments import get_environment_profile
 from intelligence.config.settings import Settings, get_settings
 
 _app_instance: Optional[FastAPI] = None
@@ -26,6 +27,17 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     if settings is None:
         settings = get_settings()
+
+    if (
+        get_environment_profile(settings.environment).is_production
+        and not settings.api_secret
+    ):
+        raise RuntimeError(
+            "Refusing to start Kairos Intelligence REST API: "
+            "KAIROS_API_SECRET is required when KAIROS_ENVIRONMENT=production. "
+            "Authentication would otherwise be silently disabled. "
+            "Set a strong KAIROS_API_SECRET or run in development mode."
+        )
 
     app = FastAPI(
         title="Kairos Intelligence API",

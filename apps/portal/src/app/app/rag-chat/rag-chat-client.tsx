@@ -427,8 +427,8 @@ export function RagChat({ kbs }: Props) {
                             Citations
                           </p>
                           <div className="space-y-1.5">
-                            {msg.citations.map((c, i) => (
-                              <div key={i} className="flex items-start gap-2 rounded-lg bg-bg/50 p-2 text-xs">
+                            {msg.citations.map((c) => (
+                              <div key={c.chunkId} className="flex items-start gap-2 rounded-lg bg-bg/50 p-2 text-xs">
                                 <FileText size={12} className="shrink-0 mt-0.5 text-text-tertiary" />
                                 <div className="min-w-0">
                                   <p className="font-medium text-text-primary truncate">{c.documentName}</p>
@@ -485,7 +485,7 @@ export function RagChat({ kbs }: Props) {
                         {msg.pipeline.steps && msg.pipeline.steps.length > 0 && (
                           <div className="space-y-1">
                             {msg.pipeline.steps.map((step, i) => (
-                              <div key={i} className="flex items-center gap-2 text-xs text-text-secondary bg-bg/50 rounded-lg px-2.5 py-1.5 border border-border">
+                              <div key={step.name} className="flex items-center gap-2 text-xs text-text-secondary bg-bg/50 rounded-lg px-2.5 py-1.5 border border-border">
                                 <div className="w-4 h-4 rounded-full bg-brand/10 flex items-center justify-center shrink-0">
                                   <span className="text-[8px] font-bold text-brand">{i + 1}</span>
                                 </div>
@@ -582,8 +582,8 @@ export function RagChat({ kbs }: Props) {
                               <span className="text-[10px] font-semibold uppercase tracking-wider text-text-tertiary">Full Prompt ({msg.pipeline.prompt.messages.length} messages)</span>
                               <button onClick={() => copyToClipboard(msg.pipeline!.prompt.messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n"))} className="text-text-tertiary hover:text-text-primary" aria-label="Copy full prompt"><Copy size={10} /></button>
                             </div>
-                            {msg.pipeline.prompt.messages.map((m, i) => (
-                              <div key={i} className="text-[11px]">
+                            {msg.pipeline.prompt.messages.map((m) => (
+                              <div key={`${m.role}-${m.content.slice(0, 64)}`} className="text-[11px]">
                                 <span className="font-semibold text-text-primary">{m.role.toUpperCase()}</span>
                                 <pre className="text-text-secondary whitespace-pre-wrap font-mono mt-0.5">{m.content.slice(0, 500)}{m.content.length > 500 ? "..." : ""}</pre>
                               </div>
@@ -616,7 +616,7 @@ export function RagChat({ kbs }: Props) {
                           <div className="rounded-lg border border-border bg-bg p-3 space-y-2">
                             {msg.pipeline.steps && msg.pipeline.steps.length > 0 ? (
                               msg.pipeline.steps.map((step, i) => (
-                                <TimelineBar key={i} label={step.description} value={step.durationMs} total={msg.pipeline!.retrieval.latencyMs} color={["bg-brand", "bg-blue-500", "bg-purple-500", "bg-emerald-500", "bg-amber-500"][i % 5]} />
+                                <TimelineBar key={step.name} label={step.description} value={step.durationMs} total={msg.pipeline!.retrieval.latencyMs} color={["bg-brand", "bg-blue-500", "bg-purple-500", "bg-emerald-500", "bg-amber-500"][i % 5]} />
                               ))
                             ) : (
                               <>

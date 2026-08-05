@@ -425,9 +425,9 @@ const CopilotPageInner = function CopilotPage({ runs }: CopilotPageProps) {
                 <div className="space-y-2">
                   {messages
                     .find((m) => m.id === selectedMessage)
-                    ?.evidence?.map((e, i) => (
+                    ?.evidence?.map((e) => (
                       <div
-                        key={i}
+                        key={e.source}
                         className="rounded-lg bg-surface-secondary border border-border p-2"
                       >
                         <div className="flex items-center justify-between">

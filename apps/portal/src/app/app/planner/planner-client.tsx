@@ -274,8 +274,8 @@ export function PlannerPage({ runs }: PlannerPageProps) {
               <div className="mt-4">
                 <h3 className="text-xs font-semibold text-text-tertiary uppercase mb-2">Critical Gaps</h3>
                 <div className="space-y-1">
-                  {plannerResult.summary.criticalGaps.map((gap, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm p-2 rounded bg-bg-secondary">
+                  {plannerResult.summary.criticalGaps.map((gap) => (
+                    <div key={gap} className="flex items-start gap-2 text-sm p-2 rounded bg-bg-secondary">
                       <AlertTriangle size={14} className="text-amber-500 mt-0.5 shrink-0" />
                       <span className="text-text-secondary">{gap}</span>
                     </div>

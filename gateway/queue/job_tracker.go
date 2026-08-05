@@ -92,16 +92,6 @@ func (tracker *JobTracker) GetJobSnapshot(id uuid.UUID) (Status, string, error) 
 	return job.jobStatus, job.jobError, nil
 }
 
-func (tracker *JobTracker) GetJob(id uuid.UUID) (*jobEntry, error) {
-	tracker.mutex.RLock()
-	defer tracker.mutex.RUnlock()
-	job := tracker.jobsMap[id]
-	if job == nil {
-		return nil, errors.New("job not found")
-	}
-	return job, nil
-}
-
 func (tracker *JobTracker) EvictExpired(ttl time.Duration) int {
 	tracker.mutex.Lock()
 	defer tracker.mutex.Unlock()
@@ -121,23 +111,4 @@ func (tracker *JobTracker) EvictExpired(ttl time.Duration) int {
 	return evicted
 }
 
-func (tracker *JobTracker) ActiveCount() int {
-	tracker.mutex.RLock()
-	defer tracker.mutex.RUnlock()
 
-	count := 0
-	for _, job := range tracker.jobsMap {
-		if job.jobStatus == Pending || job.jobStatus == Processing {
-			count++
-		}
-	}
-	return count
-}
-
-func (job *jobEntry) GetStatus() Status {
-	return job.jobStatus
-}
-
-func (job *jobEntry) GetJobError() string {
-	return job.jobError
-}

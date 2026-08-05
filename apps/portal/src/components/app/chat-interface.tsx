@@ -353,9 +353,9 @@ export function ChatInterface({ kbId, kbName }: Props) {
                       Sources
                     </p>
                     <div className="space-y-1.5">
-                      {msg.citations.map((c, i) => (
+                      {msg.citations.map((c) => (
                         <div
-                          key={i}
+                          key={c.chunkId}
                           className="flex items-start gap-2 rounded-lg bg-bg/50 p-2 text-xs"
                         >
                           <FileText size={12} className="shrink-0 mt-0.5 text-text-tertiary" />

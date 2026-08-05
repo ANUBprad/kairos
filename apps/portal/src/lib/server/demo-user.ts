@@ -19,9 +19,11 @@ export interface DemoSession {
 
 /**
  * Returns true only if demo mode is explicitly enabled via KAIROS_DEMO_MODE=true.
- * Demo mode is NEVER active in production unless the env var is explicitly set.
+ * Demo mode is NEVER active in production: every anonymous request would
+ * otherwise be treated as the demo ADMIN user, silently bypassing auth.
  */
 export function isDemoModeEnabled(): boolean {
+  if (process.env.NODE_ENV === "production") return false;
   return process.env.KAIROS_DEMO_MODE === "true";
 }
 

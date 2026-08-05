@@ -117,23 +117,4 @@ func GenerateResponse(ctx context.Context, client pb.IntelligenceServiceClient, 
 	return res, nil
 }
 
-func IngestDocument(ctx context.Context, client pb.IntelligenceServiceClient, mime_type string, chunking_strat int32, namespace string, filename string, content []byte) (*pb.IngestDocumentResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-	ctx = injectTraceContext(ctx)
 
-	req := &pb.IngestDocumentRequest{
-		DocContent:       content,
-		Namespace:        namespace,
-		Filename:         filename,
-		MimeType:         mime_type,
-		ChunkingStrategy: pb.ChunkingStrategy(chunking_strat),
-	}
-
-	res, err := client.IngestDocument(ctx, req)
-	if err != nil {
-		slog.Error("Couldn't connect to IngestDocument", "ERROR", err)
-		return nil, err
-	}
-	return res, nil
-}

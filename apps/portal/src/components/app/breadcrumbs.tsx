@@ -16,7 +16,7 @@ export function Breadcrumbs() {
         <Home size={14} />
       </Link>
       {breadcrumbs.map((item, i) => (
-        <span key={i} className="flex items-center gap-1.5">
+        <span key={`${item.href ?? "current"}-${i}`} className="flex items-center gap-1.5">
           <ChevronRight size={12} className="text-text-tertiary/40" />
           {item.href ? (
             <Link

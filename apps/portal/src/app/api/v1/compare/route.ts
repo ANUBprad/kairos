@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
+import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: NextRequest) {
-  const auth = validateApiKey(request);
+  const auth = await validateApiKey(request);
   if (!auth) return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
+
+  const rl = rateLimit(`v1:${auth.organizationId}`, RATE_LIMITS.api);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.api) },
+    );
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -29,8 +38,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const [expA, expB] = await Promise.all([
-      prisma.experiment.findUnique({ where: { id: experimentAId } }),
-      prisma.experiment.findUnique({ where: { id: experimentBId } }),
+      prisma.experiment.findFirst({
+        where: { id: experimentAId, knowledgeBase: { project: { organizationId: auth.organizationId } } },
+      }),
+      prisma.experiment.findFirst({
+        where: { id: experimentBId, knowledgeBase: { project: { organizationId: auth.organizationId } } },
+      }),
     ]);
 
     if (!expA || !expB) {
@@ -79,3 +92,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error", errorId: sanitized.errorId }, { status: 500 });
   }
 }
+
+

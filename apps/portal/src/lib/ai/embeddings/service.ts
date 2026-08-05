@@ -90,17 +90,18 @@ export async function generateEmbeddings(
         const dimensions = response.embeddings[0]?.length || 1536;
         await vectorStore.bulkUpsertEmbeddings(entries, dimensions);
 
-        for (let idx = 0; idx < batch.length; idx++) {
-          const chunk = batch[idx];
-          await prisma.documentEmbedding.update({
-            where: { chunkId: chunk.id },
-            data: {
-              model,
-              dimensions: response.embeddings[idx]?.length || 1536,
-              status: "completed",
-            },
-          });
-        }
+        await prisma.$transaction(
+          batch.map((chunk, idx) =>
+            prisma.documentEmbedding.update({
+              where: { chunkId: chunk.id },
+              data: {
+                model,
+                dimensions: response.embeddings[idx]?.length || 1536,
+                status: "completed",
+              },
+            }),
+          ),
+        );
 
         processedCount += batch.length;
         lastError = null;

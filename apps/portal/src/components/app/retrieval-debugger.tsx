@@ -439,8 +439,8 @@ function CitationsPanel({
         </div>
       </div>
       {citations.length > 0 ? (
-        citations.map((c, i) => (
-          <div key={i} className="rounded-lg border border-border p-3">
+        citations.map((c) => (
+          <div key={c.chunk.chunkId} className="rounded-lg border border-border p-3">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-medium text-text-primary">{c.chunk.documentName}</span>
               <span className="text-xs text-text-tertiary">sim: {c.chunk.similarity.toFixed(3)}</span>
@@ -481,8 +481,8 @@ function WhyNotPanel({
       </div>
       {whyNotInsights.length > 0 && (
         <div className="space-y-1 mb-4">
-          {whyNotInsights.map((insight, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs text-text-secondary">
+          {whyNotInsights.map((insight) => (
+            <div key={insight} className="flex items-start gap-2 text-xs text-text-secondary">
               <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
               {insight}
             </div>

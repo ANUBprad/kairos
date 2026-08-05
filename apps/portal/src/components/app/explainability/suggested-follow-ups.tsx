@@ -82,7 +82,7 @@ export function SuggestedFollowUpQuestions({
       <div className="space-y-1.5">
         {suggestions.map((question, i) => (
           <div
-            key={i}
+            key={question}
             className="group flex items-center gap-2 rounded-lg border border-border bg-surface p-2.5 transition-colors hover:border-brand/30 hover:bg-brand/5"
           >
             <button

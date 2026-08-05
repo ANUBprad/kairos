@@ -482,6 +482,7 @@ model ExperimentRun {
   @@index([experimentId])
   @@index([knowledgeBaseId])
   @@index([status])
+  @@index([knowledgeBaseId, createdAt])
 }
 
 model ExperimentArtifact {
@@ -605,6 +606,7 @@ model BenchmarkRun {
 
   @@index([datasetId])
   @@index([createdById])
+  @@index([status])
 }
 
 /// Activity / Audit Logs
@@ -649,6 +651,7 @@ model ApiKey {
 
   @@index([userId])
   @@index([organizationId])
+  @@index([keyPrefix])
 }
 
 /// Enterprise: Invitations
@@ -1386,6 +1389,7 @@ model ProviderHealth {
   @@unique([provider, model, date])
   @@index([provider, date])
   @@index([date])
+  @@index([organizationId, date])
 }
 
 /// Observability Platform: Pipeline Runs

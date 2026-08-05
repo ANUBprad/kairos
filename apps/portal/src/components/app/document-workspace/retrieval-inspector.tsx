@@ -76,9 +76,9 @@ export function RetrievalInspector({ chunks, className }: RetrievalInspectorProp
             Token Distribution
           </p>
           <div className="flex items-end gap-1 h-20">
-            {tokenDistribution.map((bucket, i) => (
+            {tokenDistribution.map((bucket) => (
               <div
-                key={i}
+                key={bucket.label}
                 className="flex-1 rounded-t bg-brand/20 hover:bg-brand/40 transition-colors relative group"
                 style={{ height: `${bucket.percentage}%`, minHeight: bucket.percentage > 0 ? "4px" : "0" }}
                 aria-label={`${bucket.label}: ${bucket.count} chunks`}
