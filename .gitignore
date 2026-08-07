@@ -83,7 +83,8 @@ gateway/main.exe
 # Docker
 docker-compose.override.yml
 
-# Misc
-dashboard/
-experiments/
+# Misc (root-level runtime output dirs only — anchored so nested source
+# directories like apps/portal/src/components/app/dashboard are NOT ignored)
+/dashboard/
+/experiments/
 benchmarks/EU_AI_Act.pdf
