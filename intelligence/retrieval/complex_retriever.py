@@ -81,6 +81,9 @@ class ComplexRetriever(BaseRetriever):
                 cleaned_retrieval.append(doc)
                 cleaned_embeddings.append(embed)
 
+        if not cleaned_retrieval:
+            return []
+
         mmr_result = self._mmr_calc(
             query_embed=query_embed,
             candidate_docs=cleaned_retrieval,
@@ -156,10 +159,14 @@ class ComplexRetriever(BaseRetriever):
                 )
                 return self.embedder.embed(str(hypothesis_answer.text))
 
-            except Exception as e:
+            except (TimeoutError, ConnectionError, OSError) as e:
+                raise ConnectionError(
+                    f"Unable to reach provider in Complex Retriever, ERROR: {e}"
+                ) from e
+            except (ValueError, TypeError) as e:
                 raise ValueError(
                     f"Unable to generate hypothesis answer in Complex Retriever, ERROR: {e}"
-                )
+                ) from e
 
         elif self.llm_provider in ["openai", "ollama"]:
             try:
@@ -170,9 +177,13 @@ class ComplexRetriever(BaseRetriever):
                 return self.embedder.embed(
                     str(hypothesis_answer.choices[0].message.content)
                 )
-            except Exception as e:
+            except (TimeoutError, ConnectionError, OSError) as e:
+                raise ConnectionError(
+                    f"Unable to reach provider in Complex Retriever, ERROR: {e}"
+                ) from e
+            except (ValueError, TypeError, AttributeError) as e:
                 raise ValueError(
                     f"Unable to generate answer in Complex Retriever, ERROR: {e}"
-                )
+                ) from e
         else:
             raise ValueError("Unidentified model provider given")
