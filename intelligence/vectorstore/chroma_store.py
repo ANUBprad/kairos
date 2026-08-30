@@ -15,7 +15,7 @@ class ChromaStore:
         metadatas = [
             {"source": filename, "chunk_index": idx} for idx in range(len(chunks))
         ]
-        collection.add(
+        collection.upsert(
             ids=ids, documents=chunks, metadatas=metadatas, embeddings=embeddings
         )
 
