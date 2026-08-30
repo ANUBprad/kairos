@@ -69,6 +69,7 @@ class QueryEntry:
     expected_articles: Optional[List[str]] = None
     confidence_category: Optional[ConfidenceCategoryStr] = None
     notes: Optional[str] = None
+    expected_answer: Optional[str] = None
 
     @property
     def query(self) -> str:
@@ -202,6 +203,8 @@ def _raw_to_entry(item: object) -> QueryEntry:
             f"not in {_CONFIDENCE_CATEGORY_VALUES}"
         )
 
+    expected_answer = _optional_str(normalised, qid, "expected_answer")
+
     return QueryEntry(
         id=qid,
         text=text,
@@ -212,6 +215,7 @@ def _raw_to_entry(item: object) -> QueryEntry:
         expected_articles=expected_articles,
         confidence_category=confidence_category,  # type: ignore[arg-type]
         notes=notes,
+        expected_answer=expected_answer,
     )
 
 

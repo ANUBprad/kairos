@@ -18,6 +18,9 @@ from intelligence.evaluation.reporting import (
     generate_evaluation_report,
     evaluate_retrieval_strategies,
 )
+from intelligence.evaluation.run_config import RunConfig
+from intelligence.evaluation.entry_result import EntryResult, RunResult
+from intelligence.evaluation.runner import EvaluationRunner
 
 __all__ = [
     "reciprocal_rank",
@@ -35,4 +38,8 @@ __all__ = [
     "run_retrieval_benchmark",
     "generate_evaluation_report",
     "evaluate_retrieval_strategies",
+    "RunConfig",
+    "EntryResult",
+    "RunResult",
+    "EvaluationRunner",
 ]
