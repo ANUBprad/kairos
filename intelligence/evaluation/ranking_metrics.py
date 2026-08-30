@@ -132,7 +132,9 @@ def hit_rate(
     return hits / len(queries)
 
 
-def precision_at_k(relevant: Set[str], retrieved: Sequence[str], k: Optional[int] = None) -> float:
+def precision_at_k(
+    relevant: Set[str], retrieved: Sequence[str], k: Optional[int] = None
+) -> float:
     """Precision@k: fraction of top-k retrieved documents that are relevant.
 
     Args:
@@ -143,14 +145,16 @@ def precision_at_k(relevant: Set[str], retrieved: Sequence[str], k: Optional[int
     Returns:
         Precision score (0.0 to 1.0).
     """
-    if not retrieved or not relevant:
+    if not retrieved or not relevant or k == 0:
         return 0.0
     truncated = retrieved[:k] if k is not None else retrieved
     hits = sum(1 for doc in truncated if doc in relevant)
     return hits / len(truncated)
 
 
-def recall_at_k(relevant: Set[str], retrieved: Sequence[str], k: Optional[int] = None) -> float:
+def recall_at_k(
+    relevant: Set[str], retrieved: Sequence[str], k: Optional[int] = None
+) -> float:
     """Recall@k: fraction of relevant documents found in top-k retrieved.
 
     Args:
