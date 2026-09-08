@@ -7,13 +7,6 @@ from unittest.mock import patch
 
 import pytest
 
-_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_intelligence = os.path.join(_root, "intelligence")
-_generated = os.path.join(_root, "generated", "python")
-for p in [_root, _intelligence, _generated]:
-    if p not in os.sys.path:
-        os.sys.path.insert(0, p)
-
 from intelligence.server.config import ServerConfig, validate_env  # noqa: E402
 
 
@@ -25,7 +18,13 @@ from intelligence.server.config import ServerConfig, validate_env  # noqa: E402
 class TestServerConfigFromEnv:
     """Default values and env-var overrides."""
 
-    def test_defaults_are_sensible(self) -> None:
+    def test_defaults_are_sensible(self, monkeypatch) -> None:
+        from intelligence.config.settings import Settings as RealSettings
+
+        monkeypatch.setattr(
+            "intelligence.config.settings.Settings",
+            lambda: RealSettings(_env_file=None),
+        )
         config = ServerConfig.from_env()
         assert config.intelligence_port == 50051
         assert config.chroma_store_host == "localhost"
@@ -85,6 +84,22 @@ class TestServerConfigFromEnv:
             config = ServerConfig.from_env()
             assert config.chroma_store_host == "10.0.0.1"
             assert config.chroma_store_port == 9001
+
+    def test_docker_compose_chroma_override_wins_over_dotenv(self) -> None:
+        """In the compose containers the unprefixed alias (set by the service
+        environment block) must override the .env value shipped via env_file.
+        The KAIROS_-prefixed alias loses to the unprefixed one, so compose must
+        override the unprefixed name directly (see docker-compose.yml)."""
+        with patch.dict(
+            os.environ,
+            {
+                "CHROMA_STORE_HOST": "chromadb",
+                "CHROMA_STORE_PORT": "8000",
+            },
+        ):
+            config = ServerConfig.from_env()
+            assert config.chroma_store_host == "chromadb"
+            assert config.chroma_store_port == 8000
 
     def test_reads_mmr_lambda(self) -> None:
         with patch.dict(os.environ, {"KAIROS_MMR_RETRIEVAL_LAMBDA": "0.7"}):

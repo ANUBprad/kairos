@@ -2,14 +2,11 @@ import logging
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai import types as genai_types
 from sentence_transformers import CrossEncoder
 from openai import OpenAI
 
 from intelligence.cache.embedding_cache import EmbeddingCache
-from intelligence.circuit_breaker.circuit_breaker import (
-    CircuitBreaker,
-    CircuitState,
-)
 from intelligence.embeddings.cached_embedder import CachedEmbedder
 from intelligence.embeddings.local_embedder import LocalEmbedder
 from intelligence.ingestion.chunker import Chunker
@@ -32,6 +29,11 @@ from intelligence.vectorstore.chroma_store import ChromaStore
 from intelligence.classifier.query_classifier import ClassifyQuery
 from intelligence.server.config import ServerConfig, validate_env
 from intelligence.server.engine import RetrievalEngine
+from intelligence.circuit_breaker.circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakerOpenError,
+    CircuitState,
+)
 from intelligence.telemetry import TelemetryCollector, TelemetryStorage
 from intelligence.server.health import HealthServicer, add_health_servicer_to_server
 
@@ -41,6 +43,34 @@ from generated.python import rag_pb2_grpc
 from concurrent import futures
 
 logger = logging.getLogger(__name__)
+
+
+def map_grpc_error(exc: Exception) -> tuple[grpc.StatusCode, str]:
+    """Map an exception to a gRPC status code and user-facing detail.
+
+    Distinguishes validation errors, timeouts, dependency unavailability,
+    circuit-breaker trips, and unknown internal failures so the gateway can
+    return appropriate HTTP status codes (400/504/502/500) instead of a
+    generic 500.
+    """
+    if isinstance(exc, ValueError):
+        return grpc.StatusCode.INVALID_ARGUMENT, str(exc)
+    if isinstance(exc, TimeoutError):
+        return grpc.StatusCode.DEADLINE_EXCEEDED, "Dependency call timed out"
+    if isinstance(exc, (ConnectionError, OSError)):
+        return grpc.StatusCode.UNAVAILABLE, "Dependency service unavailable"
+    if isinstance(exc, CircuitBreakerOpenError):
+        return grpc.StatusCode.UNAVAILABLE, "Circuit breaker is open"
+    if isinstance(exc, NotImplementedError):
+        return grpc.StatusCode.UNIMPLEMENTED, "Operation not implemented"
+    return grpc.StatusCode.INTERNAL, "Internal service error"
+
+
+def _abort_with_error(context, exc: Exception) -> None:
+    code, detail = map_grpc_error(exc)
+    logger.error("RPC %s failed: %s", context.method(), exc)
+    context.set_code(code)
+    context.set_details(detail)
 
 
 class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
@@ -54,9 +84,7 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
             embeddings = self._engine.compute_embeddings(request.user_query)
             return rag_pb2.ComputeEmbeddingResponse(vector_embeddings=embeddings)
         except Exception as e:
-            logger.error("ComputeEmbeddings failed: %s", e)
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal embedding computation error")
+            _abort_with_error(context, e)
             return rag_pb2.ComputeEmbeddingResponse()
 
     def ClassifyQueryType(self, request, context):
@@ -73,9 +101,7 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
                 confidence_score=result["confidence_score"],
             )
         except Exception as e:
-            logger.error("ClassifyQueryType failed: %s", e)
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal query classification error")
+            _abort_with_error(context, e)
             return rag_pb2.ClassifyQueryResponse()
 
     def ExecuteRetrieval(self, request, context):
@@ -102,9 +128,7 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
                 retrieval_status=True,
             )
         except Exception as e:
-            logger.error("ExecuteRetrieval failed: %s", e)
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal retrieval execution error")
+            _abort_with_error(context, e)
             return rag_pb2.ExecuteRetrievalResponse(retrieval_status=False)
 
     def GenerateResponse(self, request, context):
@@ -120,9 +144,7 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
                 model=result["model"],
             )
         except Exception as e:
-            logger.error("GenerateResponse failed: %s", e)
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal response generation error")
+            _abort_with_error(context, e)
             return rag_pb2.GeneratedResponse()
 
     def IngestDocument(self, request, context):
@@ -139,13 +161,8 @@ class IntelligenceServiceServicer(rag_pb2_grpc.IntelligenceServiceServicer):
                 chunk_count=chunk_count,
             )
         except Exception as e:
-            logger.error("IngestDocument failed: %s", e)
-            context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details("Internal document ingestion error")
+            _abort_with_error(context, e)
             return rag_pb2.IngestDocumentResponse()
-
-
-load_dotenv()
 
 
 def _create_embedder(cfg: ServerConfig):
@@ -276,6 +293,7 @@ def _register_server(
 
 
 def serve():
+    load_dotenv()
     cfg = ServerConfig.from_env()
 
     missing = validate_env(cfg)
@@ -353,7 +371,12 @@ def serve():
             )
     else:
         if cfg.llm_provider == "gemini":
-            client = genai.Client(api_key=cfg.gemini_api_key)
+            client = genai.Client(
+                api_key=cfg.gemini_api_key,
+                http_options=genai_types.HttpOptions(
+                    timeout=int(cfg.provider_timeout_seconds * 1000)
+                ),
+            )
             llm_client = GeminiLLM(client=client, model_name=cfg.gemini_model_name)
             model_name = cfg.gemini_model_name
 

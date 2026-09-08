@@ -1,7 +1,6 @@
-from intelligence.api.app import create_app, get_app, run_api
+from intelligence.api.app import create_app, get_app
 
 __all__ = [
     "create_app",
     "get_app",
-    "run_api",
 ]

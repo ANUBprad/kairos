@@ -168,7 +168,9 @@ def validate_env(cfg: ServerConfig) -> list[str]:
                 "KAIROS_OLLAMA_MODEL_NAME is required when KAIROS_LLM_PROVIDER=ollama"
             )
         if not cfg.ollama_url:
-            errors.append("KAIROS_OLLAMA_URL is required when KAIROS_LLM_PROVIDER=ollama")
+            errors.append(
+                "KAIROS_OLLAMA_URL is required when KAIROS_LLM_PROVIDER=ollama"
+            )
         return errors
 
     if cfg.large_groq_model and cfg.small_groq_model:

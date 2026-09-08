@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -84,16 +83,3 @@ def get_app() -> FastAPI:
     if _app_instance is None:
         return create_app()
     return _app_instance
-
-
-def run_api(settings: Optional[Settings] = None) -> None:
-    if settings is None:
-        settings = get_settings()
-    app = create_app(settings)
-    uvicorn.run(
-        app,
-        host=settings.api_host,
-        port=settings.api_port,
-        workers=settings.api_workers,
-        log_level=settings.log_level.lower(),
-    )

@@ -25,9 +25,7 @@ async def list_models() -> List[Dict[str, object]]:
     results: List[Dict[str, object]] = []
     for entry in sorted(models_dir.iterdir()):
         if entry.is_dir():
-            results.append(
-                {"name": entry.name, "type": "directory"}
-            )
+            results.append({"name": entry.name, "type": "directory"})
         elif entry.suffix in (".bin", ".pt", ".pth", ".onnx", ".gguf"):
             results.append(
                 {

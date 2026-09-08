@@ -18,7 +18,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         exclude_paths: set | None = None,
     ) -> None:
         super().__init__(app)
-        self._store = TokenBucketStore(capacity=burst, refill_rate=rate_per_minute / 60.0)
+        self._store = TokenBucketStore(
+            capacity=burst, refill_rate=rate_per_minute / 60.0
+        )
         self._exclude_paths = exclude_paths or {
             "/health",
             "/docs",

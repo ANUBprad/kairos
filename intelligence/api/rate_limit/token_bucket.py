@@ -83,8 +83,7 @@ class TokenBucketStore:
         # Remove buckets that haven't been used in 5 minutes
         stale_threshold = now - 300.0
         stale_keys = [
-            k for k, v in self._buckets.items()
-            if v._last_refill < stale_threshold
+            k for k, v in self._buckets.items() if v._last_refill < stale_threshold
         ]
         for k in stale_keys:
             del self._buckets[k]

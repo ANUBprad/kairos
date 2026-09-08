@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 from pydantic import AliasChoices, Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     api_host: str = Field(default="0.0.0.0", description="REST API bind host")
     api_port: int = Field(default=8000, description="REST API bind port")
     api_workers: int = Field(default=1, description="Number of API worker processes")
-    api_cors_origins: list[str] = Field(
+    api_cors_origins: Annotated[list[str], NoDecode] = Field(
         default=[], description="Allowed CORS origins (empty = allow all)"
     )
     api_rate_limit: int = Field(
@@ -184,6 +184,38 @@ class Settings(BaseSettings):
         """Accept empty string as False (matches legacy _parse_bool behavior)."""
         if isinstance(v, str) and v.strip() == "":
             return False
+        return v
+
+    @field_validator("api_cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: object) -> object:
+        """Accept empty string or comma-separated origins for the CORS list."""
+        if isinstance(v, str):
+            stripped = v.strip()
+            if stripped == "":
+                return []
+            return [origin.strip() for origin in stripped.split(",") if origin.strip()]
+        return v
+
+    @field_validator(
+        "llm_provider",
+        "gemini_api_key",
+        "gemini_model_name",
+        "openai_api_key",
+        "openai_model_name",
+        "ollama_model_name",
+        "ollama_url",
+        "groq_api_key",
+        "groq_base_url",
+        "large_groq_model",
+        "small_groq_model",
+        mode="before",
+    )
+    @classmethod
+    def empty_string_to_none(cls, v: object) -> object:
+        """Normalize empty env values (e.g. KAIROS_LLM_PROVIDER=) to None."""
+        if isinstance(v, str) and v.strip() == "":
+            return None
         return v
 
     @field_validator("log_level")

@@ -40,11 +40,14 @@ class APIKeyValidator:
 
         # Constant-time comparison using hmac
         import hmac
+
         key_bytes = api_key.strip().encode("utf-8")
 
         for valid_key in self._valid_keys:
             valid_bytes = valid_key.encode("utf-8")
-            if len(key_bytes) == len(valid_bytes) and hmac.compare_digest(key_bytes, valid_bytes):
+            if len(key_bytes) == len(valid_bytes) and hmac.compare_digest(
+                key_bytes, valid_bytes
+            ):
                 return True
 
         return False

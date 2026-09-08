@@ -10,21 +10,11 @@ Covers:
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
-_root = Path(__file__).resolve().parent.parent
-_generated = _root / "generated" / "python"
-_intelligence = _root / "intelligence"
-
-for p in [_root, _intelligence, _generated]:
-    if str(p) not in sys.path:
-        sys.path.insert(0, str(p))
-
-import rag_pb2  # noqa: E402
+from generated.python import rag_pb2
 import grpc  # noqa: E402
 
 from intelligence.classifier.query_classifier import ResponseSchema  # noqa: E402
@@ -197,12 +187,37 @@ class TestConfidenceBudgetOverrides:
 
 
 class TestErrorHandling:
-    """Planner errors result in INTERNAL status and empty response."""
+    """Errors map to distinct gRPC status codes instead of a generic INTERNAL."""
 
-    def test_planner_error_returns_empty_response(self, servicer, mock_context) -> None:
+    def test_validation_error_maps_to_invalid_argument(
+        self, servicer, mock_context
+    ) -> None:
         servicer._engine.planner.plan = MagicMock(
             side_effect=ValueError("planner failed")
         )
+        request = rag_pb2.ClassifyQueryRequest(user_query="fail", namespace="ns")
+        response = servicer.ClassifyQueryType(request, mock_context)
+        mock_context.set_code.assert_called_once_with(grpc.StatusCode.INVALID_ARGUMENT)
+        assert response.query_type == rag_pb2.QueryType.QUERY_TYPE_UNSPECIFIED
+
+    def test_timeout_error_maps_to_deadline_exceeded(
+        self, servicer, mock_context
+    ) -> None:
+        servicer._engine.planner.plan = MagicMock(side_effect=TimeoutError("slow"))
+        request = rag_pb2.ClassifyQueryRequest(user_query="fail", namespace="ns")
+        servicer.ClassifyQueryType(request, mock_context)
+        mock_context.set_code.assert_called_once_with(grpc.StatusCode.DEADLINE_EXCEEDED)
+
+    def test_connection_error_maps_to_unavailable(self, servicer, mock_context) -> None:
+        servicer._engine.planner.plan = MagicMock(
+            side_effect=ConnectionError("chroma down")
+        )
+        request = rag_pb2.ClassifyQueryRequest(user_query="fail", namespace="ns")
+        servicer.ClassifyQueryType(request, mock_context)
+        mock_context.set_code.assert_called_once_with(grpc.StatusCode.UNAVAILABLE)
+
+    def test_unknown_error_maps_to_internal(self, servicer, mock_context) -> None:
+        servicer._engine.planner.plan = MagicMock(side_effect=RuntimeError("boom"))
         request = rag_pb2.ClassifyQueryRequest(user_query="fail", namespace="ns")
         response = servicer.ClassifyQueryType(request, mock_context)
         mock_context.set_code.assert_called_once_with(grpc.StatusCode.INTERNAL)

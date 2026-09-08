@@ -61,12 +61,12 @@ class TestSettings:
 
     def test_env_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("KAIROS_CHROMA_STORE_HOST", "test-host")
-        s = Settings()
+        s = Settings(_env_file=None)
         assert s.chroma_store_host == "test-host"
 
     def test_env_prefix_embedding_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("KAIROS_EMBEDDING_MODEL", "openai")
-        s = Settings()
+        s = Settings(_env_file=None)
         assert s.embedding_model == "openai"
 
     def test_get_settings_singleton(self) -> None:
