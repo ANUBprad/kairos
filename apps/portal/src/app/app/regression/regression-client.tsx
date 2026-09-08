@@ -1,7 +1,7 @@
 "use client";
 
 import { PageHeader } from "@/components/app/page-header";
-import { RegressionTesting } from "@/components/evaluation/regression-testing";
+import { RegressionRun } from "@/components/evaluation/regression-run";
 
 export function RegressionClient() {
   return (
@@ -17,7 +17,7 @@ export function RegressionClient() {
         ]}
       />
 
-      <RegressionTesting />
+      <RegressionRun />
     </div>
   );
 }
