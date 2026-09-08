@@ -38,6 +38,8 @@ def run(args: argparse.Namespace) -> int:
         use_llm_judges=args.llm_judges,
     )
 
+    exit_code = 0
+
     if args.baseline:
         from intelligence.evaluation.regression import check_regression, save_baseline
 
@@ -45,10 +47,24 @@ def run(args: argparse.Namespace) -> int:
         if baseline_path.exists():
             check = check_regression(result, str(baseline_path), tolerances=args.tolerance)
             print(json.dumps(check.to_dict(), indent=2))
-            return 0 if check.passed else 1
-        baseline_path.parent.mkdir(parents=True, exist_ok=True)
-        save_baseline(result, str(baseline_path))
-        print(f"Baseline saved to {baseline_path}")
+            if not check.passed:
+                exit_code = 1
+        else:
+            baseline_path.parent.mkdir(parents=True, exist_ok=True)
+            save_baseline(result, str(baseline_path))
+            print(f"Baseline saved to {baseline_path}")
+
+    if args.gate:
+        from intelligence.evaluation.quality_gate import QualityGateCondition, check_gate_on_run
+
+        conditions = [
+            QualityGateCondition(metric=metric, operator=operator, value=value)
+            for metric, operator, value in args.gate
+        ]
+        check = check_gate_on_run(conditions, result)
+        print(json.dumps(check.to_dict(), indent=2))
+        if not check.passed:
+            exit_code = 1
 
     if args.output:
         output = Path(args.output)
@@ -59,7 +75,7 @@ def run(args: argparse.Namespace) -> int:
         payload = result.to_dict()
         print(json.dumps(payload, indent=2))
 
-    return 0
+    return exit_code
 
 
 def main() -> int:
@@ -75,11 +91,14 @@ def main() -> int:
     run_parser.add_argument("--llm-judges", action="store_true", help="Also run LLM-as-judge dimensions")
     run_parser.add_argument("--baseline", default=None, help="JSON baseline path: creates it on first run, gates on it afterwards")
     run_parser.add_argument("--tolerance", action="append", nargs=2, metavar=("METRIC", "VALUE"), help="Override a metric tolerance, e.g. --tolerance mean_recall 0.03")
+    run_parser.add_argument("--gate", action="append", nargs=3, metavar=("METRIC", "OPERATOR", "VALUE"), help="Quality gate condition, e.g. --gate mean_recall gte 0.8 (repeatable; fails the run if any condition is unmet)")
     run_parser.add_argument("--output", default=None, help="Write results JSON to this path instead of stdout")
 
     args = parser.parse_args()
     if args.tolerance:
         args.tolerance = {metric: float(value) for metric, value in args.tolerance}
+    if args.gate:
+        args.gate = [(metric, operator, float(value)) for metric, operator, value in args.gate]
     return run(args)
 
 
