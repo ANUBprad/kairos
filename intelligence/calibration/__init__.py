@@ -12,7 +12,6 @@ from .calibration_metrics import (
     generate_calibration_report,
 )
 from .calibration_storage import (
-    CalibrationModelData,
     load_calibrator,
     save_calibrator,
 )
@@ -32,5 +31,4 @@ __all__ = [
     "generate_calibration_report",
     "save_calibrator",
     "load_calibrator",
-    "CalibrationModelData",
 ]

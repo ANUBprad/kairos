@@ -185,10 +185,15 @@ class AlertManager:
                         except Exception as exc:
                             logger.warning(
                                 "Alert handler failed",
+                                exc_info=True,
                                 extra={"handler": h.__name__, "error": str(exc)},
                             )
             except Exception as exc:
-                logger.warning("Alert evaluation failed", extra={"error": str(exc)})
+                logger.warning(
+                    "Alert evaluation failed",
+                    exc_info=True,
+                    extra={"error": str(exc)},
+                )
         return fired
 
     @property

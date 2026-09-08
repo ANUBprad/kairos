@@ -39,7 +39,7 @@ class MetricsRegistry:
         )
         # Cap to prevent unbounded memory growth
         if len(self._points) > self.MAX_POINTS:
-            self._points = self._points[-self.MAX_POINTS:]
+            self._points = self._points[-self.MAX_POINTS :]
 
     def increment(self, name: str, labels: Optional[Dict[str, str]] = None) -> None:
         self.record(name, 1.0, labels)

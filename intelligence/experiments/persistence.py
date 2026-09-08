@@ -54,13 +54,11 @@ class ExperimentStore:
         ids: List[str] = []
         for f in self._base_dir.iterdir():
             if f.is_file() and f.name.startswith("run_") and f.suffix == ".json":
-                rid = f.name[len("run_"):-len(".json")]
+                rid = f.name[len("run_") : -len(".json")]
                 ids.append(rid)
         return sorted(ids)
 
-    def save_registry_metadata(
-        self, metadata: Dict[str, object]
-    ) -> None:
+    def save_registry_metadata(self, metadata: Dict[str, object]) -> None:
         """Persist top-level registry metadata."""
         path = self._base_dir / "registry.json"
         with open(str(path), "w", encoding="utf-8") as f:

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
-from typing import Optional
 
 from .calibration_model import (
     CalibrationStrategy,
@@ -11,15 +9,6 @@ from .calibration_model import (
     PlattScalingCalibrator,
 )
 from .confidence_calibrator import ConfidenceCalibrator
-
-
-@dataclass
-class CalibrationModelData:
-    strategy_name: str
-    params: dict
-    n_training_samples: int
-    accuracy: Optional[float]
-    ece: Optional[float]
 
 
 def _serialize_calibrator(calibrator: ConfidenceCalibrator) -> dict:

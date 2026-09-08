@@ -6,9 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-logger = logging.getLogger(__name__)
-
 from .model_registry import ModelRegistry, RegistryEntry, compute_dataset_hash
+
+logger = logging.getLogger(__name__)
 
 
 class BudgetRetrainer:

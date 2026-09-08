@@ -71,6 +71,7 @@ class EventLogger:
             except Exception as exc:
                 logger.warning(
                     "Event sink failed",
+                    exc_info=True,
                     extra={"sink": sink.__name__, "error": str(exc)},
                 )
         return event

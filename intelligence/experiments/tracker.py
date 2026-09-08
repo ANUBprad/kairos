@@ -135,9 +135,7 @@ class ExperimentTracker:
             self.log_metric("total_queries", float(total))
             if total > 0 and hasattr(result, "aggregated_failures"):
                 fails = result.aggregated_failures()
-                success_rate = 1.0 - (
-                    (fails.timeout + fails.empty_retrieval) / total
-                )
+                success_rate = 1.0 - ((fails.timeout + fails.empty_retrieval) / total)
                 self.log_metric("success_rate", success_rate)
                 self.log_metric("fallback_rate", fails.planner_fallback / total)
 
@@ -147,9 +145,7 @@ class ExperimentTracker:
 
     def _require_active_run(self) -> None:
         if self._current_run is None:
-            raise RuntimeError(
-                "No active experiment run. Use tracker.start_run(...)"
-            )
+            raise RuntimeError("No active experiment run. Use tracker.start_run(...)")
 
 
 def _set_metric(metrics: ExperimentMetrics, key: str, value: float) -> None:

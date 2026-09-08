@@ -150,7 +150,7 @@ def _get_git_commit() -> Optional[str]:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except Exception:
+    except (subprocess.SubprocessError, OSError, TimeoutError):
         return None
 
 
@@ -163,5 +163,5 @@ def _get_installed_packages() -> Dict[str, str]:
             for dist in md.distributions()
             if dist.metadata.get("Name")
         }
-    except Exception:
+    except (ImportError, OSError, AttributeError):
         return {}

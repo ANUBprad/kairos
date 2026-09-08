@@ -169,7 +169,7 @@ class BenchmarkRunner:
                 include_permutation=False,
                 random_seed=42,
             )
-        except Exception:
+        except (ImportError, ValueError, TypeError, OSError):
             return None
 
     def _track_run(

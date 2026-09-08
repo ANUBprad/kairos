@@ -96,6 +96,7 @@ class Tracer:
             except Exception as exc:
                 logger.warning(
                     "Span callback failed",
+                    exc_info=True,
                     extra={"callback": cb.__name__, "error": str(exc)},
                 )
         # Restore parent

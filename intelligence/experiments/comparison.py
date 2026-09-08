@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from intelligence.experiments.models import ExperimentMetrics, ExperimentRun
+from intelligence.statistics.reporting import ValidationResult
 
 
 @dataclass(frozen=True)
@@ -94,15 +95,17 @@ def generate_comparison_report(
         "",
     ]
     for comp in comparisons:
-        lines.extend([
-            f"## {comp.treatment_name} vs {comp.baseline_name}",
-            "",
-            f"- **Baseline:** {comp.baseline_run_id}",
-            f"- **Treatment:** {comp.treatment_run_id}",
-            "",
-            "| Metric | Delta |",
-            "| ------ | ----- |",
-        ])
+        lines.extend(
+            [
+                f"## {comp.treatment_name} vs {comp.baseline_name}",
+                "",
+                f"- **Baseline:** {comp.baseline_run_id}",
+                f"- **Treatment:** {comp.treatment_run_id}",
+                "",
+                "| Metric | Delta |",
+                "| ------ | ----- |",
+            ]
+        )
         metrics: List[Tuple[str, Optional[float]]] = [
             ("Recall", comp.recall_delta),
             ("Precision", comp.precision_delta),

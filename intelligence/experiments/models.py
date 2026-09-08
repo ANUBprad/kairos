@@ -58,10 +58,20 @@ class ExperimentMetrics:
     @staticmethod
     def from_dict(d: Dict[str, object]) -> ExperimentMetrics:
         known = {
-            "precision", "recall", "latency_ms", "success_rate",
-            "fallback_rate", "avg_recall", "avg_precision", "ece",
-            "mce", "brier_score", "score_lift", "learned_avg_score",
-            "static_avg_score", "training_samples",
+            "precision",
+            "recall",
+            "latency_ms",
+            "success_rate",
+            "fallback_rate",
+            "avg_recall",
+            "avg_precision",
+            "ece",
+            "mce",
+            "brier_score",
+            "score_lift",
+            "learned_avg_score",
+            "static_avg_score",
+            "training_samples",
         }
         kwargs: Dict[str, object] = {}
         extra: Dict[str, float] = {}
@@ -114,11 +124,20 @@ class ExperimentParameters:
     @staticmethod
     def from_dict(d: Dict[str, object]) -> ExperimentParameters:
         known = {
-            "planner_enabled", "calibration_enabled", "feedback_enabled",
-            "optimization_enabled", "dataset_name", "dataset_version",
-            "query_types", "classifier_name", "retriever_name",
-            "failure_threshold", "recovery_timeout", "calibrator_type",
-            "optimizer_min_samples", "provider_timeout_seconds",
+            "planner_enabled",
+            "calibration_enabled",
+            "feedback_enabled",
+            "optimization_enabled",
+            "dataset_name",
+            "dataset_version",
+            "query_types",
+            "classifier_name",
+            "retriever_name",
+            "failure_threshold",
+            "recovery_timeout",
+            "calibrator_type",
+            "optimizer_min_samples",
+            "provider_timeout_seconds",
         }
         kwargs: Dict[str, object] = {}
         extra: Dict[str, str] = {}
@@ -179,8 +198,6 @@ class ExperimentRun:
             parameters=ExperimentParameters.from_dict(
                 d.get("parameters", {})  # type: ignore[arg-type]
             ),
-            artifact_paths=[
-                str(p) for p in d.get("artifact_paths", [])
-            ],
+            artifact_paths=[str(p) for p in d.get("artifact_paths", [])],
         )
         return run

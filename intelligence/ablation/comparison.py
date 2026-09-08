@@ -143,7 +143,7 @@ def compare_runs(
                     baseline_label=baseline_label,
                     treatment_label=treatment_label,
                 )
-        except Exception:
+        except (ImportError, ValueError, TypeError, OSError):
             validation_result = None
 
     return AblationComparison(
