@@ -6,7 +6,14 @@ from typing import Dict, List, Optional
 
 from benchmarks.dataset.loader import QueryEntry
 from benchmarks.metrics import LatencyTracker, precision_at_k, recall_at_k
-from intelligence.evaluation.entry_result import EntryResult, RunResult
+from intelligence.evaluation.cost import estimate_cost
+from intelligence.evaluation.entry_result import (
+    EntryResult,
+    RunResult,
+    get_trace_id,
+    new_trace_id,
+    set_trace_id,
+)
 from intelligence.evaluation.run_config import RunConfig
 from intelligence.judging.judge import CompositeJudge
 from intelligence.server.engine import RetrievalEngine
@@ -52,8 +59,13 @@ class EvaluationRunner:
         if limit is not None:
             entries = entries[:limit]
 
+        if not get_trace_id():
+            new_trace_id()
+        trace_id = get_trace_id()
+
         results: List[EntryResult] = []
         for entry in entries:
+            set_trace_id(trace_id)
             result = self._run_entry(entry)
             results.append(result)
         return RunResult(results=tuple(results))
@@ -142,6 +154,8 @@ class EvaluationRunner:
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 model=model,
+                cost_usd=estimate_cost(model, prompt_tokens, completion_tokens),
+                trace_id=get_trace_id(),
                 recall=recall,
                 precision=precision,
                 judge_scores=judge_scores,
@@ -166,6 +180,7 @@ class EvaluationRunner:
                 status="error",
                 error_type=error_type,
                 error_message=error_msg,
+                trace_id=get_trace_id(),
                 latency_classify=latency.classify,
                 latency_retrieval=latency.retrieval,
                 latency_generation=latency.generation,

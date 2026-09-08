@@ -19,8 +19,15 @@ from intelligence.evaluation.reporting import (
     evaluate_retrieval_strategies,
 )
 from intelligence.evaluation.run_config import RunConfig
-from intelligence.evaluation.entry_result import EntryResult, RunResult
+from intelligence.evaluation.entry_result import (
+    EntryResult,
+    RunResult,
+    get_trace_id,
+    set_trace_id,
+    new_trace_id,
+)
 from intelligence.evaluation.runner import EvaluationRunner
+from intelligence.evaluation.cost import estimate_cost
 
 __all__ = [
     "reciprocal_rank",
@@ -42,4 +49,8 @@ __all__ = [
     "EntryResult",
     "RunResult",
     "EvaluationRunner",
+    "estimate_cost",
+    "get_trace_id",
+    "set_trace_id",
+    "new_trace_id",
 ]

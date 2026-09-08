@@ -1,7 +1,30 @@
 from __future__ import annotations
 
+import contextvars
+import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
+
+from intelligence.evaluation.cost import estimate_cost
+
+_trace_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "kairos_eval_trace_id", default=""
+)
+
+
+def get_trace_id() -> str:
+    return _trace_id_var.get()
+
+
+def set_trace_id(trace_id: str) -> None:
+    _trace_id_var.set(trace_id)
+
+
+def new_trace_id() -> str:
+    """Generate and set a fresh trace id, returning it."""
+    trace_id = uuid.uuid4().hex
+    set_trace_id(trace_id)
+    return trace_id
 
 
 @dataclass(frozen=True)
@@ -23,6 +46,8 @@ class EntryResult:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     model: str = ""
+    cost_usd: float = 0.0
+    trace_id: str = ""
 
     recall: Optional[float] = None
     precision: Optional[float] = None
@@ -57,6 +82,9 @@ class EntryResult:
             d["prompt_tokens"] = self.prompt_tokens
             d["completion_tokens"] = self.completion_tokens
             d["model"] = self.model
+            d["cost_usd"] = self.cost_usd
+        if self.trace_id:
+            d["trace_id"] = self.trace_id
         if self.composite_judge_score is not None:
             d["composite_judge_score"] = self.composite_judge_score
         if self.error_type is not None:
@@ -118,6 +146,9 @@ class RunResult:
         completion = sum(r.completion_tokens for r in self.results)
         return {"prompt_tokens": prompt, "completion_tokens": completion}
 
+    def total_cost(self) -> float:
+        return sum(r.cost_usd for r in self.results)
+
     def per_type_results(self) -> Dict[str, List[EntryResult]]:
         groups: Dict[str, List[EntryResult]] = {}
         for r in self.results:
@@ -132,6 +163,7 @@ class RunResult:
             "success_rate": self.success_rate,
             "mean_latency": self.mean_latency(),
             "total_tokens": self.total_tokens(),
+            "total_cost_usd": self.total_cost(),
         }
         mr = self.mean_recall()
         mp = self.mean_precision()
