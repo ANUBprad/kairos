@@ -1,0 +1,103 @@
+name: Evaluate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: evaluate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CHROMA_STORE_HOST: localhost
+      CHROMA_STORE_PORT: "7777"
+      KAIROS_LLM_PROVIDER: ollama
+      KAIROS_OLLAMA_URL: http://localhost:11434
+      KAIROS_OLLAMA_MODEL_NAME: llama3
+      KAIROS_EMBEDDING_MODEL: local
+      KAIROS_EVAL_NAMESPACE: ci-eval
+      KAIROS_EVAL_MAX_ENTRIES: "6"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start ChromaDB
+        run: |
+          docker run -d --name chromadb -p 7777:8000 -v chroma_data:/data chromadb/chroma:1.0.15
+          for i in $(seq 1 30); do
+            if docker exec chromadb python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8000)); s.close()" 2>/dev/null; then
+              echo "ChromaDB is up after ${i} attempts"
+              break
+            fi
+            sleep 5
+          done
+          docker exec chromadb python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8000)); s.close()" || { docker logs chromadb --tail 50; exit 1; }
+
+      - name: Start Ollama and pull llama3
+        run: |
+          docker run -d --name ollama -p 11434:11434 ollama/ollama
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:11434 > /dev/null 2>&1; then
+              echo "Ollama is up after ${i} attempts"
+              break
+            fi
+            sleep 5
+          done
+          docker exec ollama ollama pull llama3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install --no-deps -e sdk 2>/dev/null || true
+
+      - name: Run evaluation and create baseline
+        run: |
+          mkdir -p artifacts
+          python scripts/eval.py run \
+            --namespace "$KAIROS_EVAL_NAMESPACE" \
+            --dataset-name ci-golden \
+            --max-entries "$KAIROS_EVAL_MAX_ENTRIES" \
+            --baseline artifacts/baseline.json \
+            --output artifacts/run-1.json
+
+      - name: Check regression against baseline
+        run: |
+          python scripts/eval.py run \
+            --namespace "$KAIROS_EVAL_NAMESPACE" \
+            --dataset-name ci-golden \
+            --max-entries "$KAIROS_EVAL_MAX_ENTRIES" \
+            --baseline artifacts/baseline.json \
+            --gate success_rate gte 0.9 \
+            --gate total gte "$KAIROS_EVAL_MAX_ENTRIES" \
+            --output artifacts/run-2.json
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evaluation-results
+          path: artifacts/
+          if-no-files-found: warn
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          docker logs chromadb --tail 100 || true
+          docker logs ollama --tail 100 || true
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker rm -f chromadb ollama || true
