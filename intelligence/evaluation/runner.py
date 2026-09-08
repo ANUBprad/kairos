@@ -117,6 +117,7 @@ class EvaluationRunner:
                     query=entry.text,
                     answer=generated_answer,
                     context=chunks,
+                    reference=entry.expected_answer or "",
                 )
                 for jr in judge_results:
                     judge_scores[jr.dimension] = jr.score
@@ -124,6 +125,7 @@ class EvaluationRunner:
                     query=entry.text,
                     answer=generated_answer,
                     context=chunks,
+                    reference=entry.expected_answer or "",
                 )
 
             latency = tracker.record()

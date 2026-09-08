@@ -3,6 +3,12 @@ from intelligence.judging.faithfulness import FaithfulnessJudge
 from intelligence.judging.relevance import RelevanceJudge
 from intelligence.judging.hallucination import HallucinationJudge
 from intelligence.judging.grounding import GroundingJudge
+from intelligence.judging.llm import (
+    LLMJudge,
+    FaithfulnessLLMJudge,
+    AnswerRelevancyLLMJudge,
+    CorrectnessLLMJudge,
+)
 from intelligence.judging.scoring import (
     aggregate_scores,
     weight_scores,
@@ -20,6 +26,10 @@ __all__ = [
     "RelevanceJudge",
     "HallucinationJudge",
     "GroundingJudge",
+    "LLMJudge",
+    "FaithfulnessLLMJudge",
+    "AnswerRelevancyLLMJudge",
+    "CorrectnessLLMJudge",
     "aggregate_scores",
     "weight_scores",
     "score_to_rating",

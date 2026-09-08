@@ -22,3 +22,9 @@ class GeminiLLM(BaseLLM):
             "completion_tokens": response.usage_metadata.candidates_token_count,
             "model": self.model,
         }
+
+    def complete(self, prompt: str) -> str:
+        response = self.client.models.generate_content(
+            model=self.model, contents=prompt
+        )
+        return response.text

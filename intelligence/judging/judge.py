@@ -49,6 +49,7 @@ class BaseJudge:
         query: str,
         answer: str,
         context: Sequence[str],
+        reference: str = "",
     ) -> JudgeResult:
         raise NotImplementedError
 
@@ -57,8 +58,9 @@ class BaseJudge:
         query: str,
         answer: str,
         context: Sequence[str],
+        reference: str = "",
     ) -> JudgeResult:
-        return self.evaluate(query, answer, context)
+        return self.evaluate(query, answer, context, reference)
 
 
 @dataclass
@@ -75,10 +77,11 @@ class CompositeJudge:
         query: str,
         answer: str,
         context: Sequence[str],
+        reference: str = "",
     ) -> List[JudgeResult]:
         results: List[JudgeResult] = []
         for judge in self.judges:
-            result = judge.evaluate(query, answer, context)
+            result = judge.evaluate(query, answer, context, reference)
             results.append(result)
         return results
 
@@ -87,16 +90,21 @@ class CompositeJudge:
         query: str,
         answer: str,
         context: Sequence[str],
+        reference: str = "",
     ) -> Dict[str, JudgeResult]:
-        return {r.dimension: r for r in self.evaluate(query, answer, context)}
+        return {
+            r.dimension: r
+            for r in self.evaluate(query, answer, context, reference)
+        }
 
     def composite_score(
         self,
         query: str,
         answer: str,
         context: Sequence[str],
+        reference: str = "",
     ) -> float:
-        results = self.evaluate(query, answer, context)
+        results = self.evaluate(query, answer, context, reference)
         total_weight = 0.0
         weighted_sum = 0.0
         for r in results:

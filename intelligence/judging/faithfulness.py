@@ -19,6 +19,7 @@ class FaithfulnessJudge(BaseJudge):
         query: str,
         answer: str,
         context: Sequence[str],
+        reference: str = "",
     ) -> JudgeResult:
         if not answer.strip():
             return JudgeResult(
