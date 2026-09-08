@@ -8,6 +8,7 @@ import threading
 from dataclasses import dataclass
 
 from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +47,8 @@ class StreamingDocumentLoader:
 
         try:
             reader = PdfReader(io.BytesIO(content))
-        except Exception as e:
-            raise ValueError(f"Cannot read PDF: {e}")
+        except (PdfReadError, ValueError, TypeError) as e:
+            raise ValueError(f"Cannot read PDF: {e}") from e
 
         pages = len(reader.pages)
         parts: list[str] = []
@@ -60,7 +61,7 @@ class StreamingDocumentLoader:
 
             try:
                 text = reader.pages[i].extract_text() or ""
-            except Exception as e:
+            except (PdfReadError, IndexError, TypeError) as e:
                 logger.warning("Failed to extract page %d: %s", i, e)
                 continue
 

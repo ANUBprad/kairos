@@ -53,7 +53,9 @@ class IngestionPipeline:
             text_content = load_document(content, mime_type)
             metrics.parsing_ms = (time.monotonic() - stage_start) * 1000
             metrics.text_length = len(text_content)
-        except Exception as e:
+        except ValueError as e:
+            raise ValueError(f"Document Loading failed: {e}") from e
+        except (OSError, UnicodeDecodeError) as e:
             raise ValueError(f"Document Loading failed: {e}") from e
 
         try:
@@ -61,21 +63,37 @@ class IngestionPipeline:
             chunks = self.chunker.chunk(text_content, strat)
             metrics.chunking_ms = (time.monotonic() - stage_start) * 1000
             metrics.chunk_count = len(chunks)
-        except Exception as e:
+        except ValueError as e:
             raise ValueError(f"Document Chunking failed: {e}") from e
+        except (TypeError, RuntimeError) as e:
+            raise ValueError(f"Document Chunking failed: {e}") from e
+
+        if not chunks:
+            metrics.total_ms = (time.monotonic() - pipeline_start) * 1000
+            logger.info(
+                "Ingestion pipeline produced no chunks",
+                extra={
+                    "filename": filename,
+                    "namespace": namespace,
+                    "strategy": strat,
+                },
+            )
+            return 0
 
         try:
             stage_start = time.monotonic()
             embeddings = self.embedder.embed_batch(chunks)
             metrics.embedding_ms = (time.monotonic() - stage_start) * 1000
-        except Exception as e:
+        except (TimeoutError, ConnectionError, OSError) as e:
+            raise ValueError(f"Document embedding generation failed: {e}") from e
+        except (ValueError, TypeError) as e:
             raise ValueError(f"Document embedding generation failed: {e}") from e
 
         try:
             stage_start = time.monotonic()
             self.store.upsert(namespace, chunks, embeddings, filename)
             metrics.indexing_ms = (time.monotonic() - stage_start) * 1000
-        except Exception as e:
+        except (ConnectionError, OSError, ValueError) as e:
             raise ValueError(f"Vector store indexing failed: {e}") from e
 
         metrics.total_ms = (time.monotonic() - pipeline_start) * 1000

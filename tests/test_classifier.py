@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
 
 from intelligence.classifier.query_classifier import ClassifyQuery, ResponseSchema
 
@@ -108,10 +109,12 @@ class TestClassifyQueryGemini:
         result = classifier.classify_with_confidence("hard query")
         assert result.confidence_score == 0.32
 
-    def test_api_failure_defaults_to_0_5(self) -> None:
-        """When the LLM call itself raises, fall back to confidence=0.5."""
+    def test_transient_api_failure_defaults_to_0_5(self) -> None:
+        """Transient errors (timeout/connection) fall back to confidence=0.5."""
         mock_client = MagicMock()
-        mock_client.models.generate_content.side_effect = Exception("Gemini API error")
+        mock_client.models.generate_content.side_effect = TimeoutError(
+            "Gemini API timed out"
+        )
 
         classifier = self._make_classifier(mock_client)
         result = classifier.classify_with_confidence("failing query")
@@ -119,6 +122,15 @@ class TestClassifyQueryGemini:
         assert result.query_type == "simple"
         assert result.domain is None
         assert result.confidence_score == 0.5
+
+    def test_non_transient_api_failure_propagates(self) -> None:
+        """Unrelated exceptions are not silently swallowed."""
+        mock_client = MagicMock()
+        mock_client.models.generate_content.side_effect = RuntimeError("Gemini API bug")
+
+        classifier = self._make_classifier(mock_client)
+        with pytest.raises(RuntimeError):
+            classifier.classify_with_confidence("failing query")
 
     def test_parse_failure_defaults_to_0_5(self) -> None:
         """When the Gemini response lacks a 'parsed' attribute (e.g. API
@@ -191,9 +203,11 @@ class TestClassifyQueryOpenAI:
         assert result.domain == "tech"
         assert result.confidence_score == 0.89
 
-    def test_api_failure_defaults_to_0_5(self) -> None:
+    def test_transient_api_failure_defaults_to_0_5(self) -> None:
         mock_client = MagicMock()
-        mock_client.chat.completions.create.side_effect = Exception("OpenAI API error")
+        mock_client.chat.completions.create.side_effect = ConnectionError(
+            "OpenAI API unreachable"
+        )
 
         classifier = self._make_classifier(mock_client)
         result = classifier.classify_with_confidence("failing query")
@@ -201,6 +215,14 @@ class TestClassifyQueryOpenAI:
         assert result.query_type == "simple"
         assert result.domain is None
         assert result.confidence_score == 0.5
+
+    def test_non_transient_api_failure_propagates(self) -> None:
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.side_effect = RuntimeError("OpenAI API bug")
+
+        classifier = self._make_classifier(mock_client)
+        with pytest.raises(RuntimeError):
+            classifier.classify_with_confidence("failing query")
 
     def test_invalid_json_defaults_to_0_5(self) -> None:
         mock_client = MagicMock()

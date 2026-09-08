@@ -3,7 +3,7 @@ from intelligence.embeddings.base_embedder import BaseEmbedder
 from openai import OpenAI
 from intelligence.vectorstore.chroma_store import ChromaStore
 from .retriever import BaseRetriever
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from google import genai
 
 
@@ -65,10 +65,10 @@ class MultiHopRetriever(BaseRetriever):
 
             try:
                 hop_data = self._llm_response(prompt=hop_prompt)
-            except Exception as e:
+            except (ValueError, TimeoutError, ConnectionError, OSError) as e:
                 raise ValueError(
                     f"Unable to generate response in Multi Hop retriever. ERROR: {e}"
-                )
+                ) from e
 
             if hop_data.is_enough:
                 break
@@ -104,20 +104,23 @@ class MultiHopRetriever(BaseRetriever):
                     },
                     contents=prompt,
                 )
-
-                try:
-                    # noinspection PyTypeChecker
-                    json_response: MultiHopResponseSchema = answer.parsed
-                    return json_response
-                except Exception as e:
-                    raise ValueError(
-                        f"Unable to parse the data in Multi Hop Retriever. ERROR: {e}"
-                    )
-
-            except Exception as e:
+            except (TimeoutError, ConnectionError, OSError) as e:
+                raise ValueError(
+                    f"Unable to reach provider in Multi Hop Retriever, ERROR: {e}"
+                ) from e
+            except (ValueError, TypeError) as e:
                 raise ValueError(
                     f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}"
-                )
+                ) from e
+
+            try:
+                # noinspection PyTypeChecker
+                json_response: MultiHopResponseSchema = answer.parsed
+                return json_response
+            except (AttributeError, ValidationError, ValueError) as e:
+                raise ValueError(
+                    f"Unable to parse the data in Multi Hop Retriever. ERROR: {e}"
+                ) from e
 
         elif self.llm_provider in ["openai", "ollama"]:
             try:
@@ -127,20 +130,23 @@ class MultiHopRetriever(BaseRetriever):
                     response_format={"type": "json_object"},
                     messages=[{"role": "user", "content": prompt}],
                 )
-
-                try:
-                    json_response = MultiHopResponseSchema.model_validate_json(
-                        str(answer.choices[0].message.content)
-                    )
-                    return json_response
-                except Exception as e:
-                    raise ValueError(
-                        f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}"
-                    )
-
-            except Exception as e:
+            except (TimeoutError, ConnectionError, OSError) as e:
+                raise ValueError(
+                    f"Unable to reach provider in Multi Hop Retriever, ERROR: {e}"
+                ) from e
+            except (ValueError, TypeError) as e:
                 raise ValueError(
                     f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}"
+                ) from e
+
+            try:
+                json_response = MultiHopResponseSchema.model_validate_json(
+                    str(answer.choices[0].message.content)
                 )
+                return json_response
+            except (AttributeError, ValidationError, ValueError) as e:
+                raise ValueError(
+                    f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}"
+                ) from e
         else:
             raise ValueError("Unidentified model provider given")

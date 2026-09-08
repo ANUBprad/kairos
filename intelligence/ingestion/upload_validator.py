@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass
 
 from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ def validate_pdf_safety(content: bytes) -> str | None:
         num_pages = len(reader.pages)
         if num_pages > 10000:
             return f"PDF has excessive pages: {num_pages}"
-    except Exception as e:
+    except (PdfReadError, ValueError, TypeError) as e:
         return f"PDF parsing failed: {e}"
     return None
 

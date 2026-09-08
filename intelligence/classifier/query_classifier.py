@@ -1,7 +1,7 @@
 import logging
 
 from google import genai
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from openai import OpenAI
 from pathlib import Path
 from typing import Literal, Union
@@ -29,8 +29,8 @@ class ClassifyQuery:
         try:
             with open(prompt_path, mode="r") as f:
                 self.prompt = f.read()
-        except Exception as e:
-            raise ValueError(f"Unable to open the prompt file. ERROR: {e}")
+        except (OSError, UnicodeDecodeError) as e:
+            raise ValueError(f"Unable to open the prompt file. ERROR: {e}") from e
 
         self.model = model_name
 
@@ -48,14 +48,24 @@ class ClassifyQuery:
                     },
                 )
 
-            except Exception as e:
-                logger.warning("Gemini classification failed, defaulting to simple: %s", e)
+            except (TimeoutError, ConnectionError, OSError) as e:
+                logger.warning(
+                    "Gemini classification unreachable, defaulting to simple: %s", e
+                )
+                return ResponseSchema(query_type="simple", domain=None)
+
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    "Gemini classification failed, defaulting to simple: %s", e
+                )
                 return ResponseSchema(query_type="simple", domain=None)
 
             try:
                 classified_query: ResponseSchema = response.parsed
-            except Exception as e:
-                logger.warning("Gemini response parse failed, defaulting to simple: %s", e)
+            except (AttributeError, ValidationError, ValueError) as e:
+                logger.warning(
+                    "Gemini response parse failed, defaulting to simple: %s", e
+                )
                 return ResponseSchema(query_type="simple", domain=None)
             return classified_query
 
@@ -67,15 +77,25 @@ class ClassifyQuery:
                     messages=[{"role": "user", "content": complete_prompt}],
                 )
 
-            except Exception as e:
-                logger.warning("OpenAI classification failed, defaulting to simple: %s", e)
+            except (TimeoutError, ConnectionError, OSError) as e:
+                logger.warning(
+                    "OpenAI classification unreachable, defaulting to simple: %s", e
+                )
+                return ResponseSchema(query_type="simple", domain=None)
+
+            except (ValueError, TypeError) as e:
+                logger.warning(
+                    "OpenAI classification failed, defaulting to simple: %s", e
+                )
                 return ResponseSchema(query_type="simple", domain=None)
 
             try:
                 response_json = response.choices[0].message.content
                 return ResponseSchema.model_validate_json(response_json)
-            except Exception as e:
-                logger.warning("OpenAI response parse failed, defaulting to simple: %s", e)
+            except (AttributeError, ValidationError, ValueError) as e:
+                logger.warning(
+                    "OpenAI response parse failed, defaulting to simple: %s", e
+                )
                 return ResponseSchema(query_type="simple", domain=None)
         else:
             return ResponseSchema(query_type="simple", domain=None)

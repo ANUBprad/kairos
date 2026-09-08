@@ -44,6 +44,7 @@ class RealRetriever:
         documents: list = []
         num_hops = 1
         error = ""
+        degraded = False
         planner_decision: Dict[str, Any] = {}
 
         try:
@@ -61,8 +62,15 @@ class RealRetriever:
                     documents = self._normalize_documents(raw)
                 elif hasattr(raw, "documents"):
                     documents = self._normalize_documents(raw.documents)
+        except (ConnectionError, OSError) as e:
+            error = f"Vector store unreachable: {e}"
+            degraded = True
+        except ValueError as e:
+            error = str(e)
         except Exception as e:
             error = str(e)
+
+        degraded = degraded or bool(getattr(retriever, "degraded_mode", False))
 
         elapsed = (time.monotonic() - start) * 1000.0
         return RetrievalResult(
@@ -77,6 +85,7 @@ class RealRetriever:
             error=error,
             num_hops=num_hops,
             planner_decision=planner_decision,
+            metadata={"degraded_mode": degraded},
         )
 
     def plan_and_retrieve(
