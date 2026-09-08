@@ -1,9 +1,6 @@
 from .base_embedder import BaseEmbedder
 from sentence_transformers import SentenceTransformer as sentTf
-from dotenv import load_dotenv
 import os
-
-load_dotenv()
 
 
 class LocalEmbedder(BaseEmbedder):

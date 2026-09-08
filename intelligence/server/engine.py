@@ -22,7 +22,7 @@ from intelligence.metrics.prometheus_metrics import (
 from intelligence.retrieval.simple_retriever import SimpleRetriever
 from intelligence.telemetry.collector import TelemetryCollector
 
-import rag_pb2 as _pb
+from generated.python import rag_pb2 as _pb
 
 logger = logging.getLogger(__name__)
 
