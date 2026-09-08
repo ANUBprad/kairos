@@ -6,6 +6,7 @@ import (
 	pb "Kairos/generated/go/proto"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc"
 )
 
 type queryResponseStruct struct {
@@ -25,6 +26,7 @@ type docHandlerResponse struct {
 
 type QueryHandler struct {
 	intelClient pb.IntelligenceServiceClient
+	conn        *grpc.ClientConn
 	semCache    *cache.SemanticCache
 }
 
@@ -38,12 +40,13 @@ type JobHandler struct {
 	tracker *queue.JobTracker
 }
 
-func NewQueryHandler(client pb.IntelligenceServiceClient, ttl, capacity int, simThreshold float32) *QueryHandler {
+func NewQueryHandler(client pb.IntelligenceServiceClient, conn *grpc.ClientConn, ttl, capacity int, simThreshold float32) *QueryHandler {
 	cacheStore := cache.NewLRU(capacity, ttl)
 	embedCache := cache.NewEmbeddingCache(cacheStore)
 	semCache := cache.NewSemanticCache(cacheStore, embedCache, simThreshold)
 	return &QueryHandler{
 		intelClient: client,
+		conn:        conn,
 		semCache:    semCache,
 	}
 }

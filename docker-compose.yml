@@ -29,6 +29,9 @@ services:
       - "8001:8001"
     env_file:
       - .env
+    environment:
+      - CHROMA_STORE_HOST=chromadb
+      - CHROMA_STORE_PORT=8000
     deploy:
       resources:
         limits:
@@ -57,7 +60,8 @@ services:
       - .env
     environment:
       - KAIROS_ENVIRONMENT=${KAIROS_ENVIRONMENT:-development}
-      - KAIROS_CHROMA_STORE_HOST=chromadb
+      - CHROMA_STORE_HOST=chromadb
+      - CHROMA_STORE_PORT=8000
       - KAIROS_INTELLIGENCE_HOST=intelligence
     deploy:
       resources:
@@ -86,7 +90,8 @@ services:
     env_file:
       - .env
     environment:
-      - KAIROS_CHROMA_STORE_HOST=chromadb
+      - CHROMA_STORE_HOST=chromadb
+      - CHROMA_STORE_PORT=8000
       - KAIROS_INTELLIGENCE_HOST=intelligence
       - STREAMLIT_SERVER_HEADLESS=true
     deploy:
@@ -117,7 +122,8 @@ services:
     env_file:
       - .env
     environment:
-      - KAIROS_CHROMA_STORE_HOST=chromadb
+      - CHROMA_STORE_HOST=chromadb
+      - CHROMA_STORE_PORT=8000
     deploy:
       resources:
         limits:
@@ -125,7 +131,7 @@ services:
           memory: "2G"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if __import__('intelligence.worker', fromlist=['']).Worker is not None else 1)"]
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if __import__('intelligence.worker', fromlist=['process_ingestion_job']).process_ingestion_job is not None else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -145,7 +151,8 @@ services:
     env_file:
       - .env
     environment:
-      - PYTHON_INTELLIGENCE_ADDR=intelligence:28080
+      - INTELLIGENCE_HOST=intelligence
+      - INTELLIGENCE_PORT=28080
     deploy:
       resources:
         limits:

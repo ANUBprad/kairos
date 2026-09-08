@@ -10,9 +10,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
 )
 
-func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, inQueue *queue.IngestionQueue, tracker *queue.JobTracker) (*chi.Mux, error) {
+func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, conn *grpc.ClientConn, inQueue *queue.IngestionQueue, tracker *queue.JobTracker) (*chi.Mux, error) {
 	mainRouter := chi.NewRouter()
 
 	ingestHandler := NewIngestHandler(int32(envVar.MaxFileSize), inQueue, tracker)
@@ -35,7 +36,7 @@ func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, 
 		MaxAge:           500,
 	}))
 
-	queryHandler := NewQueryHandler(intelClient, envVar.Cache.TTL, envVar.Cache.MaxSize, float32(envVar.Cache.SimilarityThreshold))
+	queryHandler := NewQueryHandler(intelClient, conn, envVar.Cache.TTL, envVar.Cache.MaxSize, float32(envVar.Cache.SimilarityThreshold))
 
 	mainRouter.Use(middleware.Tracing)
 	mainRouter.Use(middleware.Logging)
@@ -46,7 +47,7 @@ func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, 
 	v1Router.Use(middleware.Namespace)
 	v1Router.Use(middleware.RateLimit(envVar))
 
-	mainRouter.Get("/health", CheckHealth)
+	mainRouter.Get("/health", queryHandler.CheckHealth)
 	v1Router.Post("/query", queryHandler.HandleUserQuery)
 	v1Router.Post("/ingest", ingestHandler.IngestUserDoc)
 	v1Router.Get("/jobs/{job_id}", jobHandler.UserJobHandler)

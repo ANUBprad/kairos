@@ -15,5 +15,5 @@ ENV PYTHONPATH=/app/intelligence:/app/generated/python \
     PYTHONDONTWRITEBYTECODE=1
 USER kairos
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python3 -c "import sys; sys.exit(0 if __import__('intelligence.worker', fromlist=['']).Worker is not None else 1)"
+    CMD python3 -c "import sys; sys.exit(0 if __import__('intelligence.worker', fromlist=['process_ingestion_job']).process_ingestion_job is not None else 1)"
 ENTRYPOINT ["python", "-u", "-m", "intelligence.worker"]

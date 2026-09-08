@@ -83,6 +83,7 @@ func (semCache *SemanticCache) Get(namespace string, embedding []float32) (strin
 	for _, key := range keys {
 		vec, ok := semCache.embedCache.Get(key)
 		if !ok {
+			semCache.pruneNamespaceIndex(namespace, key)
 			continue
 		}
 		cosSim, err := CalcCosineSim(embedding, vec)
@@ -108,6 +109,16 @@ func (semCache *SemanticCache) Get(namespace string, embedding []float32) (strin
 	}
 	atomic.AddInt64(&semCache.hits, 1)
 	return response, true
+}
+
+func (semCache *SemanticCache) pruneNamespaceIndex(namespace, key string) {
+	semCache.indexMu.Lock()
+	defer semCache.indexMu.Unlock()
+	ns := semCache.namespaceIndex[namespace]
+	delete(ns, key)
+	if len(ns) == 0 {
+		delete(semCache.namespaceIndex, namespace)
+	}
 }
 
 func (semCache *SemanticCache) Size() int {

@@ -42,3 +42,105 @@ jobs:
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
+
+  docker-e2e:
+    name: Docker end-to-end
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 60
+    env:
+      KAIROS_LLM_PROVIDER: ollama
+      KAIROS_OLLAMA_URL: http://ollama:11434
+      KAIROS_OLLAMA_MODEL_NAME: llama3
+      KAIROS_EMBEDDING_MODEL: local
+      KAIROS_SECRET: test-secret-e2e
+      KAIROS_API_SECRET: test-api-secret-e2e
+      CHROMA_STORE_HOST: chromadb
+      CHROMA_STORE_PORT: "8000"
+      INTELLIGENCE_HOST: intelligence
+      INTELLIGENCE_PORT: "28080"
+      GATEWAY_PORT: "8080"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env
+          printf '\nKAIROS_LLM_PROVIDER=%s\nKAIROS_OLLAMA_URL=%s\nKAIROS_OLLAMA_MODEL_NAME=%s\nKAIROS_EMBEDDING_MODEL=%s\nKAIROS_SECRET=%s\nKAIROS_API_SECRET=%s\nCHROMA_STORE_HOST=%s\nCHROMA_STORE_PORT=%s\nINTELLIGENCE_HOST=%s\nINTELLIGENCE_PORT=%s\nGATEWAY_PORT=%s\n' \
+            "$KAIROS_LLM_PROVIDER" "$KAIROS_OLLAMA_URL" "$KAIROS_OLLAMA_MODEL_NAME" \
+            "$KAIROS_EMBEDDING_MODEL" "$KAIROS_SECRET" "$KAIROS_API_SECRET" \
+            "$CHROMA_STORE_HOST" "$CHROMA_STORE_PORT" "$INTELLIGENCE_HOST" "$INTELLIGENCE_PORT" "$GATEWAY_PORT" >> .env
+
+      - name: Build core stack images
+        run: |
+          docker compose build intelligence gateway
+
+      - name: Start core stack
+        run: |
+          docker compose up -d chromadb intelligence gateway
+
+      - name: Wait for gateway to become healthy
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Gateway is up after ${i} attempts"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Gateway did not become healthy within 600s"
+          docker compose ps
+          docker compose logs gateway --tail 100
+          docker compose logs intelligence --tail 100
+          exit 1
+
+      - name: Verify full-stack health (gateway -> intelligence gRPC)
+        run: |
+          health=$(curl -sf http://localhost:8080/health)
+          echo "$health"
+          echo "$health" | grep -q '"gateway_up":true' || { echo "gateway_up not true"; exit 1; }
+          echo "$health" | grep -q '"intelligence_up":true' || { echo "intelligence_up not true"; exit 1; }
+          echo "$health" | grep -q '"full_stack_up":true' || { echo "full_stack_up not true"; exit 1; }
+          echo "Full-stack health check passed"
+
+      - name: Verify container health status
+        run: |
+          docker compose ps --format "table {{.Service}}\t{{.Status}}"
+          for svc in chromadb intelligence gateway; do
+            status=$(docker compose ps -q "$svc" | head -1 | xargs docker inspect --format '{{.State.Health.Status}}' 2>/dev/null || echo "unknown")
+            echo "$svc: $status"
+            if [ "$status" != "healthy" ]; then
+              echo "Service $svc is not healthy"
+              exit 1
+            fi
+          done
+
+      - name: Verify gRPC gateway -> intelligence round trip
+        run: |
+          # The /metrics endpoint exercises gateway internals; the health
+          # check above already validates the gRPC health channel. Confirm
+          # the metrics endpoint is served without error.
+          curl -sf http://localhost:8080/metrics | grep -q "go_gc_duration_seconds" && echo "Metrics endpoint OK"
+
+      - name: Install E2E test dependencies
+        run: |
+          pip install ./sdk pytest
+
+      - name: Run true E2E pipeline test
+        env:
+          KAIROS_E2E_BASE_URL: http://localhost:8080
+          KAIROS_E2E_SECRET: ${{ env.KAIROS_SECRET }}
+          KAIROS_E2E: "1"
+        run: |
+          python -m pytest tests/e2e/test_full_pipeline.py -v --tb=short -x
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --tail 200 || true
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

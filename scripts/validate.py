@@ -77,7 +77,7 @@ def check_directories() -> list[str]:
         root / "gateway",
         root / "docker",
         root / "tests",
-        root / "dashboard",
+        root / "apps" / "internal-dashboard",
     ]
     for d in required:
         if d.is_dir():

@@ -37,7 +37,7 @@ func main() {
 
 	tracker := queue.NewJobTracker()
 	inQueue := queue.NewIngestionQueue(context.Background(), tracker, pythonClient)
-	mainRouter, routingErr := api.NewRouter(envVar, pythonClient, inQueue, tracker)
+	mainRouter, routingErr := api.NewRouter(envVar, pythonClient, conn, inQueue, tracker)
 
 	if routingErr != nil {
 		slog.Error("Unable to get router.",

@@ -38,7 +38,11 @@ def run(cmd: list[str], cwd: str | None = None) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Kairos release workflow")
-    parser.add_argument("--execute", action="store_true", help="Execute the full release (default: dry-run)")
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="Execute the full release (default: dry-run)",
+    )
     args = parser.parse_args()
 
     dry_run = not args.execute
@@ -74,7 +78,9 @@ def main() -> int:
     step("4/5  Generating reports")
     if dry_run:
         print("[DRY-RUN] Would run: python scripts/benchmark.py --report-only")
-    elif not run([sys.executable, "scripts/benchmark.py", "--report-only"], cwd=str(root)):
+    elif not run(
+        [sys.executable, "scripts/benchmark.py", "--report-only"], cwd=str(root)
+    ):
         print("[WARN] Report generation had issues, continuing...")
 
     # Step 5: Create release artifacts
@@ -82,7 +88,6 @@ def main() -> int:
     if dry_run:
         print("[DRY-RUN] Would create release tarball and version tag")
     else:
-        import json
         from datetime import datetime, timezone
         from intelligence.artifacts.report_registry import ReportRegistry
         from intelligence.artifacts.version_tracking import VersionTracker

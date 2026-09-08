@@ -15,9 +15,9 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="#"><img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build Status" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/tests-1%2C800%2B-brightgreen.svg" alt="Tests" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/tests-1%2C813-brightgreen.svg" alt="Tests" /></a>
   <a href="#"><img src="https://img.shields.io/badge/python-3.11+-3776AB.svg" alt="Python 3.11+" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/go-1.22+-00ADD8.svg" alt="Go 1.22+" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/go-1.26+-00ADD8.svg" alt="Go 1.26+" /></a>
   <a href="#"><img src="https://img.shields.io/badge/next.js-15-000000" alt="Next.js 15" /></a>
   <a href="#"><img src="https://img.shields.io/badge/docker-ready-2496ED" alt="Docker" /></a>
 </p>
@@ -152,7 +152,7 @@ flowchart TD
 Next.js 15 · React 19 · TypeScript 5.8 · Tailwind CSS v4 · Framer Motion · Recharts
 
 **Backend**
-Go 1.22 · Chi Router · gRPC · Protocol Buffers · FastAPI
+Go 1.26 · Chi Router · gRPC · Protocol Buffers · FastAPI
 
 **AI & ML**
 Python 3.11+ · SentenceTransformers · NumPy · SciPy · scikit-learn
@@ -177,7 +177,7 @@ kairos/
 ├── intelligence/         # Python engine (retrieval, embeddings, ingestion)
 ├── benchmarks/           # Evaluation framework (load tests, RAG evaluation)
 ├── sdk/                  # Python SDK
-├── tests/                # 1,800+ tests
+├── tests/                # 1,813 unit & integration tests (41 files)
 ├── docker/               # Multi-stage Dockerfiles
 ├── docs/                 # Documentation
 └── proto/                # gRPC contracts
@@ -224,14 +224,14 @@ docker compose up -d
 | Service | URL |
 |---------|-----|
 | Gateway API | http://localhost:8080 |
-| Grafana | http://localhost:3000 |
+| Grafana | http://localhost:3000 (conflicts with the Portal dev server, see below) |
 | Prometheus | http://localhost:9090 |
 
 > The web Portal (Next.js) is not part of the compose stack — run it with `npm run dev` in `apps/portal` (defaults to http://localhost:3000).
 
 ### Manual Setup
 
-**Prerequisites:** Node.js 20+, Python 3.11+, Go 1.22+, PostgreSQL 15+ (with pgvector)
+**Prerequisites:** Node.js 20+, Python 3.11+, Go 1.26+, PostgreSQL 15+ (with pgvector)
 
 ```bash
 git clone https://github.com/kairos-ai/kairos.git
@@ -330,7 +330,7 @@ docker compose down        # Stop
 | `GATEWAY_PORT` | Gateway port | `8080` |
 | `KAIROS_RATE_LIMIT` | Requests per second per namespace | — |
 | `KAIROS_BURST_LIMIT` | Burst limit | — |
-| `MAX_FILE_SIZE` | Max upload size in MB | `50` |
+| `MAX_FILE_SIZE` | Max upload size in MB | `10` |
 | `KAIROS_CACHE_MAX_SIZE` | Semantic cache size | — |
 | `KAIROS_CACHE_TTL` | Semantic cache TTL (seconds) | — |
 | `KAIROS_CACHE_SIMILARITY_THRESHOLD` | Cache similarity threshold | — |
@@ -396,6 +396,31 @@ See [`.env.example`](.env.example) for the full configuration reference.
 | Cohen's d | Effect size measurement |
 | Cliff's delta | Non-parametric effect size |
 | Confidence intervals | 95% CI for all metrics |
+
+---
+
+## Production Status
+
+**Kairos is in early production-viable stage.** It is deployed and exercised in
+real workloads, but carries documented caveats:
+
+- **Error handling:** dependency failures (vector store, LLM providers) map to
+  distinct gRPC status codes and the retrieval pipeline degrades to BM25-only
+  when ChromaDB is unreachable. Bare `except Exception` remains only in
+  defensive observer/callback paths.
+- **gRPC security:** the gateway ↔ intelligence channel runs on a private Docker
+  network without mTLS. Do not expose it to the public internet.
+- **Tests:** 1,813 unit & integration tests (pytest matrix on Python 3.11/3.12).
+  Frontend coverage is not yet implemented.
+- **Deployment:** Docker Compose is the supported path. See
+  [SECURITY.md](SECURITY.md) for the threat model and trust boundaries.
+
+### Known Limitations
+
+- Frontend has no automated tests yet.
+- Semantic cache is exact-threshold based (cosine similarity), tuned via
+  `KAIROS_CACHE_SIMILARITY_THRESHOLD`.
+- ChromaDB is the only vector store currently wired into the gateway.
 
 ---
 

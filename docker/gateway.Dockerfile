@@ -8,6 +8,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o kairos-gateway ./gateway
 
 FROM gcr.io/distroless/static-debian12
+COPY --from=busybox:musl /bin/wget /usr/bin/wget
 COPY --from=builder /app/kairos-gateway /app/kairos-gateway
 COPY --from=builder /app/templates /app/templates
 COPY --from=builder /app/static /app/static
