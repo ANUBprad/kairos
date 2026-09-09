@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """In-process evaluation runner construction.
 
 Builds the production :class:`RetrievalEngine` and an :class:`EvaluationRunner`
@@ -7,6 +5,8 @@ from environment configuration, so the REST API and the CLI can run golden
 datasets end to end without going through gRPC. Heavy constructors are imported
 lazily so that importing this module stays cheap.
 """
+
+from __future__ import annotations
 
 from typing import Optional
 
@@ -125,9 +125,7 @@ def _build_llm_client(cfg):
 
         from intelligence.llm.openai_llm import OpenaiLLM
 
-        client = OpenAI(
-            base_url=cfg.ollama_url, timeout=cfg.provider_timeout_seconds
-        )
+        client = OpenAI(base_url=cfg.ollama_url, timeout=cfg.provider_timeout_seconds)
         return (
             client,
             OpenaiLLM(client=client, model_name=cfg.ollama_model_name),

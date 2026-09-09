@@ -93,8 +93,7 @@ class CompositeJudge:
         reference: str = "",
     ) -> Dict[str, JudgeResult]:
         return {
-            r.dimension: r
-            for r in self.evaluate(query, answer, context, reference)
+            r.dimension: r for r in self.evaluate(query, answer, context, reference)
         }
 
     def composite_score(

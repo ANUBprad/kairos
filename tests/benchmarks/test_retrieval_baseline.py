@@ -11,20 +11,16 @@ Run:
 
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from intelligence.retrieval.persistent_bm25 import (
-    BM25Config,
     PersistentBM25Index,
     _tokenize,
 )
 from intelligence.planner.planner_config import (
     BUDGET_TABLE,
-    CONFIDENCE_HIGH,
     CONFIDENCE_MEDIUM,
     FALLBACK_THRESHOLD_FACTOR,
     STRATEGY_ESCALATION_MAP,
@@ -33,7 +29,7 @@ from intelligence.planner.planner_config import (
     RetrievalBudget,
 )
 from intelligence.planner.budget_allocator import allocate_budget
-from intelligence.planner.fallback_manager import FallbackManager, FallbackDecision
+from intelligence.planner.fallback_manager import FallbackManager
 from intelligence.classifier.strategy_selector import get_config
 from intelligence.classifier.query_classifier import ResponseSchema
 
@@ -598,7 +594,9 @@ class TestSimpleRetrieverFusion:
         ]
         dense_results = all_chunks[:3]
         retriever = self._make_retriever(dense_results, all_chunks)
-        results = retriever.retrieve_top_k("test_namespace", top_k=3, query="Apple revenue")
+        results = retriever.retrieve_top_k(
+            "test_namespace", top_k=3, query="Apple revenue"
+        )
         assert len(results) <= 3
         assert len(results) > 0
 

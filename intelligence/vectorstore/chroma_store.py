@@ -54,9 +54,7 @@ class ChromaStore:
             collection = self.client.get_collection(name=namespace)
             all_chunks = collection.get()
         except NotFoundError as e:
-            raise ValueError(
-                f"Unable to find the namespace. Error: {e}"
-            ) from e
+            raise ValueError(f"Unable to find the namespace. Error: {e}") from e
         except (ConnectionError, OSError, ValueError) as e:
             raise ConnectionError(
                 f"Vector store unavailable for namespace '{namespace}': {e}"

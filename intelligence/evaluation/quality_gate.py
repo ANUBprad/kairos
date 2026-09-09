@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Quality gates over evaluation run aggregates.
 
 Modeled after Prisma ``QualityGate.conditions`` and the portal's
@@ -9,6 +7,8 @@ flattened aggregates) with ``gt``/``gte``/``lt``/``lte``/``eq``/``neq``
 operators. Gates apply to eval/publish/release time only, never production
 traffic. Pure stdlib; no new dependencies.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, List

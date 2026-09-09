@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Regression + drift baseline for evaluation runs.
 
 Persists a JSON snapshot of :class:`RunResult` aggregates and compares a
@@ -8,9 +6,11 @@ no new dependencies. Gate consumers (CLI ``--baseline``, Phase E quality
 gates, Phase F CI job) all feed from :func:`check_regression`.
 """
 
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from intelligence.evaluation.entry_result import RunResult
 
@@ -28,7 +28,15 @@ DEFAULT_TOLERANCES: Dict[str, float] = {
 }
 # Metrics where lower is better (latency, cost). Absent metrics default to
 # higher-is-better.
-_LOWER_IS_BETTER = {"mean_latency.classify", "mean_latency.retrieval", "mean_latency.generation", "mean_latency.total", "total_cost_usd", "total_tokens.prompt_tokens", "total_tokens.completion_tokens"}
+_LOWER_IS_BETTER = {
+    "mean_latency.classify",
+    "mean_latency.retrieval",
+    "mean_latency.generation",
+    "mean_latency.total",
+    "total_cost_usd",
+    "total_tokens.prompt_tokens",
+    "total_tokens.completion_tokens",
+}
 
 
 def _flatten(agg: Dict[str, object], prefix: str = "") -> Dict[str, float]:
@@ -122,7 +130,9 @@ def check_regression(
     deltas: Dict[str, MetricDelta] = {}
     for metric, b_value in baseline.items():
         if metric not in current:
-            deltas[metric] = MetricDelta(metric, b_value, 0.0, effective.get(metric, 0.05), False)
+            deltas[metric] = MetricDelta(
+                metric, b_value, 0.0, effective.get(metric, 0.05), False
+            )
             continue
         c_value = current[metric]
         tol = effective.get(metric, 0.05)

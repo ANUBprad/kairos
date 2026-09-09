@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from benchmarks.dataset.loader import QueryEntry
 from benchmarks.metrics import LatencyTracker, precision_at_k, recall_at_k
@@ -171,7 +171,10 @@ class EvaluationRunner:
             error_type = type(exc).__name__
             error_msg = _sanitize_error(str(exc)[:500])
             logger.warning(
-                "Entry %s failed: %s: %s", entry.id, error_type, error_msg,
+                "Entry %s failed: %s: %s",
+                entry.id,
+                error_type,
+                error_msg,
             )
             return EntryResult(
                 entry_id=entry.id,

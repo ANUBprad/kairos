@@ -63,9 +63,7 @@ class LLMJudge(BaseJudge):
         if not self.dimension:
             raise ValueError("LLMJudge subclasses must set a dimension")
         if fallback_judge is _DEFAULT_FALLBACK:
-            fallback_judge = self._make_default_fallback(
-                threshold_pass, threshold_warn
-            )
+            fallback_judge = self._make_default_fallback(threshold_pass, threshold_warn)
         self.llm = llm
         self.fallback_judge = fallback_judge
         self.threshold_pass = threshold_pass

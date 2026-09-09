@@ -22,9 +22,7 @@ class TestEstimateCost:
         assert estimate_cost("gpt-4o", 1_000_000, 1_000_000) == pytest.approx(12.50)
 
     def test_known_model_gpt4_mini(self) -> None:
-        assert estimate_cost("gpt-4o-mini", 1_000_000, 1_000_000) == pytest.approx(
-            0.75
-        )
+        assert estimate_cost("gpt-4o-mini", 1_000_000, 1_000_000) == pytest.approx(0.75)
 
     def test_unknown_model_uses_default(self) -> None:
         # default $2.50/M in, $10/M out
@@ -108,12 +106,8 @@ class TestRunResultCost:
     def test_total_cost(self) -> None:
         r = RunResult(
             results=(
-                EntryResult(
-                    entry_id="Q1", query="q", query_type="s", cost_usd=0.1
-                ),
-                EntryResult(
-                    entry_id="Q2", query="q", query_type="s", cost_usd=0.2
-                ),
+                EntryResult(entry_id="Q1", query="q", query_type="s", cost_usd=0.1),
+                EntryResult(entry_id="Q2", query="q", query_type="s", cost_usd=0.2),
             )
         )
         assert r.total_cost() == pytest.approx(0.3)
@@ -124,9 +118,7 @@ class TestRunResultCost:
     def test_to_dict_includes_total_cost(self) -> None:
         r = RunResult(
             results=(
-                EntryResult(
-                    entry_id="Q1", query="q", query_type="s", cost_usd=0.15
-                ),
+                EntryResult(entry_id="Q1", query="q", query_type="s", cost_usd=0.15),
             )
         )
         assert r.to_dict()["total_cost_usd"] == pytest.approx(0.15)

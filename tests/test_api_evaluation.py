@@ -45,7 +45,9 @@ def _client() -> TestClient:
 def test_evaluate_validation_errors() -> None:
     client = _client()
 
-    resp = client.post("/api/v1/evaluation/evaluate", json={"retrieved": [], "relevant": []})
+    resp = client.post(
+        "/api/v1/evaluation/evaluate", json={"retrieved": [], "relevant": []}
+    )
     assert resp.status_code == 400
 
     resp = client.post(
@@ -109,7 +111,12 @@ def test_build_judge_algorithmic_only() -> None:
     from intelligence.evaluation.factory import _build_judge
 
     judge = _build_judge(use_llm_judges=False, llm_client=None)
-    assert {j.dimension for j in judge.judges} == {"faithfulness", "relevance", "hallucination", "grounding"}
+    assert {j.dimension for j in judge.judges} == {
+        "faithfulness",
+        "relevance",
+        "hallucination",
+        "grounding",
+    }
 
 
 def test_build_judge_requires_llm_client_for_llm_judges() -> None:

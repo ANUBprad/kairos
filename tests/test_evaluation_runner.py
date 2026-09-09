@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -170,11 +170,13 @@ class TestRunResult:
         assert r.total == 2
 
     def test_succeeded(self) -> None:
-        r = RunResult(results=(
-            self._make_entry("Q1", status="ok"),
-            self._make_entry("Q2", status="error"),
-            self._make_entry("Q3", status="ok"),
-        ))
+        r = RunResult(
+            results=(
+                self._make_entry("Q1", status="ok"),
+                self._make_entry("Q2", status="error"),
+                self._make_entry("Q3", status="ok"),
+            )
+        )
         assert r.succeeded == 2
         assert r.failed == 1
         assert r.success_rate == pytest.approx(2 / 3)
@@ -185,10 +187,12 @@ class TestRunResult:
         assert r.success_rate == 0.0
 
     def test_mean_recall(self) -> None:
-        r = RunResult(results=(
-            self._make_entry("Q1", recall=1.0),
-            self._make_entry("Q2", recall=0.5),
-        ))
+        r = RunResult(
+            results=(
+                self._make_entry("Q1", recall=1.0),
+                self._make_entry("Q2", recall=0.5),
+            )
+        )
         assert r.mean_recall() == pytest.approx(0.75)
 
     def test_mean_recall_none_when_no_ground_truth(self) -> None:
@@ -196,52 +200,68 @@ class TestRunResult:
         assert r.mean_recall() is None
 
     def test_mean_precision(self) -> None:
-        r = RunResult(results=(
-            self._make_entry("Q1", precision=1.0),
-            self._make_entry("Q2", precision=0.0),
-        ))
+        r = RunResult(
+            results=(
+                self._make_entry("Q1", precision=1.0),
+                self._make_entry("Q2", precision=0.0),
+            )
+        )
         assert r.mean_precision() == pytest.approx(0.5)
 
     def test_mean_latency(self) -> None:
-        r = RunResult(results=(
-            self._make_entry("Q1", latency_total=0.1),
-            self._make_entry("Q2", latency_total=0.3),
-        ))
+        r = RunResult(
+            results=(
+                self._make_entry("Q1", latency_total=0.1),
+                self._make_entry("Q2", latency_total=0.3),
+            )
+        )
         lat = r.mean_latency()
         assert lat["total"] == pytest.approx(0.2)
 
     def test_mean_judge_scores(self) -> None:
-        r = RunResult(results=(
-            self._make_entry("Q1", judge_scores={"faithfulness": 0.8, "relevance": 0.6}),
-            self._make_entry("Q2", judge_scores={"faithfulness": 1.0, "relevance": 0.4}),
-        ))
+        r = RunResult(
+            results=(
+                self._make_entry(
+                    "Q1", judge_scores={"faithfulness": 0.8, "relevance": 0.6}
+                ),
+                self._make_entry(
+                    "Q2", judge_scores={"faithfulness": 1.0, "relevance": 0.4}
+                ),
+            )
+        )
         scores = r.mean_judge_scores()
         assert scores["faithfulness"] == pytest.approx(0.9)
         assert scores["relevance"] == pytest.approx(0.5)
 
     def test_total_tokens(self) -> None:
-        r = RunResult(results=(
-            self._make_entry("Q1", prompt_tokens=100, completion_tokens=50),
-            self._make_entry("Q2", prompt_tokens=200, completion_tokens=30),
-        ))
+        r = RunResult(
+            results=(
+                self._make_entry("Q1", prompt_tokens=100, completion_tokens=50),
+                self._make_entry("Q2", prompt_tokens=200, completion_tokens=30),
+            )
+        )
         tokens = r.total_tokens()
         assert tokens["prompt_tokens"] == 300
         assert tokens["completion_tokens"] == 80
 
     def test_per_type_results(self) -> None:
-        r = RunResult(results=(
-            self._make_entry("Q1", query_type="simple"),
-            self._make_entry("Q2", query_type="complex"),
-            self._make_entry("Q3", query_type="simple"),
-        ))
+        r = RunResult(
+            results=(
+                self._make_entry("Q1", query_type="simple"),
+                self._make_entry("Q2", query_type="complex"),
+                self._make_entry("Q3", query_type="simple"),
+            )
+        )
         by_type = r.per_type_results()
         assert len(by_type["simple"]) == 2
         assert len(by_type["complex"]) == 1
 
     def test_to_dict(self) -> None:
-        r = RunResult(results=(
-            self._make_entry("Q1", recall=0.8, precision=0.5, latency_total=0.1),
-        ))
+        r = RunResult(
+            results=(
+                self._make_entry("Q1", recall=0.8, precision=0.5, latency_total=0.1),
+            )
+        )
         d = r.to_dict()
         assert d["total"] == 1
         assert d["succeeded"] == 1
@@ -446,7 +466,11 @@ class TestEvaluationRunner:
         assert result.total == 2
 
     def test_judge_integration(self) -> None:
-        from intelligence.judging import CompositeJudge, FaithfulnessJudge, RelevanceJudge
+        from intelligence.judging import (
+            CompositeJudge,
+            FaithfulnessJudge,
+            RelevanceJudge,
+        )
 
         engine = _make_engine()
         judge = CompositeJudge()
@@ -509,14 +533,18 @@ class TestQueryEntryExpectedAnswer:
 
     def test_with_expected_answer(self) -> None:
         e = QueryEntry(
-            id="Q1", text="q", query_type="simple",
+            id="Q1",
+            text="q",
+            query_type="simple",
             expected_answer="The answer is 42.",
         )
         assert e.expected_answer == "The answer is 42."
 
     def test_backward_compat(self) -> None:
         e = QueryEntry(
-            id="Q1", text="q", query_type="simple",
+            id="Q1",
+            text="q",
+            query_type="simple",
             domain="test",
             expected_chunks=["c1"],
         )

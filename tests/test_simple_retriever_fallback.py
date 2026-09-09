@@ -109,6 +109,7 @@ class TestDegradedModeFallback:
                 raise ValueError(
                     "Could not connect to a Chroma server. Are you sure it is running?"
                 )
+
             def get(self, **kwargs):
                 raise ValueError(
                     "Could not connect to a Chroma server. Are you sure it is running?"

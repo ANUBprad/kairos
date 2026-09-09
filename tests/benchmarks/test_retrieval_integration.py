@@ -23,7 +23,10 @@ from intelligence.retrieval.persistent_bm25 import (
 )
 from intelligence.retrieval.simple_retriever import SimpleRetriever
 from intelligence.retrieval.complex_retriever import ComplexRetriever
-from intelligence.retrieval.multihop_retriever import MultiHopRetriever, MultiHopResponseSchema
+from intelligence.retrieval.multihop_retriever import (
+    MultiHopRetriever,
+    MultiHopResponseSchema,
+)
 from intelligence.embeddings.base_embedder import BaseEmbedder
 from intelligence.vectorstore.chroma_store import ChromaStore
 from intelligence.planner.planner_config import (
@@ -42,16 +45,56 @@ from intelligence.classifier.query_classifier import ResponseSchema
 # ============================================================================
 
 CORPUS = [
-    {"id": "doc_finance_001", "text": "Apple Inc. reported record quarterly revenue of $123.9 billion for Q1 FY2024, driven by strong iPhone sales and growing services segment. Net income reached $33.9 billion.", "domain": "finance"},
-    {"id": "doc_finance_002", "text": "The Federal Reserve held interest rates steady at 5.25%-5.50% following its January 2024 meeting, citing continued progress on inflation but noting it remains above the 2% target.", "domain": "finance"},
-    {"id": "doc_finance_003", "text": "Tesla stock dropped 12% after the company reported declining margins and warned of slower delivery growth in 2024. Revenue was $25.1 billion, below analyst expectations of $25.6 billion.", "domain": "finance"},
-    {"id": "doc_tech_001", "text": "OpenAI released GPT-4 Turbo with a 128K token context window and vision capabilities. The model features improved instruction following and reduced pricing at $0.01 per 1K input tokens.", "domain": "technology"},
-    {"id": "doc_tech_002", "text": "Docker Desktop 4.27 introduced native support for Docker Compose Watch, improving hot-reload workflows. The update also includes performance improvements for large-volume mounts on macOS.", "domain": "technology"},
-    {"id": "doc_tech_003", "text": "Kubernetes 1.29 added support for sidecar containers as a stable feature, enabling better lifecycle management for service meshes and observability agents in pods.", "domain": "technology"},
-    {"id": "doc_legal_001", "text": "The EU AI Act entered into force on August 1, 2024, establishing a risk-based regulatory framework for artificial intelligence systems. High-risk AI applications must comply by August 2026.", "domain": "legal"},
-    {"id": "doc_legal_002", "text": "GDPR Article 17 provides data subjects with the right to erasure, commonly known as the right to be forgotten. Controllers must comply within one month of receiving a valid request.", "domain": "legal"},
-    {"id": "doc_health_001", "text": "The CDC recommended updated COVID-19 boosters targeting the JN.1 variant for all individuals aged 6 months and older. Clinical trials showed a 2.5-fold increase in neutralizing antibodies.", "domain": "healthcare"},
-    {"id": "doc_health_002", "text": "WHO declared the end of the global health emergency for mpox on May 11, 2024, noting sustained decline in cases worldwide. Vaccination campaigns contributed to reduced transmission.", "domain": "healthcare"},
+    {
+        "id": "doc_finance_001",
+        "text": "Apple Inc. reported record quarterly revenue of $123.9 billion for Q1 FY2024, driven by strong iPhone sales and growing services segment. Net income reached $33.9 billion.",
+        "domain": "finance",
+    },
+    {
+        "id": "doc_finance_002",
+        "text": "The Federal Reserve held interest rates steady at 5.25%-5.50% following its January 2024 meeting, citing continued progress on inflation but noting it remains above the 2% target.",
+        "domain": "finance",
+    },
+    {
+        "id": "doc_finance_003",
+        "text": "Tesla stock dropped 12% after the company reported declining margins and warned of slower delivery growth in 2024. Revenue was $25.1 billion, below analyst expectations of $25.6 billion.",
+        "domain": "finance",
+    },
+    {
+        "id": "doc_tech_001",
+        "text": "OpenAI released GPT-4 Turbo with a 128K token context window and vision capabilities. The model features improved instruction following and reduced pricing at $0.01 per 1K input tokens.",
+        "domain": "technology",
+    },
+    {
+        "id": "doc_tech_002",
+        "text": "Docker Desktop 4.27 introduced native support for Docker Compose Watch, improving hot-reload workflows. The update also includes performance improvements for large-volume mounts on macOS.",
+        "domain": "technology",
+    },
+    {
+        "id": "doc_tech_003",
+        "text": "Kubernetes 1.29 added support for sidecar containers as a stable feature, enabling better lifecycle management for service meshes and observability agents in pods.",
+        "domain": "technology",
+    },
+    {
+        "id": "doc_legal_001",
+        "text": "The EU AI Act entered into force on August 1, 2024, establishing a risk-based regulatory framework for artificial intelligence systems. High-risk AI applications must comply by August 2026.",
+        "domain": "legal",
+    },
+    {
+        "id": "doc_legal_002",
+        "text": "GDPR Article 17 provides data subjects with the right to erasure, commonly known as the right to be forgotten. Controllers must comply within one month of receiving a valid request.",
+        "domain": "legal",
+    },
+    {
+        "id": "doc_health_001",
+        "text": "The CDC recommended updated COVID-19 boosters targeting the JN.1 variant for all individuals aged 6 months and older. Clinical trials showed a 2.5-fold increase in neutralizing antibodies.",
+        "domain": "healthcare",
+    },
+    {
+        "id": "doc_health_002",
+        "text": "WHO declared the end of the global health emergency for mpox on May 11, 2024, noting sustained decline in cases worldwide. Vaccination campaigns contributed to reduced transmission.",
+        "domain": "healthcare",
+    },
 ]
 
 GROUND_TRUTH = {
@@ -71,6 +114,7 @@ GROUND_TRUTH = {
 @dataclass
 class EphemeralChroma:
     """Helper to create an ephemeral ChromaDB for testing."""
+
     store: ChromaStore
     embedder: BaseEmbedder
 
@@ -85,6 +129,7 @@ def ephemeral_chroma():
     store.client = client
 
     from intelligence.embeddings.local_embedder import LocalEmbedder
+
     embedder = LocalEmbedder()
 
     return EphemeralChroma(store=store, embedder=embedder)
@@ -219,16 +264,26 @@ class TestEmbeddingValidation:
 
     def test_unrelated_text_low_similarity(self, ephemeral_chroma):
         e1 = ephemeral_chroma.embedder.embed("The cat sat on the mat")
-        e2 = ephemeral_chroma.embedder.embed("Quantum computing breakthrough in physics")
+        e2 = ephemeral_chroma.embedder.embed(
+            "Quantum computing breakthrough in physics"
+        )
         sim = np.dot(e1, e2) / (np.linalg.norm(e1) * np.linalg.norm(e2))
         assert sim < 0.5, f"Unrelated similarity {sim:.3f} >= 0.5"
 
     def test_semantic_ordering(self, ephemeral_chroma):
         e_query = ephemeral_chroma.embedder.embed("Apple quarterly revenue")
-        e_relevant = ephemeral_chroma.embedder.embed("Apple Inc. reported record quarterly revenue of $123.9 billion")
-        e_irrelevant = ephemeral_chroma.embedder.embed("Kubernetes sidecar containers for service meshes")
-        sim_relevant = np.dot(e_query, e_relevant) / (np.linalg.norm(e_query) * np.linalg.norm(e_relevant))
-        sim_irrelevant = np.dot(e_query, e_irrelevant) / (np.linalg.norm(e_query) * np.linalg.norm(e_irrelevant))
+        e_relevant = ephemeral_chroma.embedder.embed(
+            "Apple Inc. reported record quarterly revenue of $123.9 billion"
+        )
+        e_irrelevant = ephemeral_chroma.embedder.embed(
+            "Kubernetes sidecar containers for service meshes"
+        )
+        sim_relevant = np.dot(e_query, e_relevant) / (
+            np.linalg.norm(e_query) * np.linalg.norm(e_relevant)
+        )
+        sim_irrelevant = np.dot(e_query, e_irrelevant) / (
+            np.linalg.norm(e_query) * np.linalg.norm(e_irrelevant)
+        )
         assert sim_relevant > sim_irrelevant, (
             f"Relevant ({sim_relevant:.3f}) should score higher than irrelevant ({sim_irrelevant:.3f})"
         )
@@ -344,6 +399,7 @@ class TestComplexRetrieverMocked:
 
         from intelligence.reranker.cross_encoder_reranker import CrossEncoderReranker
         from sentence_transformers import CrossEncoder
+
         cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
         reranker = CrossEncoderReranker(cross_encoder)
 
@@ -360,29 +416,39 @@ class TestComplexRetrieverMocked:
 
     def test_retrieve_with_decompose(self, setup):
         retriever, ns = setup
-        results = retriever.retrieve_top_k(ns, top_k=3, query="Apple revenue", rerank=False, decompose=True)
+        results = retriever.retrieve_top_k(
+            ns, top_k=3, query="Apple revenue", rerank=False, decompose=True
+        )
         assert len(results) > 0
 
     def test_retrieve_without_decompose(self, setup):
         retriever, ns = setup
-        results = retriever.retrieve_top_k(ns, top_k=3, query="Apple revenue", rerank=False, decompose=False)
+        results = retriever.retrieve_top_k(
+            ns, top_k=3, query="Apple revenue", rerank=False, decompose=False
+        )
         assert len(results) > 0
 
     def test_mmr_diversity(self, setup):
         retriever, ns = setup
-        results = retriever.retrieve_top_k(ns, top_k=5, query="technology", rerank=False, decompose=False)
+        results = retriever.retrieve_top_k(
+            ns, top_k=5, query="technology", rerank=False, decompose=False
+        )
         assert len(results) <= 5
         assert len(results) == len(set(results))
 
     def test_short_chunks_filtered(self, setup):
         retriever, ns = setup
-        results = retriever.retrieve_top_k(ns, top_k=10, query="test", rerank=False, decompose=False)
+        results = retriever.retrieve_top_k(
+            ns, top_k=10, query="test", rerank=False, decompose=False
+        )
         for chunk in results:
             assert len(chunk.strip()) > 30
 
     def test_reranking_applied(self, setup):
         retriever, ns = setup
-        results = retriever.retrieve_top_k(ns, top_k=3, query="Apple revenue", rerank=True, decompose=False)
+        results = retriever.retrieve_top_k(
+            ns, top_k=3, query="Apple revenue", rerank=True, decompose=False
+        )
         assert len(results) > 0
 
     def test_llm_failure_raises(self, populated_chroma):
@@ -392,16 +458,23 @@ class TestComplexRetrieverMocked:
 
         from intelligence.reranker.cross_encoder_reranker import CrossEncoderReranker
         from sentence_transformers import CrossEncoder
+
         cross_encoder = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
         reranker = CrossEncoderReranker(cross_encoder)
 
         retriever = ComplexRetriever(
-            embedder=ec.embedder, store=ec.store, client=mock_client,
-            model_name="test", mmr_lambda=0.5, cross_encoder=reranker,
+            embedder=ec.embedder,
+            store=ec.store,
+            client=mock_client,
+            model_name="test",
+            mmr_lambda=0.5,
+            cross_encoder=reranker,
             model_provider="gemini",
         )
         with pytest.raises(ConnectionError):
-            retriever.retrieve_top_k(ns, top_k=3, query="test", rerank=False, decompose=True)
+            retriever.retrieve_top_k(
+                ns, top_k=3, query="test", rerank=False, decompose=True
+            )
 
 
 class TestMultiHopRetrieverMocked:
@@ -414,8 +487,12 @@ class TestMultiHopRetrieverMocked:
         mock_response.parsed = hop_data
         mock_client.models.generate_content.return_value = mock_response
         retriever = MultiHopRetriever(
-            embedder=ec.embedder, store=ec.store, client=mock_client,
-            model_name="test-model", model_provider="gemini", num_hops=3,
+            embedder=ec.embedder,
+            store=ec.store,
+            client=mock_client,
+            model_name="test-model",
+            model_provider="gemini",
+            num_hops=3,
         )
         return retriever, ns
 
@@ -428,17 +505,25 @@ class TestMultiHopRetrieverMocked:
         ns, ec = populated_chroma
         mock_client = MagicMock()
         hop_count = [0]
+
         def side_effect(**kwargs):
             hop_count[0] += 1
-            data = MultiHopResponseSchema(next_question=f"sub query {hop_count[0]}", is_enough=False)
+            data = MultiHopResponseSchema(
+                next_question=f"sub query {hop_count[0]}", is_enough=False
+            )
             resp = MagicMock()
             resp.parsed = data
             return resp
+
         mock_client.models.generate_content.side_effect = side_effect
 
         retriever = MultiHopRetriever(
-            embedder=ec.embedder, store=ec.store, client=mock_client,
-            model_name="test", model_provider="gemini", num_hops=2,
+            embedder=ec.embedder,
+            store=ec.store,
+            client=mock_client,
+            model_name="test",
+            model_provider="gemini",
+            num_hops=2,
         )
         retriever.retrieve_top_k(ns, top_k=3, query="complex query")
         assert hop_count[0] <= 2
@@ -458,17 +543,25 @@ class TestMultiHopRetrieverMocked:
         ns, ec = populated_chroma
         mock_client = MagicMock()
         hop_count = [0]
+
         def side_effect(**kwargs):
             hop_count[0] += 1
-            data = MultiHopResponseSchema(next_question=f"sub {hop_count[0]}", is_enough=False)
+            data = MultiHopResponseSchema(
+                next_question=f"sub {hop_count[0]}", is_enough=False
+            )
             resp = MagicMock()
             resp.parsed = data
             return resp
+
         mock_client.models.generate_content.side_effect = side_effect
 
         retriever = MultiHopRetriever(
-            embedder=ec.embedder, store=ec.store, client=mock_client,
-            model_name="test", model_provider="gemini", num_hops=5,
+            embedder=ec.embedder,
+            store=ec.store,
+            client=mock_client,
+            model_name="test",
+            model_provider="gemini",
+            num_hops=5,
         )
         results = retriever.retrieve_top_k(ns, top_k=3, query="deep query")
         max_allowed = 3 * 3  # top_k * 3
@@ -479,8 +572,12 @@ class TestMultiHopRetrieverMocked:
         mock_client = MagicMock()
         mock_client.models.generate_content.side_effect = ConnectionError("down")
         retriever = MultiHopRetriever(
-            embedder=ec.embedder, store=ec.store, client=mock_client,
-            model_name="test", model_provider="gemini", num_hops=3,
+            embedder=ec.embedder,
+            store=ec.store,
+            client=mock_client,
+            model_name="test",
+            model_provider="gemini",
+            num_hops=3,
         )
         with pytest.raises(ValueError):
             retriever.retrieve_top_k(ns, top_k=3, query="test")
@@ -495,11 +592,13 @@ class TestRerankerValidation:
     @pytest.fixture(scope="class")
     def cross_encoder(self):
         from sentence_transformers import CrossEncoder
+
         return CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
     @pytest.fixture(scope="class")
     def reranker(self, cross_encoder):
         from intelligence.reranker.cross_encoder_reranker import CrossEncoderReranker
+
         return CrossEncoderReranker(cross_encoder)
 
     def test_reranking_reorders_results(self, reranker):
@@ -693,7 +792,9 @@ class TestNamespaceIsolation:
         idx_a = PersistentBM25Index()
         idx_b = PersistentBM25Index()
         idx_a.add_document("a1", "Apple quarterly revenue billion financial report.")
-        idx_b.add_document("b1", "Kubernetes sidecar containers service mesh observability.")
+        idx_b.add_document(
+            "b1", "Kubernetes sidecar containers service mesh observability."
+        )
         r_a = idx_a.query("Kubernetes sidecar containers")
         r_b = idx_b.query("Apple quarterly revenue")
         assert r_a == []
@@ -737,8 +838,10 @@ class TestFailureDegradedMode:
         ns, ec = populated_chroma
         r = SimpleRetriever(ec.store, ec.embedder)
         original_query = ec.store.query
+
         def fail_query(*args, **kwargs):
             raise ConnectionError("ChromaDB unreachable")
+
         ec.store.query = fail_query
         results = r.retrieve_top_k(ns, top_k=3, query="Apple revenue")
         assert r.degraded_mode is True
@@ -759,7 +862,9 @@ class TestFailureDegradedMode:
         ns, ec = populated_chroma
         r = SimpleRetriever(ec.store, ec.embedder)
         original_embed = ec.embedder.embed
-        ec.embedder.embed = MagicMock(side_effect=RuntimeError("Embedding model crashed"))
+        ec.embedder.embed = MagicMock(
+            side_effect=RuntimeError("Embedding model crashed")
+        )
         with pytest.raises(RuntimeError):
             r.retrieve_top_k(ns, top_k=3, query="test")
         ec.embedder.embed = original_embed
@@ -794,8 +899,8 @@ class TestPerformanceBaseline:
             times.append(time.perf_counter() - start)
         p50 = statistics.median(times)
         p95 = sorted(times)[int(len(times) * 0.95)]
-        assert p50 < 0.01, f"BM25 p50 latency {p50*1000:.1f}ms > 10ms"
-        assert p95 < 0.02, f"BM25 p95 latency {p95*1000:.1f}ms > 20ms"
+        assert p50 < 0.01, f"BM25 p50 latency {p50 * 1000:.1f}ms > 10ms"
+        assert p95 < 0.02, f"BM25 p95 latency {p95 * 1000:.1f}ms > 20ms"
 
     def test_embedding_latency(self, ephemeral_chroma):
         times = []
@@ -805,8 +910,8 @@ class TestPerformanceBaseline:
             times.append(time.perf_counter() - start)
         p50 = statistics.median(times)
         p95 = sorted(times)[int(len(times) * 0.95)]
-        assert p50 < 0.5, f"Embedding p50 latency {p50*1000:.0f}ms > 500ms"
-        assert p95 < 1.0, f"Embedding p95 latency {p95*1000:.0f}ms > 1000ms"
+        assert p50 < 0.5, f"Embedding p50 latency {p50 * 1000:.0f}ms > 500ms"
+        assert p95 < 1.0, f"Embedding p95 latency {p95 * 1000:.0f}ms > 1000ms"
 
     def test_chroma_query_latency(self, populated_chroma):
         ns, ec = populated_chroma
@@ -818,8 +923,8 @@ class TestPerformanceBaseline:
             times.append(time.perf_counter() - start)
         p50 = statistics.median(times)
         p95 = sorted(times)[int(len(times) * 0.95)]
-        assert p50 < 0.1, f"Chroma p50 latency {p50*1000:.0f}ms > 100ms"
-        assert p95 < 0.2, f"Chroma p95 latency {p95*1000:.0f}ms > 200ms"
+        assert p50 < 0.1, f"Chroma p50 latency {p50 * 1000:.0f}ms > 100ms"
+        assert p95 < 0.2, f"Chroma p95 latency {p95 * 1000:.0f}ms > 200ms"
 
     def test_simple_retriever_total_latency(self, populated_chroma):
         ns, ec = populated_chroma
@@ -830,11 +935,12 @@ class TestPerformanceBaseline:
             r.retrieve_top_k(ns, top_k=5, query="Apple quarterly revenue")
             times.append(time.perf_counter() - start)
         p50 = statistics.median(times)
-        assert p50 < 1.0, f"SimpleRetriever p50 latency {p50*1000:.0f}ms > 1000ms"
+        assert p50 < 1.0, f"SimpleRetriever p50 latency {p50 * 1000:.0f}ms > 1000ms"
 
     def test_reranker_latency(self, populated_chroma):
         from sentence_transformers import CrossEncoder
         from intelligence.reranker.cross_encoder_reranker import CrossEncoderReranker
+
         ce = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
         reranker = CrossEncoderReranker(ce)
         chunks = [doc["text"] for doc in CORPUS]
@@ -844,7 +950,7 @@ class TestPerformanceBaseline:
             reranker.rerank("Apple revenue", chunks, top_k=5)
             times.append(time.perf_counter() - start)
         p50 = statistics.median(times)
-        assert p50 < 2.0, f"Reranker p50 latency {p50*1000:.0f}ms > 2000ms"
+        assert p50 < 2.0, f"Reranker p50 latency {p50 * 1000:.0f}ms > 2000ms"
 
 
 # ============================================================================
@@ -879,15 +985,17 @@ class TestQualityComparison:
             bm25_mrr += self._mrr(bm25_results, expected)
             vec_mrr += self._mrr(vec_results, expected)
         n = len(GROUND_TRUTH)
-        print(f"\nBM25  P@1={bm25_p1/n:.3f} MRR={bm25_mrr/n:.3f}")
-        print(f"Vec   P@1={vec_p1/n:.3f} MRR={vec_mrr/n:.3f}")
+        print(f"\nBM25  P@1={bm25_p1 / n:.3f} MRR={bm25_mrr / n:.3f}")
+        print(f"Vec   P@1={vec_p1 / n:.3f} MRR={vec_mrr / n:.3f}")
         assert bm25_p1 >= 0 or vec_p1 >= 0
 
     def test_rrf_fusion_quality(self, populated_chroma, bm25_index):
         ns, ec = populated_chroma
         r = SimpleRetriever(ec.store, ec.embedder)
-        text_ground_truth = {query: [doc["text"] for doc in CORPUS if doc["id"] in ids]
-                             for query, ids in GROUND_TRUTH.items()}
+        text_ground_truth = {
+            query: [doc["text"] for doc in CORPUS if doc["id"] in ids]
+            for query, ids in GROUND_TRUTH.items()
+        }
         mrr_sum = 0.0
         for query, expected_texts in text_ground_truth.items():
             expected = set(expected_texts)
@@ -937,8 +1045,12 @@ class TestRegressionSuite:
     def test_fallback_threshold_boundary(self):
         top_k = 10
         threshold = max(1, int(top_k * FALLBACK_THRESHOLD_FACTOR))
-        d1 = FallbackManager.evaluate({"retrieval_type": "HYBRID", "top_k": top_k}, chunk_count=threshold)
-        d2 = FallbackManager.evaluate({"retrieval_type": "HYBRID", "top_k": top_k}, chunk_count=threshold - 1)
+        d1 = FallbackManager.evaluate(
+            {"retrieval_type": "HYBRID", "top_k": top_k}, chunk_count=threshold
+        )
+        d2 = FallbackManager.evaluate(
+            {"retrieval_type": "HYBRID", "top_k": top_k}, chunk_count=threshold - 1
+        )
         assert not d1.should_fallback
         assert d2.should_fallback
 

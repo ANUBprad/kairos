@@ -29,10 +29,12 @@ from intelligence.vectorstore.chroma_store import ChromaStore
 
 def _make_chroma():
     import chromadb
+
     client = chromadb.Client()
     store = ChromaStore.__new__(ChromaStore)
     store.client = client
     from intelligence.embeddings.local_embedder import LocalEmbedder
+
     embedder = LocalEmbedder()
     return store, embedder
 
@@ -106,7 +108,12 @@ class TestMultilingualRetrieval:
         assert isinstance(results, list)
 
     def test_bm25_returns_results_for_all_languages(self, bm25):
-        for lang_query in ["hybrid search", "hybride Suche", "recherche hybride", "bsqueda hbrida"]:
+        for lang_query in [
+            "hybrid search",
+            "hybride Suche",
+            "recherche hybride",
+            "bsqueda hbrida",
+        ]:
             results = bm25.query(lang_query, top_k=10)
             assert len(results) > 0, f"No results for: {lang_query}"
 
@@ -119,6 +126,7 @@ class TestMultilingualRetrieval:
 
     def test_embedder_handles_unicode(self):
         from intelligence.embeddings.local_embedder import LocalEmbedder
+
         embedder = LocalEmbedder()
         texts = [
             "über naïve résumé café München",
@@ -291,9 +299,15 @@ class TestQueryAdversarial:
     @pytest.fixture(scope="class")
     def bm25(self):
         idx = PersistentBM25Index()
-        idx.add_document("d1", "Apple Inc. reported record quarterly revenue of $123.9 billion")
-        idx.add_document("d2", "Tesla stock dropped 12% after declining margins and warnings")
-        idx.add_document("d3", "The Federal Reserve held interest rates steady at 5.25%")
+        idx.add_document(
+            "d1", "Apple Inc. reported record quarterly revenue of $123.9 billion"
+        )
+        idx.add_document(
+            "d2", "Tesla stock dropped 12% after declining margins and warnings"
+        )
+        idx.add_document(
+            "d3", "The Federal Reserve held interest rates steady at 5.25%"
+        )
         return idx
 
     def test_empty_query(self, bm25):
@@ -419,7 +433,9 @@ class TestDocumentAdversarial:
 
     def test_json_document(self):
         idx = PersistentBM25Index()
-        idx.add_document("d1", '{"name": "test", "version": "1.0.0", "dependencies": {}}')
+        idx.add_document(
+            "d1", '{"name": "test", "version": "1.0.0", "dependencies": {}}'
+        )
         results = idx.query("dependencies version", top_k=5)
         assert len(results) >= 1
 
@@ -475,7 +491,9 @@ class TestStaleDataLifecycle:
     def test_bm25_add_delete_retrieve(self):
         idx = PersistentBM25Index()
         for i in range(20):
-            idx.add_document(f"d{i}", f"Document {i} about topic {i} with unique content.")
+            idx.add_document(
+                f"d{i}", f"Document {i} about topic {i} with unique content."
+            )
         assert idx.num_documents == 20
         for i in range(10):
             idx.remove_document(f"d{i}")
@@ -498,7 +516,10 @@ class TestStaleDataLifecycle:
 
     def test_bm25_reingest_same_docs(self):
         idx = PersistentBM25Index()
-        docs = [("d1", "Apple revenue report Q1 2024"), ("d2", "Tesla stock analysis 2024")]
+        docs = [
+            ("d1", "Apple revenue report Q1 2024"),
+            ("d2", "Tesla stock analysis 2024"),
+        ]
         idx.add_documents(docs)
         assert idx.num_documents == 2
         idx.add_documents(docs)
@@ -530,7 +551,10 @@ class TestStaleDataLifecycle:
     def test_simple_retriever_bm25_rebuild_on_corpus_change(self):
         store, embedder = _make_chroma()
         ns = "rebuild_test"
-        docs_v1 = ["First version of document about apples.", "Second document about bananas."]
+        docs_v1 = [
+            "First version of document about apples.",
+            "Second document about bananas.",
+        ]
         for doc in docs_v1:
             embed = embedder.embed(doc)
             store.upsert(ns, [doc], [embed], f"v1_{hash(doc) & 0xFFF:03x}")
@@ -585,6 +609,7 @@ class TestContradictionHandling:
     def test_reranker_on_contradictions(self):
         from sentence_transformers import CrossEncoder
         from intelligence.reranker.cross_encoder_reranker import CrossEncoderReranker
+
         ce = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
         reranker = CrossEncoderReranker(ce)
         chunks = [
@@ -669,6 +694,7 @@ class TestRerankerAdversarial:
     def reranker(self):
         from sentence_transformers import CrossEncoder
         from intelligence.reranker.cross_encoder_reranker import CrossEncoderReranker
+
         ce = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
         return CrossEncoderReranker(ce)
 
@@ -709,7 +735,9 @@ class TestRerankerAdversarial:
         assert len(result) == 1
 
     def test_top_k_limits_output(self, reranker):
-        chunks = [f"Document number {i} about testing reranker behavior." for i in range(20)]
+        chunks = [
+            f"Document number {i} about testing reranker behavior." for i in range(20)
+        ]
         reranked = reranker.rerank("test", chunks, top_k=5)
         assert len(reranked) == 5
 
@@ -777,8 +805,12 @@ class TestNamespaceSecurityDeep:
         idx_b = PersistentBM25Index()
         idx_a.add_document("org_a_doc", "Organization A confidential financial report.")
         idx_b.add_document("org_b_doc", "Organization B confidential medical records.")
-        org_a_docs = [d for d, _ in idx_a.query("Organization A confidential", top_k=10)]
-        org_b_docs = [d for d, _ in idx_b.query("Organization B confidential", top_k=10)]
+        org_a_docs = [
+            d for d, _ in idx_a.query("Organization A confidential", top_k=10)
+        ]
+        org_b_docs = [
+            d for d, _ in idx_b.query("Organization B confidential", top_k=10)
+        ]
         assert "org_b_doc" not in org_a_docs
         assert "org_a_doc" not in org_b_docs
 
@@ -818,7 +850,9 @@ class TestFailureMatrix:
         store.upsert(ns, [text], [embed], "fail.pdf")
         r = SimpleRetriever(store, embedder)
         original_query = store.query
-        store.query = lambda *a, **k: (_ for _ in ()).throw(ConnectionError("ChromaDB down"))
+        store.query = lambda *a, **k: (_ for _ in ()).throw(
+            ConnectionError("ChromaDB down")
+        )
         results = r.retrieve_top_k(ns, top_k=3, query="test")
         assert r.degraded_mode is True
         assert isinstance(results, list)
@@ -853,13 +887,20 @@ class TestFailureMatrix:
 
     def test_fallback_manager_complete_chain(self):
         from intelligence.planner.fallback_manager import FallbackManager
-        d1 = FallbackManager.evaluate({"retrieval_type": "HYBRID", "top_k": 10}, chunk_count=0)
+
+        d1 = FallbackManager.evaluate(
+            {"retrieval_type": "HYBRID", "top_k": 10}, chunk_count=0
+        )
         assert d1.should_fallback
         assert d1.escalated_tier == "complex"
-        d2 = FallbackManager.evaluate({"retrieval_type": "MULTI_VECTOR", "top_k": 10}, chunk_count=0)
+        d2 = FallbackManager.evaluate(
+            {"retrieval_type": "MULTI_VECTOR", "top_k": 10}, chunk_count=0
+        )
         assert d2.should_fallback
         assert d2.escalated_tier == "multi_hop"
-        d3 = FallbackManager.evaluate({"retrieval_type": "SELF_QUERYING", "top_k": 10}, chunk_count=0)
+        d3 = FallbackManager.evaluate(
+            {"retrieval_type": "SELF_QUERYING", "top_k": 10}, chunk_count=0
+        )
         assert d3.should_fallback
         assert d3.escalated_tier is None
 
@@ -873,18 +914,24 @@ class TestPerformanceStress:
     def test_bm25_500_doc_corpus(self):
         idx = PersistentBM25Index()
         for i in range(500):
-            idx.add_document(f"doc_{i}", f"Document number {i} about topic {i % 50} with specific content for testing retrieval performance and correctness at scale.")
+            idx.add_document(
+                f"doc_{i}",
+                f"Document number {i} about topic {i % 50} with specific content for testing retrieval performance and correctness at scale.",
+            )
         start = time.perf_counter()
         for _ in range(100):
             idx.query("topic 25 specific content", top_k=10)
         elapsed = time.perf_counter() - start
         p_query = elapsed / 100
-        assert p_query < 0.01, f"BM25 p50 per query {p_query*1000:.1f}ms > 10ms"
+        assert p_query < 0.01, f"BM25 p50 per query {p_query * 1000:.1f}ms > 10ms"
 
     def test_bm25_1000_doc_corpus(self):
         idx = PersistentBM25Index()
         for i in range(1000):
-            idx.add_document(f"doc_{i}", f"Document {i} about technology topic {i % 100} with unique keywords alpha beta gamma.")
+            idx.add_document(
+                f"doc_{i}",
+                f"Document {i} about technology topic {i % 100} with unique keywords alpha beta gamma.",
+            )
         times = []
         for _ in range(50):
             start = time.perf_counter()
@@ -892,13 +939,17 @@ class TestPerformanceStress:
             times.append(time.perf_counter() - start)
         p50 = statistics.median(times)
         p95 = sorted(times)[int(len(times) * 0.95)]
-        assert p50 < 0.005, f"BM25 1000-doc p50 {p50*1000:.2f}ms > 5ms"
-        assert p95 < 0.01, f"BM25 1000-doc p95 {p95*1000:.2f}ms > 10ms"
+        assert p50 < 0.005, f"BM25 1000-doc p50 {p50 * 1000:.2f}ms > 5ms"
+        assert p95 < 0.01, f"BM25 1000-doc p95 {p95 * 1000:.2f}ms > 10ms"
 
     def test_embedding_batch_throughput(self):
         from intelligence.embeddings.local_embedder import LocalEmbedder
+
         embedder = LocalEmbedder()
-        texts = [f"Performance test sentence number {i} about various topics." for i in range(50)]
+        texts = [
+            f"Performance test sentence number {i} about various topics."
+            for i in range(50)
+        ]
         start = time.perf_counter()
         embeddings = embedder.embed_batch(texts)
         elapsed = time.perf_counter() - start
@@ -920,13 +971,15 @@ class TestPerformanceStress:
             store.query(ns, 10, query_embed)
             times.append(time.perf_counter() - start)
         p50 = statistics.median(times)
-        assert p50 < 0.1, f"Chroma 500-doc p50 {p50*1000:.0f}ms > 100ms"
+        assert p50 < 0.1, f"Chroma 500-doc p50 {p50 * 1000:.0f}ms > 100ms"
 
     def test_simple_retriever_stress(self):
         store, embedder = _make_chroma()
         ns = "retriever_stress"
         for i in range(50):
-            text = f"Document {i} about financial topic {i} with quarterly revenue data."
+            text = (
+                f"Document {i} about financial topic {i} with quarterly revenue data."
+            )
             embed = embedder.embed(text)
             store.upsert(ns, [text], [embed], f"doc_{i}.pdf")
         r = SimpleRetriever(store, embedder)
@@ -936,7 +989,7 @@ class TestPerformanceStress:
             r.retrieve_top_k(ns, top_k=5, query="financial revenue quarterly")
             times.append(time.perf_counter() - start)
         p50 = statistics.median(times)
-        assert p50 < 2.0, f"SimpleRetriever stress p50 {p50*1000:.0f}ms > 2000ms"
+        assert p50 < 2.0, f"SimpleRetriever stress p50 {p50 * 1000:.0f}ms > 2000ms"
 
 
 # ============================================================================
@@ -948,7 +1001,9 @@ class TestMemoryResourceAudit:
     def test_bm25_index_bounded(self):
         idx = PersistentBM25Index()
         for i in range(100):
-            idx.add_document(f"d{i}", f"Document {i} with unique keywords alpha{i} beta{i}.")
+            idx.add_document(
+                f"d{i}", f"Document {i} with unique keywords alpha{i} beta{i}."
+            )
         assert idx.num_documents == 100
         for i in range(50):
             idx.remove_document(f"d{i}")
@@ -995,6 +1050,7 @@ class TestDeterminism:
 
     def test_embedding_deterministic(self):
         from intelligence.embeddings.local_embedder import LocalEmbedder
+
         embedder = LocalEmbedder()
         e1 = embedder.embed("deterministic test sentence")
         e2 = embedder.embed("deterministic test sentence")
@@ -1003,6 +1059,7 @@ class TestDeterminism:
     def test_reranker_deterministic(self):
         from sentence_transformers import CrossEncoder
         from intelligence.reranker.cross_encoder_reranker import CrossEncoderReranker
+
         ce = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
         reranker = CrossEncoderReranker(ce)
         chunks = [

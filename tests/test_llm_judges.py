@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
 
 from intelligence.judging.llm import (
     AnswerRelevancyLLMJudge,
@@ -162,9 +161,7 @@ class TestCorrectnessLLMJudge:
     def test_requires_reference(self) -> None:
         llm = _FakeLLM([])
         judge = CorrectnessLLMJudge(llm)
-        result = judge.evaluate(
-            query="q", answer="a", context=["c"], reference=""
-        )
+        result = judge.evaluate(query="q", answer="a", context=["c"], reference="")
         assert result.judgment == Judgment.FAIL
         assert "reference" in result.explanation
         assert llm.prompts == []
@@ -188,10 +185,10 @@ class TestCompositeWithLLMJudge:
     def test_reference_only_reaches_llm_correctness(self) -> None:
         composite = CompositeJudge()
         composite.add_judge(_RecordingJudge())
-        composite.add_judge(
-            CorrectnessLLMJudge(_FakeLLM(['{"score": 0.9}']))
+        composite.add_judge(CorrectnessLLMJudge(_FakeLLM(['{"score": 0.9}'])))
+        results = composite.evaluate(
+            query="q", answer="a", context=["c"], reference="gold"
         )
-        results = composite.evaluate(query="q", answer="a", context=["c"], reference="gold")
         by_dim = {r.dimension: r for r in results}
         assert by_dim["recorded"].dimension == "recorded"
         assert "llm_correctness" in by_dim

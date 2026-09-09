@@ -80,7 +80,9 @@ def test_custom_tolerances_override_defaults(tmp_path) -> None:
     check = check_regression(_run(recall=0.77), path, tolerances={"mean_recall": 0.02})
     assert check.passed is False
 
-    check_loose = check_regression(_run(recall=0.77), path, tolerances={"mean_recall": 0.05})
+    check_loose = check_regression(
+        _run(recall=0.77), path, tolerances={"mean_recall": 0.05}
+    )
     assert check_loose.passed is True
 
 

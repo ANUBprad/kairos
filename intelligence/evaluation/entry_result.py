@@ -5,8 +5,6 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from intelligence.evaluation.cost import estimate_cost
-
 _trace_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
     "kairos_eval_trace_id", default=""
 )
