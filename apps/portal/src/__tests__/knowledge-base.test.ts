@@ -12,6 +12,9 @@ const createSchema = z.object({
   description: z.string().max(1000, "Description is too long").optional(),
 });
 
+// ponytail: NODE_ENV is read-only in TS types; cast once here for test env mutation.
+const env = process.env as Record<string, string | undefined>;
+
 describe("Knowledge base creation — input contract", () => {
   it("rejects empty name", () => {
     const result = createSchema.safeParse({ name: "", description: "test" });
@@ -50,50 +53,50 @@ describe("Knowledge base creation — demo mode gate", () => {
   it("isDemoModeEnabled requires KAIROS_DEMO_MODE=true in non-production", () => {
     // Replicate the logic from demo-user.ts:isDemoModeEnabled
     function isDemoModeEnabled(): boolean {
-      if (process.env.NODE_ENV === "production") return false;
-      return process.env.KAIROS_DEMO_MODE === "true";
+      if (env.NODE_ENV === "production") return false;
+      return env.KAIROS_DEMO_MODE === "true";
     }
 
-    const saved = process.env.KAIROS_DEMO_MODE;
-    const savedNode = process.env.NODE_ENV;
+    const savedDemo = env.KAIROS_DEMO_MODE;
+    const savedNode = env.NODE_ENV;
 
     try {
-      process.env.NODE_ENV = "development";
+      env.NODE_ENV = "development";
 
-      process.env.KAIROS_DEMO_MODE = "true";
+      env.KAIROS_DEMO_MODE = "true";
       assert.equal(isDemoModeEnabled(), true);
 
-      process.env.KAIROS_DEMO_MODE = "false";
+      env.KAIROS_DEMO_MODE = "false";
       assert.equal(isDemoModeEnabled(), false);
 
-      delete process.env.KAIROS_DEMO_MODE;
+      delete env.KAIROS_DEMO_MODE;
       assert.equal(isDemoModeEnabled(), false);
     } finally {
-      if (saved !== undefined) process.env.KAIROS_DEMO_MODE = saved;
-      else delete process.env.KAIROS_DEMO_MODE;
-      if (savedNode !== undefined) process.env.NODE_ENV = savedNode;
-      else delete process.env.NODE_ENV;
+      if (savedDemo !== undefined) env.KAIROS_DEMO_MODE = savedDemo;
+      else delete env.KAIROS_DEMO_MODE;
+      if (savedNode !== undefined) env.NODE_ENV = savedNode;
+      else delete env.NODE_ENV;
     }
   });
 
   it("isDemoModeEnabled always returns false in production", () => {
     function isDemoModeEnabled(): boolean {
-      if (process.env.NODE_ENV === "production") return false;
-      return process.env.KAIROS_DEMO_MODE === "true";
+      if (env.NODE_ENV === "production") return false;
+      return env.KAIROS_DEMO_MODE === "true";
     }
 
-    const saved = process.env.KAIROS_DEMO_MODE;
-    const savedNode = process.env.NODE_ENV;
+    const savedDemo = env.KAIROS_DEMO_MODE;
+    const savedNode = env.NODE_ENV;
 
     try {
-      process.env.NODE_ENV = "production";
-      process.env.KAIROS_DEMO_MODE = "true";
+      env.NODE_ENV = "production";
+      env.KAIROS_DEMO_MODE = "true";
       assert.equal(isDemoModeEnabled(), false);
     } finally {
-      if (saved !== undefined) process.env.KAIROS_DEMO_MODE = saved;
-      else delete process.env.KAIROS_DEMO_MODE;
-      if (savedNode !== undefined) process.env.NODE_ENV = savedNode;
-      else delete process.env.NODE_ENV;
+      if (savedDemo !== undefined) env.KAIROS_DEMO_MODE = savedDemo;
+      else delete env.KAIROS_DEMO_MODE;
+      if (savedNode !== undefined) env.NODE_ENV = savedNode;
+      else delete env.NODE_ENV;
     }
   });
 });
