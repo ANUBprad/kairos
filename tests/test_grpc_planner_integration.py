@@ -619,7 +619,13 @@ class TestComplexRetrieverFlags:
         retriever._compute_sub_query_embedding = MagicMock(return_value=[0.2] * 384)
         retriever.embedder.embed.return_value = [0.0] * 384
         retriever.store.query.return_value = {
-            "documents": [["d1", "d2", "d3"]],
+            "documents": [
+                [
+                    "A detailed document about the history of RAG pipelines",
+                    "A comprehensive guide to retrieval augmented generation",
+                    "An advanced overview of embedding-based search techniques",
+                ]
+            ],
             "embeddings": [[[0.3] * 384, [0.4] * 384, [0.5] * 384]],
         }
         retriever.cross_encoder.rerank.return_value = ["reranked1", "reranked2"]
