@@ -9,11 +9,14 @@ import {
   MessageSquare,
   Bot,
   FileText,
+  BookOpen,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
+import { formatSourceScopeLabel, MAX_CHAT_SOURCES } from "@/lib/ai/chat/source-scope";
 
 interface Citation {
   chunkId: string;
@@ -45,15 +48,19 @@ interface Conversation {
 interface Props {
   kbId: string;
   kbName: string;
+  documents: { id: string; name: string }[];
 }
 
-export function ChatInterface({ kbId, kbName }: Props) {
+export function ChatInterface({ kbId, kbName, documents }: Props) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const scopeRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -98,6 +105,26 @@ export function ChatInterface({ kbId, kbName }: Props) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!scopeOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (scopeRef.current && !scopeRef.current.contains(e.target as Node)) {
+        setScopeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [scopeOpen]);
+
+  const toggleSource = (docId: string) => {
+    setSelectedSourceIds((prev) => {
+      const has = prev.includes(docId);
+      if (has) return prev.filter((id) => id !== docId);
+      if (prev.length >= MAX_CHAT_SOURCES) return prev;
+      return [...prev, docId];
+    });
+  };
 
   const createConversation = async () => {
     try {
@@ -170,6 +197,7 @@ export function ChatInterface({ kbId, kbName }: Props) {
           conversationId: activeConversation,
           kbId,
           query,
+          sourceIds: selectedSourceIds,
         }),
         signal: controller.signal,
       });
@@ -381,7 +409,53 @@ export function ChatInterface({ kbId, kbName }: Props) {
         </div>
 
         <div className="border-t border-border p-4">
-          <div className="flex gap-2 max-w-4xl mx-auto">
+          <div className="flex gap-2 max-w-4xl mx-auto items-end">
+            <div className="relative shrink-0" ref={scopeRef}>
+              <button
+                onClick={() => setScopeOpen((v) => !v)}
+                disabled={!activeConversation}
+                aria-label="Source scope"
+                aria-expanded={scopeOpen}
+                className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-40"
+              >
+                <BookOpen size={14} />
+                <span>{formatSourceScopeLabel(selectedSourceIds.length)}</span>
+                <ChevronDown size={14} className={scopeOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+              </button>
+              {scopeOpen && (
+                <div className="absolute bottom-full left-0 mb-2 z-20 w-72 max-h-80 overflow-y-auto rounded-xl border border-border bg-surface shadow-lg p-2">
+                  <label className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-surface-hover cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedSourceIds.length === 0}
+                      onChange={() => setSelectedSourceIds([])}
+                      className="accent-brand"
+                    />
+                    <span className="text-text-primary">All sources</span>
+                  </label>
+                  {documents.map((doc) => (
+                    <label
+                      key={doc.id}
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-surface-hover cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSourceIds.includes(doc.id)}
+                        onChange={() => toggleSource(doc.id)}
+                        className="accent-brand"
+                      />
+                      <FileText size={12} className="shrink-0 text-text-tertiary" />
+                      <span className="truncate text-text-primary">{doc.name}</span>
+                    </label>
+                  ))}
+                  {documents.length === 0 && (
+                    <p className="px-2 py-3 text-xs text-text-tertiary text-center">
+                      No indexed documents yet
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
             <textarea
               ref={inputRef}
               value={input}

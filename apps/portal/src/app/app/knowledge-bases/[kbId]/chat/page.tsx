@@ -26,7 +26,13 @@ export default async function ChatPage({ params }: Props) {
       redirect("/app");
     }
 
-    return <ChatInterface kbId={kbId} kbName={kb.name} />;
+    const documents = await prisma.document.findMany({
+      where: { knowledgeBaseId: kbId, status: "INDEXED" },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+
+    return <ChatInterface kbId={kbId} kbName={kb.name} documents={documents} />;
   } catch {
     redirect("/app");
   }
