@@ -50,12 +50,12 @@ export interface FetchUrlOptions {
   maxRedirects?: number;
 }
 
-async function defaultResolveHost(hostname: string): Promise<string[]> {
+export async function defaultResolveHost(hostname: string): Promise<string[]> {
   const addresses = await lookup(hostname, { all: true, verbatim: true });
   return addresses.map((a) => a.address);
 }
 
-async function defaultHttpGet(url: string, init: { signal: AbortSignal; headers: Record<string, string> }): Promise<HttpGetResult> {
+export async function defaultHttpGet(url: string, init: { signal: AbortSignal; headers: Record<string, string> }): Promise<HttpGetResult> {
   const res = await fetch(url, { redirect: "manual", signal: init.signal, headers: init.headers });
   return { status: res.status, headers: res.headers, body: res.body ?? undefined };
 }
@@ -160,7 +160,7 @@ function isRedirectStatus(status: number): boolean {
   return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
 }
 
-async function readBoundedText(body: ReadableStream<Uint8Array> | undefined, maxBytes: number): Promise<string> {
+export async function readBoundedText(body: ReadableStream<Uint8Array> | undefined, maxBytes: number): Promise<string> {
   if (!body) return "";
   const reader = body.getReader();
   const parts: Uint8Array[] = [];
@@ -312,7 +312,7 @@ function stripElements(html: string, shouldStrip: (tag: string, openTag: string)
   return parts.join("");
 }
 
-function decodeEntities(text: string): string {
+export function decodeEntities(text: string): string {
   return text
     .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => {
       const n = parseInt(hex, 16);
