@@ -63,7 +63,7 @@ export interface SourceFilters {
   status?: string;
 }
 
-export function filterSources(items: SourceRow[], filters: SourceFilters): SourceRow[] {
+export function filterSources<T extends SourceRow>(items: T[], filters: SourceFilters): T[] {
   const query = (filters.search || "").trim().toLowerCase();
   let list = items;
   if (query) {

@@ -16,6 +16,8 @@ import {
   ArrowUp,
   ArrowDown,
   Search,
+  SearchX,
+  Loader2,
   File,
   CheckSquare,
   Square,
@@ -26,6 +28,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
+import { SourceTypeBadge } from "@/components/app/source-type-badge";
 import { DocumentUploadDialog } from "@/components/app/document-upload-dialog";
 import { DocumentPreviewDialog } from "@/components/app/document-preview-dialog";
 import { RenameDocumentDialog } from "@/components/app/rename-document-dialog";
@@ -36,6 +39,15 @@ import {
   bulkDeleteDocuments,
   bulkReprocessDocuments,
 } from "@/lib/actions/document";
+import {
+  SOURCE_TYPE_OPTIONS,
+  STATUS_FILTER_OPTIONS,
+  SOURCE_TYPE_META,
+  filterSources,
+  canAddToBulkSelection,
+} from "@/lib/source-library";
+import { MAX_BULK_OPERATIONS } from "@/lib/source-contract";
+import type { DocumentSourceType } from "@prisma/client";
 
 interface DocumentItem {
   id: string;
@@ -43,9 +55,12 @@ interface DocumentItem {
   fileType: string;
   size: number | null;
   status: string;
+  sourceType: DocumentSourceType;
+  sourceUrl: string | null;
   storageUrl: string | null;
   uploadedBy: { id: string; name: string | null; image: string | null } | null;
   createdAt: Date;
+  updatedAt: Date;
   _count: { chunks: number };
 }
 
@@ -57,14 +72,6 @@ interface Props {
   kbId: string;
   kbName: string;
 }
-
-const STATUS_FILTERS = [
-  { label: "All", value: "" },
-  { label: "Ready", value: "READY" },
-  { label: "Processing", value: "PROCESSING" },
-  { label: "Error", value: "ERROR" },
-  { label: "Queued", value: "QUEUED" },
-] as const;
 
 export function DocumentTable({ items, kbId, kbName }: Props) {
   const router = useRouter();
@@ -79,7 +86,9 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState("");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<DocumentSourceType | "">("");
   const [showFilters, setShowFilters] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const pageSize = 10;
 
   const toggleSort = (field: SortField) => {
@@ -91,24 +100,15 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
     }
   };
 
-  const processingStatuses = ["QUEUED", "UPLOADING", "STORED", "EXTRACTING", "CHUNKING", "EMBEDDING_PENDING", "EMBEDDING"];
+  const clearFilters = () => {
+    setSearch("");
+    setSourceTypeFilter("");
+    setStatusFilter("");
+    setPage(0);
+  };
 
   const filtered = useMemo(() => {
-    let list = items;
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (d) =>
-          d.name.toLowerCase().includes(q) ||
-          d.fileType.toLowerCase().includes(q) ||
-          d.uploadedBy?.name?.toLowerCase().includes(q),
-      );
-    }
-    if (statusFilter === "PROCESSING") {
-      list = list.filter((d) => processingStatuses.includes(d.status));
-    } else if (statusFilter) {
-      list = list.filter((d) => d.status === statusFilter);
-    }
+    const list = filterSources(items, { search, sourceType: sourceTypeFilter, status: statusFilter });
     list.sort((a, b) => {
       const dir = sortDir === "asc" ? 1 : -1;
       switch (sortField) {
@@ -127,7 +127,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
       }
     });
     return list;
-  }, [items, search, sortField, sortDir, statusFilter]);
+  }, [items, search, sortField, sortDir, statusFilter, sourceTypeFilter]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paged = filtered.slice(page * pageSize, (page + 1) * pageSize);
@@ -136,6 +136,10 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
   const someSelected = paged.some((d) => selected.has(d.id));
 
   const toggleSelect = (id: string) => {
+    if (!selected.has(id) && !canAddToBulkSelection(selected.size)) {
+      toast.warning(`You can select up to ${MAX_BULK_OPERATIONS} sources at once`);
+      return;
+    }
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -152,9 +156,15 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
         return next;
       });
     } else {
+      const available = MAX_BULK_OPERATIONS - selected.size;
+      const toAdd = paged.filter((d) => !selected.has(d.id)).slice(0, Math.max(0, available));
+      if (toAdd.length === 0) {
+        toast.warning(`You can select up to ${MAX_BULK_OPERATIONS} sources at once`);
+        return;
+      }
       setSelected((prev) => {
         const next = new Set(prev);
-        paged.forEach((d) => next.add(d.id));
+        toAdd.forEach((d) => next.add(d.id));
         return next;
       });
     }
@@ -185,30 +195,36 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
   };
 
   const handleBulkDelete = async () => {
-    if (selected.size === 0) return;
+    if (selected.size === 0 || bulkBusy) return;
+    setBulkBusy(true);
     try {
       const formData = new FormData();
       selected.forEach((id) => formData.append("ids", id));
       await bulkDeleteDocuments(formData);
-      toast.success(`${selected.size} document(s) deleted`);
+      toast.success(`${selected.size} source${selected.size !== 1 ? "s" : ""} deleted`);
       clearSelection();
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setBulkBusy(false);
     }
   };
 
   const handleBulkReprocess = async () => {
-    if (selected.size === 0) return;
+    if (selected.size === 0 || bulkBusy) return;
+    setBulkBusy(true);
     try {
       const formData = new FormData();
       selected.forEach((id) => formData.append("ids", id));
       await bulkReprocessDocuments(formData);
-      toast.success(`Reprocessing ${selected.size} document(s)`);
+      toast.success(`Reprocessing ${selected.size} source${selected.size !== 1 ? "s" : ""}`);
       clearSelection();
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to reprocess");
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -227,20 +243,20 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-text-primary">{kbName}</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            No documents yet. Upload your first document to get started.
+            No sources yet. Add your first source to get started.
           </p>
         </div>
         <div className="flex flex-col items-center justify-center py-24">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10">
             <FileText size={32} className="text-brand" />
           </div>
-          <h2 className="mt-6 text-xl font-semibold text-text-primary">No documents yet</h2>
+          <h2 className="mt-6 text-xl font-semibold text-text-primary">No sources yet</h2>
           <p className="mt-2 max-w-sm text-center text-sm text-text-secondary">
-            Upload PDF, DOCX, TXT, MD, or CSV files to populate your knowledge base.
+            Upload files, or add a URL or YouTube video to populate your knowledge base.
           </p>
           <Button variant="primary" className="mt-8" onClick={() => setUploadOpen(true)}>
             <Upload size={16} />
-            Upload documents
+            Add source
           </Button>
         </div>
         <DocumentUploadDialog
@@ -259,7 +275,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">{kbName}</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            {items.length} document{items.length !== 1 ? "s" : ""}
+            {items.length} source{items.length !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="flex gap-2">
@@ -281,47 +297,82 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
           <input
             type="text"
-            placeholder="Search by name, type, uploader..."
+            placeholder="Search by name, type, URL..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               setPage(0);
             }}
-            aria-label="Search documents"
+            aria-label="Search sources"
             className="w-full rounded-[10px] border border-border bg-bg py-2 pl-9 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none"
           />
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-1.5 rounded-[10px] border px-3 py-2 text-xs font-medium transition-colors ${
-            statusFilter
+            statusFilter || sourceTypeFilter
               ? "border-brand/30 bg-brand/10 text-brand"
               : "border-border text-text-secondary hover:bg-surface-hover"
           }`}
         >
           <Filter size={13} />
-          Filter
+          Filters
         </button>
       </div>
 
       {showFilters && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              onClick={() => {
-                setStatusFilter(f.value);
-                setPage(0);
-              }}
-              className={`rounded-[8px] border px-3 py-1.5 text-xs font-medium transition-colors ${
-                statusFilter === f.value
-                  ? "border-brand/30 bg-brand/10 text-brand"
-                  : "border-border text-text-secondary hover:bg-surface-hover"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="mb-4 flex flex-wrap items-start gap-x-8 gap-y-4 rounded-xl border border-border p-4">
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+              Source type
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {SOURCE_TYPE_OPTIONS.map((f) => {
+                const active = sourceTypeFilter === f.value;
+                return (
+                  <button
+                    key={f.value}
+                    onClick={() => {
+                      setSourceTypeFilter(f.value);
+                      setPage(0);
+                    }}
+                    aria-pressed={active}
+                    className={`flex items-center gap-1.5 rounded-[8px] border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-brand/30 bg-brand/10 text-brand"
+                        : "border-border text-text-secondary hover:bg-surface-hover"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+              Status
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_FILTER_OPTIONS.map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => {
+                    setStatusFilter(f.value);
+                    setPage(0);
+                  }}
+                  aria-pressed={statusFilter === f.value}
+                  className={`rounded-[8px] border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    statusFilter === f.value
+                      ? "border-brand/30 bg-brand/10 text-brand"
+                      : "border-border text-text-secondary hover:bg-surface-hover"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
@@ -329,19 +380,22 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-brand/30 bg-brand/5 px-4 py-2.5">
           <span className="text-sm font-medium text-text-primary">
             {selected.size} selected
+            {selected.size >= MAX_BULK_OPERATIONS && " (max)"}
           </span>
           <div className="ml-auto flex gap-2">
             <Button
               variant="secondary"
               size="sm"
+              disabled={bulkBusy}
               onClick={handleBulkReprocess}
             >
-              <RotateCcw size={13} />
+              {bulkBusy ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
               Reprocess
             </Button>
             <Button
               variant="secondary"
               size="sm"
+              disabled={bulkBusy}
               className="!border-error/30 !text-error hover:!bg-error/10"
               onClick={handleBulkDelete}
             >
@@ -351,6 +405,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
             <Button
               variant="ghost"
               size="sm"
+              disabled={bulkBusy}
               onClick={clearSelection}
             >
               Clear
@@ -359,8 +414,18 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border">
-        <table className="w-full">
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-border py-20">
+          <SearchX size={28} className="text-text-tertiary" />
+          <p className="mt-3 text-sm font-medium text-text-primary">No sources match your filters</p>
+          <p className="mt-1 text-xs text-text-tertiary">Try adjusting the search or filters.</p>
+          <Button variant="secondary" size="sm" className="mt-4" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-surface">
               <th className="w-10 px-2 py-3">
@@ -379,7 +444,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                 onClick={() => toggleSort("name")}
               >
                 <span className="inline-flex items-center gap-1.5">
-                  Filename
+                  Source
                   <SortIcon field="name" />
                 </span>
               </th>
@@ -463,15 +528,20 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                         {doc.name}
                       </Link>
                       <p className="text-xs text-text-tertiary sm:hidden">
-                        {doc.fileType.toUpperCase()} &middot; {formatSize(doc.size ?? 0)} &middot; {doc._count.chunks} chunks
+                        {SOURCE_TYPE_META[doc.sourceType as DocumentSourceType]?.label || doc.sourceType}
+                        {doc.sourceType === "FILE" && ` (${doc.fileType.toUpperCase()})`}
+                        {" · "}{formatSize(doc.size ?? 0)} · {doc._count.chunks} chunks
                       </p>
                     </div>
                   </div>
                 </td>
                 <td className="hidden px-3 py-3.5 sm:table-cell">
-                  <span className="text-sm text-text-secondary">
-                    {doc.fileType.toUpperCase()}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <SourceTypeBadge sourceType={doc.sourceType} />
+                    {doc.sourceType === "FILE" && (
+                      <span className="text-xs text-text-tertiary">{doc.fileType.toUpperCase()}</span>
+                    )}
+                  </div>
                 </td>
                 <td className="hidden px-3 py-3.5 md:table-cell">
                   <span className="text-sm text-text-secondary">{formatSize(doc.size ?? 0)}</span>
@@ -561,6 +631,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
           </tbody>
         </table>
       </div>
+      )}
 
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
