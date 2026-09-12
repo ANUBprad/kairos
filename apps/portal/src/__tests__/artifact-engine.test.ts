@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   resolveArtifactDefinition,
   listRegisteredArtifactTypes,
@@ -9,6 +10,7 @@ import {
   buildBoundedContext,
   assertNonEmptySourceScope,
   assertSourcesOwned,
+  buildArtifactTraceMetadata,
   type ArtifactSourceChunk,
 } from "@/lib/artifacts";
 
@@ -196,5 +198,62 @@ describe("artifact source scope", () => {
       () => assertSourcesOwned(["doc1", "foreign"], new Set(["doc1"])),
       { code: "ARTIFACT_SOURCE_OUT_OF_SCOPE" },
     );
+  });
+});
+
+describe("artifact trace metadata", () => {
+  it("carries artifact, kb, source scope and type in the trace metadata", () => {
+    const metadata = buildArtifactTraceMetadata({
+      artifactId: "clx-artifact",
+      knowledgeBaseId: "clx-kb",
+      sourceIds: ["clx-doc1", "clx-doc2"],
+      artifactType: "SUMMARY",
+    });
+    assert.deepEqual(metadata, {
+      artifactId: "clx-artifact",
+      knowledgeBaseId: "clx-kb",
+      sourceIds: ["clx-doc1", "clx-doc2"],
+      artifactType: "SUMMARY",
+    });
+  });
+
+  it("snapshots the source array rather than aliasing caller input", () => {
+    const sourceIds = ["clx-doc1"];
+    const metadata = buildArtifactTraceMetadata({
+      artifactId: "clx-a",
+      knowledgeBaseId: "clx-kb",
+      sourceIds,
+      artifactType: "SUMMARY",
+    });
+    sourceIds.push("clx-doc2");
+    assert.equal((metadata.sourceIds as string[]).length, 1);
+  });
+});
+
+describe("artifact engine wiring", () => {
+  const engineSource = readFileSync(
+    new URL("../lib/artifacts/engine.ts", import.meta.url),
+    "utf8",
+  );
+
+  it("generates through the provider abstraction, never raw provider SDKs", () => {
+    assert.match(engineSource, /getAIProvider|generateChat/);
+    assert.doesNotMatch(
+      engineSource,
+      /from ["'](openai|@google\/generativelanguage)["']|new OpenAI\(|new GoogleGenerativeAI\(/,
+    );
+  });
+
+  it("reuses canAccessKnowledgeBase for authorization", () => {
+    assert.match(engineSource, /canAccessKnowledgeBase/);
+  });
+
+  it("persists terminal states through the atomic lifecycle operations", () => {
+    assert.match(engineSource, /completeLearningArtifact/);
+    assert.match(engineSource, /failLearningArtifact/);
+  });
+
+  it("requires an explicit non-empty source scope at the entrypoint", () => {
+    assert.match(engineSource, /assertNonEmptySourceScope/);
   });
 });

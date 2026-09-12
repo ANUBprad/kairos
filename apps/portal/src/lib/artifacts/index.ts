@@ -22,6 +22,8 @@ export {
   listLearningArtifacts,
   updateLearningArtifactStatus,
   updateLearningArtifactContent,
+  completeLearningArtifact,
+  failLearningArtifact,
 } from "./persistence";
 export {
   resolveArtifactDefinition,
@@ -35,3 +37,4 @@ export { loadArtifactSourceChunks, buildBoundedContext } from "./context";
 export type { ArtifactSourceChunk, BoundedContext } from "./context";
 export { parseStructuredOutput, extractJsonObject } from "./output";
 export type { ParseResult, ParseSuccess, ParseFailure } from "./output";
+export { buildArtifactTraceMetadata } from "./observability";
