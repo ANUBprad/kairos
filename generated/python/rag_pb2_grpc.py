@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from generated.python import rag_pb2 as rag__pb2
+from generated.python import rag_pb2 as generated_dot_python_dot_rag__pb2
 
 GRPC_GENERATED_VERSION = '1.81.1'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in rag_pb2_grpc.py depends on'
+        + ' but the generated code in generated/python/rag_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -35,29 +35,29 @@ class IntelligenceServiceStub:
             channel: A grpc.Channel.
         """
         self.ComputeEmbeddings = channel.unary_unary(
-                '/keiro.v1.IntelligenceService/ComputeEmbeddings',
-                request_serializer=rag__pb2.ComputeEmbeddingRequest.SerializeToString,
-                response_deserializer=rag__pb2.ComputeEmbeddingResponse.FromString,
+                '/kairos.v1.IntelligenceService/ComputeEmbeddings',
+                request_serializer=generated_dot_python_dot_rag__pb2.ComputeEmbeddingRequest.SerializeToString,
+                response_deserializer=generated_dot_python_dot_rag__pb2.ComputeEmbeddingResponse.FromString,
                 _registered_method=True)
         self.ClassifyQueryType = channel.unary_unary(
-                '/keiro.v1.IntelligenceService/ClassifyQueryType',
-                request_serializer=rag__pb2.ClassifyQueryRequest.SerializeToString,
-                response_deserializer=rag__pb2.ClassifyQueryResponse.FromString,
+                '/kairos.v1.IntelligenceService/ClassifyQueryType',
+                request_serializer=generated_dot_python_dot_rag__pb2.ClassifyQueryRequest.SerializeToString,
+                response_deserializer=generated_dot_python_dot_rag__pb2.ClassifyQueryResponse.FromString,
                 _registered_method=True)
         self.IngestDocument = channel.unary_unary(
-                '/keiro.v1.IntelligenceService/IngestDocument',
-                request_serializer=rag__pb2.IngestDocumentRequest.SerializeToString,
-                response_deserializer=rag__pb2.IngestDocumentResponse.FromString,
+                '/kairos.v1.IntelligenceService/IngestDocument',
+                request_serializer=generated_dot_python_dot_rag__pb2.IngestDocumentRequest.SerializeToString,
+                response_deserializer=generated_dot_python_dot_rag__pb2.IngestDocumentResponse.FromString,
                 _registered_method=True)
         self.ExecuteRetrieval = channel.unary_unary(
-                '/keiro.v1.IntelligenceService/ExecuteRetrieval',
-                request_serializer=rag__pb2.ExecuteRetrievalRequest.SerializeToString,
-                response_deserializer=rag__pb2.ExecuteRetrievalResponse.FromString,
+                '/kairos.v1.IntelligenceService/ExecuteRetrieval',
+                request_serializer=generated_dot_python_dot_rag__pb2.ExecuteRetrievalRequest.SerializeToString,
+                response_deserializer=generated_dot_python_dot_rag__pb2.ExecuteRetrievalResponse.FromString,
                 _registered_method=True)
         self.GenerateResponse = channel.unary_unary(
-                '/keiro.v1.IntelligenceService/GenerateResponse',
-                request_serializer=rag__pb2.GenerateResponseRequest.SerializeToString,
-                response_deserializer=rag__pb2.GeneratedResponse.FromString,
+                '/kairos.v1.IntelligenceService/GenerateResponse',
+                request_serializer=generated_dot_python_dot_rag__pb2.GenerateResponseRequest.SerializeToString,
+                response_deserializer=generated_dot_python_dot_rag__pb2.GeneratedResponse.FromString,
                 _registered_method=True)
 
 
@@ -99,34 +99,34 @@ def add_IntelligenceServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'ComputeEmbeddings': grpc.unary_unary_rpc_method_handler(
                     servicer.ComputeEmbeddings,
-                    request_deserializer=rag__pb2.ComputeEmbeddingRequest.FromString,
-                    response_serializer=rag__pb2.ComputeEmbeddingResponse.SerializeToString,
+                    request_deserializer=generated_dot_python_dot_rag__pb2.ComputeEmbeddingRequest.FromString,
+                    response_serializer=generated_dot_python_dot_rag__pb2.ComputeEmbeddingResponse.SerializeToString,
             ),
             'ClassifyQueryType': grpc.unary_unary_rpc_method_handler(
                     servicer.ClassifyQueryType,
-                    request_deserializer=rag__pb2.ClassifyQueryRequest.FromString,
-                    response_serializer=rag__pb2.ClassifyQueryResponse.SerializeToString,
+                    request_deserializer=generated_dot_python_dot_rag__pb2.ClassifyQueryRequest.FromString,
+                    response_serializer=generated_dot_python_dot_rag__pb2.ClassifyQueryResponse.SerializeToString,
             ),
             'IngestDocument': grpc.unary_unary_rpc_method_handler(
                     servicer.IngestDocument,
-                    request_deserializer=rag__pb2.IngestDocumentRequest.FromString,
-                    response_serializer=rag__pb2.IngestDocumentResponse.SerializeToString,
+                    request_deserializer=generated_dot_python_dot_rag__pb2.IngestDocumentRequest.FromString,
+                    response_serializer=generated_dot_python_dot_rag__pb2.IngestDocumentResponse.SerializeToString,
             ),
             'ExecuteRetrieval': grpc.unary_unary_rpc_method_handler(
                     servicer.ExecuteRetrieval,
-                    request_deserializer=rag__pb2.ExecuteRetrievalRequest.FromString,
-                    response_serializer=rag__pb2.ExecuteRetrievalResponse.SerializeToString,
+                    request_deserializer=generated_dot_python_dot_rag__pb2.ExecuteRetrievalRequest.FromString,
+                    response_serializer=generated_dot_python_dot_rag__pb2.ExecuteRetrievalResponse.SerializeToString,
             ),
             'GenerateResponse': grpc.unary_unary_rpc_method_handler(
                     servicer.GenerateResponse,
-                    request_deserializer=rag__pb2.GenerateResponseRequest.FromString,
-                    response_serializer=rag__pb2.GeneratedResponse.SerializeToString,
+                    request_deserializer=generated_dot_python_dot_rag__pb2.GenerateResponseRequest.FromString,
+                    response_serializer=generated_dot_python_dot_rag__pb2.GeneratedResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'keiro.v1.IntelligenceService', rpc_method_handlers)
+            'kairos.v1.IntelligenceService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('keiro.v1.IntelligenceService', rpc_method_handlers)
+    server.add_registered_method_handlers('kairos.v1.IntelligenceService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -147,9 +147,9 @@ class IntelligenceService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/keiro.v1.IntelligenceService/ComputeEmbeddings',
-            rag__pb2.ComputeEmbeddingRequest.SerializeToString,
-            rag__pb2.ComputeEmbeddingResponse.FromString,
+            '/kairos.v1.IntelligenceService/ComputeEmbeddings',
+            generated_dot_python_dot_rag__pb2.ComputeEmbeddingRequest.SerializeToString,
+            generated_dot_python_dot_rag__pb2.ComputeEmbeddingResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -174,9 +174,9 @@ class IntelligenceService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/keiro.v1.IntelligenceService/ClassifyQueryType',
-            rag__pb2.ClassifyQueryRequest.SerializeToString,
-            rag__pb2.ClassifyQueryResponse.FromString,
+            '/kairos.v1.IntelligenceService/ClassifyQueryType',
+            generated_dot_python_dot_rag__pb2.ClassifyQueryRequest.SerializeToString,
+            generated_dot_python_dot_rag__pb2.ClassifyQueryResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -201,9 +201,9 @@ class IntelligenceService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/keiro.v1.IntelligenceService/IngestDocument',
-            rag__pb2.IngestDocumentRequest.SerializeToString,
-            rag__pb2.IngestDocumentResponse.FromString,
+            '/kairos.v1.IntelligenceService/IngestDocument',
+            generated_dot_python_dot_rag__pb2.IngestDocumentRequest.SerializeToString,
+            generated_dot_python_dot_rag__pb2.IngestDocumentResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -228,9 +228,9 @@ class IntelligenceService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/keiro.v1.IntelligenceService/ExecuteRetrieval',
-            rag__pb2.ExecuteRetrievalRequest.SerializeToString,
-            rag__pb2.ExecuteRetrievalResponse.FromString,
+            '/kairos.v1.IntelligenceService/ExecuteRetrieval',
+            generated_dot_python_dot_rag__pb2.ExecuteRetrievalRequest.SerializeToString,
+            generated_dot_python_dot_rag__pb2.ExecuteRetrievalResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -255,9 +255,9 @@ class IntelligenceService:
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/keiro.v1.IntelligenceService/GenerateResponse',
-            rag__pb2.GenerateResponseRequest.SerializeToString,
-            rag__pb2.GeneratedResponse.FromString,
+            '/kairos.v1.IntelligenceService/GenerateResponse',
+            generated_dot_python_dot_rag__pb2.GenerateResponseRequest.SerializeToString,
+            generated_dot_python_dot_rag__pb2.GeneratedResponse.FromString,
             options,
             channel_credentials,
             insecure,
