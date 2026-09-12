@@ -14,7 +14,7 @@ import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
 import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError } from "@/lib/ingestion/url";
 import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError } from "@/lib/ingestion/youtube";
-import { assertSameKnowledgeBase, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
+import { assertSameKnowledgeBase, MAX_BULK_OPERATIONS, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
 import type { Prisma } from "@prisma/client";
 
 const ALLOWED_EXTENSIONS = ["pdf", "txt", "md", "markdown", "csv", "docx"];
@@ -30,7 +30,6 @@ const MIME_MAP: Record<string, string> = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_DOWNLOAD_SIZE = 15 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
-const MAX_BULK_OPERATIONS = 50;
 
 function getFileType(name: string, mime: string): string {
   const ext = name.split(".").pop()?.toLowerCase() || "";

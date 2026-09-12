@@ -1,5 +1,7 @@
 import type { DocumentSourceType, DocumentStatus, Prisma } from "@prisma/client";
 
+export const MAX_BULK_OPERATIONS = 50;
+
 export const SOURCE_TYPE_VALUES: ReadonlyArray<DocumentSourceType> = ["FILE", "TEXT", "URL", "YOUTUBE"];
 
 export const SOURCE_STATUS_VALUES: ReadonlyArray<DocumentStatus> = [
