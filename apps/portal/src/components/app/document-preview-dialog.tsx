@@ -24,16 +24,16 @@ interface PreviewResult {
   metadata: Record<string, unknown> | null;
   uploadedBy: string;
   createdAt: string;
-  size: number;
+  size: number | null;
 }
 
 interface DocumentData {
   id: string;
   name: string;
   fileType: string;
-  size: number;
+  size: number | null;
   status: string;
-  storageProvider: string;
+  storageProvider: string | null;
   storageUrl: string | null;
   metadata: unknown;
   createdAt: Date;

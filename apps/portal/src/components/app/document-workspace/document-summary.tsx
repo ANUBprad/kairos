@@ -15,7 +15,7 @@ export function DocumentSummary({ document, className }: DocumentSummaryProps) {
 
   const infoItems = [
     { label: "File Type", value: document.fileType.toUpperCase() },
-    { label: "Size", value: formatBytes(document.size) },
+    { label: "Size", value: formatBytes(document.size ?? 0) },
     { label: "Status", value: document.status, color: statusColors.text },
     { label: "Chunks", value: document._count.chunks },
     { label: "Versions", value: document._count.versions },

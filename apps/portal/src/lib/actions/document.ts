@@ -513,7 +513,7 @@ export async function deleteDocument(formData: FormData) {
   await logActivity(id, session.user.id, "DELETED", { fileName: doc.name });
 
   const storage = getStorageProvider();
-  storage.delete(doc.storageKey).catch(() => {});
+  if (doc.storageKey) storage.delete(doc.storageKey).catch(() => {});
 
   await prisma.document.delete({ where: { id } });
 
@@ -571,7 +571,7 @@ export async function bulkDeleteDocuments(formData: FormData) {
 
   const storage = getStorageProvider();
   for (const doc of docs) {
-    storage.delete(doc.storageKey).catch(() => {});
+    if (doc.storageKey) storage.delete(doc.storageKey).catch(() => {});
   }
 
   await prisma.$transaction([

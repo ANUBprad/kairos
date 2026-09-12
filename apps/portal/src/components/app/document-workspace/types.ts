@@ -66,10 +66,10 @@ export interface DocumentWithDetails {
   id: string;
   name: string;
   fileType: string;
-  size: number;
+  size: number | null;
   fileHash: string | null;
-  storageProvider: string;
-  storageKey: string;
+  storageProvider: string | null;
+  storageKey: string | null;
   storageUrl: string | null;
   metadata: DocumentMetadata | null;
   status: DocumentStatus;

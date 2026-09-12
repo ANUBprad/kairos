@@ -41,7 +41,7 @@ interface DocumentItem {
   id: string;
   name: string;
   fileType: string;
-  size: number;
+  size: number | null;
   status: string;
   storageUrl: string | null;
   uploadedBy: { id: string; name: string | null; image: string | null } | null;
@@ -117,7 +117,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
         case "fileType":
           return a.fileType.localeCompare(b.fileType) * dir;
         case "size":
-          return (a.size - b.size) * dir;
+          return ((a.size ?? -1) - (b.size ?? -1)) * dir;
         case "status":
           return a.status.localeCompare(b.status) * dir;
         case "createdAt":
@@ -463,7 +463,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                         {doc.name}
                       </Link>
                       <p className="text-xs text-text-tertiary sm:hidden">
-                        {doc.fileType.toUpperCase()} &middot; {formatSize(doc.size)} &middot; {doc._count.chunks} chunks
+                        {doc.fileType.toUpperCase()} &middot; {formatSize(doc.size ?? 0)} &middot; {doc._count.chunks} chunks
                       </p>
                     </div>
                   </div>
@@ -474,7 +474,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                   </span>
                 </td>
                 <td className="hidden px-3 py-3.5 md:table-cell">
-                  <span className="text-sm text-text-secondary">{formatSize(doc.size)}</span>
+                  <span className="text-sm text-text-secondary">{formatSize(doc.size ?? 0)}</span>
                 </td>
                 <td className="hidden px-3 py-3.5 lg:table-cell">
                   <span className="text-sm text-text-secondary">

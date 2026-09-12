@@ -207,6 +207,8 @@ model KnowledgeBase {
   id          String  @id @default(cuid())
   name        String  @db.VarChar(255)
   description String? @db.Text
+  icon        String? @db.VarChar(32)
+  defaultModel String?
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -286,16 +288,18 @@ model MessageCitation {
 /// Documents / Uploads
 
 model Document {
-  id              String         @id @default(cuid())
-  name            String         @db.VarChar(255)
-  fileType        String         @db.VarChar(64)
-  size            Int
-  fileHash        String?        @db.VarChar(128)
-  storageProvider String         @default("cloudinary")
-  storageKey      String         @db.VarChar(512)
-  storageUrl      String?        @db.Text
+  id              String             @id @default(cuid())
+  name            String             @db.VarChar(255)
+  sourceType      DocumentSourceType @default(FILE)
+  sourceUrl       String?            @db.Text
+  fileType        String             @db.VarChar(64)
+  size            Int?
+  fileHash        String?            @db.VarChar(128)
+  storageProvider String?            @default("cloudinary")
+  storageKey      String?            @db.VarChar(512)
+  storageUrl      String?            @db.Text
   metadata        Json?
-  status          DocumentStatus @default(QUEUED)
+  status          DocumentStatus     @default(QUEUED)
 
   knowledgeBaseId String
   knowledgeBase   KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
@@ -394,6 +398,13 @@ enum DocumentStatus {
   INDEXED
   READY
   ERROR
+}
+
+enum DocumentSourceType {
+  FILE
+  TEXT
+  URL
+  YOUTUBE
 }
 
 /// Experiment Tracking
