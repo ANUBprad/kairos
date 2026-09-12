@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   FileText,
-  Upload,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -16,9 +15,10 @@ import {
   ArrowUp,
   ArrowDown,
   Search,
-  SearchX,
+SearchX,
   Loader2,
   File,
+  Plus,
   CheckSquare,
   Square,
   Trash,
@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
 import { SourceTypeBadge } from "@/components/app/source-type-badge";
 import { DocumentUploadDialog } from "@/components/app/document-upload-dialog";
+import { SourceAddDialog } from "@/components/app/source-add-dialog";
 import { DocumentPreviewDialog } from "@/components/app/document-preview-dialog";
 import { RenameDocumentDialog } from "@/components/app/rename-document-dialog";
 import { DeleteDocumentDialog } from "@/components/app/delete-document-dialog";
@@ -76,6 +77,7 @@ interface Props {
 export function DocumentTable({ items, kbId, kbName }: Props) {
   const router = useRouter();
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [sourceAddOpen, setSourceAddOpen] = useState(false);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<DocumentItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DocumentItem | null>(null);
@@ -254,8 +256,8 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
           <p className="mt-2 max-w-sm text-center text-sm text-text-secondary">
             Upload files, or add a URL or YouTube video to populate your knowledge base.
           </p>
-          <Button variant="primary" className="mt-8" onClick={() => setUploadOpen(true)}>
-            <Upload size={16} />
+          <Button variant="primary" className="mt-8" onClick={() => setSourceAddOpen(true)}>
+            <Plus size={16} />
             Add source
           </Button>
         </div>
@@ -264,6 +266,12 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
           open={uploadOpen}
           onOpenChange={setUploadOpen}
           existingFiles={items.map((d) => d.name)}
+        />
+        <SourceAddDialog
+          kbId={kbId}
+          open={sourceAddOpen}
+          onOpenChange={setSourceAddOpen}
+          onOpenFileUpload={() => setUploadOpen(true)}
         />
       </div>
     );
@@ -285,9 +293,9 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
               Chat
             </Button>
           </Link>
-          <Button variant="primary" onClick={() => setUploadOpen(true)}>
-            <Upload size={16} />
-            Upload
+          <Button variant="primary" onClick={() => setSourceAddOpen(true)}>
+            <Plus size={16} />
+            Add source
           </Button>
         </div>
       </div>
@@ -681,6 +689,12 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         existingFiles={items.map((d) => d.name)}
+      />
+      <SourceAddDialog
+        kbId={kbId}
+        open={sourceAddOpen}
+        onOpenChange={setSourceAddOpen}
+        onOpenFileUpload={() => setUploadOpen(true)}
       />
       <DocumentPreviewDialog
         docId={previewId}
