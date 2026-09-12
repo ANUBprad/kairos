@@ -14,6 +14,7 @@ import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
 import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError } from "@/lib/ingestion/url";
 import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError } from "@/lib/ingestion/youtube";
+import { assertSameKnowledgeBase, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
 import type { Prisma } from "@prisma/client";
 
 const ALLOWED_EXTENSIONS = ["pdf", "txt", "md", "markdown", "csv", "docx"];
@@ -77,6 +78,8 @@ async function assertDocAccess(docId: string, userId: string) {
       size: true,
       fileHash: true,
       status: true,
+      sourceType: true,
+      sourceUrl: true,
       storageUrl: true,
       storageKey: true,
       storageProvider: true,
@@ -669,23 +672,26 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
   }
 }
 
-export async function listDocuments(kbId: string) {
+export async function listDocuments(kbId: string, filters?: SourceListFilters): Promise<SourceListItem[]> {
   const session = await getServerSession();
   if (!session) return [];
 
   await getOrgFromKb(kbId, session.user.id);
 
   return prisma.document.findMany({
-    where: { knowledgeBaseId: kbId },
-    orderBy: { createdAt: "desc" },
+    where: resolveSourceWhere(kbId, filters),
+    orderBy: resolveSourceListOrder(),
     select: {
       id: true,
       name: true,
       fileType: true,
       size: true,
       status: true,
+      sourceType: true,
+      sourceUrl: true,
       storageUrl: true,
       createdAt: true,
+      updatedAt: true,
       metadata: true,
       uploadedBy: { select: { id: true, name: true, image: true } },
       _count: { select: { chunks: true } },
@@ -799,7 +805,8 @@ export async function bulkDeleteDocuments(formData: FormData) {
 
   if (docs.length === 0) throw new Error("No documents found");
 
-  await getOrgFromKb(docs[0].knowledgeBaseId, session.user.id);
+  const bulkKbId = assertSameKnowledgeBase(docs);
+  await getOrgFromKb(bulkKbId, session.user.id);
 
   const storage = getStorageProvider();
   for (const doc of docs) {
@@ -836,7 +843,8 @@ export async function bulkReprocessDocuments(formData: FormData) {
 
   if (docs.length === 0) throw new Error("No documents found");
 
-  await getOrgFromKb(docs[0].knowledgeBaseId, session.user.id);
+  const bulkKbId = assertSameKnowledgeBase(docs);
+  await getOrgFromKb(bulkKbId, session.user.id);
 
   await prisma.$transaction(async (tx) => {
     for (const doc of docs) {
