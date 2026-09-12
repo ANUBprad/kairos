@@ -33,6 +33,19 @@ export async function getLearningArtifact(id: string): Promise<LearningArtifactD
   return artifact ? toLearningArtifactData(artifact) : null;
 }
 
+// Workspace-scoped read. The artifact id alone must never authorize a read —
+// the knowledge base acts as the tenant boundary, so a cross-KB id resolves
+// to "missing" rather than leaking a foreign artifact.
+export async function getLearningArtifactInKb(
+  id: string,
+  knowledgeBaseId: string,
+): Promise<LearningArtifactData | null> {
+  const artifact = await prisma.learningArtifact.findFirst({
+    where: { id, knowledgeBaseId },
+  });
+  return artifact ? toLearningArtifactData(artifact) : null;
+}
+
 export async function listLearningArtifacts(
   knowledgeBaseId: string,
   filters: ListLearningArtifactsFilters = {},

@@ -11,7 +11,9 @@ import {
   assertNonEmptySourceScope,
   assertSourcesOwned,
   buildArtifactTraceMetadata,
+  toLearningArtifactData,
   type ArtifactSourceChunk,
+  type LearningArtifactRow,
 } from "@/lib/artifacts";
 
 const validSummary = {
@@ -255,5 +257,102 @@ describe("artifact engine wiring", () => {
 
   it("requires an explicit non-empty source scope at the entrypoint", () => {
     assert.match(engineSource, /assertNonEmptySourceScope/);
+  });
+});
+
+describe("artifact application wiring", () => {
+  const actionsSource = readFileSync(
+    new URL("../lib/actions/artifacts.ts", import.meta.url),
+    "utf8",
+  );
+  const persistenceSource = readFileSync(
+    new URL("../lib/artifacts/persistence.ts", import.meta.url),
+    "utf8",
+  );
+
+  it("is a server action boundary", () => {
+    assert.match(actionsSource, /^"use server";/m);
+  });
+
+  it("delegates generation to the artifact engine instead of a second pipeline", () => {
+    assert.match(actionsSource, /generateLearningArtifact/);
+    assert.doesNotMatch(actionsSource, /generateChat|getAIProvider/);
+  });
+
+  it("authorizes reads and lists through canAccessKnowledgeBase, never a second check", () => {
+    const authUses = actionsSource.match(/canAccessKnowledgeBase/g);
+    assert.equal(authUses?.length, 3); // one import + the read and list call sites
+    assert.doesNotMatch(actionsSource, /API_KEY|session\.user\.id to|members/);
+  });
+
+  it("keeps direct database access out of the application layer", () => {
+    assert.doesNotMatch(actionsSource, /from ["']@\/lib\/prisma["']/);
+  });
+
+  it("reads artifacts through the KB-scoped persistence primitive", () => {
+    assert.match(actionsSource, /getLearningArtifactInKb/);
+    assert.match(persistenceSource, /getLearningArtifactInKb[\s\S]*where:\s*\{\s*id,\s*knowledgeBaseId\s*\}/);
+  });
+});
+
+describe("public artifact DTO contract", () => {
+  it("exposes exactly the public application fields and nothing internal", () => {
+    const row: LearningArtifactRow = {
+      id: "clx-a",
+      type: "SUMMARY",
+      status: "COMPLETED",
+      name: "My summary",
+      schemaVersion: 1,
+      sourceIds: ["clx-doc1"],
+      content: { title: "T", overview: "O", keyPoints: ["K"] },
+      metadata: { promptVersion: "summary-v1", providerType: "openai", model: "gpt-4o" },
+      knowledgeBaseId: "clx-kb",
+      createdById: "clx-user",
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+      updatedAt: new Date("2026-01-01T00:00:00Z"),
+    };
+    assert.deepEqual(Object.keys(toLearningArtifactData(row)).sort(), [
+      "content",
+      "createdAt",
+      "createdById",
+      "id",
+      "knowledgeBaseId",
+      "metadata",
+      "name",
+      "schemaVersion",
+      "sourceIds",
+      "status",
+      "type",
+      "updatedAt",
+    ].sort());
+  });
+
+  it("the DTO carries no storage URLs, keys, or credentials fields", () => {
+    const row: LearningArtifactRow = {
+      id: "clx-a",
+      type: "SUMMARY",
+      status: "COMPLETED",
+      name: null,
+      schemaVersion: 1,
+      sourceIds: [],
+      content: null,
+      metadata: null,
+      knowledgeBaseId: "clx-kb",
+      createdById: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const dto = toLearningArtifactData(row);
+    assert.equal(JSON.stringify(dto).match(/storageUrl|storageKey|apiKey|secret|embedding/i), null);
+  });
+
+  it("artifact metadata holds only safe provenance fields", () => {
+    const safe = JSON.stringify({
+      promptVersion: "summary-v1",
+      providerType: "openai",
+      model: "gpt-4o",
+    });
+    assert.match(safe, /promptVersion/);
+    assert.doesNotMatch(safe, /apiKey|token|secret/i);
   });
 });

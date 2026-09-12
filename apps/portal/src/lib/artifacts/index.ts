@@ -19,6 +19,7 @@ export type {
 export {
   createLearningArtifact,
   getLearningArtifact,
+  getLearningArtifactInKb,
   listLearningArtifacts,
   updateLearningArtifactStatus,
   updateLearningArtifactContent,
