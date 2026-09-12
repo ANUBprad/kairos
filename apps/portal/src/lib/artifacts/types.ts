@@ -1,4 +1,5 @@
 import { isValidEntityId } from "@/lib/validation";
+import { AppError } from "@/lib/errors";
 import type { ArtifactType, ArtifactStatus, Prisma } from "@prisma/client";
 
 export const ARTIFACT_TYPE_VALUES: ReadonlyArray<ArtifactType> = [
@@ -129,4 +130,35 @@ export function toLearningArtifactData(row: LearningArtifactRow): LearningArtifa
 // must never authorize a cross-workspace read/write.
 export function artifactBelongsToKb(artifact: { knowledgeBaseId: string }, kbId: string): boolean {
   return artifact.knowledgeBaseId === kbId;
+}
+
+// An artifact is generated from an explicit source scope. Unlike chat, empty
+// is not "all sources" — generating from nothing would invent content.
+export function assertNonEmptySourceScope(sourceIds: readonly string[]): string[] {
+  if (sourceIds.length === 0) {
+    throw new AppError(
+      "ARTIFACT_NO_SOURCES",
+      "At least one source is required to generate an artifact",
+      400,
+    );
+  }
+  return [...sourceIds];
+}
+
+// Every requested source must belong to the knowledge base. A partial or
+// cross-KB scope is rejected as a whole rather than silently narrowed, so the
+// caller's intent is preserved and nothing leaks a foreign source's existence.
+export function assertSourcesOwned(
+  sourceIds: readonly string[],
+  ownedIds: ReadonlySet<string>,
+): string[] {
+  const missing = sourceIds.filter((id) => !ownedIds.has(id));
+  if (missing.length > 0) {
+    throw new AppError(
+      "ARTIFACT_SOURCE_OUT_OF_SCOPE",
+      "One or more sources do not belong to this knowledge base",
+      404,
+    );
+  }
+  return [...sourceIds];
 }
