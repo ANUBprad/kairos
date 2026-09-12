@@ -36,6 +36,7 @@ model User {
   conversations    Conversation[]
   experiments      Experiment[]
   benchmarkRuns    BenchmarkRun[]
+  learningArtifacts LearningArtifact[]
 
   apiKeys          ApiKey[]
   notifications    Notification[]
@@ -218,6 +219,7 @@ model KnowledgeBase {
   experiments       Experiment[]
   experimentRuns    ExperimentRun[]
   benchmarkDatasets BenchmarkDataset[]
+  learningArtifacts LearningArtifact[]
 
   retrievalConfig Json? @default("{}")
 
@@ -283,6 +285,46 @@ model MessageCitation {
   createdAt DateTime @default(now())
 
   @@index([messageId])
+}
+
+/// Generated learning artifacts (OpenBook-style knowledge artifacts)
+
+enum ArtifactType {
+  SUMMARY
+  REPORT
+  QUIZ
+  FLASHCARDS
+  MINDMAP
+  TAKEAWAYS
+  PODCAST
+}
+
+enum ArtifactStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model LearningArtifact {
+  id              String         @id @default(cuid())
+  type            ArtifactType
+  status          ArtifactStatus @default(PENDING)
+  name            String?        @db.VarChar(255)
+  schemaVersion   Int            @default(1)
+  sourceIds       String[]       @default([])
+  content         Json?
+  metadata        Json?
+  knowledgeBaseId String
+  knowledgeBase   KnowledgeBase  @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  createdById     String?
+  createdBy       User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([knowledgeBaseId, type])
+  @@index([knowledgeBaseId, status])
+  @@index([knowledgeBaseId, createdAt])
 }
 
 /// Documents / Uploads
