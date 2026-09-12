@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
+import { SourceTypeBadge } from "@/components/app/source-type-badge";
 import { getDocument, getDocumentPreviewContent } from "@/lib/actions/document";
 import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 
@@ -33,10 +34,13 @@ interface DocumentData {
   fileType: string;
   size: number | null;
   status: string;
+  sourceType?: string;
+  sourceUrl?: string | null;
   storageProvider: string | null;
   storageUrl: string | null;
   metadata: unknown;
   createdAt: Date;
+  updatedAt?: Date;
   uploadedBy: { id: string; name: string | null; image: string | null } | null;
   _count: { chunks: number };
 }
@@ -314,6 +318,12 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
               </h3>
               <div className="mt-4 space-y-3">
                 <div>
+                  <p className="text-[11px] text-text-tertiary">Source type</p>
+                  <div className="mt-1">
+                    <SourceTypeBadge sourceType={doc?.sourceType || "FILE"} />
+                  </div>
+                </div>
+                <div>
                   <p className="text-[11px] text-text-tertiary">Status</p>
                   <div className="mt-1">
                     <ProcessingBadge status={preview?.status || doc?.status || ""} />
@@ -325,6 +335,12 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
                     {(preview?.fileType || doc?.fileType || "").toUpperCase()}
                   </p>
                 </div>
+                {doc?.sourceUrl && (
+                  <div>
+                    <p className="text-[11px] text-text-tertiary">Source URL</p>
+                    <p className="mt-0.5 break-all text-sm text-text-primary">{doc.sourceUrl}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-[11px] text-text-tertiary">Size</p>
                   <p className="mt-0.5 text-sm text-text-primary">
@@ -341,6 +357,14 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
                         : "-"}
                   </p>
                 </div>
+                {doc?.updatedAt && new Date(doc.updatedAt).getTime() !== new Date(doc.createdAt).getTime() && (
+                  <div>
+                    <p className="text-[11px] text-text-tertiary">Updated</p>
+                    <p className="mt-0.5 text-sm text-text-primary">
+                      {new Date(doc.updatedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-[11px] text-text-tertiary">Uploaded by</p>
                   <p className="mt-0.5 text-sm text-text-primary">
