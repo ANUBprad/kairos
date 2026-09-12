@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { isValidEntityId } from "@/lib/validation";
 
 export interface VectorSearchResult {
   chunkId: string;
@@ -20,6 +21,7 @@ export interface VectorStore {
     embedding: number[],
     options: {
       knowledgeBaseIds?: string[];
+      documentIds?: string[];
       topK?: number;
       minSimilarity?: number;
     },
@@ -66,6 +68,7 @@ class PgVectorStore implements VectorStore {
     queryEmbedding: number[],
     options: {
       knowledgeBaseIds?: string[];
+      documentIds?: string[];
       topK?: number;
       minSimilarity?: number;
     },
@@ -74,11 +77,16 @@ class PgVectorStore implements VectorStore {
     const minSim = options.minSimilarity ?? 0.7;
     const queryVec = vecLiteral(queryEmbedding);
 
-    const kbIds = options.knowledgeBaseIds?.filter(
-      (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
-    );
+    const kbIds = options.knowledgeBaseIds?.filter(isValidEntityId);
+    const docIds = options.documentIds?.filter(isValidEntityId);
+    if (docIds?.length === 0) return [];
+
+    let paramIndex = 3;
     const kbPlaceholders = kbIds?.length
-      ? `AND d."knowledgeBaseId" IN (${kbIds.map((_, i) => `$${i + 3}`).join(",")})`
+      ? `AND d."knowledgeBaseId" IN (${kbIds.map(() => `$${paramIndex++}`).join(",")})`
+      : "";
+    const docPlaceholders = docIds?.length
+      ? `AND d."id" IN (${docIds.map(() => `$${paramIndex++}`).join(",")})`
       : "";
 
     const sql = `
@@ -96,6 +104,7 @@ class PgVectorStore implements VectorStore {
       WHERE e.embedding IS NOT NULL
         AND d.status = 'INDEXED'
         ${kbPlaceholders}
+        ${docPlaceholders}
         AND 1 - (e.embedding <=> '${queryVec}'::vector) >= $1
       ORDER BY e.embedding <=> '${queryVec}'::vector
       LIMIT $2
@@ -104,6 +113,9 @@ class PgVectorStore implements VectorStore {
     const params: unknown[] = [minSim, topK];
     if (kbIds?.length) {
       params.push(...kbIds);
+    }
+    if (docIds?.length) {
+      params.push(...docIds);
     }
 
     const rows = await prisma.$queryRawUnsafe<

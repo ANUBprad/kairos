@@ -34,6 +34,7 @@ export async function searchSimilar(
 
   const results = await vectorStore.similaritySearch(queryEmbedding, {
     knowledgeBaseIds: options.knowledgeBaseIds,
+    documentIds: options.documentIds,
     topK: options.topK ?? 10,
     minSimilarity: options.minSimilarity ?? 0.7,
   });

@@ -11,3 +11,13 @@ export function sanitizeFilename(filename: string): string {
     .replace(/^[._-]+/, "")
     .substring(0, 255);
 }
+
+const ID_MAX_LENGTH = 128;
+const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+
+// Entity ids use Prisma cuid() (also tolerate uuid) — never charset-guess
+// beyond a safe slug-like shape. Authorization is what actually secures the
+// query, not this shape test.
+export function isValidEntityId(id: string): boolean {
+  return id.length > 0 && id.length <= ID_MAX_LENGTH && ID_PATTERN.test(id);
+}

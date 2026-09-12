@@ -9,7 +9,8 @@ export class KeywordStrategy implements RetrievalStrategy {
   private indexCache = new Map<string, { bm25: BM25; chunks: StrategyDocument[] }>();
 
   async retrieve(ctx: RetrievalContext): Promise<RetrievalResult> {
-    const cacheKey = `${ctx.kbId}`;
+    const scopeKey = ctx.documentIds?.length ? [...ctx.documentIds].sort().join(",") : "all";
+    const cacheKey = `${ctx.kbId}:${scopeKey}`;
     let indexEntry = this.indexCache.get(cacheKey);
 
     if (!indexEntry) {
@@ -17,6 +18,7 @@ export class KeywordStrategy implements RetrievalStrategy {
         where: {
           document: {
             knowledgeBaseId: ctx.kbId,
+            ...(ctx.documentIds?.length ? { id: { in: ctx.documentIds } } : {}),
             status: "INDEXED",
           },
         },

@@ -81,6 +81,7 @@ export async function executeRetrievalWithTrace(
     minSimilarity: 0.0,
     embeddingModel,
     embeddingProvider,
+    documentIds: config.documentIds,
   };
 
   const baseStrategy = strategyRegistry.get(mergedConfig.strategy) || strategyRegistry.get("vector")!;
@@ -137,6 +138,7 @@ export async function executeRetrievalWithTrace(
     output: {
       chunkCount: result.chunks.length,
       metadata: result.metadata,
+      scope: { documentIds: ctx.documentIds ?? [] },
     },
   });
 

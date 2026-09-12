@@ -28,10 +28,11 @@ export interface StreamingChatResponse {
   conversationId: string;
 }
 
-async function getRetrievalOptions(kbId: string) {
+async function getRetrievalOptions(kbId: string, sourceIds?: string[]) {
   const config = await getRetrievalConfig(kbId);
   return {
     knowledgeBaseIds: [kbId],
+    documentIds: sourceIds?.length ? sourceIds : undefined,
     topK: config.topK,
     minSimilarity: config.similarityThreshold,
   };
@@ -42,7 +43,7 @@ export async function generateChatResponse(
 ): Promise<ChatResponse> {
   const provider = getAIProvider(request.providerType);
 
-  const retrievalOptions = await getRetrievalOptions(request.kbId);
+  const retrievalOptions = await getRetrievalOptions(request.kbId, request.sourceIds);
 
   const retrieval = await searchSimilar(request.query, retrievalOptions);
 
@@ -95,7 +96,7 @@ export async function* streamChatResponse(
   try {
     const provider = getAIProvider(request.providerType);
 
-    const retrievalOptions = await getRetrievalOptions(request.kbId);
+    const retrievalOptions = await getRetrievalOptions(request.kbId, request.sourceIds);
 
     const retrieval = await searchSimilar(request.query, retrievalOptions);
 

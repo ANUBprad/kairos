@@ -1,14 +1,8 @@
+import { isValidEntityId } from "@/lib/validation";
+
 export const MAX_CHAT_SOURCES = 50;
 
-const ID_MAX_LENGTH = 128;
-const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
-
-// Entity ids use Prisma cuid() (also tolerate uuid) — never charset-guess
-// beyond a safe slug-like shape. Server-side ownership checks are what
-// actually secure the query, not this shape test.
-export function isValidEntityId(id: string): boolean {
-  return id.length > 0 && id.length <= ID_MAX_LENGTH && ID_PATTERN.test(id);
-}
+export { isValidEntityId };
 
 // Returns null when the client did not send a source-scope array (means "all
 // sources"). Invalid/duplicate entries are safely ignored rather than leaked
@@ -28,6 +22,15 @@ export function parseSourceIds(value: unknown): string[] | null {
 
 export function formatSourceScopeLabel(selectedCount: number): string {
   return selectedCount > 0 ? `Selected sources (${selectedCount})` : "All sources";
+}
+
+// Keeps only requested ids that exist in the caller-provided owned set.
+// Returns undefined when nothing survives so the caller falls back to
+// all-sources retrieval instead of an empty (leaky) scope.
+export function filterScopedSourceIds(requested: string[], ownedIds: string[]): string[] | undefined {
+  const owned = new Set(ownedIds);
+  const valid = requested.filter((id) => owned.has(id));
+  return valid.length > 0 ? valid : undefined;
 }
 
 export function sourceScopeKey(sourceIds: string[] | null | undefined): string {

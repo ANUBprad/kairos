@@ -25,6 +25,7 @@ export class VectorStrategy implements RetrievalStrategy {
     const searchStart = performance.now();
     const results = await vectorStore.similaritySearch(queryEmbedding, {
       knowledgeBaseIds: [ctx.kbId],
+      documentIds: ctx.documentIds,
       topK: ctx.topK,
       minSimilarity: ctx.minSimilarity,
     });

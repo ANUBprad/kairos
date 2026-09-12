@@ -6,6 +6,7 @@ import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { buildChatPrompt } from "@/lib/ai/prompts";
 import { executeRetrievalWithTrace } from "@/lib/retrieval/strategies";
 import { getConversationMessages } from "@/lib/ai/memory";
+import { parseSourceIds, filterScopedSourceIds } from "@/lib/ai/chat/source-scope";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
   const provider = typeof body.provider === "string" ? body.provider : undefined;
   const model = typeof body.model === "string" ? body.model : undefined;
   const explainable = typeof body.explainable === "boolean" ? body.explainable : false;
+  const sourceIds = parseSourceIds(body.sourceIds);
 
   const validProviders = ["openai", "gemini"] as const;
   const typedProvider = provider && validProviders.includes(provider as typeof validProviders[number])
@@ -94,6 +96,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
   }
 
+  // Server-side source scope validation: keep only ids that point at documents
+  // inside THIS knowledge base. Invalid/cross-workspace ids are ignored so we
+  // never leak whether an inaccessible source exists.
+  let scopedSourceIds: string[] | undefined;
+  if (sourceIds && sourceIds.length > 0) {
+    const ownedDocs = await prisma.document.findMany({
+      where: { id: { in: sourceIds }, knowledgeBaseId: kbId },
+      select: { id: true },
+    });
+    scopedSourceIds = filterScopedSourceIds(sourceIds, ownedDocs.map((d) => d.id));
+  }
+
   const encoder = new TextEncoder();
   const abortController = new AbortController();
 
@@ -131,6 +145,7 @@ export async function POST(request: NextRequest) {
             query,
             {
               strategy: (retrievalConfig.retrievalStrategy || retrievalConfig.retrievalMode || "vector") as "vector" | "keyword" | "hybrid" | "query-expansion" | "multi-query" | "reranking",
+              documentIds: scopedSourceIds,
               topK: retrievalConfig.topK,
               enableQueryExpansion: retrievalConfig.enableQueryExpansion || false,
               enableMultiQuery: retrievalConfig.enableMultiQuery || false,
@@ -224,6 +239,7 @@ ${contextStr || "No relevant documents found."}`;
               multiQuery: retrievalConfig.enableMultiQuery,
               reranking: retrievalConfig.enableReranking,
               compression: retrievalConfig.enableCompression,
+              sourceScope: scopedSourceIds ?? null,
             },
           };
 
@@ -257,6 +273,7 @@ ${contextStr || "No relevant documents found."}`;
           conversationId,
           kbId,
           query,
+          sourceIds: scopedSourceIds,
           providerType: typedProvider,
           model: model || undefined,
         });
@@ -313,7 +330,7 @@ ${contextStr || "No relevant documents found."}`;
     },
   });
 
-  serverTrackEvent("ai_chat_requested", { kbId, conversationId }, session.user.id);
+  serverTrackEvent("ai_chat_requested", { kbId, conversationId, sourceIds: scopedSourceIds }, session.user.id);
 
   return new NextResponse(stream, {
     headers: {

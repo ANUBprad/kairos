@@ -4,6 +4,7 @@ import {
   MAX_CHAT_SOURCES,
   isValidEntityId,
   parseSourceIds,
+  filterScopedSourceIds,
   formatSourceScopeLabel,
   sourceScopeKey,
 } from "@/lib/ai/chat/source-scope";
@@ -53,6 +54,18 @@ describe("parseSourceIds", () => {
     const many = Array.from({ length: MAX_CHAT_SOURCES + 10 }, (_, i) => `id${i}`.replace("id", "brky"));
     const result = parseSourceIds(many);
     assert.equal(result?.length ?? 0, MAX_CHAT_SOURCES);
+  });
+});
+
+describe("filterScopedSourceIds", () => {
+  it("keeps only ids that exist in the owned set", () => {
+    assert.deepEqual(filterScopedSourceIds([CUID_A, CUID_B], [CUID_A]), [CUID_A]);
+  });
+  it("returns undefined when no requested id is owned", () => {
+    assert.equal(filterScopedSourceIds([CUID_B], [CUID_A]), undefined);
+  });
+  it("returns undefined for an empty requested set", () => {
+    assert.equal(filterScopedSourceIds([], []), undefined);
   });
 });
 
