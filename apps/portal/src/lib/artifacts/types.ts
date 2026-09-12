@@ -64,8 +64,8 @@ export interface CreateLearningArtifactInput {
   sourceIds: string[];
   name?: string;
   status?: ArtifactStatus;
-  content?: Prisma.JsonValue;
-  metadata?: Prisma.JsonValue;
+  content?: Prisma.InputJsonValue;
+  metadata?: Prisma.InputJsonValue;
   schemaVersion?: number;
   createdById?: string;
 }

@@ -14,3 +14,10 @@ export type {
   LearningArtifactRow,
   LearningArtifactData,
 } from "./types";
+export {
+  createLearningArtifact,
+  getLearningArtifact,
+  listLearningArtifacts,
+  updateLearningArtifactStatus,
+  updateLearningArtifactContent,
+} from "./persistence";
