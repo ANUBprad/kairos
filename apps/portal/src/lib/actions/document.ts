@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
+import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError } from "@/lib/ingestion/url";
 import type { Prisma } from "@prisma/client";
 
 const ALLOWED_EXTENSIONS = ["pdf", "txt", "md", "markdown", "csv", "docx"];
@@ -238,6 +239,103 @@ export async function uploadDocument(kbId: string, formData: FormData) {
   return results;
 }
 
+function urlIngestErrorMessage(code: string): string {
+  switch (code) {
+    case "invalid_url":
+      return "That URL is not valid. Use a full http(s) address.";
+    case "blocked":
+      return "That URL could not be reached from our servers or was blocked.";
+    case "timeout":
+      return "That URL did not respond in time.";
+    case "too_large":
+      return "That page is too large to ingest.";
+    case "unsupported_content":
+      return "That URL did not return article content we can ingest.";
+    case "no_content":
+      return "No readable article content was found at that URL.";
+    case "too_many_redirects":
+      return "That URL redirects too many times.";
+    default:
+      return "Could not fetch that URL.";
+  }
+}
+
+export async function ingestUrl(kbId: string, rawUrl: string) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const rl = rateLimit(`ingest-url:${session.user.id}`, RATE_LIMITS.upload);
+  if (!rl.allowed) throw new Error("Rate limit exceeded. Please try again later.");
+
+  const url = (rawUrl || "").trim();
+  if (!url) throw new Error("A URL is required");
+
+  // Tenancy is enforced BEFORE any network call or document write.
+  await getOrgFromKb(kbId, session.user.id);
+
+  let article;
+  try {
+    article = await fetchArticle(url);
+  } catch (err) {
+    const code = err instanceof UrlSourceError ? err.code : "fetch";
+    logger.warn("URL ingestion rejected", { kbId, code, url });
+    serverTrackEvent("url_ingest_rejected", { code, kbId }, session.user.id);
+    throw new Error(urlIngestErrorMessage(code), { cause: err });
+  }
+
+  const baseName = (article.title || new URL(article.url).hostname).slice(0, 255);
+  let doc: Prisma.DocumentGetPayload<{ include: { uploadedBy: true } }>;
+  try {
+    doc = await prisma.$transaction(async (tx) => {
+      const existing = await tx.document.findFirst({
+        where: { knowledgeBaseId: kbId, fileHash: urlDocumentFileHash(article.markdown) },
+        select: { id: true, name: true },
+      });
+      if (existing) {
+        throw new Error(`This URL is a duplicate of "${existing.name}" (same content)`);
+      }
+
+      const created = await tx.document.create({
+        data: buildUrlDocumentData({
+          kbId,
+          userId: session.user.id,
+          name: baseName,
+          sourceUrl: article.url,
+          title: article.title,
+          markdown: article.markdown,
+        }),
+        include: { uploadedBy: true },
+      });
+
+      await tx.documentActivity.create({
+        data: {
+          documentId: created.id,
+          userId: session.user.id,
+          action: "UPLOADED",
+          details: { source: "URL", sourceUrl: article.url, title: article.title } as never,
+        },
+      });
+
+      return created;
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("This URL is a duplicate of")) throw err;
+    logger.error("Failed saving ingested URL document", { kbId, url, error: err instanceof Error ? err.message : "unknown" });
+    throw new Error("Failed to save the ingested URL", { cause: err });
+  }
+
+  const buffer = Buffer.from(article.markdown, "utf8");
+  logger.info("URL document created", { docId: doc.id, kbId, bytes: buffer.byteLength, chars: article.markdown.length });
+
+  serverTrackEvent("document_url_added", { kbId }, session.user.id);
+  processDocument(doc.id, "txt", buffer).catch((err) => {
+    logger.error(`Processing failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
+  });
+
+  revalidatePath(`/app/knowledge-bases/${kbId}`);
+  return doc;
+}
+
 async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer) {
   const pipelineStart = Date.now();
   let stage = "init";
@@ -252,7 +350,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
   try {
     const doc = await prisma.document.findUnique({
       where: { id: docId },
-      select: { id: true, storageUrl: true, knowledgeBaseId: true, fileType: true, metadata: true, uploadedById: true },
+      select: { id: true, storageUrl: true, knowledgeBaseId: true, fileType: true, metadata: true, uploadedById: true, sourceType: true, sourceUrl: true },
     });
     if (!doc) {
       logger.warn("[Init] Document not found, aborting", { docId });
@@ -300,11 +398,22 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
         }
         throw fetchErr;
       }
+    } else if (!buffer && doc.sourceType === "URL" && doc.sourceUrl) {
+      logger.info("[Download] Re-fetching source URL", { docId, sourceUrl: doc.sourceUrl });
+      try {
+        const article = await fetchArticle(doc.sourceUrl);
+        buffer = Buffer.from(article.markdown, "utf8");
+        logger.info("[Download] Source URL fetched", { docId, bytes: buffer.byteLength, chars: article.markdown.length });
+      } catch (refetchErr) {
+        const reason = refetchErr instanceof Error ? refetchErr.message : "unknown";
+        logger.warn("[Download] Source URL re-fetch failed", { docId, reason });
+        throw new Error(`Failed to re-fetch source URL: ${reason}`, { cause: refetchErr });
+      }
     } else if (buffer) {
       logger.info("[Download] Using provided buffer", { docId, bytes: buffer.byteLength });
     }
 
-    if (!buffer) throw new Error("No file data available — no buffer provided and no storageUrl on document");
+    if (!buffer) throw new Error("No file data available — no buffer, storageUrl, or source URL on document");
 
     stage = "extract";
     logger.info("[Extraction] Converting buffer → ArrayBuffer", {
