@@ -10,12 +10,14 @@ import { SourceTypeBadge } from "@/components/app/source-type-badge";
 import { generateSummaryArtifact } from "@/lib/actions/artifacts";
 import type { SourceListItem } from "@/lib/source-contract";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
-import { SummaryArtifactViewer } from "./summary-artifact-viewer";
+import { SummaryArtifactList } from "./summary-artifact-list";
+import { SummaryArtifactDialog } from "./summary-artifact-dialog";
 
 interface Props {
   kbId: string;
   kbName: string;
   sources: SourceListItem[];
+  initialArtifacts: LearningArtifactData[];
 }
 
 const TABS = [
@@ -23,12 +25,13 @@ const TABS = [
   { label: "Chat", href: (kbId: string) => `/app/knowledge-bases/${kbId}/chat` },
 ];
 
-export function SummaryStudio({ kbId, kbName, sources }: Props) {
+export function SummaryStudio({ kbId, kbName, sources, initialArtifacts }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [artifactName, setArtifactName] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [generated, setGenerated] = useState<LearningArtifactData | null>(null);
+  const [artifacts, setArtifacts] = useState<LearningArtifactData[]>(initialArtifacts);
+  const [openArtifactId, setOpenArtifactId] = useState<string | null>(null);
 
   const selectedCount = selectedIds.length;
 
@@ -42,14 +45,14 @@ export function SummaryStudio({ kbId, kbName, sources }: Props) {
     if (selectedCount === 0 || generating) return;
     setGenerating(true);
     setError(null);
-    setGenerated(null);
     try {
       const artifact = await generateSummaryArtifact(
         kbId,
         selectedIds,
         artifactName.trim() || undefined,
       );
-      setGenerated(artifact);
+      setArtifacts((prev) => [artifact, ...prev]);
+      setOpenArtifactId(artifact.id);
       setSelectedIds([]);
       setArtifactName("");
     } catch (err) {
@@ -185,15 +188,22 @@ export function SummaryStudio({ kbId, kbName, sources }: Props) {
         )}
       </section>
 
-      {generated && (
-        <div className="mt-6">
-          <SummaryArtifactViewer
-            artifact={generated}
-            sources={sources}
-            onClose={() => setGenerated(null)}
-          />
-        </div>
-      )}
+      <section className="mt-6 rounded-xl border border-border bg-surface" aria-label="Generated summaries">
+        <header className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="text-base font-semibold text-text-primary">Summaries</h2>
+          <span className="text-xs font-medium text-text-tertiary">
+            {artifacts.length} artifact{artifacts.length !== 1 ? "s" : ""}
+          </span>
+        </header>
+        <SummaryArtifactList artifacts={artifacts} onOpen={setOpenArtifactId} />
+      </section>
+
+      <SummaryArtifactDialog
+        kbId={kbId}
+        artifactId={openArtifactId}
+        sources={sources}
+        onClose={() => setOpenArtifactId(null)}
+      />
     </div>
   );
 }

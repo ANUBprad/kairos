@@ -91,12 +91,38 @@ describe("studio wiring", () => {
     new URL("../app/app/knowledge-bases/[kbId]/studio/page.tsx", import.meta.url),
     "utf8",
   );
+  const dialogSource = readFileSync(
+    new URL("../components/app/studio/summary-artifact-dialog.tsx", import.meta.url),
+    "utf8",
+  );
+  const viewerSource = readFileSync(
+    new URL("../components/app/studio/summary-artifact-viewer.tsx", import.meta.url),
+    "utf8",
+  );
 
   it("generates through the O4-T3 application action, never the engine or database directly", () => {
     assert.match(studioSource, /generateSummaryArtifact/);
     assert.doesNotMatch(studioSource, /generateLearningArtifact|getAIProvider|generateChat/);
     assert.doesNotMatch(studioSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(studioSource, /from ["']openai["']/);
+  });
+
+  it("lists artifacts through the O4-T3 workspace action, filtered to SUMMARY on the server", () => {
+    assert.match(pageSource, /listLearningArtifactsForWorkspace/);
+    assert.match(pageSource, /type: "SUMMARY"/);
+    assert.doesNotMatch(pageSource, /main\(|\.content/);
+  });
+
+  it("opens artifacts through the O4-T3 read action, never trusting the browser id alone", () => {
+    assert.match(dialogSource, /getLearningArtifactForWorkspace/);
+    assert.doesNotMatch(dialogSource, /from ["']@\/lib\/prisma["']/);
+    assert.doesNotMatch(dialogSource, /generateLearningArtifact|getAIProvider|generateChat/);
+  });
+
+  it("renders summary content strictly through the view helpers (no crashing on legacy data)", () => {
+    assert.match(viewerSource, /parseSummaryContent/);
+    assert.match(viewerSource, /resolveSourceProvenance/);
+    assert.doesNotMatch(viewerSource, /from ["']@\/lib\/actions\//);
   });
 
   it("reuses the source library contract from the existing server action", () => {

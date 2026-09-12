@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { listDocuments } from "@/lib/actions/document";
+import { listLearningArtifactsForWorkspace } from "@/lib/actions/artifacts";
 import { SummaryStudio } from "@/components/app/studio/summary-studio";
 
 export const metadata = {
@@ -27,9 +28,19 @@ export default async function StudioPage({ params }: Props) {
       redirect("/app");
     }
 
-    const sources = await listDocuments(kbId);
+    const [sources, artifacts] = await Promise.all([
+      listDocuments(kbId),
+      listLearningArtifactsForWorkspace(kbId, { type: "SUMMARY" }),
+    ]);
 
-    return <SummaryStudio kbId={kbId} kbName={kb.name} sources={sources} />;
+    return (
+      <SummaryStudio
+        kbId={kbId}
+        kbName={kb.name}
+        sources={sources}
+        initialArtifacts={artifacts}
+      />
+    );
   } catch {
     redirect("/app");
   }
