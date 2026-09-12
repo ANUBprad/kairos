@@ -11,6 +11,7 @@ export interface ChatRequest {
   conversationId: string;
   kbId: string;
   query: string;
+  sourceIds?: string[];
   providerType?: ProviderType;
   model?: string;
 }

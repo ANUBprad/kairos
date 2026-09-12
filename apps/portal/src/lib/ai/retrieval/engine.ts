@@ -5,6 +5,7 @@ import type { RetrievedChunk, ProviderType } from "@/lib/ai/types";
 
 export interface RetrievalOptions {
   knowledgeBaseIds: string[];
+  documentIds?: string[];
   topK?: number;
   minSimilarity?: number;
   providerType?: ProviderType;

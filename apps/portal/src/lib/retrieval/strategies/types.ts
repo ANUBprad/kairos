@@ -18,6 +18,7 @@ export interface RetrievalContext {
   minSimilarity: number;
   embeddingModel: string;
   embeddingProvider: ProviderType;
+  documentIds?: string[];
   expandedQueries?: string[];
   multiQueryVariations?: string[];
 }

@@ -13,6 +13,7 @@ export type StrategyName = "vector" | "keyword" | "hybrid" | "query-expansion" |
 
 export interface StrategyConfig {
   strategy: StrategyName;
+  documentIds?: string[];
   hybridConfig?: Partial<HybridConfig>;
   enableQueryExpansion?: boolean;
   enableMultiQuery?: boolean;
