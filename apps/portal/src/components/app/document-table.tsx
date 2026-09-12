@@ -25,6 +25,7 @@ SearchX,
   RotateCcw,
   Filter,
   Bot,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
@@ -291,6 +292,12 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
             <Button variant="secondary">
               <Bot size={16} />
               Chat
+            </Button>
+          </Link>
+          <Link href={`/app/knowledge-bases/${kbId}/studio`}>
+            <Button variant="secondary">
+              <Sparkles size={16} />
+              Studio
             </Button>
           </Link>
           <Button variant="primary" onClick={() => setSourceAddOpen(true)}>
