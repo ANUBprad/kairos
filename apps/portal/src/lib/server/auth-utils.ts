@@ -1,20 +1,45 @@
-import { getDemoSession, type DemoSession } from "./demo-user";
+import { cache } from "react";
+import { headers } from "next/headers";
+import { auth } from "@/lib/server/auth";
+import { getDemoSession, isDemoModeEnabled, type DemoSession } from "./demo-user";
+import { logger } from "@/lib/logger";
 
 export type { DemoSession };
 
-/**
- * Retrieves the current server session.
- *
- * In demo mode (KAIROS_DEMO_MODE=true), returns the demo user session.
- * In production, this is a placeholder that returns null — replace with
- * proper BetterAuth/session validation when auth provider is integrated.
- *
- * IMPORTANT: In production mode without demo enabled, this returns null,
- * and callers MUST check for null and return 401.
- */
-export async function getServerSession(): Promise<DemoSession | null> {
-  return getDemoSession();
+function isDynamicServerError(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    err.message.includes("couldn't be rendered statically because it used")
+  );
 }
+
+/**
+ * Resolves the current server session.
+ *
+ * - Demo mode (KAIROS_DEMO_MODE=true, non-production): the demo user session.
+ * - Otherwise: the real Better Auth session, or null when unauthenticated.
+ *
+ * In production the demo branch is unreachable, so a user is never fabricated:
+ * callers must handle null (see requireSession).
+ */
+export const getServerSession = cache(async (): Promise<DemoSession | null> => {
+  if (isDemoModeEnabled()) return getDemoSession();
+
+  try {
+    const headersList = await headers();
+    const session = await auth.api.getSession({ headers: headersList });
+    // better-auth exposes its own User shape; map to the app's session contract.
+    return session
+      ? { user: session.user as unknown as DemoSession["user"] }
+      : null;
+  } catch (err) {
+    if (isDynamicServerError(err)) throw err;
+    logger.error("Session validation failed", {
+      error: err instanceof Error ? err.message : "unknown",
+    });
+    return null;
+  }
+});
 
 /**
  * Requires a valid session. Throws if no session is available.
