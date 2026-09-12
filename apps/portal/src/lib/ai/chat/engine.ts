@@ -139,9 +139,8 @@ export async function* streamChatResponse(
     yield { content: "", done: true, citations };
   } catch (err) {
     logger.error("Chat stream error", { error: err instanceof Error ? err.message : "unknown" });
-    yield {
-      content: "",
-      done: true,
-    };
+    // Surface the error to the caller so the route can emit an SSE error event
+    // instead of silently ending the stream as if it had completed.
+    throw err;
   }
 }

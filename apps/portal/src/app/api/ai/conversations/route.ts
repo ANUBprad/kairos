@@ -4,10 +4,10 @@ import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/server/auth-utils";
+import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import { isValidEntityId } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: NextRequest) {
   const start = performance.now();
@@ -24,8 +24,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "kbId is required" }, { status: 400 });
     }
 
-    if (!UUID_REGEX.test(kbId)) {
+    if (!isValidEntityId(kbId)) {
       return NextResponse.json({ error: "Invalid kbId format" }, { status: 400 });
+    }
+
+    if (!(await canAccessKnowledgeBase(session.user.id, kbId))) {
+      return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
     }
 
     const conversations = await listConversations(kbId, session.user.id);
@@ -72,12 +76,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "kbId is required" }, { status: 400 });
     }
 
-    if (!UUID_REGEX.test(kbId)) {
+    if (!isValidEntityId(kbId)) {
       return NextResponse.json({ error: "Invalid kbId format" }, { status: 400 });
     }
 
     if (title && title.length > 500) {
       return NextResponse.json({ error: "Title too long" }, { status: 400 });
+    }
+
+    if (!(await canAccessKnowledgeBase(session.user.id, kbId))) {
+      return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
     }
 
     const conversation = await createConversation(

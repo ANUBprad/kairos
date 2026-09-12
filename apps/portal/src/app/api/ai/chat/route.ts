@@ -7,6 +7,8 @@ import { buildChatPrompt } from "@/lib/ai/prompts";
 import { executeRetrievalWithTrace } from "@/lib/retrieval/strategies";
 import { getConversationMessages } from "@/lib/ai/memory";
 import { parseSourceIds, filterScopedSourceIds } from "@/lib/ai/chat/source-scope";
+import { canAccessKnowledgeBase, canUseConversationInKb } from "@/lib/ai/chat/access";
+import { isValidEntityId } from "@/lib/validation";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
@@ -63,8 +65,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!UUID_REGEX.test(conversationId) || !UUID_REGEX.test(kbId)) {
+  if (!isValidEntityId(conversationId) || !isValidEntityId(kbId)) {
     return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
   }
 
@@ -73,26 +74,13 @@ export async function POST(request: NextRequest) {
     select: { userId: true, knowledgeBaseId: true },
   });
 
-  if (!conversation || conversation.userId !== session.user.id) {
+  // Conversation must belong to the requesting user AND the asked-for KB.
+  // Cross-workspace usage is indistinguishable from not-found (no leak).
+  if (!canUseConversationInKb(conversation, session.user.id, kbId)) {
     return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   }
 
-  const kb = await prisma.knowledgeBase.findUnique({
-    where: { id: kbId },
-    select: {
-      project: {
-        select: {
-          organization: {
-            select: {
-              members: { where: { userId: session.user.id }, select: { id: true } },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!kb || kb.project.organization.members.length === 0) {
+  if (!(await canAccessKnowledgeBase(session.user.id, kbId))) {
     return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
   }
 

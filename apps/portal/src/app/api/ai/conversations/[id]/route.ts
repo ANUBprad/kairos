@@ -7,10 +7,10 @@ import {
 import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/server/auth-utils";
+import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import { isValidEntityId } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(
   _request: NextRequest,
@@ -25,7 +25,7 @@ export async function GET(
 
     const { id } = await params;
 
-    if (!UUID_REGEX.test(id)) {
+    if (!isValidEntityId(id)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
@@ -33,6 +33,10 @@ export async function GET(
 
     if (!conversation || conversation.userId !== session.user.id) {
       return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
+    if (conversation.knowledgeBaseId && !(await canAccessKnowledgeBase(session.user.id, conversation.knowledgeBaseId))) {
+      return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
     }
 
     const duration = Math.round(performance.now() - start);
@@ -59,7 +63,7 @@ export async function DELETE(
 
     const { id } = await params;
 
-    if (!UUID_REGEX.test(id)) {
+    if (!isValidEntityId(id)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
@@ -89,7 +93,7 @@ export async function PATCH(
 
     const { id } = await params;
 
-    if (!UUID_REGEX.test(id)) {
+    if (!isValidEntityId(id)) {
       return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
     }
 
