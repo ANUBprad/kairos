@@ -3,20 +3,17 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { ensureDefaultOrg } from "@/lib/server/organization";
+import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { revalidatePath } from "next/cache";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
 
-async function assertMemberAccess(kbId: string, _userId: string) {
-  const kb = await prisma.knowledgeBase.findUnique({
-    where: { id: kbId },
-    select: { id: true },
-  });
-
-  if (!kb) {
+// The caller's identity is the authorization gate, not the KB's existence:
+// a foreign KB resolves to the same "not found" as a missing one, so probing
+// other organizations' knowledge bases cannot succeed or leak existence.
+async function assertMemberAccess(kbId: string, userId: string) {
+  if (!(await canAccessKnowledgeBase(userId, kbId))) {
     throw new Error("Knowledge base not found");
   }
-
-  return kb;
 }
 
 export async function createKnowledgeBase(formData: FormData) {
