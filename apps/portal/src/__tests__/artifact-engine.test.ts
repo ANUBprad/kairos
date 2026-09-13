@@ -8,6 +8,8 @@ import {
   reportArtifactSchema,
   quizArtifactSchema,
   flashcardsArtifactSchema,
+  mindmapArtifactSchema,
+  mindmapNodeSchema,
   extractJsonObject,
   parseStructuredOutput,
   buildBoundedContext,
@@ -39,7 +41,13 @@ const validReport = {
 
 describe("artifact definition registry", () => {
   it("registers the supported artifact types (no ghost implementations for the rest)", () => {
-    assert.deepEqual(listRegisteredArtifactTypes(), ["SUMMARY", "REPORT", "QUIZ", "FLASHCARDS"]);
+    assert.deepEqual(listRegisteredArtifactTypes(), [
+      "SUMMARY",
+      "REPORT",
+      "QUIZ",
+      "FLASHCARDS",
+      "MINDMAP",
+    ]);
   });
 
   it("resolves the SUMMARY definition and exposes its declared metadata", () => {
@@ -62,7 +70,6 @@ describe("artifact definition registry", () => {
   });
 
   it("rejects generation for types without a registered definition", () => {
-    assert.throws(() => resolveArtifactDefinition("MINDMAP"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("TAKEAWAYS"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("PODCAST"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
   });
@@ -401,6 +408,166 @@ describe("flashcards output schema", () => {
       }).success,
       false,
     );
+  });
+});
+
+describe("mindmap output schema", () => {
+  const validMindMap = {
+    title: "Photosynthesis at a glance",
+    root: {
+      label: "Photosynthesis",
+      description: "How plants convert light into chemical energy.",
+      children: [
+        {
+          label: "Light-dependent reactions",
+          children: [{ label: "Thylakoid membranes" }],
+        },
+        { label: "Calvin cycle" },
+      ],
+    },
+  };
+
+  it("accepts a valid tree payload", () => {
+    const result = mindmapArtifactSchema.safeParse(validMindMap);
+    assert.deepEqual(result.success ? result.data : null, validMindMap);
+  });
+
+  it("accepts leaf nodes and nodes without descriptions", () => {
+    const leaves = {
+      title: "T",
+      root: { label: "Root", children: [{ label: "Leaf" }] },
+    };
+    assert.equal(mindmapArtifactSchema.safeParse(leaves).success, true);
+  });
+
+  it("rejects a payload missing the root or the title", () => {
+    assert.equal(mindmapArtifactSchema.safeParse({ title: "T" }).success, false);
+    assert.equal(mindmapArtifactSchema.safeParse({ root: { label: "R" } }).success, false);
+  });
+
+  it("rejects invalid node shapes (missing label, non-string label, empty label)", () => {
+    assert.equal(mindmapArtifactSchema.safeParse({ ...validMindMap, root: {} }).success, false);
+    assert.equal(
+      mindmapArtifactSchema.safeParse({ ...validMindMap, root: { label: 7 } }).success,
+      false,
+    );
+    assert.equal(
+      mindmapArtifactSchema.safeParse({ ...validMindMap, root: { label: "" } }).success,
+      false,
+    );
+  });
+
+  it("deeply validates malformed nodes at any level of the tree", () => {
+    const missingLabel = {
+      title: "T",
+      root: { label: "0", children: [{ label: "1", children: [{ children: [] }] }] },
+    };
+    assert.equal(mindmapArtifactSchema.safeParse(missingLabel).success, false);
+
+    const extraKeyDeep = {
+      title: "T",
+      root: { label: "0", children: [{ label: "1", children: [{ label: "2", color: "red" }] }] },
+    };
+    assert.equal(mindmapArtifactSchema.safeParse(extraKeyDeep).success, false);
+
+    const nonObjectChild = {
+      title: "T",
+      root: { label: "0", children: [{ label: "1", children: ["not a node"] }] },
+    };
+    assert.equal(mindmapArtifactSchema.safeParse(nonObjectChild).success, false);
+  });
+
+  it("rejects an excessive total node count", () => {
+    // 1 root + 12 children + each child 3 grandchildren = 49 nodes, depth 3:
+    // within every bound, accepted.
+    const okTree = {
+      title: "T",
+      root: {
+        label: "Root",
+        children: Array.from({ length: 12 }, (_, i) => ({
+          label: `Branch ${i}`,
+          children: Array.from({ length: 3 }, (_, j) => ({ label: `Leaf ${i}-${j}` })),
+        })),
+      },
+    };
+    assert.equal(mindmapArtifactSchema.safeParse(okTree).success, true);
+
+    // 1 root + 12 children + each child 10 grandchildren = 133 nodes with a
+    // legal per-node shape (<=12 children) but over the total-node bound.
+    const tooWide = {
+      title: "T",
+      root: {
+        label: "Root",
+        children: Array.from({ length: 12 }, (_, i) => ({
+          label: `Branch ${i}`,
+          children: Array.from({ length: 10 }, (_, j) => ({ label: `Leaf ${i}-${j}` })),
+        })),
+      },
+    };
+    assert.equal(mindmapArtifactSchema.safeParse(tooWide).success, false);
+  });
+
+  it("rejects an excessive depth", () => {
+    // Exactly at the 6-level limit: root + 5 descendants.
+    let okBranch: unknown = { label: "level-6" };
+    for (let i = 5; i >= 2; i--) {
+      okBranch = { label: `level-${i}`, children: [okBranch] };
+    }
+    const okTree = { title: "T", root: { label: "root", children: [okBranch] } };
+    assert.equal(mindmapArtifactSchema.safeParse(okTree).success, true);
+
+    // One level past the limit: root + 6 descendants.
+    let deepBranch: unknown = { label: "level-7" };
+    for (let i = 6; i >= 2; i--) {
+      deepBranch = { label: `level-${i}`, children: [deepBranch] };
+    }
+    const tooDeep = { title: "T", root: { label: "root", children: [deepBranch] } };
+    assert.equal(mindmapArtifactSchema.safeParse(tooDeep).success, false);
+  });
+
+  it("rejects oversize labels and descriptions", () => {
+    assert.equal(
+      mindmapArtifactSchema.safeParse({
+        ...validMindMap,
+        root: { ...validMindMap.root, label: "l".repeat(201) },
+      }).success,
+      false,
+    );
+    assert.equal(
+      mindmapArtifactSchema.safeParse({
+        ...validMindMap,
+        root: { ...validMindMap.root, description: "d".repeat(1001) },
+      }).success,
+      false,
+    );
+  });
+
+  it("rejects more children than the per-node cap on any level", () => {
+    const manyChildren = {
+      title: "T",
+      root: {
+        label: "Root",
+        children: Array.from({ length: 13 }, (_, i) => ({ label: `C${i}` })),
+      },
+    };
+    assert.equal(mindmapArtifactSchema.safeParse(manyChildren).success, false);
+  });
+
+  it("strictly rejects unknown extra keys in the map and every node", () => {
+    assert.equal(mindmapArtifactSchema.safeParse({ ...validMindMap, style: {} }).success, false);
+    assert.equal(
+      mindmapArtifactSchema.safeParse({
+        ...validMindMap,
+        root: { ...validMindMap.root, color: "#fff" },
+      }).success,
+      false,
+    );
+  });
+
+  it("parses a standalone node through the recursive node schema", () => {
+    const node = { label: "Hi", children: [{ label: "Child", description: "Detail" }] };
+    const result = mindmapNodeSchema.safeParse(node);
+    assert.deepEqual(result.success ? result.data : null, node);
   });
 });
 

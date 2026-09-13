@@ -40,6 +40,15 @@ export { quizArtifactSchema, quizArtifactDefinition } from "./quiz";
 export type { QuizArtifactOutput } from "./quiz";
 export { flashcardsArtifactSchema, flashcardsArtifactDefinition } from "./flashcards";
 export type { FlashcardsArtifactOutput } from "./flashcards";
+export {
+  mindmapArtifactSchema,
+  mindmapNodeSchema,
+  mindmapArtifactDefinition,
+  MINDMAP_MAX_DEPTH,
+  MINDMAP_MAX_TOTAL_NODES,
+  MINDMAP_MAX_CHILDREN_PER_NODE,
+} from "./mindmap";
+export type { MindMapArtifactOutput, MindMapNodeData } from "./mindmap";
 export { loadArtifactSourceChunks, buildBoundedContext } from "./context";
 export type { ArtifactSourceChunk, BoundedContext } from "./context";
 export { parseStructuredOutput, extractJsonObject } from "./output";
