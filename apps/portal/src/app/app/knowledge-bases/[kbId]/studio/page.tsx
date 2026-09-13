@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { listDocuments } from "@/lib/actions/document";
 import { listLearningArtifactsForWorkspace } from "@/lib/actions/artifacts";
-import { SummaryStudio } from "@/components/app/studio/summary-studio";
+import { ArtifactStudio } from "@/components/app/studio/artifact-studio";
 
 export const metadata = {
   title: "Studio | Knowledge Base",
@@ -30,11 +30,11 @@ export default async function StudioPage({ params }: Props) {
 
     const [sources, artifacts] = await Promise.all([
       listDocuments(kbId),
-      listLearningArtifactsForWorkspace(kbId, { type: "SUMMARY" }),
+      listLearningArtifactsForWorkspace(kbId),
     ]);
 
     return (
-      <SummaryStudio
+      <ArtifactStudio
         kbId={kbId}
         kbName={kb.name}
         sources={sources}

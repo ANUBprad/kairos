@@ -7,11 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProcessingBadge } from "@/components/app/processing-badge";
 import { SourceTypeBadge } from "@/components/app/source-type-badge";
-import { generateSummaryArtifact } from "@/lib/actions/artifacts";
+import {
+  generateSummaryArtifact,
+  generateReportArtifact,
+  generateQuizArtifact,
+} from "@/lib/actions/artifacts";
 import type { SourceListItem } from "@/lib/source-contract";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
-import { SummaryArtifactList } from "./summary-artifact-list";
-import { SummaryArtifactDialog } from "./summary-artifact-dialog";
+import {
+  ACTIVE_STUDIO_ARTIFACT_TYPES,
+  ARTIFACT_TYPE_META,
+  type ActiveStudioArtifactType,
+} from "./artifact-type-meta";
+import { ArtifactList } from "./artifact-list";
+import { ArtifactDialog } from "./artifact-dialog";
 
 interface Props {
   kbId: string;
@@ -25,7 +34,18 @@ const TABS = [
   { label: "Chat", href: (kbId: string) => `/app/knowledge-bases/${kbId}/chat` },
 ];
 
-export function SummaryStudio({ kbId, kbName, sources, initialArtifacts }: Props) {
+// Exactly the three supported artifact types. Everything else is intentionally
+// absent: the UI cannot generate a type that has no studio action.
+const GENERATORS: Readonly<
+  Record<ActiveStudioArtifactType, (kbId: string, sourceIds: string[], name?: string) => Promise<LearningArtifactData>>
+> = {
+  SUMMARY: generateSummaryArtifact,
+  REPORT: generateReportArtifact,
+  QUIZ: generateQuizArtifact,
+};
+
+export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Props) {
+  const [artifactType, setArtifactType] = useState<ActiveStudioArtifactType>("SUMMARY");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [artifactName, setArtifactName] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -34,6 +54,7 @@ export function SummaryStudio({ kbId, kbName, sources, initialArtifacts }: Props
   const [openArtifactId, setOpenArtifactId] = useState<string | null>(null);
 
   const selectedCount = selectedIds.length;
+  const typeMeta = ARTIFACT_TYPE_META[artifactType];
 
   const toggleSource = (id: string) => {
     setSelectedIds((prev) =>
@@ -46,7 +67,7 @@ export function SummaryStudio({ kbId, kbName, sources, initialArtifacts }: Props
     setGenerating(true);
     setError(null);
     try {
-      const artifact = await generateSummaryArtifact(
+      const artifact = await GENERATORS[artifactType](
         kbId,
         selectedIds,
         artifactName.trim() || undefined,
@@ -56,7 +77,7 @@ export function SummaryStudio({ kbId, kbName, sources, initialArtifacts }: Props
       setSelectedIds([]);
       setArtifactName("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Summary generation failed");
+      setError(err instanceof Error ? err.message : "Artifact generation failed");
     } finally {
       setGenerating(false);
     }
@@ -89,17 +110,45 @@ export function SummaryStudio({ kbId, kbName, sources, initialArtifacts }: Props
         </nav>
       </header>
 
-      <section className="rounded-xl border border-border bg-surface p-5" aria-label="Summary generator">
-        <h2 className="text-base font-semibold text-text-primary">Generate a summary</h2>
+      <section className="rounded-xl border border-border bg-surface p-5" aria-label="Artifact generator">
+        <h2 className="text-base font-semibold text-text-primary">Generate an artifact</h2>
+
+        <div
+          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1"
+          role="group"
+          aria-label="Artifact type"
+        >
+          {ACTIVE_STUDIO_ARTIFACT_TYPES.map((type) => {
+            const meta = ARTIFACT_TYPE_META[type];
+            const selected = type === artifactType;
+            return (
+              <button
+                key={type}
+                disabled={generating}
+                onClick={() => setArtifactType(type)}
+                aria-pressed={selected}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  selected
+                    ? "bg-brand/10 text-brand"
+                    : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                } disabled:opacity-50`}
+              >
+                <meta.Icon size={13} />
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-sm text-text-secondary">{typeMeta.description}</p>
         <p className="mt-1 text-sm text-text-secondary">
-          Pick the sources to summarize, then generate. Only indexed sources can be selected.
+          Pick the sources to work with, then generate. Only indexed sources can be selected.
         </p>
 
         {sources.length === 0 ? (
           <div className="mt-4 flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-10 text-center">
             <FileText size={24} className="text-text-tertiary" />
             <p className="mt-3 text-sm font-medium text-text-primary">No sources yet</p>
-            <p className="mt-1 text-xs text-text-tertiary">Add sources before generating summaries.</p>
+            <p className="mt-1 text-xs text-text-tertiary">Add sources before generating artifacts.</p>
             <Link href={`/app/knowledge-bases/${kbId}`} className="mt-4">
               <Button variant="secondary" size="sm">
                 Go to sources
@@ -156,7 +205,7 @@ export function SummaryStudio({ kbId, kbName, sources, initialArtifacts }: Props
                 ) : (
                   <Sparkles size={14} />
                 )}
-                {generating ? "Generating…" : "Generate Summary"}
+                {generating ? "Generating…" : `Generate ${typeMeta.label}`}
               </Button>
             </div>
 
@@ -188,17 +237,17 @@ export function SummaryStudio({ kbId, kbName, sources, initialArtifacts }: Props
         )}
       </section>
 
-      <section className="mt-6 rounded-xl border border-border bg-surface" aria-label="Generated summaries">
+      <section className="mt-6 rounded-xl border border-border bg-surface" aria-label="Generated artifacts">
         <header className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-base font-semibold text-text-primary">Summaries</h2>
+          <h2 className="text-base font-semibold text-text-primary">Artifacts</h2>
           <span className="text-xs font-medium text-text-tertiary">
             {artifacts.length} artifact{artifacts.length !== 1 ? "s" : ""}
           </span>
         </header>
-        <SummaryArtifactList artifacts={artifacts} onOpen={setOpenArtifactId} />
+        <ArtifactList artifacts={artifacts} onOpen={setOpenArtifactId} />
       </section>
 
-      <SummaryArtifactDialog
+      <ArtifactDialog
         kbId={kbId}
         artifactId={openArtifactId}
         sources={sources}
