@@ -230,7 +230,7 @@ describe("artifact status meta", () => {
 });
 
 describe("artifact type presentation meta", () => {
-  it("lists exactly the six studio-supported artifact types (no ghost entries)", () => {
+  it("lists exactly the seven studio-supported artifact types (no ghost entries)", () => {
     assert.deepEqual(ACTIVE_STUDIO_ARTIFACT_TYPES, [
       "SUMMARY",
       "REPORT",
@@ -238,6 +238,7 @@ describe("artifact type presentation meta", () => {
       "FLASHCARDS",
       "MINDMAP",
       "TAKEAWAYS",
+      "PODCAST",
     ]);
   });
 
@@ -250,14 +251,14 @@ describe("artifact type presentation meta", () => {
     }
   });
 
-  it("narrows only the active types and rejects PODCAST (deferred)", () => {
+  it("narrows exactly the active types, including PODCAST as the seventh", () => {
     assert.equal(isActiveStudioArtifactType("SUMMARY"), true);
     assert.equal(isActiveStudioArtifactType("REPORT"), true);
     assert.equal(isActiveStudioArtifactType("QUIZ"), true);
     assert.equal(isActiveStudioArtifactType("FLASHCARDS"), true);
     assert.equal(isActiveStudioArtifactType("MINDMAP"), true);
     assert.equal(isActiveStudioArtifactType("TAKEAWAYS"), true);
-    assert.equal(isActiveStudioArtifactType("PODCAST"), false);
+    assert.equal(isActiveStudioArtifactType("PODCAST"), true);
   });
 });
 
@@ -306,16 +307,16 @@ describe("studio wiring", () => {
     assert.match(studioSource, /generateFlashcardsArtifact/);
     assert.match(studioSource, /generateMindmapArtifact/);
     assert.match(studioSource, /generateTakeawaysArtifact/);
+    assert.match(studioSource, /generatePodcastArtifact/);
     assert.doesNotMatch(studioSource, /generateLearningArtifact|getAIProvider|generateChat/);
-    assert.doesNotMatch(studioSource, /generatePodcastArtifact/);
     assert.doesNotMatch(studioSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(studioSource, /from ["']openai["']/);
   });
 
-  it("exposes the six active artifact types through the shared selector and meta", () => {
+  it("exposes the seven active artifact types through the shared selector and meta", () => {
     assert.match(studioSource, /ACTIVE_STUDIO_ARTIFACT_TYPES/);
     assert.match(studioSource, /Generate \$\{typeMeta\.label\}/);
-    assert.doesNotMatch(studioSource, /PODCAST/);
+    assert.match(studioSource, /PODCAST/);
   });
 
   it("lists artifacts through the O4-T3 workspace action without a client-side type split", () => {
@@ -331,7 +332,7 @@ describe("studio wiring", () => {
     assert.match(dialogSource, /FlashcardsArtifactViewer/);
     assert.match(dialogSource, /MindmapArtifactViewer/);
     assert.match(dialogSource, /TakeawaysArtifactViewer/);
-    assert.doesNotMatch(dialogSource, /PodcastArtifactViewer/);
+    assert.match(dialogSource, /PodcastArtifactViewer/);
     assert.doesNotMatch(dialogSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(dialogSource, /generateLearningArtifact|getAIProvider|generateChat/);
   });
@@ -388,14 +389,30 @@ describe("studio wiring", () => {
     assert.doesNotMatch(takeawaysViewerSource, /from ["']@\/lib\/actions\//);
   });
 
+  it("renders podcast media through the native audio player with a same-origin source", () => {
+    const podcastViewerSource = readFileSync(
+      new URL("../components/app/studio/podcast-artifact-viewer.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(podcastViewerSource, /"use client"/);
+    assert.match(podcastViewerSource, /parsePodcastContent/);
+    assert.match(podcastViewerSource, /parsePodcastAudioMetadata/);
+    assert.match(podcastViewerSource, /<audio[\s\S]*preload="none"/);
+    assert.match(podcastViewerSource, /`\/api\/artifacts\/\$\{artifact\.id\}\/audio`/);
+    assert.match(podcastViewerSource, /PODCAST_HOST_PERSONAS/);
+    assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/actions\//);
+    assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/prisma["']/);
+    assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/artifacts\/persistence["']/);
+  });
+
   it("renders only through the Studio panel and guards against missing knowledge bases", () => {
     assert.match(pageSource, /ArtifactStudio/);
     assert.match(pageSource, /redirect\("\/app"\)/);
   });
 });
 
-describe("unsupported artifact types", () => {
-  it("cannot be generated: PODCAST appears nowhere as an option or action", () => {
+describe("podcast artifact support", () => {
+  it("is generated, advertised and viewable end to end", () => {
     const studioSource = readFileSync(
       new URL("../components/app/studio/artifact-studio.tsx", import.meta.url),
       "utf8",
@@ -408,8 +425,14 @@ describe("unsupported artifact types", () => {
       new URL("../lib/actions/artifacts.ts", import.meta.url),
       "utf8",
     );
-    assert.doesNotMatch(studioSource, /PODCAST/);
-    assert.doesNotMatch(dialogSource, /Podcast|PODCAST/);
-    assert.doesNotMatch(actionsSource, /generatePodcastArtifact/);
+    const metaSource = readFileSync(
+      new URL("../components/app/studio/artifact-type-meta.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(studioSource, /generatePodcastArtifact/);
+    assert.doesNotMatch(studioSource, /generateLearningArtifact|getAIProvider|generateChat/);
+    assert.match(dialogSource, /PodcastArtifactViewer/);
+    assert.match(actionsSource, /generatePodcastArtifact[\s\S]*artifactType: "PODCAST"/);
+    assert.match(metaSource, /PODCAST[\s\S]*label: "Podcast"/);
   });
 });

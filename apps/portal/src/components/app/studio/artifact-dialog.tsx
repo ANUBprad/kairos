@@ -13,6 +13,7 @@ import { QuizArtifactViewer } from "./quiz-artifact-viewer";
 import { FlashcardsArtifactViewer } from "./flashcards-artifact-viewer";
 import { MindmapArtifactViewer } from "./mindmap-artifact-viewer";
 import { TakeawaysArtifactViewer } from "./takeaways-artifact-viewer";
+import { PodcastArtifactViewer } from "./podcast-artifact-viewer";
 
 interface Props {
   kbId: string;
@@ -96,6 +97,9 @@ export function ArtifactDialog({ kbId, artifactId, sources, onClose }: Props) {
             )}
             {artifact.type === "TAKEAWAYS" && (
               <TakeawaysArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
+            )}
+            {artifact.type === "PODCAST" && (
+              <PodcastArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
             )}
             {!isActiveStudioArtifactType(artifact.type) && (
               <div className="flex flex-col items-center justify-center gap-3 py-24">

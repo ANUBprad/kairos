@@ -895,7 +895,10 @@ describe("artifact application wiring", () => {
     assert.match(actionsSource, /generateFlashcardsArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "FLASHCARDS"/);
     assert.match(actionsSource, /generateMindmapArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "MINDMAP"/);
     assert.match(actionsSource, /generateTakeawaysArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "TAKEAWAYS"/);
-    assert.doesNotMatch(actionsSource, /generatePodcastArtifact/);
+  });
+
+  it("pins PODCAST generation to the unified engine", () => {
+    assert.match(actionsSource, /generatePodcastArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "PODCAST"/);
   });
 
   it("authorizes reads and lists through canAccessKnowledgeBase, never a second check", () => {
@@ -911,6 +914,51 @@ describe("artifact application wiring", () => {
   it("reads artifacts through the KB-scoped persistence primitive", () => {
     assert.match(actionsSource, /getLearningArtifactInKb/);
     assert.match(persistenceSource, /getLearningArtifactInKb[\s\S]*where:\s*\{\s*id,\s*knowledgeBaseId\s*\}/);
+  });
+
+  it("routes every server action return through the client-safety projection", () => {
+    assert.match(actionsSource, /toWorkspaceArtifactData/);
+    assert.ok((actionsSource.match(/toWorkspaceArtifactData\(/g)?.length ?? 0) >= 8);
+  });
+});
+
+describe("podcast engine media wiring", () => {
+  const engineSource = readFileSync(new URL("../lib/artifacts/engine.ts", import.meta.url), "utf8");
+  const routeSource = readFileSync(
+    new URL("../app/api/artifacts/[artifactId]/audio/route.ts", import.meta.url),
+    "utf8",
+  );
+  const actionsSource = readFileSync(new URL("../lib/actions/artifacts.ts", import.meta.url), "utf8");
+
+  it("synthesizes podcast audio inside the unified engine, not a second pipeline", () => {
+    assert.match(engineSource, /generatePodcastAudio/);
+    assert.match(engineSource, /artifactType === "PODCAST"/);
+    assert.match(engineSource, /accessMode: "authenticated"/);
+  });
+
+  it("stores the media reference only in metadata with the storage details server-side", () => {
+    assert.match(engineSource, /storageKey: storageFile\.key/);
+    assert.match(engineSource, /durationSeconds: synthesized\.durationSeconds/);
+  });
+
+  it("cleans up uploaded audio best-effort when a later stage fails", () => {
+    assert.match(engineSource, /getStorageProvider\(\)\.delete\(uploadedAudioKey\)/);
+    assert.match(engineSource, /logError\("artifact\.engine\.cleanup"/);
+  });
+
+  it("serves podcast audio through a session-authenticated same-origin media route", () => {
+    assert.match(routeSource, /getServerSession/);
+    assert.match(routeSource, /canAccessKnowledgeBase/);
+    assert.match(routeSource, /getSignedUrl/);
+    assert.match(routeSource, /type !== "PODCAST"/);
+    assert.match(routeSource, /audio\/mpeg|audio\/wav/);
+  });
+
+  it("keeps the storage key out of the client-safe projection at the action boundary", () => {
+    const dtoSource = readFileSync(new URL("../lib/artifacts/dto.ts", import.meta.url), "utf8");
+    assert.match(dtoSource, /delete safeAudio\.storageKey/);
+    assert.match(dtoSource, /delete safeAudio\.storageProvider/);
+    assert.match(actionsSource, /toWorkspaceArtifactData/);
   });
 });
 
@@ -973,5 +1021,42 @@ describe("public artifact DTO contract", () => {
     });
     assert.match(safe, /promptVersion/);
     assert.doesNotMatch(safe, /apiKey|token|secret/i);
+  });
+
+  it("the workspace projection strips media storage references but keeps playback fields", async () => {
+    const { toWorkspaceArtifactData } = await import("@/lib/artifacts/dto");
+    const row: LearningArtifactRow = {
+      id: "clx-a",
+      type: "PODCAST",
+      status: "COMPLETED",
+      name: null,
+      schemaVersion: 1,
+      sourceIds: [],
+      content: null,
+      metadata: {
+        promptVersion: "podcast-v1",
+        providerType: "openai",
+        model: "gpt-4o",
+        audio: {
+          provider: "local",
+          storageProvider: "cloudinary",
+          storageKey: "artifacts/podcast-clx-a",
+          format: "wav",
+          durationSeconds: 12.5,
+        },
+      },
+      knowledgeBaseId: "clx-kb",
+      createdById: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const projected = toWorkspaceArtifactData(toLearningArtifactData(row));
+    const audio = (projected.metadata as { audio?: Record<string, unknown> })?.audio;
+    assert.ok(audio);
+    assert.equal(audio.storageKey, undefined);
+    assert.equal(audio.storageProvider, undefined);
+    assert.equal(audio.format, "wav");
+    assert.equal(audio.durationSeconds, 12.5);
+    assert.equal(JSON.stringify(projected).match(/storageKey|storageProvider/i), null);
   });
 });

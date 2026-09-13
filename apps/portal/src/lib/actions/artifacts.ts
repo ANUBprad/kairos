@@ -5,24 +5,28 @@ import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { generateLearningArtifact } from "@/lib/artifacts/engine";
 import { getLearningArtifactInKb, listLearningArtifacts } from "@/lib/artifacts/persistence";
+import { toWorkspaceArtifactData } from "@/lib/artifacts/dto";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
 
 // Application contract for the artifact Studio. The engine authenticates the
 // session, authorizes the knowledge base, validates the source scope and
 // traces the run; these actions only pin the supported capabilities and their
-// typed public signatures. All database access happens below through the
-// artifact layer, never in this file.
+// typed public signatures, routing every return through the client-safety
+// projection so media storage references never reach the browser.
+// All database access happens below through the artifact layer, never here.
 export async function generateSummaryArtifact(
   knowledgeBaseId: string,
   sourceIds: string[],
   name?: string,
 ): Promise<LearningArtifactData> {
-  return generateLearningArtifact({
-    knowledgeBaseId,
-    artifactType: "SUMMARY",
-    sourceIds,
-    name,
-  });
+  return toWorkspaceArtifactData(
+    await generateLearningArtifact({
+      knowledgeBaseId,
+      artifactType: "SUMMARY",
+      sourceIds,
+      name,
+    }),
+  );
 }
 
 export async function generateReportArtifact(
@@ -30,12 +34,14 @@ export async function generateReportArtifact(
   sourceIds: string[],
   name?: string,
 ): Promise<LearningArtifactData> {
-  return generateLearningArtifact({
-    knowledgeBaseId,
-    artifactType: "REPORT",
-    sourceIds,
-    name,
-  });
+  return toWorkspaceArtifactData(
+    await generateLearningArtifact({
+      knowledgeBaseId,
+      artifactType: "REPORT",
+      sourceIds,
+      name,
+    }),
+  );
 }
 
 export async function generateQuizArtifact(
@@ -43,12 +49,14 @@ export async function generateQuizArtifact(
   sourceIds: string[],
   name?: string,
 ): Promise<LearningArtifactData> {
-  return generateLearningArtifact({
-    knowledgeBaseId,
-    artifactType: "QUIZ",
-    sourceIds,
-    name,
-  });
+  return toWorkspaceArtifactData(
+    await generateLearningArtifact({
+      knowledgeBaseId,
+      artifactType: "QUIZ",
+      sourceIds,
+      name,
+    }),
+  );
 }
 
 export async function generateFlashcardsArtifact(
@@ -56,12 +64,14 @@ export async function generateFlashcardsArtifact(
   sourceIds: string[],
   name?: string,
 ): Promise<LearningArtifactData> {
-  return generateLearningArtifact({
-    knowledgeBaseId,
-    artifactType: "FLASHCARDS",
-    sourceIds,
-    name,
-  });
+  return toWorkspaceArtifactData(
+    await generateLearningArtifact({
+      knowledgeBaseId,
+      artifactType: "FLASHCARDS",
+      sourceIds,
+      name,
+    }),
+  );
 }
 
 export async function generateMindmapArtifact(
@@ -69,12 +79,14 @@ export async function generateMindmapArtifact(
   sourceIds: string[],
   name?: string,
 ): Promise<LearningArtifactData> {
-  return generateLearningArtifact({
-    knowledgeBaseId,
-    artifactType: "MINDMAP",
-    sourceIds,
-    name,
-  });
+  return toWorkspaceArtifactData(
+    await generateLearningArtifact({
+      knowledgeBaseId,
+      artifactType: "MINDMAP",
+      sourceIds,
+      name,
+    }),
+  );
 }
 
 export async function generateTakeawaysArtifact(
@@ -82,12 +94,29 @@ export async function generateTakeawaysArtifact(
   sourceIds: string[],
   name?: string,
 ): Promise<LearningArtifactData> {
-  return generateLearningArtifact({
-    knowledgeBaseId,
-    artifactType: "TAKEAWAYS",
-    sourceIds,
-    name,
-  });
+  return toWorkspaceArtifactData(
+    await generateLearningArtifact({
+      knowledgeBaseId,
+      artifactType: "TAKEAWAYS",
+      sourceIds,
+      name,
+    }),
+  );
+}
+
+export async function generatePodcastArtifact(
+  knowledgeBaseId: string,
+  sourceIds: string[],
+  name?: string,
+): Promise<LearningArtifactData> {
+  return toWorkspaceArtifactData(
+    await generateLearningArtifact({
+      knowledgeBaseId,
+      artifactType: "PODCAST",
+      sourceIds,
+      name,
+    }),
+  );
 }
 
 export async function getLearningArtifactForWorkspace(
@@ -103,7 +132,7 @@ export async function getLearningArtifactForWorkspace(
 
   const artifact = await getLearningArtifactInKb(artifactId, knowledgeBaseId);
   if (!artifact) throw new Error("Artifact not found");
-  return artifact;
+  return toWorkspaceArtifactData(artifact);
 }
 
 export async function listLearningArtifactsForWorkspace(
@@ -117,5 +146,5 @@ export async function listLearningArtifactsForWorkspace(
     throw new Error("Knowledge base not found");
   }
 
-  return listLearningArtifacts(knowledgeBaseId, filters);
+  return (await listLearningArtifacts(knowledgeBaseId, filters)).map(toWorkspaceArtifactData);
 }

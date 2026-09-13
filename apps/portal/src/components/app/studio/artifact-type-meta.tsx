@@ -1,4 +1,4 @@
-import { ClipboardList, FileText, Lightbulb, ListChecks, SquareStack, Workflow } from "lucide-react";
+import { ClipboardList, FileText, Lightbulb, ListChecks, Podcast, SquareStack, Workflow } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ArtifactType } from "@prisma/client";
 
@@ -8,9 +8,9 @@ export interface ArtifactTypeMeta {
   Icon: LucideIcon;
 }
 
-// The studio generation panel supports exactly these six artifact types.
-// PODCAST is intentionally absent: it belongs to the deferred audio phase and
-// the UI never advertises what it cannot generate.
+// The studio generation panel supports exactly these seven artifact types.
+// A type the UI advertises is a type the engine can generate; nothing else
+// appears as an option.
 export const ACTIVE_STUDIO_ARTIFACT_TYPES = [
   "SUMMARY",
   "REPORT",
@@ -18,6 +18,7 @@ export const ACTIVE_STUDIO_ARTIFACT_TYPES = [
   "FLASHCARDS",
   "MINDMAP",
   "TAKEAWAYS",
+  "PODCAST",
 ] as const;
 
 export type ActiveStudioArtifactType = (typeof ACTIVE_STUDIO_ARTIFACT_TYPES)[number];
@@ -52,6 +53,11 @@ export const ARTIFACT_TYPE_META: Readonly<Record<ActiveStudioArtifactType, Artif
     label: "Takeaways",
     description: "The key points worth remembering from the sources.",
     Icon: Lightbulb,
+  },
+  PODCAST: {
+    label: "Podcast",
+    description: "A two-host audio episode grounded in the sources.",
+    Icon: Podcast,
   },
 };
 

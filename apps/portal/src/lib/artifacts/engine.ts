@@ -7,6 +7,8 @@ import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { requireSession } from "@/lib/server/auth-utils";
 import { createTrace, finishTrace } from "@/lib/observability/trace-explorer";
 import { AppError, logError, sanitizeError } from "@/lib/errors";
+import { getStorageProvider } from "@/lib/storage";
+import { generatePodcastAudio } from "@/lib/audio/pipeline";
 import {
   normalizeArtifactSourceIds,
   assertNonEmptySourceScope,
@@ -18,6 +20,7 @@ import {
   type LearningArtifactData,
 } from "@/lib/artifacts";
 import type { ProviderType } from "@/lib/ai/types";
+import type { PodcastArtifactOutput } from "./podcast";
 import { resolveArtifactDefinition } from "./definitions";
 import { parseStructuredOutput } from "./output";
 import { loadArtifactSourceChunks, buildBoundedContext } from "./context";
@@ -101,6 +104,8 @@ export async function generateLearningArtifactForUser(
       })
     : null;
 
+  let uploadedAudioKey: string | null = null;
+
   try {
     const chunks = await loadArtifactSourceChunks(knowledgeBaseId, normalized);
     const bounded = buildBoundedContext(chunks, definition.contextTokenBudget);
@@ -131,6 +136,29 @@ export async function generateLearningArtifactForUser(
       throw new AppError("ARTIFACT_SCHEMA_ERROR", "Generated content did not match the artifact schema", 502);
     }
 
+    // PODCAST additionally produces media: each turn is synthesized and the
+    // episode is stored as authenticated audio. Any failure here fails the
+    // whole artifact atomically — no partial podcast is ever completed.
+    let audioMetadata: Record<string, unknown> | undefined;
+    if (artifactType === "PODCAST") {
+      const podcastContent = parsed.data as unknown as PodcastArtifactOutput;
+      const synthesized = await generatePodcastAudio({ turns: podcastContent.turns });
+      const storageFile = await getStorageProvider().upload(
+        synthesized.audio,
+        `${artifactType.toLowerCase()}.${synthesized.format}`,
+        `artifacts/${artifactType.toLowerCase()}-${artifact.id}`,
+        { accessMode: "authenticated" },
+      );
+      uploadedAudioKey = storageFile.key;
+      audioMetadata = {
+        provider: synthesized.provider,
+        storageProvider: storageFile.provider,
+        storageKey: storageFile.key,
+        format: synthesized.format,
+        durationSeconds: synthesized.durationSeconds,
+      };
+    }
+
     const completed = await completeLearningArtifact(
       artifact.id,
       parsed.data as unknown as Prisma.InputJsonValue,
@@ -139,7 +167,8 @@ export async function generateLearningArtifactForUser(
           promptVersion: definition.promptVersion,
           providerType: provider.type,
           model: response.model,
-        },
+          ...(audioMetadata ? { audio: audioMetadata as Prisma.InputJsonValue } : {}),
+        } as Prisma.InputJsonValue,
         schemaVersion: definition.schemaVersion,
       },
     );
@@ -154,6 +183,13 @@ export async function generateLearningArtifactForUser(
     }
     return completed;
   } catch (error) {
+    if (uploadedAudioKey) {
+      try {
+        await getStorageProvider().delete(uploadedAudioKey);
+      } catch (cleanupError) {
+        logError("artifact.engine.cleanup", cleanupError, { artifactId: artifact.id, audioKey: uploadedAudioKey });
+      }
+    }
     if (startedTrace) {
       try {
         await finishTrace(startedTrace.id, { status: "ERROR" });
