@@ -51,6 +51,19 @@ export {
 export type { MindMapArtifactOutput, MindMapNodeData } from "./mindmap";
 export { takeawaysArtifactSchema, takeawaysArtifactDefinition } from "./takeaways";
 export type { TakeawaysArtifactOutput } from "./takeaways";
+export {
+  podcastArtifactSchema,
+  podcastTurnSchema,
+  podcastArtifactDefinition,
+  PODCAST_SPEAKERS,
+  PODCAST_HOST_PERSONAS,
+  PODCAST_TITLE_MAX,
+  PODCAST_SUMMARY_MAX,
+  PODCAST_TURN_TEXT_MAX,
+  PODCAST_TURNS_MAX,
+  PODCAST_CONTEXT_TOKEN_BUDGET,
+} from "./podcast";
+export type { PodcastArtifactOutput, PodcastSpeaker } from "./podcast";
 export { loadArtifactSourceChunks, buildBoundedContext } from "./context";
 export type { ArtifactSourceChunk, BoundedContext } from "./context";
 export { parseStructuredOutput, extractJsonObject } from "./output";

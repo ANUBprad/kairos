@@ -41,7 +41,7 @@ const validReport = {
 };
 
 describe("artifact definition registry", () => {
-  it("registers the supported artifact types (no ghost implementations for the rest)", () => {
+  it("registers the supported artifact types (no ghost implementations beyond them)", () => {
     assert.deepEqual(listRegisteredArtifactTypes(), [
       "SUMMARY",
       "REPORT",
@@ -49,6 +49,7 @@ describe("artifact definition registry", () => {
       "FLASHCARDS",
       "MINDMAP",
       "TAKEAWAYS",
+      "PODCAST",
     ]);
   });
 
@@ -72,7 +73,19 @@ describe("artifact definition registry", () => {
   });
 
   it("rejects generation for types without a registered definition", () => {
-    assert.throws(() => resolveArtifactDefinition("PODCAST"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
+    assert.throws(() => resolveArtifactDefinition("UNKNOWN" as never), {
+      code: "UNSUPPORTED_ARTIFACT_TYPE",
+    });
+  });
+
+  it("resolves the PODCAST definition and exposes its declared metadata", () => {
+    const def = resolveArtifactDefinition("PODCAST");
+    assert.equal(def.type, "PODCAST");
+    assert.equal(def.schemaVersion, 1);
+    assert.equal(def.promptVersion, "podcast-v1");
+    assert.ok(def.contextTokenBudget > 0);
+    assert.equal(def.buildSystemPrompt().length > 0, true);
+    assert.equal(def.buildUserPrompt("context").includes("context"), true);
   });
 
   it("resolves the QUIZ definition and exposes its declared metadata", () => {
