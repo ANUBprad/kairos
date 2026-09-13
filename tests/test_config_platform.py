@@ -92,6 +92,22 @@ class TestSettings:
         p = s.effective_model_registry_dir()
         assert p.name == "models"
 
+    def test_local_dotenv_cannot_set_llm_provider(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".env").write_text(
+            "KAIROS_LLM_PROVIDER=ollama\n", encoding="utf-8"
+        )
+        monkeypatch.chdir(tmp_path)
+        assert Settings().llm_provider is None
+
+    def test_local_dotenv_cannot_set_api_secret(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / ".env").write_text("KAIROS_API_SECRET=leaked\n", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+        assert Settings().api_secret is None
+
 
 class TestEnvironments:
     def test_from_string_development(self) -> None:
