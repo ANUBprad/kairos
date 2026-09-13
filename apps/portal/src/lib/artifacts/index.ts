@@ -64,6 +64,28 @@ export {
   PODCAST_CONTEXT_TOKEN_BUDGET,
 } from "./podcast";
 export type { PodcastArtifactOutput, PodcastSpeaker } from "./podcast";
+export {
+  interruptionTurnSchema,
+  podcastInterruptSchema,
+  parseInterruptionQuestion,
+  parseStoredInterruptions,
+  insertInterruptionRecord,
+  buildPodcastInterruptSystemPrompt,
+  buildPodcastInterruptUserPrompt,
+  PODCAST_INTERRUPT_QUESTION_MAX,
+  PODCAST_INTERRUPT_TURN_TEXT_MAX,
+  PODCAST_INTERRUPT_TURNS_MIN,
+  PODCAST_INTERRUPT_TURNS_MAX,
+  PODCAST_INTERRUPTION_HISTORY_MAX,
+  PODCAST_INTERRUPT_PROMPT_VERSION,
+  PODCAST_INTERRUPT_TEMPERATURE,
+  PODCAST_INTERRUPT_CONTEXT_TOKEN_BUDGET,
+} from "./interrupt";
+export type {
+  PodcastInterruptOutput,
+  PodcastInterruptionAudio,
+  PodcastInterruptionRecord,
+} from "./interrupt";
 export { loadArtifactSourceChunks, buildBoundedContext } from "./context";
 export type { ArtifactSourceChunk, BoundedContext } from "./context";
 export { parseStructuredOutput, extractJsonObject } from "./output";
