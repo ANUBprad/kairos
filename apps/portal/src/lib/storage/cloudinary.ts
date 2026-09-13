@@ -2,6 +2,7 @@ import { v2 as cloudinary } from "cloudinary";
 import type { StorageFile, StorageProvider } from "./types";
 
 const UPLOAD_TIMEOUT_MS = 120_000;
+const SIGNED_URL_TTL_SECONDS = 86_400;
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,8 +11,14 @@ cloudinary.config({
 });
 
 export class CloudinaryStorageProvider implements StorageProvider {
-  async upload(buffer: Buffer, fileName: string, path?: string): Promise<StorageFile> {
+  async upload(
+    buffer: Buffer,
+    fileName: string,
+    path?: string,
+    options?: { accessMode?: "public" | "authenticated" },
+  ): Promise<StorageFile> {
     const publicId = path || fileName.replace(/\.[^.]+$/, "");
+    const accessMode = options?.accessMode ?? "public";
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -23,7 +30,7 @@ export class CloudinaryStorageProvider implements StorageProvider {
         {
           public_id: publicId,
           resource_type: "raw",
-          access_mode: "public",
+          access_mode: accessMode,
         },
         (err, result) => {
           clearTimeout(timer);
@@ -55,5 +62,22 @@ export class CloudinaryStorageProvider implements StorageProvider {
   getUrl(key: string): string {
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "demo";
     return `https://res.cloudinary.com/${cloudName}/raw/upload/${key}`;
+  }
+
+  async getSignedUrl(key: string): Promise<string> {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "demo";
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    if (!apiSecret) {
+      throw new Error("CLOUDINARY_API_SECRET is not configured");
+    }
+    const timestamp = Math.floor(Date.now() / 1000);
+    const expiresAt = timestamp + SIGNED_URL_TTL_SECONDS;
+    const params = {
+      timestamp: String(timestamp),
+      expires_at: String(expiresAt),
+    };
+    const signature = cloudinary.utils.api_sign_request(params, apiSecret);
+    const query = new URLSearchParams({ ...params, signature });
+    return `https://res.cloudinary.com/${cloudName}/raw/authenticated/${key}?${query.toString()}`;
   }
 }

@@ -15,6 +15,7 @@ export interface WavInfo {
   sampleRate: number;
   bitsPerSample: number;
   dataBytes: number;
+  dataOffset: number;
 }
 
 // Parses the standard 44+-byte RIFF/WAVE header. Null when the buffer is not a
@@ -32,6 +33,7 @@ export function parseWavHeader(buffer: Buffer): WavInfo | null {
     sampleRate: buffer.readUInt32LE(24),
     bitsPerSample: buffer.readUInt16LE(34),
     dataBytes: buffer.readUInt32LE(dataPos + 4),
+    dataOffset: dataPos + 8,
   };
 }
 

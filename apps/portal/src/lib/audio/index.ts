@@ -1,6 +1,7 @@
 export type { TTSProvider, TTSRequest, TTSResult, TTSProviderType, AudioFormat } from "./types";
 export {
   LocalTTSProvider,
+  buildLocalWav,
   parseWavHeader,
   wavDurationSeconds,
   LOCAL_TTS_SAMPLE_RATE,
@@ -18,3 +19,15 @@ export {
   ELEVENLABS_VOICE_HOST_A_ENV,
   ELEVENLABS_VOICE_HOST_B_ENV,
 } from "./providers/elevenlabs";
+export {
+  assemblePodcastSegments,
+  PODCAST_TURN_PAUSE_SECONDS,
+} from "./assembly";
+export type { AudioSegment, AssembledAudio } from "./assembly";
+export {
+  generatePodcastAudio,
+  resolveSpeakerVoiceId,
+  PODCAST_VOICE_HOST_A,
+  PODCAST_VOICE_HOST_B,
+} from "./pipeline";
+export type { PodcastSynthesisInput, PodcastSynthesisResult } from "./pipeline";
