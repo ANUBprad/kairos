@@ -35,6 +35,4 @@ def _hermetic_settings(monkeypatch: pytest.MonkeyPatch) -> None:
     ):
         return init_settings, env_settings, file_secret_settings
 
-    monkeypatch.setattr(
-        Settings, "settings_customise_sources", classmethod(_no_dotenv)
-    )
+    monkeypatch.setattr(Settings, "settings_customise_sources", classmethod(_no_dotenv))

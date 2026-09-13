@@ -95,9 +95,7 @@ class TestSettings:
     def test_local_dotenv_cannot_set_llm_provider(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        (tmp_path / ".env").write_text(
-            "KAIROS_LLM_PROVIDER=ollama\n", encoding="utf-8"
-        )
+        (tmp_path / ".env").write_text("KAIROS_LLM_PROVIDER=ollama\n", encoding="utf-8")
         monkeypatch.chdir(tmp_path)
         assert Settings().llm_provider is None
 
