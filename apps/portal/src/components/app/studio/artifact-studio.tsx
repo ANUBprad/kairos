@@ -11,6 +11,9 @@ import {
   generateSummaryArtifact,
   generateReportArtifact,
   generateQuizArtifact,
+  generateFlashcardsArtifact,
+  generateMindmapArtifact,
+  generateTakeawaysArtifact,
 } from "@/lib/actions/artifacts";
 import type { SourceListItem } from "@/lib/source-contract";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
@@ -34,7 +37,7 @@ const TABS = [
   { label: "Chat", href: (kbId: string) => `/app/knowledge-bases/${kbId}/chat` },
 ];
 
-// Exactly the three supported artifact types. Everything else is intentionally
+// Exactly the six supported artifact types. Everything else is intentionally
 // absent: the UI cannot generate a type that has no studio action.
 const GENERATORS: Readonly<
   Record<ActiveStudioArtifactType, (kbId: string, sourceIds: string[], name?: string) => Promise<LearningArtifactData>>
@@ -42,6 +45,9 @@ const GENERATORS: Readonly<
   SUMMARY: generateSummaryArtifact,
   REPORT: generateReportArtifact,
   QUIZ: generateQuizArtifact,
+  FLASHCARDS: generateFlashcardsArtifact,
+  MINDMAP: generateMindmapArtifact,
+  TAKEAWAYS: generateTakeawaysArtifact,
 };
 
 export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Props) {

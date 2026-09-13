@@ -1,4 +1,4 @@
-import { ClipboardList, FileText, ListChecks } from "lucide-react";
+import { ClipboardList, FileText, Lightbulb, ListChecks, SquareStack, Workflow } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ArtifactType } from "@prisma/client";
 
@@ -8,10 +8,17 @@ export interface ArtifactTypeMeta {
   Icon: LucideIcon;
 }
 
-// The studio generation panel supports exactly these three artifact types.
-// The backend registry may gain more later; the UI only advertises what it
-// can actually generate.
-export const ACTIVE_STUDIO_ARTIFACT_TYPES = ["SUMMARY", "REPORT", "QUIZ"] as const;
+// The studio generation panel supports exactly these six artifact types.
+// PODCAST is intentionally absent: it belongs to the deferred audio phase and
+// the UI never advertises what it cannot generate.
+export const ACTIVE_STUDIO_ARTIFACT_TYPES = [
+  "SUMMARY",
+  "REPORT",
+  "QUIZ",
+  "FLASHCARDS",
+  "MINDMAP",
+  "TAKEAWAYS",
+] as const;
 
 export type ActiveStudioArtifactType = (typeof ACTIVE_STUDIO_ARTIFACT_TYPES)[number];
 
@@ -30,6 +37,21 @@ export const ARTIFACT_TYPE_META: Readonly<Record<ActiveStudioArtifactType, Artif
     label: "Quiz",
     description: "Multiple-choice study questions with explanations.",
     Icon: ListChecks,
+  },
+  FLASHCARDS: {
+    label: "Flashcards",
+    description: "A study deck of front-and-back cards.",
+    Icon: SquareStack,
+  },
+  MINDMAP: {
+    label: "Mind Map",
+    description: "A rooted hierarchy of connected concepts.",
+    Icon: Workflow,
+  },
+  TAKEAWAYS: {
+    label: "Takeaways",
+    description: "The key points worth remembering from the sources.",
+    Icon: Lightbulb,
   },
 };
 

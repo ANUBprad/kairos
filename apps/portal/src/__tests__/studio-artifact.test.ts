@@ -8,6 +8,9 @@ import {
 } from "@/lib/artifacts/summary-view";
 import { parseReportContent } from "@/lib/artifacts/report-view";
 import { parseQuizContent } from "@/lib/artifacts/quiz-view";
+import { parseFlashcardsContent } from "@/lib/artifacts/flashcards-view";
+import { parseMindmapContent } from "@/lib/artifacts/mindmap-view";
+import { parseTakeawaysContent } from "@/lib/artifacts/takeaways-view";
 import {
   ACTIVE_STUDIO_ARTIFACT_TYPES,
   ARTIFACT_TYPE_META,
@@ -111,6 +114,79 @@ describe("quiz content view", () => {
   });
 });
 
+describe("flashcards content view", () => {
+  const content = {
+    title: "Qubit Deck",
+    cards: [
+      { front: "What is a qubit?", back: "The quantum analogue of a bit." },
+      { front: "What does superposition mean?", back: "A qubit is a mix of states until measured." },
+    ],
+  };
+
+  it("parses a valid stored FLASHCARDS payload", () => {
+    assert.deepEqual(parseFlashcardsContent(content), content);
+  });
+
+  it("returns null for malformed content (missing fields or empty deck)", () => {
+    assert.equal(parseFlashcardsContent({ title: "Only a title" }), null);
+    assert.equal(parseFlashcardsContent({ ...content, cards: [] }), null);
+    assert.equal(parseFlashcardsContent("not json"), null);
+  });
+
+  it("returns null for strict-invalid extra keys", () => {
+    assert.equal(parseFlashcardsContent({ ...content, tags: ["x"] }), null);
+  });
+});
+
+describe("mindmap content view", () => {
+  const content = {
+    title: "Qubit Concepts",
+    root: {
+      label: "Quantum Computing",
+      description: "Computing with qubits.",
+      children: [{ label: "Superposition", description: "Mixed states" }, { label: "Entanglement" }],
+    },
+  };
+
+  it("parses a valid stored MINDMAP payload", () => {
+    assert.deepEqual(parseMindmapContent(content), content);
+  });
+
+  it("returns null for malformed content (missing root or bad recursion)", () => {
+    assert.equal(parseMindmapContent({ title: "Only a title" }), null);
+    assert.equal(parseMindmapContent({ title: "T", root: {} }), null);
+    assert.equal(parseMindmapContent("not json"), null);
+  });
+
+  it("returns null for strict-invalid extra keys", () => {
+    assert.equal(parseMindmapContent({ ...content, style: {} }), null);
+  });
+});
+
+describe("takeaways content view", () => {
+  const content = {
+    title: "Qubit Essentials",
+    takeaways: [
+      { heading: "Superposition", detail: "A qubit holds a mix of states." },
+      { heading: "Entanglement", detail: "Qubits can be correlated across distance." },
+    ],
+  };
+
+  it("parses a valid stored TAKEAWAYS payload", () => {
+    assert.deepEqual(parseTakeawaysContent(content), content);
+  });
+
+  it("returns null for malformed content (missing fields or empty list)", () => {
+    assert.equal(parseTakeawaysContent({ title: "Only a title" }), null);
+    assert.equal(parseTakeawaysContent({ ...content, takeaways: [] }), null);
+    assert.equal(parseTakeawaysContent("not json"), null);
+  });
+
+  it("returns null for strict-invalid extra keys", () => {
+    assert.equal(parseTakeawaysContent({ ...content, summary: "x" }), null);
+  });
+});
+
 describe("source provenance", () => {
   const sources = [
     { id: "doc_a", name: "paper.pdf" },
@@ -154,8 +230,15 @@ describe("artifact status meta", () => {
 });
 
 describe("artifact type presentation meta", () => {
-  it("lists exactly the three studio-supported artifact types (no ghost entries)", () => {
-    assert.deepEqual(ACTIVE_STUDIO_ARTIFACT_TYPES, ["SUMMARY", "REPORT", "QUIZ"]);
+  it("lists exactly the six studio-supported artifact types (no ghost entries)", () => {
+    assert.deepEqual(ACTIVE_STUDIO_ARTIFACT_TYPES, [
+      "SUMMARY",
+      "REPORT",
+      "QUIZ",
+      "FLASHCARDS",
+      "MINDMAP",
+      "TAKEAWAYS",
+    ]);
   });
 
   it("every active type has a label, description and icon", () => {
@@ -167,13 +250,13 @@ describe("artifact type presentation meta", () => {
     }
   });
 
-  it("narrows only the active types and rejects the unimplemented ones", () => {
+  it("narrows only the active types and rejects PODCAST (deferred)", () => {
     assert.equal(isActiveStudioArtifactType("SUMMARY"), true);
     assert.equal(isActiveStudioArtifactType("REPORT"), true);
     assert.equal(isActiveStudioArtifactType("QUIZ"), true);
-    assert.equal(isActiveStudioArtifactType("FLASHCARDS"), false);
-    assert.equal(isActiveStudioArtifactType("MINDMAP"), false);
-    assert.equal(isActiveStudioArtifactType("TAKEAWAYS"), false);
+    assert.equal(isActiveStudioArtifactType("FLASHCARDS"), true);
+    assert.equal(isActiveStudioArtifactType("MINDMAP"), true);
+    assert.equal(isActiveStudioArtifactType("TAKEAWAYS"), true);
     assert.equal(isActiveStudioArtifactType("PODCAST"), false);
   });
 });
@@ -203,20 +286,36 @@ describe("studio wiring", () => {
     new URL("../components/app/studio/quiz-artifact-viewer.tsx", import.meta.url),
     "utf8",
   );
+  const flashcardsViewerSource = readFileSync(
+    new URL("../components/app/studio/flashcards-artifact-viewer.tsx", import.meta.url),
+    "utf8",
+  );
+  const mindmapViewerSource = readFileSync(
+    new URL("../components/app/studio/mindmap-artifact-viewer.tsx", import.meta.url),
+    "utf8",
+  );
+  const takeawaysViewerSource = readFileSync(
+    new URL("../components/app/studio/takeaways-artifact-viewer.tsx", import.meta.url),
+    "utf8",
+  );
 
-  it("generates through the O4-T3/O4-T5 application actions, never the engine or database directly", () => {
+  it("generates through the O4 application actions, never the engine or database directly", () => {
     assert.match(studioSource, /generateSummaryArtifact/);
     assert.match(studioSource, /generateReportArtifact/);
     assert.match(studioSource, /generateQuizArtifact/);
+    assert.match(studioSource, /generateFlashcardsArtifact/);
+    assert.match(studioSource, /generateMindmapArtifact/);
+    assert.match(studioSource, /generateTakeawaysArtifact/);
     assert.doesNotMatch(studioSource, /generateLearningArtifact|getAIProvider|generateChat/);
+    assert.doesNotMatch(studioSource, /generatePodcastArtifact/);
     assert.doesNotMatch(studioSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(studioSource, /from ["']openai["']/);
   });
 
-  it("exposes exactly three active artifact types in the selector, never the unimplemented ones", () => {
-    assert.doesNotMatch(studioSource, /FLASHCARDS|MINDMAP|TAKEAWAYS|PODCAST/);
+  it("exposes the six active artifact types through the shared selector and meta", () => {
     assert.match(studioSource, /ACTIVE_STUDIO_ARTIFACT_TYPES/);
     assert.match(studioSource, /Generate \$\{typeMeta\.label\}/);
+    assert.doesNotMatch(studioSource, /PODCAST/);
   });
 
   it("lists artifacts through the O4-T3 workspace action without a client-side type split", () => {
@@ -229,6 +328,10 @@ describe("studio wiring", () => {
     assert.match(dialogSource, /SummaryArtifactViewer/);
     assert.match(dialogSource, /ReportArtifactViewer/);
     assert.match(dialogSource, /QuizArtifactViewer/);
+    assert.match(dialogSource, /FlashcardsArtifactViewer/);
+    assert.match(dialogSource, /MindmapArtifactViewer/);
+    assert.match(dialogSource, /TakeawaysArtifactViewer/);
+    assert.doesNotMatch(dialogSource, /PodcastArtifactViewer/);
     assert.doesNotMatch(dialogSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(dialogSource, /generateLearningArtifact|getAIProvider|generateChat/);
   });
@@ -260,6 +363,31 @@ describe("studio wiring", () => {
     assert.match(studioSource, /SourceListItem/);
   });
 
+  it("performs soft-swipe flashcards: reveal, navigate and reset all stay client-local", () => {
+    assert.match(flashcardsViewerSource, /"use client"/);
+    assert.match(flashcardsViewerSource, /useState/);
+    assert.match(flashcardsViewerSource, /parseFlashcardsContent/);
+    assert.match(flashcardsViewerSource, /goNext|goPrev|setIndex/);
+    assert.match(flashcardsViewerSource, /setRevealed/);
+    assert.doesNotMatch(flashcardsViewerSource, /from ["']@\/lib\/actions\//);
+    assert.doesNotMatch(flashcardsViewerSource, /from ["']@\/lib\/prisma["']/);
+    assert.doesNotMatch(flashcardsViewerSource, /generateFlashcardsArtifact|getLearningArtifactForWorkspace/);
+  });
+
+  it("renders the mind map as a nested hierarchy without a graph engine", () => {
+    assert.match(mindmapViewerSource, /"use client"/);
+    assert.match(mindmapViewerSource, /parseMindmapContent/);
+    assert.match(mindmapViewerSource, /MindMapNodeTree/);
+    assert.doesNotMatch(mindmapViewerSource, /@xyflow|reactflow|mermaid|d3/);
+    assert.doesNotMatch(mindmapViewerSource, /from ["']@\/lib\/actions\//);
+  });
+
+  it("renders takeaways through the view helpers with provenance and no action access", () => {
+    assert.match(takeawaysViewerSource, /parseTakeawaysContent/);
+    assert.match(takeawaysViewerSource, /resolveSourceProvenance/);
+    assert.doesNotMatch(takeawaysViewerSource, /from ["']@\/lib\/actions\//);
+  });
+
   it("renders only through the Studio panel and guards against missing knowledge bases", () => {
     assert.match(pageSource, /ArtifactStudio/);
     assert.match(pageSource, /redirect\("\/app"\)/);
@@ -267,7 +395,7 @@ describe("studio wiring", () => {
 });
 
 describe("unsupported artifact types", () => {
-  it("cannot be generated: no unimplemented type appears as an option or action anywhere", () => {
+  it("cannot be generated: PODCAST appears nowhere as an option or action", () => {
     const studioSource = readFileSync(
       new URL("../components/app/studio/artifact-studio.tsx", import.meta.url),
       "utf8",
@@ -276,7 +404,12 @@ describe("unsupported artifact types", () => {
       new URL("../components/app/studio/artifact-dialog.tsx", import.meta.url),
       "utf8",
     );
-    assert.doesNotMatch(studioSource, /FLASHCARDS|MINDMAP|TAKEAWAYS|PODCAST/);
-    assert.doesNotMatch(dialogSource, /FLASHCARDS|MINDMAP|TAKEAWAYS|PODCAST/);
+    const actionsSource = readFileSync(
+      new URL("../lib/actions/artifacts.ts", import.meta.url),
+      "utf8",
+    );
+    assert.doesNotMatch(studioSource, /PODCAST/);
+    assert.doesNotMatch(dialogSource, /Podcast|PODCAST/);
+    assert.doesNotMatch(actionsSource, /generatePodcastArtifact/);
   });
 });

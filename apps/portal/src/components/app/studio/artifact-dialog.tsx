@@ -10,6 +10,9 @@ import { ArtifactStatusBadge } from "./artifact-status-badge";
 import { SummaryArtifactViewer } from "./summary-artifact-viewer";
 import { ReportArtifactViewer } from "./report-artifact-viewer";
 import { QuizArtifactViewer } from "./quiz-artifact-viewer";
+import { FlashcardsArtifactViewer } from "./flashcards-artifact-viewer";
+import { MindmapArtifactViewer } from "./mindmap-artifact-viewer";
+import { TakeawaysArtifactViewer } from "./takeaways-artifact-viewer";
 
 interface Props {
   kbId: string;
@@ -84,6 +87,15 @@ export function ArtifactDialog({ kbId, artifactId, sources, onClose }: Props) {
             )}
             {artifact.type === "QUIZ" && (
               <QuizArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
+            )}
+            {artifact.type === "FLASHCARDS" && (
+              <FlashcardsArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
+            )}
+            {artifact.type === "MINDMAP" && (
+              <MindmapArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
+            )}
+            {artifact.type === "TAKEAWAYS" && (
+              <TakeawaysArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
             )}
             {!isActiveStudioArtifactType(artifact.type) && (
               <div className="flex flex-col items-center justify-center gap-3 py-24">
