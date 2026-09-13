@@ -34,7 +34,7 @@ class TestREADME:
 
     def test_readme_has_benchmark_content(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")
-        assert "Benchmark" in content
+        assert "benchmark" in content.lower()
 
     def test_readme_has_contributing_section(self) -> None:
         content = (ROOT / "README.md").read_text(encoding="utf-8")

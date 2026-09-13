@@ -1,6 +1,6 @@
 # Contributing to Kairos
 
-Kairos is an open-source, explainable RAG research workbench. Contributions of all kinds are welcome — bug reports, feature requests, documentation improvements, and code.
+Kairos is an open-source, explainable AI research and learning workspace. Contributions of all kinds are welcome — bug reports, feature requests, documentation improvements, and code.
 
 ## How to Contribute
 
@@ -97,7 +97,7 @@ docker compose up -d
 
 ```bash
 # Frontend
-cd apps/portal && npm test
+cd apps/portal && npx tsx --test "src/__tests__/*.test.ts"
 
 # Python — full suite
 python -m pytest tests/ -v

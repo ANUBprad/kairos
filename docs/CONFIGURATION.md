@@ -18,19 +18,18 @@ Complete configuration reference for Kairos.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DIRECT_URL` | - | Direct PostgreSQL connection (session mode) |
+| `DIRECT_URL` | - | Direct PostgreSQL connection (session mode; required for Supabase) |
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | `http://localhost:3000` | Public app URL |
-| `AI_PROVIDER` | `openai` | Default AI provider: `openai` or `gemini` |
-| `OPENAI_CHAT_MODEL` | `gpt-4o-mini` | OpenAI chat model |
-| `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-small` | OpenAI embedding model |
-| `GEMINI_CHAT_MODEL` | `gemini-2.0-flash` | Gemini chat model |
-| `GEMINI_EMBEDDING_MODEL` | `text-embedding-004` | Gemini embedding model |
+| `KAIROS_LLM_PROVIDER` | - | Generated-model provider: `openai` / `gemini` / `ollama` |
+| `KAIROS_EMBEDDING_MODEL` | `local` | Embedding backend: `local` / `openai` / `gemini` |
+| `OPENAI_API_KEY` | - | OpenAI API key |
 | `GEMINI_API_KEY` | - | Google Gemini API key |
 | `CLOUDINARY_CLOUD_NAME` | - | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | - | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | - | Cloudinary API secret |
 | `GITHUB_CLIENT_ID` | - | GitHub OAuth Client ID |
 | `GITHUB_CLIENT_SECRET` | - | GitHub OAuth Client Secret |
+| `KAIROS_API_SECRET` | - | Shared secret for `/api/v1/*` endpoints (`x-api-key`) |
 | `PROMETHEUS_PORT` | `9090` | Prometheus metrics port |
 | `GRAFANA_PASSWORD` | `admin` | Grafana admin password |
 
@@ -38,12 +37,15 @@ Complete configuration reference for Kairos.
 
 | Service | Default Port | Variable |
 |---------|--------------|----------|
-| Portal | 3000 | `PORT` |
+| Portal (dev) | 3000 | `PORT` |
 | Gateway | 8080 | `GATEWAY_PORT` |
-| Intelligence | 28080 | `INTELLIGENCE_PORT` |
-| ChromaDB | 7777 | `CHROMA_PORT` |
+| Intelligence (gRPC) | 28080 | `INTELLIGENCE_PORT` |
+| Intelligence metrics | 8001 | `KAIROS_METRICS_PORT` |
+| API (FastAPI) | 8000 | `API_PORT` |
+| Internal Dashboard | 8501 | `DASHBOARD_PORT` |
+| ChromaDB | 7777 | `CHROMA_STORE_PORT` |
 | Prometheus | 9090 | `PROMETHEUS_PORT` |
-| Grafana | 3000 | `GRAFANA_PORT` |
+| Grafana | 3000 | (conflicts with Portal dev — run one at a time) |
 
 ---
 
@@ -224,72 +226,20 @@ registry.register(
 
 **Location:** `docker-compose.yml`
 
-### Services
+The compose stack serves eight services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`.
 
-```yaml
-services:
-  portal:
-    build: ./apps/portal
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/kairos
-      - DIRECT_URL=postgresql://postgres:postgres@db:5432/kairos
+| Service | Build / Image | Port | Notes |
+|---------|---------------|------|-------|
+| `chromadb` | `chromadb/chroma:1.0.15` | 7777 → 8000 | Vector store |
+| `intelligence` | `docker/intelligence.Dockerfile` | 28080, 8001 | gRPC engine + metrics |
+| `api` | `docker/api.Dockerfile` | ${API_PORT:-8000} | FastAPI management API |
+| `internal-dashboard` | `docker/dashboard.Dockerfile` | ${DASHBOARD_PORT:-8501} | Streamlit dashboard |
+| `worker` | `docker/worker.Dockerfile` | — | Background ingestion worker |
+| `gateway` | `docker/gateway.Dockerfile` | ${GATEWAY_PORT:-8080} | HTTP API gateway |
+| `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Metrics collection |
+| `grafana` | `grafana/grafana:10.4.2` | 3000 | Dashboards (provisioned from `docker/grafana/`) |
 
-  gateway:
-    build: ./gateway
-    ports:
-      - "8080:8080"
-    environment:
-      - INTELLIGENCE_URL=intelligence:28080
-
-  intelligence:
-    build: ./intelligence
-    ports:
-      - "28080:28080"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - CHROMA_HOST=chroma
-
-  chroma:
-    image: chromadb/chroma:latest
-    ports:
-      - "7777:8000"
-    volumes:
-      - chroma_data:/chroma/chroma
-
-  db:
-    image: pgvector/pgvector:pg15
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=kairos
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-```
-
-### Volumes
-
-```yaml
-volumes:
-  pg_data:
-  chroma_data:
-```
+The stack reads its environment from `.env` (see `.env.example`). PostgreSQL is provided externally via `DATABASE_URL`/`DIRECT_URL` and is not part of the compose stack.
 
 ---
 
@@ -320,35 +270,44 @@ type Config struct {
 
 ### Config Options
 
+Key settings exposed by `Settings` (Pydantic, populated from env):
+
 ```python
 class Settings:
     # Server
-    host: str = "0.0.0.0"
-    port: int = 28080
-    workers: int = 4
-    
-    # Database
-    database_url: str
-    
-    # AI Providers
-    openai_api_key: Optional[str]
-    gemini_api_key: Optional[str]
-    default_provider: str = "openai"
-    
-    # Vector Store
-    chroma_host: str = "localhost"
-    chroma_port: int = 7777
-    
+    intelligence_port: int = 28080
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
+    dashboard_port: int = 8501
+
+    # Data
+    chroma_store_host: str = "localhost"
+    chroma_store_port: int = 7777
+
+    # AI
+    embedding_model: str = "local"
+    llm_provider: Optional[str] = None  # "openai" | "gemini" | "ollama"
+    gemini_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    ollama_url: Optional[str] = None
+
+    # Chunking
+    chunk_size: int = 1024
+    overlap: int = 150
+
     # Caching
-    cache_enabled: bool = True
-    cache_ttl: int = 3600
-    redis_url: str = "redis://localhost:6379"
-    
-    # Logging
-    log_level: str = "INFO"
-    log_format: str = "json"
-    
-    # Metrics
-    enable_metrics: bool = True
-    metrics_port: int = 9091
+    cache_maxsize: int = 4096
+    cache_ttl_seconds: int = 300
+
+    # Metrics / health
+    metrics_enabled: bool = True
+    metrics_port: int = 8001
+    health_check_enabled: bool = True
+
+    # Resilience
+    provider_timeout_seconds: float = 30.0
+    circuit_breaker_failure_threshold: int = 5
+    circuit_breaker_recovery_timeout: float = 30.0
 ```
+
+All of these are overridable via environment variables — see `.env.example` for the authoritative list.

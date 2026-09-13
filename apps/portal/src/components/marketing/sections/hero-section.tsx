@@ -220,7 +220,7 @@ export function Hero() {
             </Button>
             <Button variant="secondary" size="lg" asChild>
               <a
-                href="https://github.com/kairos-ai/kairos"
+                href="https://github.com/ANUBprad/kairos"
                 target="_blank"
                 rel="noopener noreferrer"
               >

@@ -195,7 +195,7 @@ kairos config reset
 
 ```yaml
 - name: Run Kairos Benchmark
-  uses: kairos-ai/cli-action@v1
+  uses: ANUBprad/cli-action@v1
   with:
     api-key: ${{ secrets.KAIROS_API_KEY }}
     command: benchmark run

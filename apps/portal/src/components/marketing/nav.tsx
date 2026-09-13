@@ -12,7 +12,7 @@ const navLinks = [
   { label: "Features", href: "/features" },
   { label: "Docs", href: "/docs" },
   { label: "Blog", href: "/blog" },
-  { label: "GitHub", href: "https://github.com/kairos-ai/kairos" },
+  { label: "GitHub", href: "https://github.com/ANUBprad/kairos" },
 ];
 
 export function Nav() {

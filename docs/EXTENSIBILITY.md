@@ -398,7 +398,7 @@ Plugin packages can be signed with a private key; the platform verifies the sign
 ### TypeScript
 
 - TypeScript code is validated via `tsc` and ESLint.
-- Unit tests are written with Jest.
+- Unit tests run with `node:test` via `tsx` (`npx tsx --test "src/__tests__/*.test.ts"`).
 
 ### Prisma
 

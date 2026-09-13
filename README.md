@@ -5,494 +5,241 @@
 <h1 align="center">Kairos</h1>
 
 <p align="center">
-  <strong>Explainable AI Workbench for Retrieval-Augmented Generation</strong>
+  <strong>An explainable AI research and learning workspace.</strong>
 </p>
 
 <p align="center">
-  End-to-end RAG pipeline visibility — from ingestion and chunking through retrieval and generation — with statistical rigor at every stage.
+  Bring your own documents. Build knowledge that is grounded, inspectable, and reusable — with retrieval that explains itself.
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/build-passing-brightgreen.svg" alt="Build Status" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/tests-1%2C813-brightgreen.svg" alt="Tests" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/python-3.11+-3776AB.svg" alt="Python 3.11+" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/go-1.26+-00ADD8.svg" alt="Go 1.26+" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/next.js-15-000000" alt="Next.js 15" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/docker-ready-2496ED" alt="Docker" /></a>
-</p>
-
-<p align="center">
+  <a href="#what-is-kairos">What is Kairos</a> ·
   <a href="#quick-start">Quick Start</a> ·
   <a href="#architecture">Architecture</a> ·
-  <a href="#why-kairos">Why Kairos</a> ·
   <a href="#features">Features</a> ·
   <a href="#contributing">Contributing</a>
 </p>
 
 ---
 
-## What is Kairos?
+## About
 
-Kairos is an open-source research workbench for **Retrieval-Augmented Generation** (RAG) pipelines. It gives you full visibility into how answers are constructed from your documents — every retrieval decision, every chunk selection, every generation input is inspectable.
-
-Most RAG tools are black boxes. **Kairos is a microscope.**
+Kairos is an open-source platform for retrieval-augmented AI research and learning. It combines a modern web workspace with a production-grade RAG engine, so answers come with the reasoning that produced them — the retrieval pipeline is visible end to end.
 
 ---
 
-## Why Kairos?
+## What is Kairos
 
-| | Traditional RAG Tools | Kairos |
-|---|---|---|
-| Retrieval | Black box — trust the results | **Explainable** — trace every decision |
-| Evaluation | Basic similarity scores | **Statistical rigor** — 12+ IR metrics with confidence intervals |
-| Experiments | Manual, ad-hoc | **Reproducible** — full configuration capture per run |
-| Debugging | Logs and guesswork | **Pipeline traces** — inspect chunks, scores, and inferences |
-| Benchmarking | One-off comparisons | **Campaign mode** — A/B testing across configurations |
+Kairos is a self-hostable platform built around one idea: **different questions need different retrieval strategies.**
 
----
+You bring documents. Kairos ingests them into a knowledge base, then every AI interaction runs a real retrieval pipeline — classification, retrieval planning, and strategy selection among dense vector, BM25, and hybrid retrievers — before generating an answer grounded in your material.
 
-## Features
+Kairos is a *workspace*, not just an API:
 
-<table>
-<tr>
-<td width="50%">
-
-### 🔍 Explainable Retrieval
-Full pipeline trace per query. Inspect retrieved chunks, similarity scores, and document inclusion decisions.
-
-### 📊 Statistical Evaluation
-12+ IR metrics with confidence intervals, p-values, effect sizes (Cohen's d, Cliff's delta), and distribution analysis.
-
-### 🧪 Experiment Tracking
-Run multiple strategies against labeled datasets. Capture configurations, results, and reproduce any experiment.
-
-</td>
-<td width="50%">
-
-### 💬 RAG Chat
-Chat interface with inline citations, retrieved chunks, similarity scores, and per-message pipeline traces.
-
-### ⚡ Production Architecture
-Go gateway for performance. Python intelligence engine for ML. gRPC, Prometheus, Docker-ready.
-
-### 📈 Benchmark Campaigns
-Leaderboard with composite scores. Run A/B comparisons across retrieval configurations with statistical validation.
-
-</td>
-</tr>
-</table>
+- **Knowledge bases** — upload PDFs, DOCX, TXT, Markdown, and CSV; chunk, embed, and search over them.
+- **RAG chat with citations** — answers reference the chunks they came from, and the retrieval trace for each message is inspectable.
+- **Artifact Studio** — turn knowledge base material into reusable learning artifacts (text pieces, illustrations, and audio podcast renditions), each with source grounding.
+- **Explainable podcast Q&A** — a podcast artifact can be interrupted mid-play to ask questions about what you just heard; the answers are grounded in the source material and surfaced inline.
+- **Evaluation & benchmarks** — a statistical evaluation framework and a leaderboard for comparing retrieval configurations.
+- **Ops-friendly** — Docker Compose stack with Prometheus/Grafana observability and an internal Streamlit research dashboard.
 
 ---
 
-## Architecture
+## What Kairos Does Today
 
-**Simple flow:**
+Current production-shaped capabilities:
 
-```
-User → Next.js Portal → Go Gateway → Python Intelligence → Postgres + Vector Store → LLM Providers
-```
-
-**Detailed system:**
-
-```mermaid
-flowchart TD
-    User["User"]
-    Portal["Next.js 15 Portal<br/>React 19 · TypeScript · Tailwind v4"]
-
-    subgraph Research["Research"]
-        R1["Research Dashboard"]
-        R2["AI Copilot"]
-        R3["Experiment Planner"]
-    end
-
-    subgraph Build["Build & Ingest"]
-        B1["Knowledge Base Manager"]
-        B2["Chunking Studio"]
-    end
-
-    subgraph Evaluate["Evaluation"]
-        E1["Retrieval Lab"]
-        E2["Evaluation Dashboard"]
-        E3["Benchmark Explorer"]
-    end
-
-    subgraph Explain["Explainability"]
-        X1["RAG Chat"]
-        X2["Retrieval Debugger"]
-    end
-
-    KB["Knowledge Base<br/>PostgreSQL + pgvector"]
-    Retrieval["Retrieval Engine<br/>BM25 · Vector · Hybrid · Reranking"]
-    Embedding["Embedding Service<br/>OpenAI · Gemini · Local"]
-    LLMs["LLM Providers<br/>OpenAI · Gemini"]
-    Eval["Evaluation Engine<br/>12+ IR Metrics · Statistical Tests"]
-
-    User --> Portal
-    Portal --> Research
-    Portal --> Build
-    Portal --> Evaluate
-    Portal --> Explain
-
-    Build --> KB
-    KB --> Retrieval
-    Retrieval --> Embedding
-    Retrieval --> LLMs
-    Evaluate --> Eval
-    Explain --> Retrieval
-    Research --> LLMs
-    Research --> Eval
-```
-
----
-
-## Tech Stack
-
-**Frontend**
-Next.js 15 · React 19 · TypeScript 5.8 · Tailwind CSS v4 · Framer Motion · Recharts
-
-**Backend**
-Go 1.26 · Chi Router · gRPC · Protocol Buffers · FastAPI
-
-**AI & ML**
-Python 3.11+ · SentenceTransformers · NumPy · SciPy · scikit-learn
-
-**Data**
-PostgreSQL 15 · pgvector · Prisma ORM · ChromaDB (pluggable)
-
-**Observability**
-Prometheus · Grafana · OpenTelemetry
-
-**Infrastructure**
-Docker · Docker Compose
-
----
-
-## Project Structure
-
-```
-kairos/
-├── apps/portal/          # Next.js 15 frontend (React, TypeScript, Tailwind)
-├── gateway/              # Go API gateway (Chi, gRPC, worker pool)
-├── intelligence/         # Python engine (retrieval, embeddings, ingestion)
-├── benchmarks/           # Evaluation framework (load tests, RAG evaluation)
-├── sdk/                  # Python SDK
-├── tests/                # 1,813 unit & integration tests (41 files)
-├── docker/               # Multi-stage Dockerfiles
-├── docs/                 # Documentation
-└── proto/                # gRPC contracts
-```
-
----
-
-## How It Works
-
-### 1. Upload Documents
-
-Upload PDFs, plain text, or markdown. Documents are chunked using one of 5 strategies (fixed-size, structural, semantic, paragraph, heading-based) and embedded into a vector store.
-
-### 2. Build Experiments
-
-Configure retrieval experiments with different embedding models (OpenAI, Gemini, local), retrieval strategies (vector, BM25, hybrid, reranked), chunking configurations, and top-K values.
-
-### 3. Run Benchmarks
-
-Execute benchmark campaigns against labeled datasets. Each run captures full configuration, per-question metrics, and retrieval traces for reproducibility.
-
-### 4. Evaluate with Statistical Rigor
-
-Compute 12+ IR metrics per question — Recall@K, Precision@K, MRR, nDCG, Hit Rate, MAP, F1@K — plus generation metrics (Faithfulness, Answer Relevance, Context Precision, Context Recall) with confidence intervals and effect sizes.
-
-### 5. Chat with Your Documents
-
-Use RAG Chat to ask questions and see exactly how answers are constructed, with inline citations, retrieved chunks, similarity scores, and a full pipeline trace.
+- Full-stack retrieval pipeline mounted behind a web portal: ingestion → chunking → embeddings → retrieval planning → strategy selection (BM25 / dense / hybrid) → reranking → grounded answer generation.
+- Embedding and LLM providers are pluggable: local models via SentenceTransformers, or OpenAI and Gemini APIs; LLM generation via OpenAI, Gemini, or Ollama.
+- Typical document formats handled end to end: PDF, DOCX, TXT, Markdown, CSV.
+- Artifact generation from knowledge bases, including multi-part audio podcasts with mid-play, grounded interruption Q&A.
+- Chat with citations, pipeline traces, and per-message grounding.
+- Statistical retrieval evaluation (recall, precision, MRR, nDCG, latency, cost, faithfulness and failure-rate metrics) with an internal leaderboard.
+- Dockerized full stack with health checks, rate limiting, semantic caching, and Prometheus/Grafana dashboards.
 
 ---
 
 ## Quick Start
 
-### Docker (Recommended)
+**Prerequisites:** Docker and Docker Compose v2.
 
 ```bash
-git clone https://github.com/kairos-ai/kairos.git
+git clone https://github.com/ANUBprad/kairos.git
 cd kairos
+
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env: set at least DATABASE_URL, BETTER_AUTH_SECRET and an AI provider key
 docker compose up -d
+
+docker compose ps   # wait until all services report healthy
 ```
 
-| Service | URL |
-|---------|-----|
-| Gateway API | http://localhost:8080 |
-| Grafana | http://localhost:3000 (conflicts with the Portal dev server, see below) |
-| Prometheus | http://localhost:9090 |
+**Default services**
 
-> The web Portal (Next.js) is not part of the compose stack — run it with `npm run dev` in `apps/portal` (defaults to http://localhost:3000).
+| Service | URL / Port | Purpose |
+|---------|------------|---------|
+| Portal (dev) | http://localhost:3000 | Web workspace — run via `npm run dev` in `apps/portal` |
+| Gateway | http://localhost:8080 | Go HTTP API gateway |
+| Intelligence | http://localhost:28080 | Python RAG engine (gRPC) |
+| API | http://localhost:8000 | FastAPI management API |
+| Internal Dashboard | http://localhost:8501 | Streamlit research/ops dashboard |
+| ChromaDB | http://localhost:7777 | Vector store |
+| Prometheus | http://localhost:9090 | Metrics collection |
+| Grafana | http://localhost:3000 | Metrics dashboards — conflicts with the Portal dev server; run them one at a time |
 
-### Manual Setup
-
-**Prerequisites:** Node.js 20+, Python 3.11+, Go 1.26+, PostgreSQL 15+ (with pgvector)
+**Run the portal locally**
 
 ```bash
-git clone https://github.com/kairos-ai/kairos.git
-cd kairos
-
-# Frontend
-cd apps/portal && cp .env.example .env
-npm install && npx prisma generate && npx prisma db push && npm run dev
-
-# Intelligence Engine (new terminal)
-cd ../../ && pip install -r requirements.txt && python -m intelligence.main
-
-# Gateway (new terminal)
-cd gateway && go run main.go
+cd apps/portal
+npm install
+npx prisma generate
+npx prisma db push        # applies the schema to your PostgreSQL database
+npm run dev
 ```
 
+The full environment reference lives in [`.env.example`](.env.example); see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment notes.
+
 ---
 
-## Deployment
+## Architecture
 
-### Docker Compose Services
+Kairos is a microservice platform with three layers:
 
-| Service | Port | Description |
-|---------|------|-------------|
-| `gateway` | 8080 | Go API gateway |
-| `intelligence` | 28080 | Python gRPC server |
-| `api` | 8000 | FastAPI REST server |
-| `internal-dashboard` | 8501 | Streamlit dashboard |
-| `worker` | — | Background ingestion worker |
-| `chromadb` | 7777 | Vector database |
-| `prometheus` | 9090 | Metrics collection |
-| `grafana` | 3000 | Metrics visualization |
-
-```bash
-docker compose up -d
-docker compose ps          # Check health
-docker compose logs -f     # Follow logs
-docker compose down        # Stop
+```text
+Browser (Next.js Portal)
+        │  REST / server actions
+        ▼
+Go API Gateway ───gRPC───► Python Intelligence Engine
+                                ├─ Query Classification
+                                ├─ Retrieval Planning
+                                ├─ Retrievers (BM25 / Dense / Hybrid / Multi-hop)
+                                ├─ Reranking
+                                ├─ Response Assembly
+                                └─ Evaluation & Telemetry
+   │                            │
+   ▼                            ▼
+PostgreSQL                 ChromaDB
+   (users, artifacts,        (vectors)
+    knowledge bases)
 ```
 
-### Resource Limits
+- **Portal** (`apps/portal/`) — Next.js 15 workspace: knowledge bases, document ingestion, RAG chat, artifact studio, podcast Q&A.
+- **Gateway** (`gateway/`) — Go HTTP gateway: routing, auth, rate limiting, caching, Prometheus metrics.
+- **Intelligence** (`intelligence/`) — Python engine: ingestion, classification, adaptive retrieval planning, multiple retriever backends, reranking, evaluation.
+- **Data** — PostgreSQL via Prisma; ChromaDB for vector search; Cloudinary for artifact media.
+- **Observability** — Prometheus + Grafana, structured logging, and an internal Streamlit dashboard.
 
-| Service | CPU | Memory |
-|---------|-----|--------|
-| Intelligence | 2 cores | 4 GB |
-| API | 1 core | 2 GB |
-| Gateway | 0.5 core | 512 MB |
-| ChromaDB | 1 core | 2 GB |
-| Worker | 1 core | 2 GB |
+A dedicated [ARCHITECTURE.md](docs/ARCHITECTURE.md) covers component responsibilities, the retrieval pipeline, and the evaluation framework.
 
 ---
 
-## Environment Variables
+## Features
 
-### Required
+**Grounded Q&A with explanations.** Every response cites the chunks it was built from; retrieval decisions are exposed so answers can be audited.
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string for Prisma ORM |
-| `KAIROS_SECRET` | Shared API secret for authentication |
+**Adaptive retrieval.** Queries are classified and routed to the right strategy — vector, BM25, hybrid, or multi-hop — rather than forcing one pipeline for everything.
 
-### Intelligence Engine
+**Artifact Studio.** Generate learning artifacts (text pieces, illustrations, audio podcasts) from knowledge base material, each grounded in its source documents.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `KAIROS_LLM_PROVIDER` | LLM provider (`gemini`, `openai`, `ollama`) | — |
-| `KAIROS_DEPLOYMENT` | Production mode with Groq | `False` |
-| `KAIROS_CHUNK_SIZE` | Chunk size in characters | `1024` |
-| `KAIROS_OVERLAP` | Chunk overlap in characters | `150` |
-| `KAIROS_EMBEDDING_MODEL` | Embedding backend (`local`) | `local` |
-| `KAIROS_CACHE_MAXSIZE` | Embedding cache size | `4096` |
-| `KAIROS_CACHE_TTL_SECONDS` | Cache TTL in seconds | `300` |
-| `KAIROS_METRICS_ENABLED` | Enable Prometheus metrics | `True` |
-| `KAIROS_METRICS_PORT` | Prometheus metrics port | `8001` |
-| `KAIROS_HEALTH_CHECK_ENABLED` | Enable gRPC health checks | `True` |
-| `KAIROS_PROVIDER_TIMEOUT_SECONDS` | LLM provider timeout | `30.0` |
-| `KAIROS_CIRCUIT_BREAKER_FAILURE_THRESHOLD` | Circuit breaker threshold | `5` |
-| `KAIROS_CIRCUIT_BREAKER_RECOVERY_TIMEOUT` | Circuit breaker recovery | `30.0` |
+**Explainable podcast Q&A.** Player-side interruption and resume with grounded, source-cited answers to questions about the content being played.
 
-### AI Providers
+**Statistical evaluation.** A metrics-heavy evaluation framework (recall@K, MRR, nDCG, latency, cost, faithfulness, failure rate…) with confidence intervals and effect sizes, plus a leaderboard.
 
-| Variable | Description |
-|----------|-------------|
-| `GEMINI_API_KEY` | Google Gemini API key |
-| `KAIROS_GEMINI_MODEL_NAME` | Gemini model name |
-| `OPENAI_API_KEY` | OpenAI API key |
-| `KAIROS_OPENAI_MODEL_NAME` | OpenAI model name |
-| `GROQ_API_KEY` | Groq API key (production) |
-| `GROQ_BASE_URL` | Groq base URL |
-
-### Gateway
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GATEWAY_HOST` | Gateway bind host | `0.0.0.0` |
-| `GATEWAY_PORT` | Gateway port | `8080` |
-| `KAIROS_RATE_LIMIT` | Requests per second per namespace | — |
-| `KAIROS_BURST_LIMIT` | Burst limit | — |
-| `MAX_FILE_SIZE` | Max upload size in MB | `10` |
-| `KAIROS_CACHE_MAX_SIZE` | Semantic cache size | — |
-| `KAIROS_CACHE_TTL` | Semantic cache TTL (seconds) | — |
-| `KAIROS_CACHE_SIMILARITY_THRESHOLD` | Cache similarity threshold | — |
-| `KAIROS_CORS_ORIGINS` | Allowed CORS origins | `*` |
-
-See [`.env.example`](.env.example) for the full configuration reference.
-
----
-
-## API Reference
-
-### Gateway (port 8080)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/v1/query` | Execute RAG query |
-| `POST` | `/v1/ingest` | Upload document |
-| `GET` | `/v1/jobs/{job_id}` | Check job status |
-| `GET` | `/metrics` | Prometheus metrics |
-
-### Intelligence Engine (port 28080 — gRPC)
-
-| RPC | Description |
-|-----|-------------|
-| `ComputeEmbeddings` | Generate embeddings for text |
-| `ClassifyQueryType` | Classify query and select retrieval strategy |
-| `ExecuteRetrieval` | Execute retrieval with given config |
-| `GenerateResponse` | Generate LLM response from context |
-| `IngestDocument` | Ingest and index a document |
-
----
-
-## Benchmarks & Metrics
-
-### Retrieval Metrics
-
-| Metric | Description |
-|--------|-------------|
-| Recall@K | Proportion of relevant documents retrieved in top K |
-| Precision@K | Proportion of retrieved documents that are relevant |
-| MRR | Mean Reciprocal Rank of first relevant result |
-| nDCG@K | Normalized Discounted Cumulative Gain |
-| Hit Rate | Whether any relevant document appears in top K |
-| MAP | Mean Average Precision across queries |
-| F1@K | Harmonic mean of Precision@K and Recall@K |
-
-### Generation Metrics
-
-| Metric | Description |
-|--------|-------------|
-| Faithfulness | LLM-judged answer faithfulness to context |
-| Answer Relevance | LLM-judged answer relevance to question |
-| Context Precision | LLM-judged context quality |
-| Context Recall | LLM-judged context completeness |
-
-### Statistical Tests
-
-| Test | Description |
-|------|-------------|
-| Paired t-test | Compare two configurations |
-| Wilcoxon signed-rank | Non-parametric comparison |
-| Cohen's d | Effect size measurement |
-| Cliff's delta | Non-parametric effect size |
-| Confidence intervals | 95% CI for all metrics |
-
----
-
-## Production Status
-
-**Kairos is in early production-viable stage.** It is deployed and exercised in
-real workloads, but carries documented caveats:
-
-- **Error handling:** dependency failures (vector store, LLM providers) map to
-  distinct gRPC status codes and the retrieval pipeline degrades to BM25-only
-  when ChromaDB is unreachable. Bare `except Exception` remains only in
-  defensive observer/callback paths.
-- **gRPC security:** the gateway ↔ intelligence channel runs on a private Docker
-  network without mTLS. Do not expose it to the public internet.
-- **Tests:** 1,813 unit & integration tests (pytest matrix on Python 3.11/3.12).
-  Frontend coverage is not yet implemented.
-- **Deployment:** Docker Compose is the supported path. See
-  [SECURITY.md](SECURITY.md) for the threat model and trust boundaries.
-
-### Known Limitations
-
-- Frontend has no automated tests yet.
-- Semantic cache is exact-threshold based (cosine similarity), tuned via
-  `KAIROS_CACHE_SIMILARITY_THRESHOLD`.
-- ChromaDB is the only vector store currently wired into the gateway.
-
----
-
-## Performance Highlights
-
-Kairos includes several performance optimizations built into the pipeline:
-
-- **Persistent BM25 indexing** — avoids re-indexing on every startup
-- **Go worker pool** — parallelized ingestion with configurable concurrency
-- **Retrieval cache** — semantic + LRU caching for repeated queries
-- **Batch embedding** — vectorized embedding generation for throughput
-- **Optimized chunker** — streaming document processing with memory efficiency
-
----
-
-## Who Is This For?
-
-- **Researchers** — rigorous evaluation framework with statistical tests and reproducible experiments
-- **ML Engineers** — production-ready RAG pipeline with monitoring and observability
-- **RAG Developers** — full visibility into retrieval and generation decisions
-- **Students** — learn how RAG pipelines work with interactive exploration
-- **Open Source Contributors** — well-structured codebase across Go, Python, and TypeScript
+**Production fundamentals.** Health checks, rate limiting, semantic caching, provider failover, structured logging, and monitoring out of the box.
 
 ---
 
 ## Roadmap
 
-### Near-term
-- [ ] HNSW indexing for faster vector search
-- [ ] Streaming RAG responses
-- [ ] Multi-tenant support
+Honest gaps and planned work:
 
-### Future
-- [ ] Custom embedding model training
-- [ ] Automated hyperparameter optimization
-- [ ] Integration with LangChain and LlamaIndex
-
-### Research Ideas
-- [ ] Real-time collaboration on experiments
-- [ ] Export to Jupyter notebooks
+- mTLS on the gateway ↔ intelligence channel (currently private-network only — do not expose publicly).
+- Multi-tenant organization support beyond per-user knowledge bases.
+- The public cloud CLI and REST API documented in `cli/SPECIFICATION.md` — designed, not shipped.
+- The extension-framework roadmap in `docs/EXTENSIBILITY.md` (plugins, event bus, webhooks, marketplace) — a design report for future phases.
 
 ---
 
-## Supported Formats
+## Project Structure
 
-| Format | Extension | Parser |
-|--------|-----------|--------|
-| PDF | `.pdf` | pypdf |
-| Plain Text | `.txt` | Native UTF-8 |
-| Markdown | `.md` | Native |
-| CSV | `.csv` | csv-parse |
+```text
+kairos/
+├── apps/portal/          # Next.js workspace (auth, knowledge bases, chat, artifact studio)
+├── apps/internal-dashboard/ # Streamlit research/ops dashboard
+├── gateway/              # Go API gateway (Chi, gRPC, caching, rate limiting)
+├── intelligence/         # Python RAG engine (ingestion, retrieval, evaluation, telemetry)
+├── proto/                # gRPC contract definitions
+├── sdk/                  # Python client SDK (kairos-client)
+├── benchmarks/           # Evaluation datasets, leaderboard
+├── tests/                # Python test suite (unit, integration, benchmarks, e2e)
+├── examples/             # Runnable SDK/engine examples
+├── docker/               # Dockerfiles and grafana provisioning
+├── docs/                 # Architecture, developer, deployment, and config docs
+├── scripts/              # Build, release, evaluation, and validation scripts
+└── .github/              # CI/CD workflows and issue/PR templates
+```
+
+---
+
+## Developer Guide
+
+Full development setup, code style, and testing conventions live in [docs/DEVELOPER.md](docs/DEVELOPER.md). The short version:
+
+```bash
+# Python suite
+python -m pytest tests/
+
+# Portal (TypeScript) suite
+cd apps/portal
+npx tsx --test "src/__tests__/*.test.ts"
+npx tsc --noEmit
+
+# Gateway (Go)
+cd gateway
+go test ./...
+```
+
+---
+
+## Current Test Coverage Summary
+
+Measured on this branch with the commands above — not badges, plain numbers:
+
+- **Portal:** 377 tests across 79 suites, all passing (unit, integration, and structural coverage of the portal, including the artifact studio and podcast interaction flows).
+- **Python:** ~2,275 tests in `tests/`. 2,237 pass in a default local environment; 38 depend on configured credentials/API keys and are validated in CI (running with a clean environment).
+- **Go gateway:** covered by `go test ./...`.
+
+CI (`test.yml`, `portal.yml`, `lint.yml`) additionally runs the full Python suite on Python 3.11/3.12, a Docker end-to-end pipeline test, ESLint, Prisma validation, and a production `next build`.
+
+---
+
+## Documentation Index
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system architecture, components, pipeline.
+- [docs/DEVELOPER.md](docs/DEVELOPER.md) — contributor guide, code style, testing.
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — deployment options and production checklist.
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — configuration and environment reference.
+- [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) — logging, metrics, health, alerting.
+- [docs/PIPELINE.md](docs/PIPELINE.md) — RAG pipeline stages in detail.
+- [docs/DATA-FLOW.md](docs/DATA-FLOW.md) — data flow diagrams for key operations.
+- [docs/SECURITY.md](docs/SECURITY.md) — security model and practices.
+- [cli/SPECIFICATION.md](cli/SPECIFICATION.md) — cloud CLI specification (design-stage).
+- [docs/diagrams/](docs/diagrams/) — Mermaid diagrams of the system.
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style guide, pull request process, and architecture overview.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the issue template, development setup, code style rules, and the pull request process.
 
 ---
 
-## Security
+## Changelog
 
-See [SECURITY.md](SECURITY.md) for vulnerability reporting, security best practices, and supported versions.
+See [CHANGELOG.md](CHANGELOG.md) for the release history.
 
 ---
 
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-<p align="center">
-  Built with care for the RAG research community.
-</p>

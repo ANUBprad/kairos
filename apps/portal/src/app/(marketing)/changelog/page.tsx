@@ -109,7 +109,7 @@ export default function ChangelogPage() {
           <div className="p-6 rounded-[14px] border border-border bg-surface/50 text-center">
             <p className="text-sm text-text-tertiary">
               Stay updated with new releases. Follow us on{" "}
-              <a href="https://github.com/kairos-ai/kairos" className="text-brand hover:underline" target="_blank" rel="noopener noreferrer">GitHub</a>{" "}
+              <a href="https://github.com/ANUBprad/kairos" className="text-brand hover:underline" target="_blank" rel="noopener noreferrer">GitHub</a>{" "}
               or subscribe to our{" "}
               <a href="/blog" className="text-brand hover:underline">blog</a>.
             </p>

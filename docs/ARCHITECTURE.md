@@ -2,318 +2,181 @@
 
 ## Overview
 
-Kairos is an Adaptive Knowledge Retrieval Intelligence Platform built around the idea that:
+Kairos is an explainable AI research and learning workspace built around the idea that:
 
 > Different queries require different retrieval strategies.
 
-Instead of applying a fixed retrieval pipeline to every query, Kairos dynamically selects retrieval strategies based on query complexity and retrieval requirements.
+Instead of applying a fixed retrieval pipeline to every query, Kairos classifies the query and selects a retrieval strategy — dense vector, BM25, hybrid, or multi-hop — based on complexity and retrieval requirements. Every step is observable so answers carry provenance.
 
 ---
 
-# High-Level Architecture
+## High-Level Architecture
 
 ```text
-Client
-  │
-  ▼
+Browser (Next.js Portal)
+        │  REST / server actions
+        ▼
 Go API Gateway
-  │
-  ▼
-gRPC Layer
-  │
-  ▼
-Python Intelligence Layer
-  │
-  ├── Query Classification
-  ├── Retrieval Planning
-  ├── Retrieval Execution
-  ├── Caching
-  └── Response Assembly
-  │
-  ▼
-LLM
-  │
-  ▼
-Response
+        │  gRPC (Protocol Buffers)
+        ▼
+Python Intelligence Engine
+        ├── Query Classification
+        ├── Retrieval Planning
+        ├── Retrieval Execution (BM25 / Dense / Hybrid / Multi-hop)
+        ├── Reranking
+        ├── Response Assembly
+        └── Evaluation & Telemetry
+   │                            │
+   ▼                            ▼
+PostgreSQL                 ChromaDB
+   (users,                (vectors)
+    knowledge bases,
+    artifacts)
 ```
 
 ---
 
-# Repository Structure
+## Repository Structure
 
 ```text
 kairos/
-│
-├── gateway/           # Go API gateway
-├── intelligence/      # Python intelligence layer
-│   ├── api/           # FastAPI management API (Phase 8)
-│   ├── config/        # Pydantic config system (Phase 8)
-│   ├── artifacts/     # Model/experiment/report registries (Phase 8)
-│   ├── observability/ # Tracing, logging, monitoring, alerting (Phase 7)
-│   ├── evaluation/    # Ranking metrics, evaluator, benchmarks (Phase 7)
-│   └── ...            # Classifier, retrievers, embeddings, etc.
-├── proto/             # gRPC contracts
-├── sdk/               # Python client SDK
-├── benchmarks/        # Evaluation datasets and results
-├── docker/            # Dockerfiles (Phase 8)
-├── docs/              # Architecture, deployment, operations docs
-├── scripts/           # Release, build, benchmark, validation (Phase 8)
-├── .github/workflows/ # CI/CD pipelines (Phase 8)
-├── dashboard/         # Streamlit research dashboard (Phase 7)
-│
-├── docker-compose.yml
-├── prometheus.yml
-└── README.md
+├── apps/portal/            # Next.js workspace (auth, knowledge bases, chat, artifact studio)
+├── apps/internal-dashboard/# Streamlit research/ops dashboard
+├── gateway/                # Go API gateway
+├── intelligence/           # Python intelligence engine
+│   ├── api/                # FastAPI management API
+│   ├── config/             # Pydantic settings + environment profiles
+│   ├── ingestion/          # Document parsing, chunking, embedding
+│   ├── retrieval/          # Retrievers, planner, executor, persistent BM25
+│   ├── evaluation/         # Metrics, evaluator, reporting
+│   ├── experiments/        # Experiment tracking
+│   ├── artifacts/          # Model/experiment/report registries
+│   ├── observability/      # Tracing, logging, metrics, alerting
+│   └── worker/             # Background ingestion jobs
+├── proto/                  # gRPC contracts
+├── sdk/                    # Python client SDK
+├── benchmarks/             # Evaluation datasets, leaderboard
+├── tests/                  # pytest suite (unit, integration, benchmarks, e2e)
+├── examples/               # Runnable SDK/engine examples
+├── docker/                 # Service Dockerfiles + Grafana provisioning
+├── docs/                   # Architecture, deployment, operations docs
+├── scripts/                # Build, release, evaluation, validation
+└── .github/                # CI/CD workflows
 ```
 
 ---
 
-# Component Responsibilities
+## Component Responsibilities
 
-## gateway/
+### Portal — `apps/portal/`
 
-Responsibilities:
+Next.js 15 application (React 19, TypeScript, Tailwind). Responsibilities:
 
-* API routing
-* Request validation
-* Authentication
-* Rate limiting
-* gRPC communication
+- Authentication (email + GitHub via better-auth) and user workspaces
+- Knowledge base management and document upload (`PDF`, `DOCX`, `TXT`, `Markdown`, `CSV`)
+- RAG chat with citations and retrieval traces
+- Artifact Studio: generation of grounded learning artifacts (text pieces, illustrations, audio podcast renditions) from knowledge base material
+- Podcast player with mid-play, grounded interruption Q&A (`src/lib/artifacts/interrupt-service.ts`, playback state machine in `src/lib/audio/playback.ts`)
+- Marketing pages and changelog
 
-Technology:
+### Gateway — `gateway/`
 
-* Go
+Go HTTP API gateway. Responsibilities:
 
-Purpose:
+- API routing and request validation
+- Authentication and rate limiting
+- Semantic + LRU caching
+- gRPC communication with the intelligence engine
+- Prometheus metrics and health endpoints
 
-Acts as the public-facing entry point for Kairos.
+### Intelligence Engine — `intelligence/`
 
----
+Python service. Responsibilities:
 
-## intelligence/
+- Document ingestion, chunking, and embedding
+- Query classification and retrieval planning
+- Retrieval execution across strategies (vector, BM25, hybrid, multi-hop), reranking
+- LLM response assembly and grounding
+- Evaluation framework (IR + generation metrics, statistics)
+- Experiment tracking and artifact registries
+- Background ingestion worker
 
-Responsibilities:
+### Actors alongside the core services
 
-* Query classification
-* Retrieval planning
-* Retrieval execution
-* Cache management
-* Response generation
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| FastAPI management API | `intelligence/api/` | Configuration/artifact/evaluation endpoints (`/api/v1/*`) |
+| Internal dashboard | `apps/internal-dashboard/` | Streamlit research/ops dashboard (ablations, benchmarks, observability, planner analysis) |
+| Worker | `intelligence/worker/` | Background ingestion job processing |
+| ChromaDB | docker service | Vector store |
+| PostgreSQL | external / via DATABASE_URL | Users, knowledge bases, artifacts, podcast interruptions |
+| Prometheus + Grafana | docker services | Metrics collection and dashboards |
 
-Technology:
+### proto/
 
-* Python
+gRPC service definitions shared between the gateway and the intelligence engine.
 
-Purpose:
+### sdk/
 
-Core intelligence engine of Kairos.
+Python client SDK (`kairos-client`) for integrating with the platform.
 
----
+### benchmarks/
 
-## proto/
-
-Responsibilities:
-
-* gRPC contracts
-* Service definitions
-* Request/response schemas
-
-Purpose:
-
-Communication layer between Gateway and Intelligence services.
-
----
-
-## sdk/
-
-Responsibilities:
-
-* Developer API
-* Client abstractions
-* Integration helpers
-
-Purpose:
-
-Allows developers to integrate Kairos into applications.
+Evaluation datasets, the leaderboard, and performance harnesses used by the research/ops workflow.
 
 ---
 
-## benchmarks/
-
-Responsibilities:
-
-* Evaluation datasets
-* Benchmark definitions
-* Experiment results
-
-Purpose:
-
-Provides reproducible evaluation for retrieval systems.
-
----
-
-# Retrieval Pipeline
-
-Current Pipeline:
+## Retrieval Pipeline
 
 ```text
 Query
- ↓
-Classifier
- ↓
-Strategy Selector
- ↓
-Retriever
- ↓
-LLM
- ↓
-Response
+  ↓
+Classifier → retrieval complexity / strategy
+  ↓
+Retrieval Planner → strategy, top_k, budget, fallback policy
+  ↓
+Retriever (BM25 / Dense / Hybrid / Multi-hop)
+  ↓
+Reranking (when enabled)
+  ↓
+LLM (grounded response assembly)
+  ↓
+Response (with citations and trace)
 ```
 
----
-
-# Future Kairos v2 Pipeline
-
-```text
-Query
- ↓
-Classifier
- ↓
-Confidence Score
- ↓
-Retrieval Planner
- ↓
-Budget Allocator
- ↓
-Fallback Manager
- ↓
-Retriever
- ↓
-LLM
- ↓
-Response
-```
+The planner bakes in confidence-aware fallback: if a primary strategy under-performs or the vector store is unreachable, the pipeline degrades gracefully (e.g. to BM25-only) rather than failing the request.
 
 ---
 
-# Query Classification
+## Evaluation Framework
 
-Current Categories
-
-* Simple
-* Complex
-* Multi-Hop
-
-Purpose
-
-Determine retrieval complexity before execution.
+- Retrieval metrics: Recall@K, Precision@K, MRR, nDCG@K, Hit Rate, MAP, F1@K, latency, cost, failure rate
+- Generation metrics: faithfulness, answer relevance, context precision, context recall
+- Statistical tools: confidence intervals, paired comparisons, effect sizes (Cohen's d, Cliff's delta)
+- Evaluations run against labeled datasets and feed the internal leaderboard (`benchmarks/leaderboard/`)
+- Adversarial hardening suites in `tests/benchmarks/` guard retrieval quality end to end
 
 ---
 
-# Retrieval Planner (Phase 1)
+## Observability
 
-Responsibilities:
-
-* Select retrieval strategy
-* Allocate retrieval budget
-* Handle uncertainty
-* Manage fallback logic
-
-Inputs:
-
-* Query
-* Classification
-* Confidence
-* Metadata
-
-Outputs:
-
-* Retrieval strategy
-* top_k
-* Retrieval depth
-* Budget
-* Fallback policy
+- Portal: structured JSON logging, request correlation (`x-request-id`), health endpoints, in-memory metrics, PostHog analytics — see `docs/OBSERVABILITY.md`
+- Gateway: Prometheus metrics (`/metrics`), structured logging, `/health`
+- Intelligence: Prometheus metrics, gRPC health checks (port 8001), structured logging
+- Grafana dashboards provisioned from `docker/grafana/`
 
 ---
 
-# Caching Layer
+## Deployment
 
-Purpose:
-
-Reduce latency and cost by reusing previous retrieval results.
-
-Future Metrics:
-
-* Cache hit rate
-* Cache miss rate
-* Latency savings
+The supported deployment is Docker Compose. Services: `chromadb`, `intelligence`, `api`, `internal-dashboard`, `worker`, `gateway`, `prometheus`, `grafana`. See `docker-compose.yml` and `docs/DEPLOYMENT.md` for details.
 
 ---
 
-# Evaluation Framework
-
-Purpose:
-
-Measure improvements objectively.
-
-Metrics:
-
-* Classification Accuracy
-* Retrieval Recall
-* Context Recall
-* Context Precision
-* Latency
-* Cost
-* Faithfulness
-* Failure Rate
-
----
-
-# Observability
-
-Current Stack
-
-* Prometheus
-* Grafana
-
-Tracked Metrics
-
-* Request latency
-* Throughput
-* Retrieval performance
-* Service health
-
-Future Metrics
-
-* Planner accuracy
-* Retrieval quality
-* Cost efficiency
-* Hallucination rate
-
----
-
-# Research Hypothesis
+## Research Direction
 
 Kairos is built around a central hypothesis:
 
 > Confidence-aware adaptive retrieval planning can improve retrieval quality while maintaining or reducing latency and retrieval cost compared to static retrieval routing.
 
-Phase 1 is focused entirely on validating this hypothesis.
-
----
-
-# Long-Term Vision
-
-Kairos evolves from:
-
-```text
-Adaptive RAG Infrastructure
-```
-
-to:
-
-```text
-Intelligent Retrieval Operating System
-```
-
-capable of planning, executing, evaluating, and optimizing retrieval workflows automatically.
+The retrieval planner and fallback manager in `intelligence/retrieval/` implement this direction; the evaluation framework exists to test it empirically. Forward-looking design documents (extension framework, cloud CLI) live in `docs/EXTENSIBILITY.md` and `cli/SPECIFICATION.md`.

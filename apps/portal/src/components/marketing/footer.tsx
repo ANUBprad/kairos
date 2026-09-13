@@ -14,7 +14,7 @@ const footerColumns = [
   {
     title: "Resources",
     links: [
-      { label: "GitHub", href: "https://github.com/kairos-ai/kairos" },
+      { label: "GitHub", href: "https://github.com/ANUBprad/kairos" },
       { label: "Architecture", href: "/architecture" },
       { label: "Capabilities", href: "/capabilities" },
     ],
@@ -37,7 +37,7 @@ const footerColumns = [
 ];
 
 const socialLinks = [
-  { label: "GitHub", href: "https://github.com/kairos-ai/kairos", icon: Github },
+  { label: "GitHub", href: "https://github.com/ANUBprad/kairos", icon: Github },
   { label: "Twitter / X", href: "https://x.com/kairos_ai", icon: Twitter },
   { label: "Discord", href: "https://discord.gg/kairos", icon: MessageCircle },
   { label: "Email", href: "mailto:hello@kairos.dev", icon: Mail },
