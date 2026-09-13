@@ -91,6 +91,7 @@ export const RATE_LIMITS = {
   upload: { windowMs: 60 * 1000, maxRequests: 10 },
   evaluation: { windowMs: 60 * 1000, maxRequests: 15 },
   research: { windowMs: 60 * 1000, maxRequests: 20 },
+  podcastInterrupt: { windowMs: 60 * 1000, maxRequests: 5 },
   api: { windowMs: 60 * 1000, maxRequests: 60 },
 } as const;
 

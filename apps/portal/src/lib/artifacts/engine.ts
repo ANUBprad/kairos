@@ -35,7 +35,7 @@ export interface GenerateArtifactRequest {
   providerType?: ProviderType;
 }
 
-async function getKbOrganizationId(kbId: string): Promise<string | null> {
+export async function getKbOrganizationId(kbId: string): Promise<string | null> {
   const kb = await prisma.knowledgeBase.findUnique({
     where: { id: kbId },
     select: { project: { select: { organizationId: true } } },

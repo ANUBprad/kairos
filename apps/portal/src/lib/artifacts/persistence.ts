@@ -8,6 +8,11 @@ import {
   type LearningArtifactData,
   type ListLearningArtifactsFilters,
 } from "./types";
+import {
+  insertInterruptionRecord,
+  parseStoredInterruptions,
+  type PodcastInterruptionRecord,
+} from "./interrupt";
 
 export async function createLearningArtifact(
   input: CreateLearningArtifactInput,
@@ -59,6 +64,30 @@ export async function listLearningArtifacts(
     orderBy: { createdAt: "desc" },
   });
   return artifacts.map(toLearningArtifactData);
+}
+
+// Appends a completed interruption to the podcast's bounded history window,
+// preserving every other metadata field (prompt provenance, media reference,
+// ...). Interruptions are a single-writer append on an already COMPLETED
+// artifact, so read-modify-write here is safe; the history helper keeps the
+// window bounded and drops the oldest entry silently.
+export async function appendPodcastInterruption(
+  artifactId: string,
+  record: PodcastInterruptionRecord,
+): Promise<LearningArtifactData> {
+  const existing = await prisma.learningArtifact.findUnique({
+    where: { id: artifactId },
+    select: { metadata: true },
+  });
+  if (!existing) throw new Error("Learning artifact not found");
+
+  const metadata = (existing.metadata as Record<string, unknown> | null) ?? {};
+  const interruptions = insertInterruptionRecord(parseStoredInterruptions(metadata), record);
+  const updated = await prisma.learningArtifact.update({
+    where: { id: artifactId },
+    data: { metadata: { ...metadata, interruptions } as unknown as Prisma.InputJsonValue },
+  });
+  return toLearningArtifactData(updated);
 }
 
 export async function updateLearningArtifactStatus(
