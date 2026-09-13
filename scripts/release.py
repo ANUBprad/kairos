@@ -8,8 +8,7 @@ Steps:
     1. Validate configuration
     2. Run tests
     3. Build artifacts
-    4. Generate reports
-    5. Create release artifacts
+    4. Create release artifacts
 """
 
 from __future__ import annotations
@@ -17,6 +16,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -34,6 +34,33 @@ def run(cmd: list[str], cwd: str | None = None) -> bool:
         return False
     print(result.stdout[:500])
     return True
+
+
+def build_release_notes(version: str, commits: list[str]) -> str:
+    """Release notes built only from real metadata: version, date, commits."""
+    changes = "\n".join(f"- {commit}" for commit in commits)
+    if not changes:
+        changes = "No commits recorded for this release."
+    return f"""# Kairos Release {version}
+
+**Date:** {datetime.now(timezone.utc).isoformat()}
+
+## Changes
+
+{changes}
+"""
+
+
+def _recent_commits(root: Path, limit: int = 20) -> list[str]:
+    result = subprocess.run(
+        ["git", "log", "--oneline", "--no-decorate", "-n", str(limit), "HEAD"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return []
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
 def main() -> int:
@@ -54,61 +81,38 @@ def main() -> int:
         print()
 
     # Step 1: Validate configuration
-    step("1/5  Validating configuration")
+    step("1/4  Validating configuration")
     if dry_run:
         print("[DRY-RUN] Would run: python scripts/validate.py")
     elif not run([sys.executable, "scripts/validate.py"], cwd=str(root)):
         return 1
 
     # Step 2: Run tests
-    step("2/5  Running test suite")
+    step("2/4  Running test suite")
     if dry_run:
         print("[DRY-RUN] Would run: pytest tests/ -v -x")
     elif not run([sys.executable, "-m", "pytest", "tests/", "-v", "-x"], cwd=str(root)):
         return 1
 
     # Step 3: Build artifacts
-    step("3/5  Building artifacts")
+    step("3/4  Building artifacts")
     if dry_run:
         print("[DRY-RUN] Would run: python scripts/build.py")
     elif not run([sys.executable, "scripts/build.py"], cwd=str(root)):
         return 1
 
-    # Step 4: Generate reports
-    step("4/5  Generating reports")
+    # Step 4: Create release artifacts
+    step("4/4  Creating release artifacts")
     if dry_run:
-        print("[DRY-RUN] Would run: python scripts/benchmark.py --report-only")
-    elif not run(
-        [sys.executable, "scripts/benchmark.py", "--report-only"], cwd=str(root)
-    ):
-        print("[WARN] Report generation had issues, continuing...")
-
-    # Step 5: Create release artifacts
-    step("5/5  Creating release artifacts")
-    if dry_run:
-        print("[DRY-RUN] Would create release tarball and version tag")
+        print("[DRY-RUN] Would create release notes and version tag")
     else:
-        from datetime import datetime, timezone
         from intelligence.artifacts.report_registry import ReportRegistry
         from intelligence.artifacts.version_tracking import VersionTracker
 
         tracker = VersionTracker()
         release_version = tracker.current_str
 
-        release_notes = f"""# Kairos Release {release_version}
-
-**Date:** {datetime.now(timezone.utc).isoformat()}
-
-## Changes
-
-This release includes configuration system, API platform, Dockerization,
-CI/CD pipelines, artifact management, and deployment documentation.
-
-## Artifacts
-
-- Python SDK: `dist/kairos-client-{release_version}.tar.gz`
-- Docker images tagged `{release_version}`
-"""
+        release_notes = build_release_notes(release_version, _recent_commits(root))
 
         report_path = Path("releases") / f"RELEASE_{release_version}.md"
         report_path.parent.mkdir(parents=True, exist_ok=True)
