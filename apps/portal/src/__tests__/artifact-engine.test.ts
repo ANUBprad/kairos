@@ -878,6 +878,13 @@ describe("artifact application wiring", () => {
     assert.match(actionsSource, /generateQuizArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "QUIZ"/);
   });
 
+  it("pins FLASHCARDS, MINDMAP and TAKEAWAYS generation to the unified engine", () => {
+    assert.match(actionsSource, /generateFlashcardsArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "FLASHCARDS"/);
+    assert.match(actionsSource, /generateMindmapArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "MINDMAP"/);
+    assert.match(actionsSource, /generateTakeawaysArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "TAKEAWAYS"/);
+    assert.doesNotMatch(actionsSource, /generatePodcastArtifact/);
+  });
+
   it("authorizes reads and lists through canAccessKnowledgeBase, never a second check", () => {
     const authUses = actionsSource.match(/canAccessKnowledgeBase/g);
     assert.equal(authUses?.length, 3); // one import + the read and list call sites

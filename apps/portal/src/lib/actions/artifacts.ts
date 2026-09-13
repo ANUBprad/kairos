@@ -51,6 +51,45 @@ export async function generateQuizArtifact(
   });
 }
 
+export async function generateFlashcardsArtifact(
+  knowledgeBaseId: string,
+  sourceIds: string[],
+  name?: string,
+): Promise<LearningArtifactData> {
+  return generateLearningArtifact({
+    knowledgeBaseId,
+    artifactType: "FLASHCARDS",
+    sourceIds,
+    name,
+  });
+}
+
+export async function generateMindmapArtifact(
+  knowledgeBaseId: string,
+  sourceIds: string[],
+  name?: string,
+): Promise<LearningArtifactData> {
+  return generateLearningArtifact({
+    knowledgeBaseId,
+    artifactType: "MINDMAP",
+    sourceIds,
+    name,
+  });
+}
+
+export async function generateTakeawaysArtifact(
+  knowledgeBaseId: string,
+  sourceIds: string[],
+  name?: string,
+): Promise<LearningArtifactData> {
+  return generateLearningArtifact({
+    knowledgeBaseId,
+    artifactType: "TAKEAWAYS",
+    sourceIds,
+    name,
+  });
+}
+
 export async function getLearningArtifactForWorkspace(
   knowledgeBaseId: string,
   artifactId: string,
