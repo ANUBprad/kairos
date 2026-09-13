@@ -54,7 +54,11 @@ benchmarks/results/
 
 # Models / Generated Files
 models/*
-generated/
+# Generated protobuf stubs are committed source (regenerated via
+# scripts/gen_proto.py and protoc for go); ignore only transient output.
+generated/*
+!generated/python/
+!generated/go/
 
 # IDE
 .vscode/
