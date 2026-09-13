@@ -891,6 +891,8 @@ class TestFailureDegradedMode:
 
 
 class TestPerformanceBaseline:
+    pytestmark = pytest.mark.performance
+
     def test_bm25_query_latency(self, bm25_index):
         times = []
         for _ in range(50):

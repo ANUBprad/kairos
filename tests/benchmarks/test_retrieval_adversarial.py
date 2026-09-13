@@ -750,6 +750,7 @@ class TestRerankerAdversarial:
         reranked = reranker.rerank("fruit", chunks, top_k=3)
         assert set(reranked) == set(chunks)
 
+    @pytest.mark.performance
     def test_reranker_latency(self, reranker):
         chunks = [f"Document {i} for latency testing." for i in range(10)]
         start = time.perf_counter()
@@ -911,6 +912,8 @@ class TestFailureMatrix:
 
 
 class TestPerformanceStress:
+    pytestmark = pytest.mark.performance
+
     def test_bm25_500_doc_corpus(self):
         idx = PersistentBM25Index()
         for i in range(500):
