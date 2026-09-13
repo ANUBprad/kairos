@@ -34,6 +34,8 @@ export {
 export type { ArtifactDefinition } from "./definitions";
 export { summaryArtifactSchema, summaryArtifactDefinition } from "./summary";
 export type { SummaryArtifactOutput } from "./summary";
+export { reportArtifactSchema, reportArtifactDefinition } from "./report";
+export type { ReportArtifactOutput } from "./report";
 export { loadArtifactSourceChunks, buildBoundedContext } from "./context";
 export type { ArtifactSourceChunk, BoundedContext } from "./context";
 export { parseStructuredOutput, extractJsonObject } from "./output";

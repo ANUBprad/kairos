@@ -5,6 +5,7 @@ import {
   resolveArtifactDefinition,
   listRegisteredArtifactTypes,
   summaryArtifactSchema,
+  reportArtifactSchema,
   extractJsonObject,
   parseStructuredOutput,
   buildBoundedContext,
@@ -22,9 +23,21 @@ const validSummary = {
   keyPoints: ["Chlorophyll absorbs light", "Oxygen is released"],
 };
 
+const validReport = {
+  title: "Photosynthesis Overview",
+  executiveSummary: "A survey of how plants convert sunlight into chemical energy.",
+  sections: [
+    {
+      heading: "Mechanism",
+      content: "Chlorophyll absorbs light and drives the light-dependent reactions.",
+    },
+  ],
+  keyFindings: ["Chlorophyll absorbs light", "Oxygen is released"],
+};
+
 describe("artifact definition registry", () => {
-  it("registers exactly the SUMMARY type (no fake implementations for others)", () => {
-    assert.deepEqual(listRegisteredArtifactTypes(), ["SUMMARY"]);
+  it("registers the supported artifact types (no ghost implementations for the rest)", () => {
+    assert.deepEqual(listRegisteredArtifactTypes(), ["SUMMARY", "REPORT"]);
   });
 
   it("resolves the SUMMARY definition and exposes its declared metadata", () => {
@@ -36,11 +49,22 @@ describe("artifact definition registry", () => {
     assert.equal(def.buildSystemPrompt().length > 0, true);
   });
 
+  it("resolves the REPORT definition and exposes its declared metadata", () => {
+    const def = resolveArtifactDefinition("REPORT");
+    assert.equal(def.type, "REPORT");
+    assert.equal(def.schemaVersion, 1);
+    assert.equal(def.promptVersion, "report-v1");
+    assert.ok(def.contextTokenBudget > 0);
+    assert.equal(def.buildSystemPrompt().length > 0, true);
+    assert.equal(def.buildUserPrompt("context").includes("context"), true);
+  });
+
   it("rejects generation for types without a registered definition", () => {
-    assert.throws(() => resolveArtifactDefinition("REPORT"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("QUIZ"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("FLASHCARDS"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("MINDMAP"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
+    assert.throws(() => resolveArtifactDefinition("TAKEAWAYS"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
+    assert.throws(() => resolveArtifactDefinition("PODCAST"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
   });
 });
 
@@ -73,6 +97,87 @@ describe("summary output schema", () => {
   it("strictly rejects unknown extra keys", () => {
     assert.equal(
       summaryArtifactSchema.safeParse({ ...validSummary, fceExtras: true }).success,
+      false,
+    );
+  });
+});
+
+describe("report output schema", () => {
+  it("accepts a valid report payload", () => {
+    const result = reportArtifactSchema.safeParse(validReport);
+    assert.deepEqual(result.success ? result.data : null, validReport);
+  });
+
+  it("rejects a payload missing required keys", () => {
+    assert.equal(reportArtifactSchema.safeParse({ title: "X", keyFindings: ["K"] }).success, false);
+    assert.equal(
+      reportArtifactSchema.safeParse({ ...validReport, executiveSummary: undefined }).success,
+      false,
+    );
+  });
+
+  it("rejects empty sections, empty findings and empty executive summary", () => {
+    assert.equal(
+      reportArtifactSchema.safeParse({ ...validReport, sections: [] }).success,
+      false,
+    );
+    assert.equal(reportArtifactSchema.safeParse({ ...validReport, keyFindings: [] }).success, false);
+    assert.equal(
+      reportArtifactSchema.safeParse({ ...validReport, executiveSummary: "" }).success,
+      false,
+    );
+  });
+
+  it("rejects unbounded structures (excessive sections or findings)", () => {
+    const manySections = {
+      ...validReport,
+      sections: Array.from({ length: 13 }, (_, i) => ({ heading: `H${i}`, content: "C" })),
+    };
+    assert.equal(reportArtifactSchema.safeParse(manySections).success, false);
+
+    const manyFindings = {
+      ...validReport,
+      keyFindings: Array.from({ length: 21 }, (_, i) => `Finding ${i}`),
+    };
+    assert.equal(reportArtifactSchema.safeParse(manyFindings).success, false);
+  });
+
+  it("rejects oversize strings (runaway title or section heading)", () => {
+    assert.equal(
+      reportArtifactSchema.safeParse({ ...validReport, title: "x".repeat(201) }).success,
+      false,
+    );
+    assert.equal(
+      reportArtifactSchema.safeParse({
+        ...validReport,
+        sections: [{ heading: "h".repeat(201), content: "C" }],
+      }).success,
+      false,
+    );
+  });
+
+  it("rejects non-string content and non-object section entries", () => {
+    assert.equal(
+      reportArtifactSchema.safeParse({ ...validReport, executiveSummary: 42 }).success,
+      false,
+    );
+    assert.equal(
+      reportArtifactSchema.safeParse({ ...validReport, sections: [{ heading: "H", content: 7 }] })
+        .success,
+      false,
+    );
+  });
+
+  it("strictly rejects unknown extra keys in the report and its sections", () => {
+    assert.equal(
+      reportArtifactSchema.safeParse({ ...validReport, footnotes: [] }).success,
+      false,
+    );
+    assert.equal(
+      reportArtifactSchema.safeParse({
+        ...validReport,
+        sections: [{ heading: "H", content: "C", citations: [] }],
+      }).success,
       false,
     );
   });
