@@ -5,8 +5,8 @@ import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { sanitizeError } from "@/lib/errors";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { getStorageProvider } from "@/lib/storage";
+import { isValidEntityId } from "@/lib/validation";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 
 interface PodcastMetadata {
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { artifactId } = await params;
-  if (!UUID_REGEX.test(artifactId)) {
+  if (!isValidEntityId(artifactId)) {
     return NextResponse.json({ error: "Invalid artifact ID" }, { status: 400 });
   }
 

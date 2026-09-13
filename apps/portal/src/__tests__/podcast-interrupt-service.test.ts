@@ -200,7 +200,7 @@ describe("podcast interruption media route wiring", () => {
   });
 
   it("validates both route ids and guards upstream bytes like the episode route", () => {
-    assert.match(routeSource, /UUID_REGEX\.test\(artifactId\) \|\| !UUID_REGEX\.test\(interruptionId\)/);
+    assert.match(routeSource, /isValidEntityId\(artifactId\) \|\| !UUID_REGEX\.test\(interruptionId\)/);
     assert.match(routeSource, /MAX_AUDIO_BYTES/);
     assert.match(routeSource, /Media upstream unavailable/);
     assert.match(routeSource, /sanitizeError/);
