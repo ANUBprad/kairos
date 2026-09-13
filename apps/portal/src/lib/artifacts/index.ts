@@ -49,6 +49,8 @@ export {
   MINDMAP_MAX_CHILDREN_PER_NODE,
 } from "./mindmap";
 export type { MindMapArtifactOutput, MindMapNodeData } from "./mindmap";
+export { takeawaysArtifactSchema, takeawaysArtifactDefinition } from "./takeaways";
+export type { TakeawaysArtifactOutput } from "./takeaways";
 export { loadArtifactSourceChunks, buildBoundedContext } from "./context";
 export type { ArtifactSourceChunk, BoundedContext } from "./context";
 export { parseStructuredOutput, extractJsonObject } from "./output";

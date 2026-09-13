@@ -6,6 +6,7 @@ import { reportArtifactDefinition } from "./report";
 import { quizArtifactDefinition } from "./quiz";
 import { flashcardsArtifactDefinition } from "./flashcards";
 import { mindmapArtifactDefinition } from "./mindmap";
+import { takeawaysArtifactDefinition } from "./takeaways";
 
 export interface ArtifactDefinition<S extends z.ZodTypeAny = z.ZodTypeAny> {
   type: ArtifactType;
@@ -45,3 +46,4 @@ registerArtifactDefinition(reportArtifactDefinition);
 registerArtifactDefinition(quizArtifactDefinition);
 registerArtifactDefinition(flashcardsArtifactDefinition);
 registerArtifactDefinition(mindmapArtifactDefinition);
+registerArtifactDefinition(takeawaysArtifactDefinition);

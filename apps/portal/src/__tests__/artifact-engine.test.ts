@@ -10,6 +10,7 @@ import {
   flashcardsArtifactSchema,
   mindmapArtifactSchema,
   mindmapNodeSchema,
+  takeawaysArtifactSchema,
   extractJsonObject,
   parseStructuredOutput,
   buildBoundedContext,
@@ -47,6 +48,7 @@ describe("artifact definition registry", () => {
       "QUIZ",
       "FLASHCARDS",
       "MINDMAP",
+      "TAKEAWAYS",
     ]);
   });
 
@@ -70,7 +72,6 @@ describe("artifact definition registry", () => {
   });
 
   it("rejects generation for types without a registered definition", () => {
-    assert.throws(() => resolveArtifactDefinition("TAKEAWAYS"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("PODCAST"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
   });
 
@@ -89,6 +90,26 @@ describe("artifact definition registry", () => {
     assert.equal(def.type, "FLASHCARDS");
     assert.equal(def.schemaVersion, 1);
     assert.equal(def.promptVersion, "flashcards-v1");
+    assert.ok(def.contextTokenBudget > 0);
+    assert.equal(def.buildSystemPrompt().length > 0, true);
+    assert.equal(def.buildUserPrompt("context").includes("context"), true);
+  });
+
+  it("resolves the MINDMAP definition and exposes its declared metadata", () => {
+    const def = resolveArtifactDefinition("MINDMAP");
+    assert.equal(def.type, "MINDMAP");
+    assert.equal(def.schemaVersion, 1);
+    assert.equal(def.promptVersion, "mindmap-v1");
+    assert.ok(def.contextTokenBudget > 0);
+    assert.equal(def.buildSystemPrompt().length > 0, true);
+    assert.equal(def.buildUserPrompt("context").includes("context"), true);
+  });
+
+  it("resolves the TAKEAWAYS definition and exposes its declared metadata", () => {
+    const def = resolveArtifactDefinition("TAKEAWAYS");
+    assert.equal(def.type, "TAKEAWAYS");
+    assert.equal(def.schemaVersion, 1);
+    assert.equal(def.promptVersion, "takeaways-v1");
     assert.ok(def.contextTokenBudget > 0);
     assert.equal(def.buildSystemPrompt().length > 0, true);
     assert.equal(def.buildUserPrompt("context").includes("context"), true);
@@ -568,6 +589,86 @@ describe("mindmap output schema", () => {
     const node = { label: "Hi", children: [{ label: "Child", description: "Detail" }] };
     const result = mindmapNodeSchema.safeParse(node);
     assert.deepEqual(result.success ? result.data : null, node);
+  });
+});
+
+describe("takeaways output schema", () => {
+  const validTakeaways = {
+    title: "Photosynthesis essentials",
+    takeaways: [
+      {
+        heading: "Energy conversion",
+        detail: "Plants convert sunlight into chemical energy stored as glucose.",
+      },
+      {
+        heading: "Location",
+        detail: "Photosynthesis happens in the chloroplasts.",
+      },
+    ],
+  };
+
+  it("accepts a valid takeaways payload", () => {
+    const result = takeawaysArtifactSchema.safeParse(validTakeaways);
+    assert.deepEqual(result.success ? result.data : null, validTakeaways);
+  });
+
+  it("rejects a payload missing required fields (title or takeaways)", () => {
+    assert.equal(takeawaysArtifactSchema.safeParse({ takeaways: [] }).success, false);
+    assert.equal(takeawaysArtifactSchema.safeParse({ title: "X" }).success, false);
+  });
+
+  it("rejects an empty list and empty heading/detail strings", () => {
+    assert.equal(takeawaysArtifactSchema.safeParse({ ...validTakeaways, takeaways: [] }).success, false);
+    assert.equal(
+      takeawaysArtifactSchema.safeParse({
+        ...validTakeaways,
+        takeaways: [{ heading: "", detail: "D" }],
+      }).success,
+      false,
+    );
+    assert.equal(
+      takeawaysArtifactSchema.safeParse({
+        ...validTakeaways,
+        takeaways: [{ heading: "H", detail: "" }],
+      }).success,
+      false,
+    );
+  });
+
+  it("rejects an excessive item count over the bound", () => {
+    const many = {
+      ...validTakeaways,
+      takeaways: Array.from({ length: 21 }, (_, i) => ({ heading: `H${i}`, detail: "D" })),
+    };
+    assert.equal(takeawaysArtifactSchema.safeParse(many).success, false);
+  });
+
+  it("rejects oversize headings and details", () => {
+    assert.equal(
+      takeawaysArtifactSchema.safeParse({
+        ...validTakeaways,
+        takeaways: [{ heading: "h".repeat(201), detail: "D" }],
+      }).success,
+      false,
+    );
+    assert.equal(
+      takeawaysArtifactSchema.safeParse({
+        ...validTakeaways,
+        takeaways: [{ heading: "H", detail: "d".repeat(1001) }],
+      }).success,
+      false,
+    );
+  });
+
+  it("strictly rejects unknown extra keys in the payload and its items", () => {
+    assert.equal(takeawaysArtifactSchema.safeParse({ ...validTakeaways, summary: "x" }).success, false);
+    assert.equal(
+      takeawaysArtifactSchema.safeParse({
+        ...validTakeaways,
+        takeaways: [{ heading: "H", detail: "D", priority: 1 }],
+      }).success,
+      false,
+    );
   });
 });
 
