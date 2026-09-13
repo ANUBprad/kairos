@@ -12,6 +12,21 @@ interface TokenAccount {
   totalTokens: number;
 }
 
+export function validateEmbeddingResponse(embeddings: number[][], expectedCount: number): number {
+  if (embeddings.length !== expectedCount) {
+    throw new Error(
+      `Embedding provider returned ${embeddings.length} vectors for ${expectedCount} chunks`,
+    );
+  }
+  const dimensions = embeddings[0]?.length ?? 0;
+  if (dimensions === 0 || embeddings.some((vector) => vector.length !== dimensions)) {
+    throw new Error(
+      `Embedding provider returned empty or inconsistent vector dimensions (expected ${dimensions})`,
+    );
+  }
+  return dimensions;
+}
+
 export interface EmbeddingResult {
   documentId: string;
   chunkCount: number;
@@ -63,6 +78,7 @@ export async function generateEmbeddings(
   let totalInputTokens = 0;
   let totalTokens = 0;
   let processedCount = 0;
+  let expectedDimensions: number | null = null;
 
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
     const batch = chunks.slice(i, i + BATCH_SIZE);
@@ -82,21 +98,28 @@ export async function generateEmbeddings(
           totalTokens += response.usage.totalTokens;
         }
 
+        const dimensions = validateEmbeddingResponse(response.embeddings, batch.length);
+        if (expectedDimensions !== null && dimensions !== expectedDimensions) {
+          throw new Error(
+            `Embedding dimension changed mid-document: ${expectedDimensions} → ${dimensions}`,
+          );
+        }
+        expectedDimensions = dimensions;
+
         const entries = batch.map((chunk, idx) => ({
           chunkId: chunk.id,
           embedding: response.embeddings[idx],
         }));
 
-        const dimensions = response.embeddings[0]?.length || 1536;
         await vectorStore.bulkUpsertEmbeddings(entries, dimensions);
 
         await prisma.$transaction(
-          batch.map((chunk, idx) =>
+          batch.map((chunk) =>
             prisma.documentEmbedding.update({
               where: { chunkId: chunk.id },
               data: {
                 model,
-                dimensions: response.embeddings[idx]?.length || 1536,
+                dimensions,
                 status: "completed",
               },
             }),

@@ -1,3 +1,4 @@
+import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidEntityId } from "@/lib/validation";
 
@@ -12,7 +13,6 @@ export interface VectorSearchResult {
 }
 
 export interface VectorStore {
-  ensureSchema(): Promise<void>;
   bulkUpsertEmbeddings(
     entries: { chunkId: string; embedding: number[] }[],
     dimensions: number,
@@ -34,21 +34,10 @@ function vecLiteral(values: number[]): string {
   return `[${values.join(",")}]`;
 }
 
-class PgVectorStore implements VectorStore {
-  async ensureSchema(): Promise<void> {
-    await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS vector`);
-
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "DocumentEmbedding"
-      ADD COLUMN IF NOT EXISTS embedding vector(3072)
-    `);
-
-    await prisma.$executeRawUnsafe(`
-      CREATE INDEX IF NOT EXISTS idx_document_embedding_vector
-      ON "DocumentEmbedding"
-      USING ivfflat (embedding vector_cosine_ops)
-      WITH (lists = 100)
-    `);
+export class PgVectorStore implements VectorStore {
+  private readonly client: PrismaClient;
+  constructor(client: PrismaClient = prisma) {
+    this.client = client;
   }
 
   async bulkUpsertEmbeddings(
@@ -56,10 +45,12 @@ class PgVectorStore implements VectorStore {
     _dimensions: number,
   ): Promise<void> {
     for (const entry of entries) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "DocumentEmbedding" SET embedding = $1::vector WHERE "chunkId" = $2`,
-        vecLiteral(entry.embedding),
+      await this.client.$executeRawUnsafe(
+        `INSERT INTO "DocumentEmbedding" ("id", "chunkId", "embedding")
+         VALUES (gen_random_uuid(), $1, $2::vector)
+         ON CONFLICT ("chunkId") DO UPDATE SET "embedding" = EXCLUDED."embedding"`,
         entry.chunkId,
+        vecLiteral(entry.embedding),
       );
     }
   }
@@ -118,7 +109,7 @@ class PgVectorStore implements VectorStore {
       params.push(...docIds);
     }
 
-    const rows = await prisma.$queryRawUnsafe<
+    const rows = await this.client.$queryRawUnsafe<
       {
         chunkId: string;
         documentId: string;
@@ -137,14 +128,14 @@ class PgVectorStore implements VectorStore {
   }
 
   async deleteEmbedding(chunkId: string): Promise<void> {
-    await prisma.$executeRawUnsafe(
+    await this.client.$executeRawUnsafe(
       `UPDATE "DocumentEmbedding" SET embedding = NULL WHERE "chunkId" = $1`,
       chunkId,
     );
   }
 
   async deleteEmbeddingsByDocument(documentId: string): Promise<void> {
-    await prisma.$executeRawUnsafe(
+    await this.client.$executeRawUnsafe(
       `UPDATE "DocumentEmbedding" e SET embedding = NULL
        FROM "DocumentChunk" c
        WHERE c.id = e."chunkId" AND c."documentId" = $1`,
