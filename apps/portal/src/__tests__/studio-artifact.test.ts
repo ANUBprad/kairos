@@ -400,9 +400,30 @@ describe("studio wiring", () => {
     assert.match(podcastViewerSource, /<audio[\s\S]*preload="none"/);
     assert.match(podcastViewerSource, /`\/api\/artifacts\/\$\{artifact\.id\}\/audio`/);
     assert.match(podcastViewerSource, /PODCAST_HOST_PERSONAS/);
-    assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/actions\//);
     assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/artifacts\/persistence["']/);
+  });
+
+  it("grounds questions exclusively in the podcast interrupt action and resumes the episode from its stored position", () => {
+    const podcastViewerSource = readFileSync(
+      new URL("../components/app/studio/podcast-artifact-viewer.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(podcastViewerSource, /from ["']@\/lib\/actions\/podcast-interrupt["']/);
+    assert.match(podcastViewerSource, /askPodcastInterruption/);
+    assert.match(podcastViewerSource, /parseClientInterruptions/);
+    assert.match(podcastViewerSource, /audio\/interruption\/\$\{interruptionId\}/);
+    assert.match(podcastViewerSource, /startInterruption/);
+    assert.match(podcastViewerSource, /endInterruptionPlayback/);
+    assert.match(podcastViewerSource, /wasPlaying: !el\.paused/);
+    assert.match(podcastViewerSource, /intent\.resume/);
+    assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/actions\/artifacts["']|from ["']@\/lib\/actions\/["']/);
+    assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/prisma["']/);
+    assert.doesNotMatch(podcastViewerSource, /getAIProvider|generateChat|getTTSProvider|generatePodcastAudio/);
+    assert.doesNotMatch(
+      podcastViewerSource,
+      /storage\.ownerType|from ["']@\/lib\/storage["']|from ["']@\/lib\/artifacts\/persistence["']/,
+    );
   });
 
   it("renders only through the Studio panel and guards against missing knowledge bases", () => {
