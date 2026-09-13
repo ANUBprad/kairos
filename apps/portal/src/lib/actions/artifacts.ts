@@ -9,9 +9,9 @@ import type { LearningArtifactData } from "@/lib/artifacts/types";
 
 // Application contract for the artifact Studio. The engine authenticates the
 // session, authorizes the knowledge base, validates the source scope and
-// traces the run; this action only pins the SUMMARY capability and its typed
-// public signature. All database access happens below through the artifact
-// layer, never in this file.
+// traces the run; these actions only pin the supported capabilities and their
+// typed public signatures. All database access happens below through the
+// artifact layer, never in this file.
 export async function generateSummaryArtifact(
   knowledgeBaseId: string,
   sourceIds: string[],
@@ -20,6 +20,32 @@ export async function generateSummaryArtifact(
   return generateLearningArtifact({
     knowledgeBaseId,
     artifactType: "SUMMARY",
+    sourceIds,
+    name,
+  });
+}
+
+export async function generateReportArtifact(
+  knowledgeBaseId: string,
+  sourceIds: string[],
+  name?: string,
+): Promise<LearningArtifactData> {
+  return generateLearningArtifact({
+    knowledgeBaseId,
+    artifactType: "REPORT",
+    sourceIds,
+    name,
+  });
+}
+
+export async function generateQuizArtifact(
+  knowledgeBaseId: string,
+  sourceIds: string[],
+  name?: string,
+): Promise<LearningArtifactData> {
+  return generateLearningArtifact({
+    knowledgeBaseId,
+    artifactType: "QUIZ",
     sourceIds,
     name,
   });

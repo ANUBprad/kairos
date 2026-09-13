@@ -521,6 +521,11 @@ describe("artifact application wiring", () => {
     assert.doesNotMatch(actionsSource, /generateChat|getAIProvider/);
   });
 
+  it("pins REPORT and QUIZ generation to the unified engine with their artifact types", () => {
+    assert.match(actionsSource, /generateReportArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "REPORT"/);
+    assert.match(actionsSource, /generateQuizArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "QUIZ"/);
+  });
+
   it("authorizes reads and lists through canAccessKnowledgeBase, never a second check", () => {
     const authUses = actionsSource.match(/canAccessKnowledgeBase/g);
     assert.equal(authUses?.length, 3); // one import + the read and list call sites
