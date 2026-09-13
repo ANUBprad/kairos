@@ -36,6 +36,8 @@ export { summaryArtifactSchema, summaryArtifactDefinition } from "./summary";
 export type { SummaryArtifactOutput } from "./summary";
 export { reportArtifactSchema, reportArtifactDefinition } from "./report";
 export type { ReportArtifactOutput } from "./report";
+export { quizArtifactSchema, quizArtifactDefinition } from "./quiz";
+export type { QuizArtifactOutput } from "./quiz";
 export { loadArtifactSourceChunks, buildBoundedContext } from "./context";
 export type { ArtifactSourceChunk, BoundedContext } from "./context";
 export { parseStructuredOutput, extractJsonObject } from "./output";

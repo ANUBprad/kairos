@@ -6,6 +6,7 @@ import {
   listRegisteredArtifactTypes,
   summaryArtifactSchema,
   reportArtifactSchema,
+  quizArtifactSchema,
   extractJsonObject,
   parseStructuredOutput,
   buildBoundedContext,
@@ -37,7 +38,7 @@ const validReport = {
 
 describe("artifact definition registry", () => {
   it("registers the supported artifact types (no ghost implementations for the rest)", () => {
-    assert.deepEqual(listRegisteredArtifactTypes(), ["SUMMARY", "REPORT"]);
+    assert.deepEqual(listRegisteredArtifactTypes(), ["SUMMARY", "REPORT", "QUIZ"]);
   });
 
   it("resolves the SUMMARY definition and exposes its declared metadata", () => {
@@ -60,11 +61,20 @@ describe("artifact definition registry", () => {
   });
 
   it("rejects generation for types without a registered definition", () => {
-    assert.throws(() => resolveArtifactDefinition("QUIZ"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("FLASHCARDS"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("MINDMAP"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("TAKEAWAYS"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("PODCAST"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
+  });
+
+  it("resolves the QUIZ definition and exposes its declared metadata", () => {
+    const def = resolveArtifactDefinition("QUIZ");
+    assert.equal(def.type, "QUIZ");
+    assert.equal(def.schemaVersion, 1);
+    assert.equal(def.promptVersion, "quiz-v1");
+    assert.ok(def.contextTokenBudget > 0);
+    assert.equal(def.buildSystemPrompt().length > 0, true);
+    assert.equal(def.buildUserPrompt("context").includes("context"), true);
   });
 });
 
@@ -177,6 +187,133 @@ describe("report output schema", () => {
       reportArtifactSchema.safeParse({
         ...validReport,
         sections: [{ heading: "H", content: "C", citations: [] }],
+      }).success,
+      false,
+    );
+  });
+});
+
+describe("quiz output schema", () => {
+  const validQuestion = {
+    question: "What drives photosynthesis?",
+    options: ["Light", "Sound", "Gravity", "Wind"],
+    correctAnswer: 0,
+    explanation: "Chlorophyll absorbs light energy in the light-dependent reactions.",
+  };
+
+  const validQuiz = {
+    title: "Photosynthesis Quiz",
+    instructions: "Pick the single best answer for each question.",
+    questions: [validQuestion],
+  };
+
+  it("accepts a valid quiz payload", () => {
+    const result = quizArtifactSchema.safeParse(validQuiz);
+    assert.deepEqual(result.success ? result.data : null, validQuiz);
+  });
+
+  it("rejects a payload missing required fields (title, instructions, questions)", () => {
+    assert.equal(quizArtifactSchema.safeParse({ questions: [validQuestion] }).success, false);
+    assert.equal(
+      quizArtifactSchema.safeParse({ ...validQuiz, instructions: undefined }).success,
+      false,
+    );
+    assert.equal(quizArtifactSchema.safeParse({ ...validQuiz, questions: [] }).success, false);
+  });
+
+  it("rejects questions with too few options and empty or non-string options", () => {
+    const tooFew = { ...validQuiz, questions: [{ ...validQuestion, options: ["Only one"] }] };
+    assert.equal(quizArtifactSchema.safeParse(tooFew).success, false);
+
+    const includesEmpty = {
+      ...validQuiz,
+      questions: [{ ...validQuestion, options: ["A", ""] }],
+    };
+    assert.equal(quizArtifactSchema.safeParse(includesEmpty).success, false);
+
+    const nonString = { ...validQuiz, questions: [{ ...validQuestion, options: ["A", 7] }] };
+    assert.equal(quizArtifactSchema.safeParse(nonString).success, false);
+  });
+
+  it("rejects a correctAnswer that is out of range for its option list", () => {
+    const outOfRange = {
+      ...validQuiz,
+      questions: [{ ...validQuestion, correctAnswer: 4 }],
+    };
+    assert.equal(quizArtifactSchema.safeParse(outOfRange).success, false);
+
+    const negative = {
+      ...validQuiz,
+      questions: [{ ...validQuestion, correctAnswer: -1 }],
+    };
+    assert.equal(quizArtifactSchema.safeParse(negative).success, false);
+
+    const fractional = {
+      ...validQuiz,
+      questions: [{ ...validQuestion, correctAnswer: 1.5 }],
+    };
+    assert.equal(quizArtifactSchema.safeParse(fractional).success, false);
+  });
+
+  it("accepts each in-range answer index", () => {
+    for (let index = 0; index < 4; index++) {
+      const quiz = { ...validQuiz, questions: [{ ...validQuestion, correctAnswer: index }] };
+      assert.equal(quizArtifactSchema.safeParse(quiz).success, true);
+    }
+  });
+
+  it("rejects unreasonable question counts over the bound", () => {
+    const manyQuestions = {
+      ...validQuiz,
+      questions: Array.from({ length: 16 }, () => validQuestion),
+    };
+    assert.equal(quizArtifactSchema.safeParse(manyQuestions).success, false);
+  });
+
+  it("rejects an over-bound option count and oversize strings", () => {
+    const tooManyOptions = {
+      ...validQuiz,
+      questions: [{ ...validQuestion, options: ["A", "B", "C", "D", "E", "F"] }],
+    };
+    assert.equal(quizArtifactSchema.safeParse(tooManyOptions).success, false);
+
+    const longQuestion = {
+      ...validQuiz,
+      questions: [{ ...validQuestion, question: "q".repeat(501) }],
+    };
+    assert.equal(quizArtifactSchema.safeParse(longQuestion).success, false);
+
+    const longExplanation = {
+      ...validQuiz,
+      questions: [{ ...validQuestion, explanation: "e".repeat(1001) }],
+    };
+    assert.equal(quizArtifactSchema.safeParse(longExplanation).success, false);
+  });
+
+  it("rejects questions missing the single answer index or missing explanation", () => {
+    const missingAnswer = {
+      ...validQuiz,
+      questions: [
+        { question: "Q?", options: ["A", "B"], explanation: "Because A." },
+      ],
+    };
+    assert.equal(quizArtifactSchema.safeParse(missingAnswer).success, false);
+
+    const missingExplanation = {
+      ...validQuiz,
+      questions: [
+        { question: "Q?", options: ["A", "B"], correctAnswer: 0 },
+      ],
+    };
+    assert.equal(quizArtifactSchema.safeParse(missingExplanation).success, false);
+  });
+
+  it("strictly rejects unknown extra keys in the quiz and its questions", () => {
+    assert.equal(quizArtifactSchema.safeParse({ ...validQuiz, tags: [] }).success, false);
+    assert.equal(
+      quizArtifactSchema.safeParse({
+        ...validQuiz,
+        questions: [{ ...validQuestion, difficulty: "hard" }],
       }).success,
       false,
     );
