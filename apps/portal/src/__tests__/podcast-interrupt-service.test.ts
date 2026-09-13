@@ -172,3 +172,42 @@ describe("podcast interruption workspace projection", () => {
     assert.equal(metadata.promptVersion, "podcast-v1");
   });
 });
+
+describe("podcast interruption media route wiring", () => {
+  const routeSource = readFileSync(
+    new URL("../app/api/artifacts/[artifactId]/audio/interruption/[interruptionId]/route.ts", import.meta.url),
+    "utf8",
+  );
+
+  it("serves interruption audio through the same session-authenticated media flow as the episode", () => {
+    assert.match(routeSource, /getServerSession/);
+    assert.match(routeSource, /rateLimit\(`audio:\$\{session\.user\.id\}`, RATE_LIMITS\.api\)/);
+    assert.match(routeSource, /canAccessKnowledgeBase/);
+    assert.match(routeSource, /getSignedUrl/);
+    assert.match(routeSource, /audio\/mpeg|audio\/wav/);
+    assert.match(routeSource, /Cache-Control/);
+  });
+
+  it("resolves a foreign artifact or interruption to 404, never a leaking 403", () => {
+    assert.match(routeSource, /artifact\.type !== "PODCAST"/);
+    assert.match(routeSource, /status: 404/);
+    assert.match(routeSource, /Not found/);
+  });
+
+  it("reads the interruption only from the podcast's persisted history", () => {
+    assert.match(routeSource, /parseStoredInterruptions\(artifact\.metadata\)\.find/);
+    assert.match(routeSource, /entry\.id === interruptionId/);
+  });
+
+  it("validates both route ids and guards upstream bytes like the episode route", () => {
+    assert.match(routeSource, /UUID_REGEX\.test\(artifactId\) \|\| !UUID_REGEX\.test\(interruptionId\)/);
+    assert.match(routeSource, /MAX_AUDIO_BYTES/);
+    assert.match(routeSource, /Media upstream unavailable/);
+    assert.match(routeSource, /sanitizeError/);
+  });
+
+  it("never returns a storage identity to the client", () => {
+    assert.doesNotMatch(routeSource, /storage.{0,6}(key|provider)['"`]/i);
+    assert.match(routeSource, /interruption\.audio\.storageKey/);
+  });
+});
