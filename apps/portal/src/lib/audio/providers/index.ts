@@ -1,5 +1,6 @@
 import type { TTSProvider, TTSProviderType } from "../types";
 import { LocalTTSProvider } from "./local";
+import { createElevenLabsProvider } from "./elevenlabs";
 
 export const TTS_PROVIDER_ENV = "TTS_PROVIDER";
 
@@ -31,8 +32,4 @@ export function getTTSProvider(type?: TTSProviderType): TTSProvider {
   }
 }
 
-// ElevenLabs is implemented in the ElevenLabs provider module; routing the
-// name to a "not implemented" error keeps selection strict before that lands.
-function createElevenLabsProvider(): TTSProvider {
-  throw new Error("ElevenLabs TTS provider is not implemented yet");
-}
+export type { TTSProvider } from "../types";

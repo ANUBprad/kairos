@@ -10,3 +10,11 @@ export {
 } from "./providers/local";
 export type { WavInfo } from "./providers/local";
 export { TTS_PROVIDER_ENV, getTTSProvider, resolveTTSProviderType } from "./providers/index";
+export {
+  ElevenLabsTTSProvider,
+  createElevenLabsProvider,
+  ELEVENLABS_API_URL,
+  ELEVENLABS_API_KEY_ENV,
+  ELEVENLABS_VOICE_HOST_A_ENV,
+  ELEVENLABS_VOICE_HOST_B_ENV,
+} from "./providers/elevenlabs";

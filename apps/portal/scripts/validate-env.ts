@@ -13,6 +13,10 @@ const optional = [
   "CLOUDINARY_API_SECRET",
   "NEXT_PUBLIC_POSTHOG_KEY",
   "NEXT_PUBLIC_POSTHOG_HOST",
+  "TTS_PROVIDER",
+  "ELEVENLABS_API_KEY",
+  "ELEVENLABS_VOICE_HOST_A",
+  "ELEVENLABS_VOICE_HOST_B",
 ];
 
 console.log("🔍 Validating environment variables...\n");
