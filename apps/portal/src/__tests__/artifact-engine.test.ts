@@ -7,6 +7,7 @@ import {
   summaryArtifactSchema,
   reportArtifactSchema,
   quizArtifactSchema,
+  flashcardsArtifactSchema,
   extractJsonObject,
   parseStructuredOutput,
   buildBoundedContext,
@@ -38,7 +39,7 @@ const validReport = {
 
 describe("artifact definition registry", () => {
   it("registers the supported artifact types (no ghost implementations for the rest)", () => {
-    assert.deepEqual(listRegisteredArtifactTypes(), ["SUMMARY", "REPORT", "QUIZ"]);
+    assert.deepEqual(listRegisteredArtifactTypes(), ["SUMMARY", "REPORT", "QUIZ", "FLASHCARDS"]);
   });
 
   it("resolves the SUMMARY definition and exposes its declared metadata", () => {
@@ -61,7 +62,6 @@ describe("artifact definition registry", () => {
   });
 
   it("rejects generation for types without a registered definition", () => {
-    assert.throws(() => resolveArtifactDefinition("FLASHCARDS"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("MINDMAP"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("TAKEAWAYS"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
     assert.throws(() => resolveArtifactDefinition("PODCAST"), { code: "UNSUPPORTED_ARTIFACT_TYPE" });
@@ -72,6 +72,16 @@ describe("artifact definition registry", () => {
     assert.equal(def.type, "QUIZ");
     assert.equal(def.schemaVersion, 1);
     assert.equal(def.promptVersion, "quiz-v1");
+    assert.ok(def.contextTokenBudget > 0);
+    assert.equal(def.buildSystemPrompt().length > 0, true);
+    assert.equal(def.buildUserPrompt("context").includes("context"), true);
+  });
+
+  it("resolves the FLASHCARDS definition and exposes its declared metadata", () => {
+    const def = resolveArtifactDefinition("FLASHCARDS");
+    assert.equal(def.type, "FLASHCARDS");
+    assert.equal(def.schemaVersion, 1);
+    assert.equal(def.promptVersion, "flashcards-v1");
     assert.ok(def.contextTokenBudget > 0);
     assert.equal(def.buildSystemPrompt().length > 0, true);
     assert.equal(def.buildUserPrompt("context").includes("context"), true);
@@ -314,6 +324,80 @@ describe("quiz output schema", () => {
       quizArtifactSchema.safeParse({
         ...validQuiz,
         questions: [{ ...validQuestion, difficulty: "hard" }],
+      }).success,
+      false,
+    );
+  });
+});
+
+describe("flashcards output schema", () => {
+  const validDeck = {
+    title: "Photosynthesis Deck",
+    cards: [
+      { front: "Where does photosynthesis occur?", back: "In the chloroplasts of plant cells." },
+      { front: "What gas does photosynthesis release?", back: "Oxygen." },
+    ],
+  };
+
+  it("accepts a valid deck payload", () => {
+    const result = flashcardsArtifactSchema.safeParse(validDeck);
+    assert.deepEqual(result.success ? result.data : null, validDeck);
+  });
+
+  it("rejects a payload missing required fields (title or cards)", () => {
+    assert.equal(flashcardsArtifactSchema.safeParse({ cards: [] }).success, false);
+    assert.equal(flashcardsArtifactSchema.safeParse({ title: "X" }).success, false);
+  });
+
+  it("rejects an empty card list and empty card text", () => {
+    assert.equal(flashcardsArtifactSchema.safeParse({ ...validDeck, cards: [] }).success, false);
+    assert.equal(
+      flashcardsArtifactSchema.safeParse({
+        ...validDeck,
+        cards: [{ front: "", back: "Answer" }],
+      }).success,
+      false,
+    );
+    assert.equal(
+      flashcardsArtifactSchema.safeParse({
+        ...validDeck,
+        cards: [{ front: "Prompt", back: "" }],
+      }).success,
+      false,
+    );
+  });
+
+  it("rejects an excessive card count over the bound", () => {
+    const manyCards = {
+      ...validDeck,
+      cards: Array.from({ length: 31 }, () => ({ front: "F", back: "B" })),
+    };
+    assert.equal(flashcardsArtifactSchema.safeParse(manyCards).success, false);
+  });
+
+  it("rejects oversize card fields", () => {
+    assert.equal(
+      flashcardsArtifactSchema.safeParse({
+        ...validDeck,
+        cards: [{ front: "f".repeat(1001), back: "B" }],
+      }).success,
+      false,
+    );
+    assert.equal(
+      flashcardsArtifactSchema.safeParse({
+        ...validDeck,
+        cards: [{ front: "F", back: "b".repeat(1001) }],
+      }).success,
+      false,
+    );
+  });
+
+  it("strictly rejects unknown extra keys in the deck and its cards", () => {
+    assert.equal(flashcardsArtifactSchema.safeParse({ ...validDeck, tags: [] }).success, false);
+    assert.equal(
+      flashcardsArtifactSchema.safeParse({
+        ...validDeck,
+        cards: [{ front: "F", back: "B", difficulty: 1 }],
       }).success,
       false,
     );

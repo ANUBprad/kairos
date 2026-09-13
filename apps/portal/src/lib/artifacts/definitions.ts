@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors";
 import { summaryArtifactDefinition } from "./summary";
 import { reportArtifactDefinition } from "./report";
 import { quizArtifactDefinition } from "./quiz";
+import { flashcardsArtifactDefinition } from "./flashcards";
 
 export interface ArtifactDefinition<S extends z.ZodTypeAny = z.ZodTypeAny> {
   type: ArtifactType;
@@ -41,3 +42,4 @@ export function listRegisteredArtifactTypes(): ArtifactType[] {
 registerArtifactDefinition(summaryArtifactDefinition);
 registerArtifactDefinition(reportArtifactDefinition);
 registerArtifactDefinition(quizArtifactDefinition);
+registerArtifactDefinition(flashcardsArtifactDefinition);

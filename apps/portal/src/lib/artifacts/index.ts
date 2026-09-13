@@ -38,6 +38,8 @@ export { reportArtifactSchema, reportArtifactDefinition } from "./report";
 export type { ReportArtifactOutput } from "./report";
 export { quizArtifactSchema, quizArtifactDefinition } from "./quiz";
 export type { QuizArtifactOutput } from "./quiz";
+export { flashcardsArtifactSchema, flashcardsArtifactDefinition } from "./flashcards";
+export type { FlashcardsArtifactOutput } from "./flashcards";
 export { loadArtifactSourceChunks, buildBoundedContext } from "./context";
 export type { ArtifactSourceChunk, BoundedContext } from "./context";
 export { parseStructuredOutput, extractJsonObject } from "./output";
