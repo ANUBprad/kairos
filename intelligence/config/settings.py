@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     api_secret: Optional[str] = Field(
         default=None, description="API shared secret for authentication"
     )
+    secret: Optional[str] = Field(
+        default=None,
+        description="GATEWAY_/SERVICE shared secret (KAIROS_SECRET) for gRPC authentication",
+    )
 
     # --- ChromaDB ----------------------------------------------------
     chroma_store_host: str = Field(

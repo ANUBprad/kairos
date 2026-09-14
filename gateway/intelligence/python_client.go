@@ -23,6 +23,18 @@ func injectTraceContext(ctx context.Context) context.Context {
 	return metadata.AppendToOutgoingContext(ctx, "x-trace-id", traceID)
 }
 
+// serviceAuth attaches the KAIROS_SECRET service credential to every outbound
+// gRPC call. Intelligence rejects protected RPCs that do not present it, so an
+// empty secret means every protected call fails closed on the far side.
+func serviceAuth(secret string) grpc.DialOption {
+	return grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if secret != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx, "x-api-key", secret)
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
+	})
+}
+
 func ConnectToPython(envVar *config.Config) (pb.IntelligenceServiceClient, *grpc.ClientConn, error) {
 
 	host := envVar.Intelligence.Host
@@ -30,7 +42,10 @@ func ConnectToPython(envVar *config.Config) (pb.IntelligenceServiceClient, *grpc
 
 	target := host + ":" + port
 
-	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(target,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		serviceAuth(envVar.Auth),
+	)
 
 	if err != nil {
 		slog.Error("Couldn't establish connection with python server", "ERROR", err)

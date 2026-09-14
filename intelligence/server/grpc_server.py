@@ -28,6 +28,7 @@ from intelligence.retrieval.simple_retriever import SimpleRetriever
 from intelligence.vectorstore.chroma_store import ChromaStore
 from intelligence.classifier.query_classifier import ClassifyQuery
 from intelligence.server.config import ServerConfig, validate_env
+from intelligence.server.auth import AuthInterceptor
 from intelligence.server.engine import RetrievalEngine
 from intelligence.circuit_breaker.circuit_breaker import (
     CircuitBreaker,
@@ -323,9 +324,19 @@ def serve():
     # --- Telemetry collector ---------------------------------------------
     telemetry_collector = TelemetryCollector(storage=TelemetryStorage())
 
-    # --- Metrics interceptor & server ------------------------------------
-    interceptor = MetricsInterceptor() if cfg.metrics_enabled else None
-    interceptors = [interceptor] if interceptor else []
+    # --- Auth interceptor (fail closed) --------------------------------
+    # Every protected RPC must present the KAIROS_SECRET service credential.
+    # With no secret configured the server rejects all protected calls —
+    # network placement alone is not authentication.
+    if not cfg.grpc_secret:
+        logger.warning(
+            "KAIROS_SECRET is not set — every protected RPC on the gRPC "
+            "boundary will be rejected with UNAUTHENTICATED. Set KAIROS_SECRET "
+            "to the same value the gateway presents to allow trusted callers."
+        )
+    interceptors = [AuthInterceptor(cfg.grpc_secret)]
+    if cfg.metrics_enabled:
+        interceptors.append(MetricsInterceptor())
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=50),
         interceptors=interceptors,

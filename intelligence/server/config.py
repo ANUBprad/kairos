@@ -61,6 +61,8 @@ class ServerConfig:
 
     health_check_enabled: bool = True
 
+    grpc_secret: Optional[str] = None
+
     provider_timeout_seconds: float = 30.0
     circuit_breaker_failure_threshold: int = 5
     circuit_breaker_recovery_timeout: float = 30.0
@@ -102,6 +104,7 @@ class ServerConfig:
             cache_maxsize=settings.cache_maxsize,
             cache_ttl_seconds=settings.cache_ttl_seconds,
             health_check_enabled=settings.health_check_enabled,
+            grpc_secret=settings.secret,
             provider_timeout_seconds=settings.provider_timeout_seconds,
             circuit_breaker_failure_threshold=settings.circuit_breaker_failure_threshold,
             circuit_breaker_recovery_timeout=settings.circuit_breaker_recovery_timeout,

@@ -72,7 +72,9 @@ def test_run_endpoint_rejects_client_dataset_paths(monkeypatch: MonkeyPatch) -> 
     from intelligence.evaluation import factory
 
     def explode(config, dataset_path=None, use_llm_judges=False):
-        raise AssertionError("run_dataset must never receive a client-supplied filesystem path")
+        raise AssertionError(
+            "run_dataset must never receive a client-supplied filesystem path"
+        )
 
     monkeypatch.setattr(factory, "run_dataset", explode)
 
