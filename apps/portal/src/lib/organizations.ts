@@ -9,6 +9,8 @@ import { randomBytes } from "crypto";
 import {
   createAuditLog,
   getMembership,
+  hasPermission,
+  isRoleSufficient,
 } from "./rbac";
 import { createNotification } from "./notifications";
 import type { MemberRole } from "@prisma/client";
@@ -280,6 +282,16 @@ export async function addMember(
   role: MemberRole,
   invitedBy?: string
 ): Promise<void> {
+  if (invitedBy) {
+    const membership = await getMembership(invitedBy, organizationId);
+    if (!membership || !hasPermission(membership.role, "manage_members")) {
+      throw new Error("Only owners and admins can add members");
+    }
+    if (!isRoleSufficient(membership.role, role)) {
+      throw new Error("Cannot grant a role higher than your own role");
+    }
+  }
+
   const existing = await prisma.member.findUnique({
     where: {
       organizationId_userId: {
@@ -332,8 +344,8 @@ export async function updateMemberRole(
     throw new Error("Only the organization owner can update member roles");
   }
 
-  const member = await prisma.member.findUnique({
-    where: { id: memberId },
+  const member = await prisma.member.findFirst({
+    where: { id: memberId, organizationId },
     select: { userId: true, role: true },
   });
 
@@ -371,8 +383,8 @@ export async function removeMember(
     throw new Error("Only the organization owner can remove members");
   }
 
-  const member = await prisma.member.findUnique({
-    where: { id: memberId },
+  const member = await prisma.member.findFirst({
+    where: { id: memberId, organizationId },
     select: { userId: true, role: true },
   });
 
