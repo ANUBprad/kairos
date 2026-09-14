@@ -3,6 +3,7 @@
 import { getServerSession } from "@/lib/server/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import {
   getRetrievalConfig,
   saveRetrievalConfig,
@@ -14,17 +15,10 @@ import {
 } from "@/lib/retrieval/service";
 import type { RetrievalConfig, RetrievalResultDisplay } from "@/lib/retrieval/types";
 
-async function assertKbAccess(kbId: string, _userId: string) {
-  const kb = await prisma.knowledgeBase.findUnique({
-    where: { id: kbId },
-    select: { id: true },
-  });
-
-  if (!kb) {
+async function assertKbAccess(kbId: string, userId: string) {
+  if (!(await canAccessKnowledgeBase(userId, kbId))) {
     throw new Error("Knowledge base not found");
   }
-
-  return kb;
 }
 
 export async function getKbRetrievalConfig(kbId: string): Promise<RetrievalConfig> {

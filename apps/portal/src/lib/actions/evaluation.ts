@@ -4,6 +4,7 @@ import { getServerSession } from "@/lib/server/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { logError } from "@/lib/errors";
+import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import {
   createBenchmarkDataset,
   getBenchmarkDatasets,
@@ -22,17 +23,10 @@ import { generateRecommendations, type StrategyConfig, type Recommendation } fro
 import type { ScientificLeaderboardEntry, LeaderboardTier } from "@/lib/evaluation/types";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 
-async function assertKbAccess(kbId: string, _userId: string) {
-  const kb = await prisma.knowledgeBase.findUnique({
-    where: { id: kbId },
-    select: { id: true },
-  });
-
-  if (!kb) {
+async function assertKbAccess(kbId: string, userId: string) {
+  if (!(await canAccessKnowledgeBase(userId, kbId))) {
     throw new Error("Knowledge base not found");
   }
-
-  return kb;
 }
 
 async function assertDatasetAccess(datasetId: string, _userId: string) {
