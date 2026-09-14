@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   LayoutDashboard,
@@ -9,9 +10,11 @@ import {
   Building2,
   Sun,
   Moon,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/app/user-avatar";
+import { authClient } from "@/lib/auth-client";
 
 interface UserMenuProps {
   email: string;
@@ -21,6 +24,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ email, name, image, organizationName }: UserMenuProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const menuRef = useRef<HTMLDivElement>(null);
@@ -51,6 +55,13 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
     }
   }
 
+  async function handleSignOut() {
+    await authClient.signOut();
+    setOpen(false);
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <div ref={menuRef} className="relative">
       <button
@@ -70,7 +81,7 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
               <UserAvatar image={image} name={name} email={email} size="lg" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-text-primary truncate">
-                  {name || "Demo User"}
+                  {name || email.split("@")[0] || "User"}
                 </p>
                 <p className="text-xs text-text-tertiary truncate">{email}</p>
               </div>
@@ -119,6 +130,16 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
                   )}
                 />
               </div>
+            </button>
+          </div>
+
+          <div className="border-t border-border pt-1">
+            <button
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            >
+              <LogOut size={16} />
+              Sign out
             </button>
           </div>
         </div>

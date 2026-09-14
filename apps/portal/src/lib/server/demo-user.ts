@@ -14,6 +14,7 @@ export interface DemoSession {
     email: string;
     name: string;
     role: string;
+    image?: string | null;
   };
 }
 
@@ -141,6 +142,7 @@ export async function getDemoSession(): Promise<DemoSession | null> {
       email: DEMO_USER_EMAIL,
       name: DEMO_USER_NAME,
       role: "ADMIN",
+      image: null,
     },
   };
 }

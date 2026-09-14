@@ -79,15 +79,17 @@ model Session {
 }
 
 model Account {
-  id           String  @id @default(cuid())
-  accountId    String  @db.VarChar(255)
-  providerId   String  @db.VarChar(64)
-  userId       String
-  accessToken  String? @db.Text
-  refreshToken String? @db.Text
-  idToken      String? @db.Text
-  password     String? @db.VarChar(255)
-  scope        String? @db.VarChar(255)
+  id                   String   @id @default(cuid())
+  accountId            String   @db.VarChar(255)
+  providerId           String   @db.VarChar(64)
+  userId               String
+  accessToken          String?  @db.Text
+  refreshToken         String?  @db.Text
+  accessTokenExpiresAt DateTime?
+  refreshTokenExpiresAt DateTime?
+  idToken              String?  @db.Text
+  password             String?  @db.VarChar(255)
+  scope                String?  @db.VarChar(255)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

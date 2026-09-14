@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { getServerSession } from "@/lib/server/auth-utils";
 import { getDemoOrgAndProject } from "@/lib/server/demo-user";
 import { prisma } from "@/lib/prisma";
 import { AppSidebar } from "@/components/app/sidebar";
@@ -15,6 +17,11 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   const result = await getDemoOrgAndProject();
 
   const organization = result
@@ -49,9 +56,9 @@ export default async function AppLayout({
       />
       <div className="flex flex-1 flex-col">
         <AppHeader
-          email="demo@kairos.dev"
-          name="Demo User"
-          image={null}
+          email={session.user.email}
+          name={session.user.name}
+          image={session.user.image ?? null}
           organizationName={organization?.name ?? null}
         />
         <main id="main-content" className="flex-1 p-6">

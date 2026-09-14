@@ -63,4 +63,7 @@ export const auth: any = new Proxy({} as any, {
   get(_target, prop) {
     return Reflect.get(getAuth(), prop);
   },
+  has(_target, prop) {
+    return Reflect.has(getAuth(), prop);
+  },
 });
