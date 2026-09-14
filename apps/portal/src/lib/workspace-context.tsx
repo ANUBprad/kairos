@@ -112,7 +112,6 @@ function useLocalStorageState<T>(
 const PAGE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/app": [{ label: "Overview" }],
   "/app/research": [{ label: "Research" }, { label: "Dashboard" }],
-  "/app/copilot": [{ label: "Research" }, { label: "AI Copilot" }],
   "/app/lineage": [{ label: "Research" }, { label: "Experiment Lineage" }],
   "/app/planner": [{ label: "Research" }, { label: "Experiment Planner" }],
   "/app/knowledge-bases": [{ label: "Build" }, { label: "Documents" }],

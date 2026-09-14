@@ -263,7 +263,6 @@ export function PromptsClient() {
         purpose="Organize prompts into folders, track versions, and publish when ready."
         nextAction={{ label: "Knowledge Bases", href: "/app/knowledge-bases" }}
         relatedPages={[
-          { label: "Copilot", href: "/app/copilot" },
           { label: "Evaluation", href: "/app/evaluation" },
         ]}
       />

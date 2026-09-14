@@ -7,7 +7,7 @@ import {
   Bot, BarChart3, BookOpen, Database,
   Sparkles, ChevronDown, ChevronUp,
   ZoomIn, ZoomOut, Maximize2, X,
-  Brain, MessageSquare,
+  Brain,
   FlaskConical, Repeat,
 } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
@@ -63,8 +63,7 @@ const ARCH_MODULES: ArchModule[] = [
   { id: "llm-service", label: "LLM Service", shortLabel: "LLM", icon: Bot, x: 280, y: 640, w: 140, h: 70, color: "#a855f7", purpose: "Generate answers via OpenAI GPT-4o or Google Gemini", input: "Structured prompt", output: "Generated answer", algorithms: ["GPT-4o", "GPT-4o-mini", "Gemini 2.0 Flash", "Claude Sonnet"], latency: "~2s", dependencies: ["prompt-builder"], config: ["Provider", "Model", "Temperature", "Max tokens"], sourceModules: ["src/lib/llm/*.ts"] },
   { id: "eval-framework", label: "Evaluation Framework", shortLabel: "Eval", icon: BarChart3, x: 80, y: 640, w: 140, h: 70, color: "#ef4444", purpose: "Measure retrieval and generation quality with standard metrics", input: "Chunks + answer + ground truth", output: "Metrics report", algorithms: ["Recall@K", "Precision@K", "MRR", "nDCG", "Faithfulness"], latency: "~10s/benchmark", dependencies: ["retriever", "llm-service"], config: ["Metrics", "Dataset", "Reporting"], sourceModules: ["src/lib/eval/*.ts"] },
   { id: "research-intel", label: "Research Intelligence", shortLabel: "Research", icon: BookOpen, x: 80, y: 400, w: 140, h: 70, color: "#0ea5e9", purpose: "Track research trends, paper metadata, and citation graphs", input: "Papers + queries", output: "Research insights", algorithms: ["Citation graph analysis", "Trend detection", "Topic modeling"], latency: "< 500ms", dependencies: ["vector-store"], config: ["Crawl sources", "Update frequency"], sourceModules: ["src/lib/research/*.ts"] },
-  { id: "copilot", label: "Copilot", shortLabel: "Copilot", icon: MessageSquare, x: 880, y: 400, w: 140, h: 70, color: "#6366f1", purpose: "Interactive AI assistant with conversational context", input: "User messages + context", output: "Conversational responses", algorithms: ["Context-aware chat", "Follow-up tracking", "Suggestion generation"], latency: "~2s", dependencies: ["llm-service", "retriever"], config: ["Context window", "Suggestion mode"], sourceModules: ["src/lib/copilot/*.ts"] },
-  { id: "experiment-tracker", label: "Experiment Tracker", shortLabel: "Experiments", icon: FlaskConical, x: 280, y: 520, w: 140, h: 70, color: "#f97316", purpose: "Log and compare experiments across retrieval strategies", input: "Config + metrics", output: "Experiment logs", algorithms: ["A/B comparison", "Statistical significance", "Parameter sweep"], latency: "< 1s", dependencies: ["eval-framework"], config: ["Auto-log", "Comparison window"], sourceModules: ["src/lib/experiments/*.ts"] },
+{ id: "experiment-tracker", label: "Experiment Tracker", shortLabel: "Experiments", icon: FlaskConical, x: 280, y: 520, w: 140, h: 70, color: "#f97316", purpose: "Log and compare experiments across retrieval strategies", input: "Config + metrics", output: "Experiment logs", algorithms: ["A/B comparison", "Statistical significance", "Parameter sweep"], latency: "< 1s", dependencies: ["eval-framework"], config: ["Auto-log", "Comparison window"], sourceModules: ["src/lib/experiments/*.ts"] },
   { id: "reproducibility", label: "Reproducibility Engine", shortLabel: "Reproducibility", icon: Repeat, x: 880, y: 520, w: 140, h: 70, color: "#14b8a6", purpose: "Ensure reproducible results across runs and environments", input: "Experiment configs", output: "Reproducible pipelines", algorithms: ["Deterministic seeding", "Version pinning", "Environment snapshots"], latency: "< 1s", dependencies: ["experiment-tracker"], config: ["Snapshot frequency", "Pin versions"], sourceModules: ["src/lib/reproducibility/*.ts"] },
 ];
 
@@ -80,8 +79,6 @@ const CONNECTIONS: Array<[string, string, string]> = [
   ["retriever", "eval-framework", "Retrieval results"],
   ["llm-service", "eval-framework", "Generated answer"],
   ["research-intel", "vector-store", "Research vectors"],
-  ["research-intel", "copilot", "Research context"],
-  ["llm-service", "copilot", "LLM responses"],
   ["eval-framework", "experiment-tracker", "Metrics data"],
   ["experiment-tracker", "reproducibility", "Experiment configs"],
 ];
@@ -98,7 +95,6 @@ const MODULE_DETAILS: Record<string, { purpose: string; inputs: string; outputs:
   "llm-service": { purpose: "Generate natural language answer from the constructed prompt", inputs: "Prompt with context + question", outputs: "Generated answer text", algorithms: ["GPT-4o", "GPT-4o-mini", "Gemini 2.0 Flash", "Claude Sonnet"], latency: "~2s", dependencies: ["prompt-builder"], config: ["Provider", "Model", "Temperature", "Max tokens", "Top-p"], sourceModules: ["src/lib/llm/*.ts"] },
   "eval-framework": { purpose: "Measure retrieval and generation quality using standard metrics", inputs: "Retrieved chunks + generated answer + ground truth", outputs: "Quantitative metrics report", algorithms: ["Recall@K", "Precision@K", "MRR", "nDCG", "Hit Rate", "Faithfulness"], latency: "~10s", dependencies: ["retriever", "llm-service"], config: ["Metric selection", "Dataset specification", "Reporting format"], sourceModules: ["src/lib/eval/*.ts"] },
   "research-intel": { purpose: "Track research trends, paper metadata, and citation graphs", inputs: "Papers + queries", outputs: "Research insights", algorithms: ["Citation graph analysis", "Trend detection", "Topic modeling"], latency: "< 500ms", dependencies: ["vector-store"], config: ["Crawl sources", "Update frequency"], sourceModules: ["src/lib/research/*.ts"] },
-  "copilot": { purpose: "Interactive AI assistant with conversational context", inputs: "User messages + context", outputs: "Conversational responses", algorithms: ["Context-aware chat", "Follow-up tracking", "Suggestion generation"], latency: "~2s", dependencies: ["llm-service", "retriever"], config: ["Context window", "Suggestion mode"], sourceModules: ["src/lib/copilot/*.ts"] },
   "experiment-tracker": { purpose: "Log and compare experiments across retrieval strategies", inputs: "Config + metrics", outputs: "Experiment logs", algorithms: ["A/B comparison", "Statistical significance", "Parameter sweep"], latency: "< 1s", dependencies: ["eval-framework"], config: ["Auto-log", "Comparison window"], sourceModules: ["src/lib/experiments/*.ts"] },
   "reproducibility": { purpose: "Ensure reproducible results across runs and environments", inputs: "Experiment configs", outputs: "Reproducible pipelines", algorithms: ["Deterministic seeding", "Version pinning", "Environment snapshots"], latency: "< 1s", dependencies: ["experiment-tracker"], config: ["Snapshot frequency", "Pin versions"], sourceModules: ["src/lib/reproducibility/*.ts"] },
 };

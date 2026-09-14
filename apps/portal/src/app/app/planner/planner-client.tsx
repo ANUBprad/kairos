@@ -173,7 +173,6 @@ export function PlannerPage({ runs }: PlannerPageProps) {
           purpose="AI-powered suggestions for your next experiments."
           relatedPages={[
             { label: "Research Dashboard", href: "/app/research" },
-            { label: "Copilot", href: "/app/copilot" },
           ]}
         />
         <PremiumCard variant="elevated">
@@ -197,7 +196,6 @@ export function PlannerPage({ runs }: PlannerPageProps) {
         purpose="AI-powered suggestions for your next experiments."
         relatedPages={[
           { label: "Research Dashboard", href: "/app/research" },
-          { label: "Copilot", href: "/app/copilot" },
         ]}
       />
       {/* Hero Header */}

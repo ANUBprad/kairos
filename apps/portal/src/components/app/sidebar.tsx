@@ -17,7 +17,6 @@ import {
   Eye,
   Search,
   Lightbulb,
-  Sparkles,
   FlaskConical,
   NotebookPen,
   FileText,
@@ -75,7 +74,6 @@ const navSections: NavSection[] = [
     items: [
       { label: "Overview", href: "/app", icon: LayoutDashboard },
       { label: "Research Dashboard", href: "/app/research", icon: Microscope },
-      { label: "AI Copilot", href: "/app/copilot", icon: Sparkles },
       { label: "Notebook", href: "/app/notebook", icon: NotebookPen, badge: "New" },
       { label: "Experiment Lineage", href: "/app/lineage", icon: GitBranch },
       { label: "Experiment Planner", href: "/app/planner", icon: Lightbulb },
@@ -273,13 +271,6 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
               >
                 <BarChart3 size={12} />
                 View Benchmarks
-              </Link>
-              <Link
-                href="/app/copilot"
-                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
-              >
-                <Sparkles size={12} />
-                Ask Copilot
               </Link>
             </div>
           )}

@@ -243,7 +243,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
         <QuickActionCard href="/app/knowledge-bases" icon={Upload} title="Upload Document" description="Add files to a knowledge base" shortcut="U" />
         <QuickActionCard href="/app/rag-chat" icon={MessageSquare} title="Open RAG Chat" description="Ask questions about your docs" color="text-emerald-500" shortcut="R" />
         <QuickActionCard href="/app/evaluation" icon={BarChart3} title="Run Evaluation" description="Benchmark retrieval performance" color="text-violet-500" shortcut="E" />
-        <QuickActionCard href="/app/copilot" icon={Sparkles} title="Ask Copilot" description="Get AI research insights" color="text-yellow-500" />
+        <QuickActionCard href="/app/knowledge-bases" icon={BookOpen} title="Manage Documents" description="Organize knowledge base sources" color="text-blue-500" shortcut="M" />
       </div>
 
       {/* Main Content Grid: 3-column layout */}

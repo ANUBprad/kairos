@@ -142,7 +142,6 @@ export function ResearchDashboard({
         title="Research Dashboard"
         description="Adaptive Retrieval-Augmented Generation Research Platform"
         purpose="Statistical analysis and automated insights from your experiments."
-        nextAction={{ label: "Ask Copilot", href: "/app/copilot" }}
         relatedPages={[
           { label: "Experiment Planner", href: "/app/planner" },
           { label: "Evaluation", href: "/app/evaluation" },

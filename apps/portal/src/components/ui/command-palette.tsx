@@ -6,7 +6,6 @@ import {
   Search,
   LayoutDashboard,
   Microscope,
-  Sparkles,
   GitBranch,
   Lightbulb,
   FolderOpen,
@@ -43,7 +42,6 @@ interface CommandItem {
 const NAVIGATION_COMMANDS: CommandItem[] = [
   { id: "overview", label: "Overview", href: "/app", icon: LayoutDashboard, category: "Navigation", keywords: ["dashboard", "home", "overview"] },
   { id: "research", label: "Research Dashboard", href: "/app/research", icon: Microscope, category: "Navigation", keywords: ["research", "dashboard", "metrics", "analysis"] },
-  { id: "copilot", label: "AI Copilot", href: "/app/copilot", icon: Sparkles, category: "Navigation", keywords: ["copilot", "ai", "assistant", "recommendations"] },
   { id: "notebook", label: "Research Notebook", href: "/app/notebook", icon: NotebookPen, category: "Navigation", keywords: ["notebook", "notes", "journal", "markdown"] },
   { id: "lineage", label: "Experiment Lineage", href: "/app/lineage", icon: GitBranch, category: "Navigation", keywords: ["lineage", "history", "versions", "provenance"] },
   { id: "planner", label: "Experiment Planner", href: "/app/planner", icon: Lightbulb, category: "Navigation", keywords: ["planner", "plan", "experiment", "suggest"] },
@@ -68,7 +66,6 @@ const ACTION_COMMANDS: CommandItem[] = [
   { id: "new-chat", label: "Open RAG Chat", description: "Ask questions about your documents", href: "/app/rag-chat", action: "new-chat", icon: MessageSquare, category: "Actions", keywords: ["chat", "ask", "question", "rag"], shortcut: "R" },
   { id: "new-experiment", label: "New Experiment", description: "Build and test a retrieval pipeline", href: "/app/experiment-builder", action: "new-experiment", icon: FlaskConical, category: "Actions", keywords: ["experiment", "new", "build", "test"] },
   { id: "run-evaluation", label: "Run Evaluation", description: "Benchmark retrieval performance", href: "/app/evaluation", action: "run-evaluation", icon: BarChart3, category: "Actions", keywords: ["evaluation", "benchmark", "metrics"], shortcut: "E" },
-  { id: "ask-copilot", label: "Ask Copilot", description: "Get AI-powered research insights", href: "/app/copilot", action: "ask-copilot", icon: Sparkles, category: "Actions", keywords: ["copilot", "ai", "help", "insight"] },
   { id: "open-lab", label: "Open Retrieval Lab", description: "Test retrieval configurations", href: "/app/retrieval-lab", action: "open-lab", icon: FlaskConical, category: "Actions", keywords: ["retrieval", "lab", "test"] },
 ];
 
