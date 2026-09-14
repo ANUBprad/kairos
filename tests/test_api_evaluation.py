@@ -68,6 +68,32 @@ def test_evaluate_array_math() -> None:
     assert data["mean_precision"] == 2 / 3
 
 
+def test_run_endpoint_rejects_client_dataset_paths(monkeypatch: MonkeyPatch) -> None:
+    from intelligence.evaluation import factory
+
+    def explode(config, dataset_path=None, use_llm_judges=False):
+        raise AssertionError("run_dataset must never receive a client-supplied filesystem path")
+
+    monkeypatch.setattr(factory, "run_dataset", explode)
+
+    client = _client()
+    for attack in [
+        "../../../etc/passwd",
+        "/etc/shadow",
+        "..\\..\\windows\\win.ini",
+        "%2e%2e%2fetc%2fpasswd",
+    ]:
+        resp = client.post(
+            "/api/v1/evaluation/run",
+            json={
+                "namespace": "ns1",
+                "dataset_name": "golden",
+                "dataset_path": attack,
+            },
+        )
+        assert resp.status_code == 422, f"dataset_path {attack!r} was accepted"
+
+
 def test_run_endpoint_wires_to_runner(monkeypatch: MonkeyPatch) -> None:
     from intelligence.evaluation import factory
 
@@ -104,6 +130,7 @@ def test_run_endpoint_wires_to_runner(monkeypatch: MonkeyPatch) -> None:
     assert cfg.dataset_name == "golden"
     assert cfg.top_k == 3
     assert cfg.max_entries == 5
+    assert cfg.dataset_path is None
     assert captured["use_llm_judges"] is True
 
 

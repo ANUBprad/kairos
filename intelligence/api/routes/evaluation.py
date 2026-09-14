@@ -4,7 +4,7 @@ from dataclasses import asdict
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from intelligence.evaluation.evaluator import Evaluator
 from intelligence.evaluation.ground_truth import GroundTruth, GroundTruthEntry
@@ -25,9 +25,14 @@ class GroundTruthAddRequest(BaseModel):
 
 
 class RunRequest(BaseModel):
+    # The HTTP evaluation boundary never accepts a filesystem path. Datasets
+    # are the package-shipped benchmark file (or a trusted internal caller
+    # invoking run_dataset/load_dataset directly). fail closed on any attempt
+    # to smuggle one in.
+    model_config = ConfigDict(extra="forbid")
+
     namespace: str
     dataset_name: str
-    dataset_path: Optional[str] = None
     top_k: Optional[int] = None
     max_entries: Optional[int] = None
     generate: bool = True
@@ -58,7 +63,6 @@ def run_evaluation_entry(body: RunRequest) -> Dict[str, object]:
     config = RunConfig(
         namespace=body.namespace,
         dataset_name=body.dataset_name,
-        dataset_path=body.dataset_path,
         generate=body.generate,
         judge=body.judge,
         top_k=body.top_k,
@@ -66,7 +70,6 @@ def run_evaluation_entry(body: RunRequest) -> Dict[str, object]:
     )
     result = run_dataset(
         config,
-        dataset_path=body.dataset_path,
         use_llm_judges=body.use_llm_judges,
     )
     payload = result.to_dict()

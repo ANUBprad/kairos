@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { logError } from "@/lib/errors";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import { assertDatasetAccess, assertRunAccess } from "@/lib/evaluation/access";
 import {
   createBenchmarkDataset,
   getBenchmarkDatasets,
@@ -27,24 +28,6 @@ async function assertKbAccess(kbId: string, userId: string) {
   if (!(await canAccessKnowledgeBase(userId, kbId))) {
     throw new Error("Knowledge base not found");
   }
-}
-
-async function assertDatasetAccess(datasetId: string, _userId: string) {
-  const dataset = await prisma.benchmarkDataset.findUnique({
-    where: { id: datasetId },
-    select: { id: true },
-  });
-  if (!dataset) throw new Error("Dataset not found");
-  return dataset;
-}
-
-async function assertRunAccess(runId: string, _userId: string) {
-  const run = await prisma.benchmarkRun.findUnique({
-    where: { id: runId },
-    select: { id: true },
-  });
-  if (!run) throw new Error("Run not found");
-  return run;
 }
 
 export async function createDataset(data: {
@@ -164,6 +147,7 @@ export async function startBenchmark(
 
   try {
     await assertKbAccess(knowledgeBaseId, session.user.id);
+    await assertDatasetAccess(datasetId, session.user.id);
 
     const runId = await runBenchmark(datasetId, knowledgeBaseId, config, label);
     revalidatePath("/app/evaluation");
@@ -259,6 +243,7 @@ export async function compareRetrievalStrategies(
   if (!session) throw new Error("Not authenticated");
 
   await assertKbAccess(knowledgeBaseId, session.user.id);
+  await assertDatasetAccess(datasetId, session.user.id);
 
   const strategies = [
     { name: "Vector", config: { retrievalStrategy: "vector" as const, retrievalMode: "vector" as const } },
@@ -298,6 +283,7 @@ export async function runCampaign(
 
   try {
     await assertKbAccess(knowledgeBaseId, session.user.id);
+    await assertDatasetAccess(datasetId, session.user.id);
 
     return runBenchmarkCampaign(
       {
