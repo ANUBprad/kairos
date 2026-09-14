@@ -14,6 +14,9 @@ const HOTPATH_TABLES = [
   "ProviderHealth",
   "DocumentChunk",
   "DocumentEmbedding",
+  "Conversation",
+  "Message",
+  "MessageCitation",
 ];
 
 const HOTPATH_INDEXES = [
@@ -21,6 +24,9 @@ const HOTPATH_INDEXES = [
   "ExperimentRun_knowledgeBaseId_createdAt_idx",
   "BenchmarkRun_status_idx",
   "ProviderHealth_organizationId_date_idx",
+  "Conversation_knowledgeBaseId_userId_idx",
+  "Message_conversationId_createdAt_idx",
+  "MessageCitation_messageId_idx",
 ];
 
 function makeClient(url: string): PrismaClient {

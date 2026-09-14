@@ -118,13 +118,6 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    label: "Explain",
-    items: [
-      { label: "RAG Chat", href: "/app/rag-chat", icon: Bot },
-      { label: "Retrieval Debugger", href: "/app/rag-chat#debug", icon: Eye },
-    ],
-  },
-  {
     label: "Learn",
     items: [
       { label: "Architecture", href: "/app/architecture", icon: BookOpen },
