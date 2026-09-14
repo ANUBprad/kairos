@@ -33,20 +33,22 @@ export async function getAlertRules(orgId: string) {
   });
 }
 
-export async function updateAlertRule(ruleId: string, data: Partial<CreateAlertRuleInput>) {
+export async function updateAlertRule(ruleId: string, data: Partial<CreateAlertRuleInput>, orgId?: string) {
   return prisma.alertRule.update({
-    where: { id: ruleId },
+    where: orgId ? { id: ruleId, organizationId: orgId } : { id: ruleId },
     data,
   });
 }
 
-export async function deleteAlertRule(ruleId: string) {
-  return prisma.alertRule.delete({ where: { id: ruleId } });
+export async function deleteAlertRule(ruleId: string, orgId?: string) {
+  return prisma.alertRule.delete({
+    where: orgId ? { id: ruleId, organizationId: orgId } : { id: ruleId },
+  });
 }
 
-export async function toggleAlertRule(ruleId: string, enabled: boolean) {
+export async function toggleAlertRule(ruleId: string, enabled: boolean, orgId?: string) {
   return prisma.alertRule.update({
-    where: { id: ruleId },
+    where: orgId ? { id: ruleId, organizationId: orgId } : { id: ruleId },
     data: { enabled },
   });
 }
@@ -153,16 +155,16 @@ export async function getAlertEvents(orgId: string, filters?: { status?: string;
   });
 }
 
-export async function resolveAlertEvent(eventId: string) {
+export async function resolveAlertEvent(eventId: string, orgId?: string) {
   return prisma.alertEvent.update({
-    where: { id: eventId },
+    where: orgId ? { id: eventId, organizationId: orgId } : { id: eventId },
     data: { status: 'RESOLVED', resolvedAt: new Date() },
   });
 }
 
-export async function acknowledgeAlertEvent(eventId: string) {
+export async function acknowledgeAlertEvent(eventId: string, orgId?: string) {
   return prisma.alertEvent.update({
-    where: { id: eventId },
+    where: orgId ? { id: eventId, organizationId: orgId } : { id: eventId },
     data: { status: 'ACKNOWLEDGED' },
   });
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import {
   createReview,
   getReview,
@@ -20,8 +21,6 @@ import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import type { ReviewStatus, ReviewPriority } from "@prisma/client";
 
-const ORG_ID = "demo-org";
-
 // ============================================================================
 // Review Item Actions
 // ============================================================================
@@ -33,7 +32,7 @@ export async function createReviewItem(input: CreateReviewInput) {
       throw new Error("Unauthorized");
     }
 
-    const review = await createReview(ORG_ID, session.user.id, input);
+    const review = await createReview(await getSelectedOrgId(), session.user.id, input);
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -55,7 +54,7 @@ export async function getReviewItem(reviewId: string) {
       throw new Error("Unauthorized");
     }
 
-    const review = await getReview(reviewId);
+    const review = await getReview(reviewId, await getSelectedOrgId());
 
     return { success: true, review };
   } catch (error) {
@@ -83,7 +82,7 @@ export async function listReviewItems(options: {
       throw new Error("Unauthorized");
     }
 
-    const result = await listReviews(ORG_ID, options);
+    const result = await listReviews(await getSelectedOrgId(), options);
 
     return { success: true, ...result };
   } catch (error) {
@@ -104,7 +103,7 @@ export async function assignReviewItem(reviewId: string, assigneeId: string) {
       throw new Error("Unauthorized");
     }
 
-    const review = await assignReview(reviewId, assigneeId);
+    const review = await assignReview(reviewId, assigneeId, await getSelectedOrgId());
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -126,7 +125,7 @@ export async function startReviewItem(reviewId: string) {
       throw new Error("Unauthorized");
     }
 
-    const review = await startReview(reviewId, session.user.id);
+    const review = await startReview(reviewId, session.user.id, await getSelectedOrgId());
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -148,7 +147,7 @@ export async function approveReviewItem(reviewId: string, score?: number) {
       throw new Error("Unauthorized");
     }
 
-    const review = await approveReview(reviewId, session.user.id, score);
+    const review = await approveReview(reviewId, session.user.id, score, await getSelectedOrgId());
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -170,7 +169,7 @@ export async function rejectReviewItem(reviewId: string, reason?: string) {
       throw new Error("Unauthorized");
     }
 
-    const review = await rejectReview(reviewId, session.user.id, reason);
+    const review = await rejectReview(reviewId, session.user.id, reason, await getSelectedOrgId());
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -192,7 +191,7 @@ export async function markReviewNeedsImprovement(reviewId: string, comments: str
       throw new Error("Unauthorized");
     }
 
-    const review = await markNeedsImprovement(reviewId, session.user.id, comments);
+    const review = await markNeedsImprovement(reviewId, session.user.id, comments, await getSelectedOrgId());
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -214,7 +213,7 @@ export async function addReviewComment(reviewId: string, content: string) {
       throw new Error("Unauthorized");
     }
 
-    const comment = await addComment(reviewId, session.user.id, content);
+    const comment = await addComment(reviewId, session.user.id, content, await getSelectedOrgId());
 
     revalidatePath("/app/reviews");
     return { success: true, comment };
@@ -236,7 +235,7 @@ export async function getReviewItemStats() {
       throw new Error("Unauthorized");
     }
 
-    const stats = await getReviewStats(ORG_ID);
+    const stats = await getReviewStats(await getSelectedOrgId());
 
     return { success: true, stats };
   } catch (error) {
@@ -261,7 +260,7 @@ export async function getMyReviewItems(options: {
       throw new Error("Unauthorized");
     }
 
-    const result = await getMyReviews(session.user.id, options);
+    const result = await getMyReviews(session.user.id, options, await getSelectedOrgId());
 
     return { success: true, ...result };
   } catch (error) {
@@ -282,7 +281,7 @@ export async function getReviewItemHistory(resourceType: string, resourceId: str
       throw new Error("Unauthorized");
     }
 
-    const history = await getReviewHistory(resourceType, resourceId);
+    const history = await getReviewHistory(resourceType, resourceId, await getSelectedOrgId());
 
     return { success: true, history };
   } catch (error) {

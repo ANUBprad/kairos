@@ -35,7 +35,7 @@ interface AuditStats {
   topActions: { action: string; count: number }[];
 }
 
-export function AuditLogsSettingsClient() {
+export function AuditLogsSettingsClient({ orgId }: { orgId: string }) {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [stats, setStats] = useState<AuditStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,8 +52,8 @@ export function AuditLogsSettingsClient() {
     setLoading(true);
     try {
       const [logsResult, statsResult] = await Promise.all([
-        listAuditLogs("demo-org", { limit: 20, offset: 0, action: filter || undefined }),
-        getAuditLogStats("demo-org"),
+        listAuditLogs(orgId, { limit: 20, offset: 0, action: filter || undefined }),
+        getAuditLogStats(orgId),
       ]);
 
       if (logsResult.success && "logs" in logsResult) {
@@ -70,7 +70,7 @@ export function AuditLogsSettingsClient() {
 
   const loadMore = async () => {
     const nextPage = page + 1;
-    const result = await listAuditLogs("demo-org", {
+    const result = await listAuditLogs(orgId, {
       limit: 20,
       offset: nextPage * 20,
       action: filter || undefined,
@@ -87,7 +87,7 @@ export function AuditLogsSettingsClient() {
   const handleExport = async (format: "json" | "csv") => {
     setExporting(true);
     try {
-      const result = await exportAuditLogs("demo-org", { format });
+      const result = await exportAuditLogs(orgId, { format });
       if (result.success && result.data) {
         const blob = new Blob(
           [typeof result.data === "string" ? result.data : JSON.stringify(result.data, null, 2)],

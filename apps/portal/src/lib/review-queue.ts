@@ -102,9 +102,9 @@ function mapReview(
   };
 }
 
-async function getReviewOrThrow(reviewId: string) {
-  const review = await prisma.reviewQueue.findUnique({
-    where: { id: reviewId },
+async function getReviewOrThrow(reviewId: string, organizationId?: string) {
+  const review = await prisma.reviewQueue.findFirst({
+    where: { id: reviewId, ...(organizationId ? { organizationId } : {}) },
     include: {
       _count: { select: { comments: true } },
     },
@@ -150,10 +150,11 @@ export async function createReview(
 }
 
 export async function getReview(
-  reviewId: string
+  reviewId: string,
+  organizationId?: string
 ): Promise<(ReviewQueueInfo & { comments: ReviewCommentInfo[] }) | null> {
-  const review = await prisma.reviewQueue.findUnique({
-    where: { id: reviewId },
+  const review = await prisma.reviewQueue.findFirst({
+    where: { id: reviewId, ...(organizationId ? { organizationId } : {}) },
     include: {
       comments: {
         include: {
@@ -227,9 +228,10 @@ export async function listReviews(
 
 export async function assignReview(
   reviewId: string,
-  assigneeId: string
+  assigneeId: string,
+  organizationId?: string
 ): Promise<ReviewQueueInfo> {
-  const review = await getReviewOrThrow(reviewId);
+  const review = await getReviewOrThrow(reviewId, organizationId);
 
   const updated = await prisma.reviewQueue.update({
     where: { id: reviewId },
@@ -253,9 +255,10 @@ export async function assignReview(
 
 export async function startReview(
   reviewId: string,
-  reviewerId: string
+  reviewerId: string,
+  organizationId?: string
 ): Promise<ReviewQueueInfo> {
-  const review = await getReviewOrThrow(reviewId);
+  const review = await getReviewOrThrow(reviewId, organizationId);
 
   if (review.status !== "PENDING") {
     throw new Error(`Cannot start review in "${review.status}" status`);
@@ -281,9 +284,10 @@ export async function startReview(
 export async function approveReview(
   reviewId: string,
   reviewerId: string,
-  score?: number
+  score?: number,
+  organizationId?: string
 ): Promise<ReviewQueueInfo> {
-  const review = await getReviewOrThrow(reviewId);
+  const review = await getReviewOrThrow(reviewId, organizationId);
 
   if (review.status !== "IN_REVIEW") {
     throw new Error(`Cannot approve review in "${review.status}" status`);
@@ -314,9 +318,10 @@ export async function approveReview(
 export async function rejectReview(
   reviewId: string,
   reviewerId: string,
-  reason?: string
+  reason?: string,
+  organizationId?: string
 ): Promise<ReviewQueueInfo> {
-  const review = await getReviewOrThrow(reviewId);
+  const review = await getReviewOrThrow(reviewId, organizationId);
 
   if (review.status !== "IN_REVIEW") {
     throw new Error(`Cannot reject review in "${review.status}" status`);
@@ -356,9 +361,10 @@ export async function rejectReview(
 export async function markNeedsImprovement(
   reviewId: string,
   reviewerId: string,
-  comments: string
+  comments: string,
+  organizationId?: string
 ): Promise<ReviewQueueInfo> {
-  const review = await getReviewOrThrow(reviewId);
+  const review = await getReviewOrThrow(reviewId, organizationId);
 
   if (review.status !== "IN_REVIEW") {
     throw new Error(
@@ -398,9 +404,10 @@ export async function markNeedsImprovement(
 export async function addComment(
   reviewId: string,
   authorId: string,
-  content: string
+  content: string,
+  organizationId?: string
 ): Promise<ReviewCommentInfo> {
-  await getReviewOrThrow(reviewId);
+  await getReviewOrThrow(reviewId, organizationId);
 
   const comment = await prisma.reviewComment.create({
     data: {
@@ -485,13 +492,15 @@ export async function getReviewStats(
 
 export async function getMyReviews(
   userId: string,
-  options: { status?: ReviewStatus; limit?: number; offset?: number } = {}
+  options: { status?: ReviewStatus; limit?: number; offset?: number } = {},
+  organizationId?: string
 ): Promise<{ reviews: ReviewQueueInfo[]; total: number }> {
   const { status, limit = 20, offset = 0 } = options;
 
   const where: Record<string, unknown> = {
     OR: [{ assigneeId: userId }, { reviewerId: userId }],
   };
+  if (organizationId) where.organizationId = organizationId;
   if (status) where.status = status;
 
   const [reviews, total] = await Promise.all([
@@ -515,10 +524,11 @@ export async function getMyReviews(
 
 export async function getReviewHistory(
   resourceType: string,
-  resourceId: string
+  resourceId: string,
+  organizationId?: string
 ): Promise<ReviewQueueInfo[]> {
   const reviews = await prisma.reviewQueue.findMany({
-    where: { resourceType, resourceId },
+    where: { resourceType, resourceId, ...(organizationId ? { organizationId } : {}) },
     include: {
       _count: { select: { comments: true } },
     },

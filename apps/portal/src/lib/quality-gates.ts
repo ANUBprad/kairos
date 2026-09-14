@@ -158,9 +158,10 @@ export async function createGate(
 
 export async function getGate(
   gateId: string,
+  organizationId?: string,
 ): Promise<QualityGateInfo | null> {
-  const gate = await prisma.qualityGate.findUnique({
-    where: { id: gateId },
+  const gate = await prisma.qualityGate.findFirst({
+    where: { id: gateId, ...(organizationId ? { organizationId } : {}) },
   });
 
   if (!gate) return null;
@@ -185,7 +186,12 @@ export async function updateGate(
     description?: string;
     conditions?: QualityGateCondition[];
   },
+  organizationId?: string
 ): Promise<QualityGateInfo> {
+  if (organizationId) {
+    const existing = await prisma.qualityGate.findFirst({ where: { id: gateId, organizationId } });
+    if (!existing) throw new Error("Quality gate not found");
+  }
   const gate = await prisma.qualityGate.update({
     where: { id: gateId },
     data: {
@@ -198,8 +204,12 @@ export async function updateGate(
   return toGateInfo(gate);
 }
 
-export async function deleteGate(gateId: string): Promise<boolean> {
+export async function deleteGate(gateId: string, organizationId?: string): Promise<boolean> {
   try {
+    if (organizationId) {
+      const existing = await prisma.qualityGate.findFirst({ where: { id: gateId, organizationId } });
+      if (!existing) return false;
+    }
     await prisma.qualityGate.delete({ where: { id: gateId } });
     return true;
   } catch {
@@ -210,7 +220,12 @@ export async function deleteGate(gateId: string): Promise<boolean> {
 export async function toggleGate(
   gateId: string,
   enabled: boolean,
+  organizationId?: string
 ): Promise<QualityGateInfo> {
+  if (organizationId) {
+    const existing = await prisma.qualityGate.findFirst({ where: { id: gateId, organizationId } });
+    if (!existing) throw new Error("Quality gate not found");
+  }
   const gate = await prisma.qualityGate.update({
     where: { id: gateId },
     data: { enabled },
@@ -262,7 +277,12 @@ export async function recordResult(
   results: Record<string, ConditionResult>,
   score?: number,
   evaluationRunId?: string,
+  organizationId?: string,
 ): Promise<QualityGateResultInfo> {
+  if (organizationId) {
+    const gate = await prisma.qualityGate.findFirst({ where: { id: gateId, organizationId } });
+    if (!gate) throw new Error("Quality gate not found");
+  }
   const result = await prisma.qualityGateResult.create({
     data: {
       gateId,
@@ -287,9 +307,15 @@ export async function recordResult(
 export async function getGateResults(
   gateId: string,
   options?: { limit?: number; offset?: number },
+  organizationId?: string,
 ): Promise<QualityGateResultInfo[]> {
   const limit = options?.limit ?? 50;
   const offset = options?.offset ?? 0;
+
+  if (organizationId) {
+    const gate = await prisma.qualityGate.findFirst({ where: { id: gateId, organizationId } });
+    if (!gate) return [];
+  }
 
   const results = await prisma.qualityGateResult.findMany({
     where: { gateId },

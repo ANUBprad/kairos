@@ -1,18 +1,11 @@
 'use server';
 
-import { auth } from '@/auth';
-import { prisma } from '@/lib/db';
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import { getTelemetryConfig, updateTelemetryConfig, archiveOldTraces, cleanupOldAlerts, getStorageStats } from '@/lib/observability/storage';
 import type { TelemetryConfigInput } from '@/lib/observability/storage';
 
 async function getOrgId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-  const membership = await prisma.member.findFirst({
-    where: { userId: session.user.id },
-  });
-  if (!membership) throw new Error('No organization');
-  return membership.organizationId;
+  return getSelectedOrgId();
 }
 
 export async function telemetryConfig() {

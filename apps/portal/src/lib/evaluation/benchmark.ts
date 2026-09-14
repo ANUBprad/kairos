@@ -7,6 +7,7 @@ import { calculateRetrievalMetrics } from "./metrics/retrieval";
 import { calculateGenerationMetrics } from "./metrics/generation";
 import { calculateAverageMetrics } from "./metrics/retrieval";
 import { calculateAverageGenerationMetrics } from "./metrics/generation";
+import { assertDatasetAccess } from "./access";
 import type { EvaluationReport, ComparisonResult } from "./types";
 
 export interface BenchmarkProgress {
@@ -44,8 +45,18 @@ export async function createBenchmarkDataset(data: {
   });
 }
 
-export async function getBenchmarkDatasets() {
+export async function getBenchmarkDatasets(userId?: string) {
   return prisma.benchmarkDataset.findMany({
+    ...(userId
+      ? {
+          where: {
+            OR: [
+              { knowledgeBaseId: null },
+              { knowledgeBase: { project: { organization: { members: { some: { userId } } } } } },
+            ],
+          },
+        }
+      : {}),
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { questions: true } } },
   });
@@ -58,7 +69,10 @@ export async function getBenchmarkDataset(id: string) {
   });
 }
 
-export async function getBenchmarkRuns(datasetId: string) {
+export async function getBenchmarkRuns(datasetId: string, userId?: string) {
+  if (userId) {
+    await assertDatasetAccess(datasetId, userId);
+  }
   return prisma.benchmarkRun.findMany({
     where: { datasetId },
     orderBy: { createdAt: "desc" },

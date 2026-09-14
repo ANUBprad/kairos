@@ -1,6 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
+import { getMembership } from "@/lib/rbac";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import {
@@ -24,6 +25,10 @@ export async function sendInvitation(
     const session = await getServerSession();
     if (!session?.user) {
       throw new Error("Unauthorized");
+    }
+
+    if (!(await getMembership(session.user.id, organizationId))) {
+      throw new Error("Organization not found");
     }
 
     const result = await inviteMember(organizationId, session.user.id, input);
@@ -71,6 +76,10 @@ export async function revokeOrganizationInvitation(
       throw new Error("Unauthorized");
     }
 
+    if (!(await getMembership(session.user.id, organizationId))) {
+      throw new Error("Organization not found");
+    }
+
     await revokeInvitation(invitationId, session.user.id);
     revalidatePath("/app/settings/members");
     return { success: true };
@@ -90,6 +99,10 @@ export async function listOrganizationInvitations(organizationId: string) {
     const session = await getServerSession();
     if (!session?.user) {
       throw new Error("Unauthorized");
+    }
+
+    if (!(await getMembership(session.user.id, organizationId))) {
+      throw new Error("Organization not found");
     }
 
     const invitations = await getOrganizationInvitations(organizationId);

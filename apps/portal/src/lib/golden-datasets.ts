@@ -146,9 +146,29 @@ export async function createDataset(
   return toDatasetInfo(dataset, 0);
 }
 
+async function assertDatasetAccess(datasetId: string, organizationId?: string) {
+  if (!organizationId) return;
+  const dataset = await prisma.goldenDataset.findFirst({
+    where: { id: datasetId, organizationId },
+    select: { id: true },
+  });
+  if (!dataset) throw new Error("Dataset not found");
+}
+
+async function assertEntryAccess(entryId: string, organizationId?: string) {
+  if (!organizationId) return;
+  const entry = await prisma.goldenDatasetEntry.findFirst({
+    where: { id: entryId, dataset: { organizationId } },
+    select: { id: true },
+  });
+  if (!entry) throw new Error("Entry not found");
+}
+
 export async function getDataset(
-  datasetId: string
+  datasetId: string,
+  organizationId?: string
 ): Promise<{ dataset: GoldenDatasetInfo; entries: GoldenDatasetEntryInfo[] } | null> {
+  await assertDatasetAccess(datasetId, organizationId);
   const dataset = await prisma.goldenDataset.findUnique({
     where: { id: datasetId },
     include: {
@@ -206,8 +226,10 @@ export async function listDatasets(
 
 export async function updateDataset(
   datasetId: string,
-  input: Partial<CreateDatasetInput>
+  input: Partial<CreateDatasetInput>,
+  organizationId?: string
 ): Promise<GoldenDatasetInfo> {
+  await assertDatasetAccess(datasetId, organizationId);
   const data: Prisma.GoldenDatasetUpdateInput = {};
 
   if (input.name !== undefined) data.name = input.name;
@@ -228,8 +250,9 @@ export async function updateDataset(
   return toDatasetInfo(dataset, dataset._count.entries);
 }
 
-export async function deleteDataset(datasetId: string): Promise<boolean> {
+export async function deleteDataset(datasetId: string, organizationId?: string): Promise<boolean> {
   try {
+    await assertDatasetAccess(datasetId, organizationId);
     await prisma.goldenDataset.delete({ where: { id: datasetId } });
     logger.info("Deleted golden dataset", { datasetId });
     return true;
@@ -240,8 +263,10 @@ export async function deleteDataset(datasetId: string): Promise<boolean> {
 
 export async function addEntry(
   datasetId: string,
-  input: CreateEntryInput
+  input: CreateEntryInput,
+  organizationId?: string
 ): Promise<GoldenDatasetEntryInfo> {
+  await assertDatasetAccess(datasetId, organizationId);
   const entry = await prisma.goldenDatasetEntry.create({
     data: {
       question: input.question,
@@ -260,8 +285,10 @@ export async function addEntry(
 
 export async function bulkAddEntries(
   datasetId: string,
-  entries: CreateEntryInput[]
+  entries: CreateEntryInput[],
+  organizationId?: string
 ): Promise<{ count: number }> {
+  await assertDatasetAccess(datasetId, organizationId);
   const result = await prisma.goldenDatasetEntry.createMany({
     data: entries.map((e) => ({
       question: e.question,
@@ -285,8 +312,10 @@ export async function bulkAddEntries(
 
 export async function updateEntry(
   entryId: string,
-  input: Partial<CreateEntryInput>
+  input: Partial<CreateEntryInput>,
+  organizationId?: string
 ): Promise<GoldenDatasetEntryInfo> {
+  await assertEntryAccess(entryId, organizationId);
   const data: Prisma.GoldenDatasetEntryUpdateInput = {};
 
   if (input.question !== undefined) data.question = input.question;
@@ -305,8 +334,9 @@ export async function updateEntry(
   return toEntryInfo(entry);
 }
 
-export async function deleteEntry(entryId: string): Promise<boolean> {
+export async function deleteEntry(entryId: string, organizationId?: string): Promise<boolean> {
   try {
+    await assertEntryAccess(entryId, organizationId);
     await prisma.goldenDatasetEntry.delete({ where: { id: entryId } });
     return true;
   } catch {
@@ -355,8 +385,10 @@ export async function importDataset(
 }
 
 export async function exportDataset(
-  datasetId: string
+  datasetId: string,
+  organizationId?: string
 ): Promise<Omit<ImportDatasetInput, "entries"> & { entries: CreateEntryInput[] } | null> {
+  await assertDatasetAccess(datasetId, organizationId);
   const dataset = await prisma.goldenDataset.findUnique({
     where: { id: datasetId },
     include: {
@@ -386,8 +418,10 @@ export async function exportDataset(
 }
 
 export async function createVersion(
-  datasetId: string
+  datasetId: string,
+  organizationId?: string
 ): Promise<GoldenDatasetInfo> {
+  await assertDatasetAccess(datasetId, organizationId);
   const source = await prisma.goldenDataset.findUnique({
     where: { id: datasetId },
     include: { entries: true },
@@ -443,11 +477,13 @@ export async function createVersion(
 }
 
 export async function validateDataset(
-  datasetId: string
+  datasetId: string,
+  organizationId?: string
 ): Promise<{
   valid: boolean;
   errors: Array<{ entryId: string; issues: string[] }>;
 }> {
+  await assertDatasetAccess(datasetId, organizationId);
   const entries = await prisma.goldenDatasetEntry.findMany({
     where: { datasetId },
   });
@@ -476,8 +512,10 @@ export async function validateDataset(
 }
 
 export async function getDatasetStats(
-  datasetId: string
+  datasetId: string,
+  organizationId?: string
 ): Promise<DatasetStats> {
+  await assertDatasetAccess(datasetId, organizationId);
   const entries = await prisma.goldenDatasetEntry.findMany({
     where: { datasetId },
     select: {

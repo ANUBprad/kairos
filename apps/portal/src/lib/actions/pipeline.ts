@@ -1,7 +1,6 @@
 'use server';
 
-import { auth } from '@/auth';
-import { prisma } from '@/lib/db';
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createPipelineRun,
@@ -14,13 +13,7 @@ import {
 import type { CreatePipelineInput } from '@/lib/observability/pipeline-inspector';
 
 async function getOrgId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-  const membership = await prisma.member.findFirst({
-    where: { userId: session.user.id },
-  });
-  if (!membership) throw new Error('No organization');
-  return membership.organizationId;
+  return getSelectedOrgId();
 }
 
 export async function startPipeline(input: CreatePipelineInput) {
@@ -33,18 +26,18 @@ export async function startPipeline(input: CreatePipelineInput) {
 }
 
 export async function completeStep(stepId: string, status: 'COMPLETED' | 'FAILED' | 'TIMEOUT', output?: unknown, error?: string) {
-  return finishPipelineStep(stepId, status, output, error);
+  return finishPipelineStep(stepId, status, output, error, await getOrgId());
 }
 
 export async function completePipeline(pipelineId: string, status: 'COMPLETED' | 'FAILED' | 'TIMEOUT') {
   const orgId = await getOrgId();
-  const result = await finishPipelineRun(pipelineId, status);
+  const result = await finishPipelineRun(pipelineId, status, orgId);
   await logActivity(orgId, 'PIPELINE_COMPLETED', 'PipelineRun', pipelineId, { status });
   return result;
 }
 
 export async function getPipeline(pipelineId: string) {
-  return getPipelineRun(pipelineId);
+  return getPipelineRun(pipelineId, await getOrgId());
 }
 
 export async function getPipelineRuns(filters?: { status?: string; limit?: number }) {

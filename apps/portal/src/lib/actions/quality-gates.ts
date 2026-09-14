@@ -1,6 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import {
   createGate,
   getGate,
@@ -19,8 +20,6 @@ import {
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 
-const DEMO_ORG = "demo-org";
-
 // ============================================================================
 // Quality Gates Actions
 // ============================================================================
@@ -36,7 +35,7 @@ export async function createQualityGate(input: {
       throw new Error("Unauthorized");
     }
 
-    const gate = await createGate(DEMO_ORG, input);
+    const gate = await createGate(await getSelectedOrgId(), input);
     revalidatePath("/app/quality-gates");
     return { success: true, ...gate };
   } catch (error) {
@@ -57,7 +56,7 @@ export async function getQualityGate(gateId: string) {
       throw new Error("Unauthorized");
     }
 
-    const gate = await getGate(gateId);
+    const gate = await getGate(gateId, await getSelectedOrgId());
     if (!gate) {
       return { success: false, error: "Quality gate not found" };
     }
@@ -81,7 +80,7 @@ export async function listQualityGates() {
       throw new Error("Unauthorized");
     }
 
-    const gates = await listGates(DEMO_ORG);
+    const gates = await listGates(await getSelectedOrgId());
     return { success: true, gates };
   } catch (error) {
     logger.error("Failed to list quality gates", {
@@ -108,7 +107,7 @@ export async function updateQualityGate(
       throw new Error("Unauthorized");
     }
 
-    const gate = await updateGate(gateId, input);
+    const gate = await updateGate(gateId, input, await getSelectedOrgId());
     revalidatePath("/app/quality-gates");
     return { success: true, ...gate };
   } catch (error) {
@@ -130,7 +129,7 @@ export async function deleteQualityGate(gateId: string) {
       throw new Error("Unauthorized");
     }
 
-    const deleted = await deleteGate(gateId);
+    const deleted = await deleteGate(gateId, await getSelectedOrgId());
     revalidatePath("/app/quality-gates");
     return { success: deleted };
   } catch (error) {
@@ -152,7 +151,7 @@ export async function toggleQualityGate(gateId: string, enabled: boolean) {
       throw new Error("Unauthorized");
     }
 
-    const gate = await toggleGate(gateId, enabled);
+    const gate = await toggleGate(gateId, enabled, await getSelectedOrgId());
     revalidatePath("/app/quality-gates");
     return { success: true, ...gate };
   } catch (error) {
@@ -178,7 +177,7 @@ export async function checkQualityGate(
       throw new Error("Unauthorized");
     }
 
-    const gate = await getGate(gateId);
+    const gate = await getGate(gateId, await getSelectedOrgId());
     if (!gate) {
       return { success: false, error: "Quality gate not found" };
     }
@@ -206,7 +205,7 @@ export async function checkAllQualityGates(
       throw new Error("Unauthorized");
     }
 
-    const results = await checkAllGates(DEMO_ORG, metrics);
+    const results = await checkAllGates(await getSelectedOrgId(), metrics);
     return { success: true, results };
   } catch (error) {
     logger.error("Failed to check all quality gates", {
@@ -232,7 +231,7 @@ export async function recordQualityGateResult(
       throw new Error("Unauthorized");
     }
 
-    const result = await recordResult(gateId, passed, results, score, evaluationRunId);
+    const result = await recordResult(gateId, passed, results, score, evaluationRunId, await getSelectedOrgId());
     revalidatePath("/app/quality-gates");
     return { success: true, ...result };
   } catch (error) {
@@ -257,7 +256,7 @@ export async function getQualityGateResults(
       throw new Error("Unauthorized");
     }
 
-    const results = await getGateResults(gateId, options);
+    const results = await getGateResults(gateId, options, await getSelectedOrgId());
     return { success: true, results };
   } catch (error) {
     logger.error("Failed to get quality gate results", {
@@ -278,7 +277,7 @@ export async function getQualityGateStats() {
       throw new Error("Unauthorized");
     }
 
-    const stats = await getGateStats(DEMO_ORG);
+    const stats = await getGateStats(await getSelectedOrgId());
     return { success: true, ...stats };
   } catch (error) {
     logger.error("Failed to get quality gate stats", {

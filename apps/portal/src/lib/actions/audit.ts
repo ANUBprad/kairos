@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
+import { getMembership } from "@/lib/rbac";
 import { logger } from "@/lib/logger";
 
 // ============================================================================
@@ -46,6 +47,10 @@ export async function listAuditLogs(
     const session = await getServerSession();
     if (!session?.user) {
       throw new Error("Unauthorized");
+    }
+
+    if (!(await getMembership(session.user.id, organizationId))) {
+      throw new Error("Organization not found");
     }
 
     const { limit = 50, offset = 0, action, resource, userId, startDate, endDate } = options;
@@ -105,6 +110,10 @@ export async function getAuditLogStats(organizationId: string) {
     const session = await getServerSession();
     if (!session?.user) {
       throw new Error("Unauthorized");
+    }
+
+    if (!(await getMembership(session.user.id, organizationId))) {
+      throw new Error("Organization not found");
     }
 
     const now = new Date();
@@ -182,6 +191,10 @@ export async function exportAuditLogs(
     const session = await getServerSession();
     if (!session?.user) {
       throw new Error("Unauthorized");
+    }
+
+    if (!(await getMembership(session.user.id, organizationId))) {
+      throw new Error("Organization not found");
     }
 
     const { startDate, endDate, format = "json" } = options;

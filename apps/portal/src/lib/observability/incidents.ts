@@ -43,9 +43,9 @@ export async function getIncidents(orgId: string, filters?: {
   });
 }
 
-export async function getIncidentById(incidentId: string) {
+export async function getIncidentById(incidentId: string, orgId?: string) {
   return prisma.incident.findUnique({
-    where: { id: incidentId },
+    where: orgId ? { id: incidentId, organizationId: orgId } : { id: incidentId },
     include: {
       owner: {
         select: { id: true, name: true, email: true, image: true },
@@ -61,7 +61,8 @@ export async function updateIncidentStatus(
     resolution?: string;
     rootCause?: string;
     postmortem?: string;
-  }
+  },
+  orgId?: string
 ) {
   const update: any = { status };
   if (data?.resolution) update.resolution = data.resolution;
@@ -72,20 +73,22 @@ export async function updateIncidentStatus(
   }
 
   return prisma.incident.update({
-    where: { id: incidentId },
+    where: orgId ? { id: incidentId, organizationId: orgId } : { id: incidentId },
     data: update,
   });
 }
 
-export async function assignIncident(incidentId: string, ownerId: string) {
+export async function assignIncident(incidentId: string, ownerId: string, orgId?: string) {
   return prisma.incident.update({
-    where: { id: incidentId },
+    where: orgId ? { id: incidentId, organizationId: orgId } : { id: incidentId },
     data: { ownerId },
   });
 }
 
-export async function linkAlertToIncident(incidentId: string, alertId: string) {
-  const incident = await prisma.incident.findUnique({ where: { id: incidentId } });
+export async function linkAlertToIncident(incidentId: string, alertId: string, orgId?: string) {
+  const incident = orgId
+    ? await prisma.incident.findFirst({ where: { id: incidentId, organizationId: orgId } })
+    : await prisma.incident.findUnique({ where: { id: incidentId } });
   if (!incident) throw new Error('Incident not found');
 
   const linkedAlertIds = [...new Set([...incident.linkedAlertIds, alertId])];
@@ -95,8 +98,10 @@ export async function linkAlertToIncident(incidentId: string, alertId: string) {
   });
 }
 
-export async function linkTraceToIncident(incidentId: string, traceId: string) {
-  const incident = await prisma.incident.findUnique({ where: { id: incidentId } });
+export async function linkTraceToIncident(incidentId: string, traceId: string, orgId?: string) {
+  const incident = orgId
+    ? await prisma.incident.findFirst({ where: { id: incidentId, organizationId: orgId } })
+    : await prisma.incident.findUnique({ where: { id: incidentId } });
   if (!incident) throw new Error('Incident not found');
 
   const linkedTraceIds = [...new Set([...incident.linkedTraceIds, traceId])];
@@ -106,7 +111,11 @@ export async function linkTraceToIncident(incidentId: string, traceId: string) {
   });
 }
 
-export async function createIncidentEvent(incidentId: string, message: string) {
+export async function createIncidentEvent(incidentId: string, message: string, orgId?: string) {
+  if (orgId) {
+    const incident = await prisma.incident.findFirst({ where: { id: incidentId, organizationId: orgId } });
+    if (!incident) throw new Error('Incident not found');
+  }
   return prisma.incidentEvent.create({
     data: {
       incidentId,
@@ -116,7 +125,11 @@ export async function createIncidentEvent(incidentId: string, message: string) {
   });
 }
 
-export async function getIncidentTimeline(incidentId: string) {
+export async function getIncidentTimeline(incidentId: string, orgId?: string) {
+  if (orgId) {
+    const incident = await prisma.incident.findFirst({ where: { id: incidentId, organizationId: orgId } });
+    if (!incident) return [];
+  }
   return prisma.incidentEvent.findMany({
     where: { incidentId },
     orderBy: { timestamp: 'asc' },

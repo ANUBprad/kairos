@@ -99,7 +99,7 @@ export async function listDatasets() {
   const session = await getServerSession();
   if (!session) return [];
 
-  return getBenchmarkDatasets();
+  return getBenchmarkDatasets(session.user.id);
 }
 
 export async function getDataset(datasetId: string) {
@@ -230,6 +230,12 @@ export async function getDatasetsForSelector() {
   if (!session) return [];
 
   return prisma.benchmarkDataset.findMany({
+    where: {
+      OR: [
+        { knowledgeBaseId: null },
+        { knowledgeBase: { project: { organization: { members: { some: { userId: session.user.id } } } } } },
+      ],
+    },
     select: { id: true, name: true, _count: { select: { questions: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -262,7 +268,15 @@ export async function getBaselines() {
   if (!session) return [];
 
   return prisma.benchmarkRun.findMany({
-    where: { status: "completed" },
+    where: {
+      status: "completed",
+      dataset: {
+        OR: [
+          { knowledgeBaseId: null },
+          { knowledgeBase: { project: { organization: { members: { some: { userId: session.user.id } } } } } },
+        ],
+      },
+    },
     select: { id: true, name: true, aggregatedMetrics: true, createdAt: true },
     orderBy: { createdAt: "desc" },
     take: 10,

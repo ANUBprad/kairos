@@ -46,23 +46,23 @@ export async function getDriftAlerts(orgId: string, filters?: {
   });
 }
 
-export async function acknowledgeDrift(driftId: string) {
+export async function acknowledgeDrift(driftId: string, orgId?: string) {
   return prisma.driftAlert.update({
-    where: { id: driftId },
+    where: orgId ? { id: driftId, organizationId: orgId } : { id: driftId },
     data: { status: 'ACKNOWLEDGED' },
   });
 }
 
-export async function resolveDrift(driftId: string) {
+export async function resolveDrift(driftId: string, orgId?: string) {
   return prisma.driftAlert.update({
-    where: { id: driftId },
+    where: orgId ? { id: driftId, organizationId: orgId } : { id: driftId },
     data: { status: 'RESOLVED', resolvedAt: new Date() },
   });
 }
 
-export async function ignoreDrift(driftId: string) {
+export async function ignoreDrift(driftId: string, orgId?: string) {
   return prisma.driftAlert.update({
-    where: { id: driftId },
+    where: orgId ? { id: driftId, organizationId: orgId } : { id: driftId },
     data: { status: 'IGNORED' },
   });
 }

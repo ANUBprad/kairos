@@ -1,7 +1,6 @@
 'use server';
 
-import { auth } from '@/auth';
-import { prisma } from '@/lib/db';
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createTrace,
@@ -17,13 +16,7 @@ import {
 import type { TraceFilter } from '@/lib/observability/trace-explorer';
 
 async function getOrgId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-  const membership = await prisma.member.findFirst({
-    where: { userId: session.user.id },
-  });
-  if (!membership) throw new Error('No organization');
-  return membership.organizationId;
+  return getSelectedOrgId();
 }
 
 export async function captureTrace(input: Parameters<typeof createTrace>[1]) {
@@ -37,15 +30,15 @@ export async function completeTrace(
   traceId: string,
   output: Parameters<typeof finishTrace>[1]
 ) {
-  return finishTrace(traceId, output);
+  return finishTrace(traceId, output, await getOrgId());
 }
 
 export async function captureSpan(traceId: string, span: Parameters<typeof addSpan>[1]) {
-  return addSpan(traceId, span);
+  return addSpan(traceId, span, await getOrgId());
 }
 
 export async function completeSpan(spanId: string, output?: unknown) {
-  return finishSpan(spanId, output);
+  return finishSpan(spanId, output, await getOrgId());
 }
 
 export async function traceEvent(
@@ -53,7 +46,7 @@ export async function traceEvent(
   name: string,
   attributes?: Record<string, unknown>
 ) {
-  return addTraceEvent(traceId, name, attributes);
+  return addTraceEvent(traceId, name, attributes, await getOrgId());
 }
 
 export async function listTraces(filters: TraceFilter) {
@@ -62,11 +55,11 @@ export async function listTraces(filters: TraceFilter) {
 }
 
 export async function getTrace(traceId: string) {
-  return getTraceById(traceId);
+  return getTraceById(traceId, await getOrgId());
 }
 
 export async function replayExistingTrace(traceId: string) {
-  return replayTrace(traceId);
+  return replayTrace(traceId, await getOrgId());
 }
 
 export async function traceStats(days?: number) {

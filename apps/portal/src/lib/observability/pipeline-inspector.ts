@@ -34,10 +34,13 @@ export async function finishPipelineStep(
   stepId: string,
   status: 'COMPLETED' | 'FAILED' | 'TIMEOUT',
   output?: unknown,
-  error?: string
+  error?: string,
+  orgId?: string
 ) {
   const now = new Date();
-  const step = await prisma.pipelineStep.findUnique({ where: { id: stepId } });
+  const step = orgId
+    ? await prisma.pipelineStep.findFirst({ where: { id: stepId, pipeline: { organizationId: orgId } } })
+    : await prisma.pipelineStep.findUnique({ where: { id: stepId } });
   if (!step) throw new Error('Pipeline step not found');
 
   return prisma.pipelineStep.update({
@@ -54,10 +57,13 @@ export async function finishPipelineStep(
 
 export async function finishPipelineRun(
   pipelineId: string,
-  status: 'COMPLETED' | 'FAILED' | 'TIMEOUT'
+  status: 'COMPLETED' | 'FAILED' | 'TIMEOUT',
+  orgId?: string
 ) {
   const now = new Date();
-  const pipeline = await prisma.pipelineRun.findUnique({ where: { id: pipelineId } });
+  const pipeline = orgId
+    ? await prisma.pipelineRun.findFirst({ where: { id: pipelineId, organizationId: orgId } })
+    : await prisma.pipelineRun.findUnique({ where: { id: pipelineId } });
   if (!pipeline) throw new Error('Pipeline run not found');
 
   return prisma.pipelineRun.update({
@@ -70,9 +76,9 @@ export async function finishPipelineRun(
   });
 }
 
-export async function getPipelineRun(pipelineId: string) {
+export async function getPipelineRun(pipelineId: string, orgId?: string) {
   return prisma.pipelineRun.findUnique({
-    where: { id: pipelineId },
+    where: orgId ? { id: pipelineId, organizationId: orgId } : { id: pipelineId },
     include: {
       steps: { orderBy: { order: 'asc' } },
     },

@@ -1,7 +1,6 @@
 'use server';
 
-import { auth } from '@/auth';
-import { prisma } from '@/lib/db';
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createIncident,
@@ -18,13 +17,7 @@ import {
 import type { CreateIncidentInput } from '@/lib/observability/incidents';
 
 async function getOrgId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-  const membership = await prisma.member.findFirst({
-    where: { userId: session.user.id },
-  });
-  if (!membership) throw new Error('No organization');
-  return membership.organizationId;
+  return getSelectedOrgId();
 }
 
 export async function createNewIncident(input: CreateIncidentInput) {
@@ -40,7 +33,7 @@ export async function listIncidents(filters?: { status?: string; severity?: stri
 }
 
 export async function getIncident(incidentId: string) {
-  return getIncidentById(incidentId);
+  return getIncidentById(incidentId, await getOrgId());
 }
 
 export async function updateIncident(
@@ -48,33 +41,33 @@ export async function updateIncident(
   status: 'OPEN' | 'INVESTIGATING' | 'IDENTIFIED' | 'MONITORING' | 'RESOLVED' | 'CLOSED',
   data?: { resolution?: string; rootCause?: string; postmortem?: string }
 ) {
-  const result = await updateIncidentStatus(incidentId, status, data);
   const orgId = await getOrgId();
+  const result = await updateIncidentStatus(incidentId, status, data, orgId);
   await logActivity(orgId, 'INCIDENT_UPDATED', 'Incident', incidentId, { status });
   return result;
 }
 
 export async function setIncidentOwner(incidentId: string, ownerId: string) {
-  return assignIncident(incidentId, ownerId);
+  return assignIncident(incidentId, ownerId, await getOrgId());
 }
 
 export async function linkAlert(incidentId: string, alertId: string) {
-  return linkAlertToIncident(incidentId, alertId);
+  return linkAlertToIncident(incidentId, alertId, await getOrgId());
 }
 
 export async function linkTrace(incidentId: string, traceId: string) {
-  return linkTraceToIncident(incidentId, traceId);
+  return linkTraceToIncident(incidentId, traceId, await getOrgId());
 }
 
 export async function addIncidentNote(incidentId: string, message: string) {
   const orgId = await getOrgId();
-  const event = await createIncidentEvent(incidentId, message);
+  const event = await createIncidentEvent(incidentId, message, orgId);
   await logActivity(orgId, 'INCIDENT_NOTE', 'Incident', incidentId, { message });
   return event;
 }
 
 export async function getIncidentEvents(incidentId: string) {
-  return getIncidentTimeline(incidentId);
+  return getIncidentTimeline(incidentId, await getOrgId());
 }
 
 export async function incidentStats(days?: number) {

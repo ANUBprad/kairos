@@ -17,7 +17,7 @@ interface Organization {
   projectCount: number;
 }
 
-export function OrganizationSettingsClient() {
+export function OrganizationSettingsClient({ orgId }: { orgId: string }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,8 +32,7 @@ export function OrganizationSettingsClient() {
   const loadOrganization = async () => {
     setLoading(true);
     try {
-      // For demo mode, use a default organization
-      const result = await getOrganizationDetails("demo-org");
+      const result = await getOrganizationDetails(orgId);
       if (result.success && result.organization) {
         setOrganization(result.organization);
         setName(result.organization.name);

@@ -1,6 +1,7 @@
 "use server";
 
 import { requireSession } from "@/lib/server/auth-utils";
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import {
   createDataset,
   getDataset,
@@ -24,13 +25,11 @@ import {
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 
-const DEMO_ORG = "demo-org";
-
 export async function createGoldenDataset(input: CreateDatasetInput) {
   const session = await requireSession();
 
   try {
-    const dataset = await createDataset(DEMO_ORG, session.user.id, input);
+    const dataset = await createDataset(await getSelectedOrgId(), session.user.id, input);
     revalidatePath("/app/datasets");
     return { success: true, dataset };
   } catch (error) {
@@ -46,7 +45,7 @@ export async function getGoldenDataset(datasetId: string) {
   const session = await requireSession();
 
   try {
-    const result = await getDataset(datasetId);
+    const result = await getDataset(datasetId, await getSelectedOrgId());
     return { success: true, ...result };
   } catch (error) {
     logger.error("Failed to get golden dataset", {
@@ -64,7 +63,7 @@ export async function listGoldenDatasets(
   const session = await requireSession();
 
   try {
-    const datasets = await listDatasets(DEMO_ORG, options);
+    const datasets = await listDatasets(await getSelectedOrgId(), options);
     return { success: true, datasets };
   } catch (error) {
     logger.error("Failed to list golden datasets", {
@@ -79,7 +78,7 @@ export async function updateGoldenDataset(datasetId: string, input: Partial<Crea
   const session = await requireSession();
 
   try {
-    const dataset = await updateDataset(datasetId, input);
+    const dataset = await updateDataset(datasetId, input, await getSelectedOrgId());
     revalidatePath("/app/datasets");
     return { success: true, dataset };
   } catch (error) {
@@ -96,7 +95,7 @@ export async function deleteGoldenDataset(datasetId: string) {
   const session = await requireSession();
 
   try {
-    const deleted = await deleteDataset(datasetId);
+    const deleted = await deleteDataset(datasetId, await getSelectedOrgId());
     revalidatePath("/app/datasets");
     return { success: deleted };
   } catch (error) {
@@ -113,7 +112,7 @@ export async function addGoldenDatasetEntry(datasetId: string, input: CreateEntr
   const session = await requireSession();
 
   try {
-    const entry = await addEntry(datasetId, input);
+    const entry = await addEntry(datasetId, input, await getSelectedOrgId());
     revalidatePath("/app/datasets");
     return { success: true, entry };
   } catch (error) {
@@ -130,7 +129,7 @@ export async function bulkAddGoldenDatasetEntries(datasetId: string, entries: Cr
   const session = await requireSession();
 
   try {
-    const result = await bulkAddEntries(datasetId, entries);
+    const result = await bulkAddEntries(datasetId, entries, await getSelectedOrgId());
     revalidatePath("/app/datasets");
     return { success: true, ...result };
   } catch (error) {
@@ -148,7 +147,7 @@ export async function updateGoldenDatasetEntry(entryId: string, input: Partial<C
   const session = await requireSession();
 
   try {
-    const entry = await updateEntry(entryId, input);
+    const entry = await updateEntry(entryId, input, await getSelectedOrgId());
     revalidatePath("/app/datasets");
     return { success: true, entry };
   } catch (error) {
@@ -165,7 +164,7 @@ export async function deleteGoldenDatasetEntry(entryId: string) {
   const session = await requireSession();
 
   try {
-    const deleted = await deleteEntry(entryId);
+    const deleted = await deleteEntry(entryId, await getSelectedOrgId());
     revalidatePath("/app/datasets");
     return { success: deleted };
   } catch (error) {
@@ -182,7 +181,7 @@ export async function importGoldenDataset(input: ImportDatasetInput) {
   const session = await requireSession();
 
   try {
-    const dataset = await importDataset(DEMO_ORG, session.user.id, input);
+    const dataset = await importDataset(await getSelectedOrgId(), session.user.id, input);
     revalidatePath("/app/datasets");
     return { success: true, dataset };
   } catch (error) {
@@ -199,7 +198,7 @@ export async function exportGoldenDataset(datasetId: string) {
   const session = await requireSession();
 
   try {
-    const data = await exportDataset(datasetId);
+    const data = await exportDataset(datasetId, await getSelectedOrgId());
     return { success: true, data };
   } catch (error) {
     logger.error("Failed to export golden dataset", {
@@ -215,7 +214,7 @@ export async function createGoldenDatasetVersion(datasetId: string) {
   const session = await requireSession();
 
   try {
-    const dataset = await createVersion(datasetId);
+    const dataset = await createVersion(datasetId, await getSelectedOrgId());
     revalidatePath("/app/datasets");
     return { success: true, dataset };
   } catch (error) {
@@ -232,7 +231,7 @@ export async function validateGoldenDataset(datasetId: string) {
   const session = await requireSession();
 
   try {
-    const result = await validateDataset(datasetId);
+    const result = await validateDataset(datasetId, await getSelectedOrgId());
     return { success: true, ...result };
   } catch (error) {
     logger.error("Failed to validate golden dataset", {
@@ -252,7 +251,7 @@ export async function getGoldenDatasetStats(datasetId: string): Promise<{
   const session = await requireSession();
 
   try {
-    const stats = await getDatasetStats(datasetId);
+    const stats = await getDatasetStats(datasetId, await getSelectedOrgId());
     return { success: true, stats };
   } catch (error) {
     logger.error("Failed to get golden dataset stats", {

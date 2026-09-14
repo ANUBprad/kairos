@@ -1,6 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import {
@@ -36,8 +37,7 @@ export async function createNewApiKey(
         : undefined,
     };
 
-    // For demo mode, use a default organization ID
-    const organizationId = "demo-org";
+    const organizationId = await getSelectedOrgId();
 
     const result = await createApiKey(
       session.user.id,
@@ -65,7 +65,7 @@ export async function listApiKeys() {
       throw new Error("Unauthorized");
     }
 
-    const apiKeys = await getUserApiKeys(session.user.id);
+    const apiKeys = await getUserApiKeys(session.user.id, await getSelectedOrgId());
     return { success: true, apiKeys };
   } catch (error) {
     logger.error("Failed to list API keys", {
@@ -85,7 +85,7 @@ export async function deactivateApiKey(apiKeyId: string) {
       throw new Error("Unauthorized");
     }
 
-    await disableApiKey(session.user.id, apiKeyId);
+    await disableApiKey(session.user.id, apiKeyId, await getSelectedOrgId());
     revalidatePath("/app/settings/api-keys");
     return { success: true };
   } catch (error) {
@@ -106,7 +106,7 @@ export async function removeApiKey(apiKeyId: string) {
       throw new Error("Unauthorized");
     }
 
-    await deleteApiKey(session.user.id, apiKeyId);
+    await deleteApiKey(session.user.id, apiKeyId, await getSelectedOrgId());
     revalidatePath("/app/settings/api-keys");
     return { success: true };
   } catch (error) {
@@ -127,8 +127,7 @@ export async function rotateExistingApiKey(apiKeyId: string) {
       throw new Error("Unauthorized");
     }
 
-    // For demo mode, use a default organization ID
-    const organizationId = "demo-org";
+    const organizationId = await getSelectedOrgId();
 
     const result = await rotateApiKey(
       session.user.id,

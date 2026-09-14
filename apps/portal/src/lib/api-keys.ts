@@ -227,10 +227,11 @@ export async function getUserApiKeys(
  */
 export async function disableApiKey(
   userId: string,
-  keyId: string
+  keyId: string,
+  organizationId?: string
 ): Promise<boolean> {
-  const key = await prisma.apiKey.findUnique({
-    where: { id: keyId },
+  const key = await prisma.apiKey.findFirst({
+    where: { id: keyId, ...(organizationId ? { organizationId } : {}) },
     select: { userId: true },
   });
 
@@ -252,10 +253,11 @@ export async function disableApiKey(
  */
 export async function deleteApiKey(
   userId: string,
-  keyId: string
+  keyId: string,
+  organizationId?: string
 ): Promise<boolean> {
-  const key = await prisma.apiKey.findUnique({
-    where: { id: keyId },
+  const key = await prisma.apiKey.findFirst({
+    where: { id: keyId, ...(organizationId ? { organizationId } : {}) },
     select: { userId: true },
   });
 
@@ -279,8 +281,8 @@ export async function rotateApiKey(
   organizationId: string,
   keyId: string
 ): Promise<CreateApiKeyResult | null> {
-  const oldKey = await prisma.apiKey.findUnique({
-    where: { id: keyId },
+  const oldKey = await prisma.apiKey.findFirst({
+    where: { id: keyId, organizationId },
     select: { userId: true, name: true, scopes: true },
   });
 

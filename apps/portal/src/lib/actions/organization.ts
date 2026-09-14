@@ -104,6 +104,10 @@ export async function getOrganizationDetails(organizationId: string) {
       throw new Error("Unauthorized");
     }
 
+    if (!(await getMembership(session.user.id, organizationId))) {
+      throw new Error("Organization not found");
+    }
+
     const organization = await getOrganization(organizationId);
     if (!organization) {
       return { success: false, error: "Organization not found" };
@@ -150,6 +154,10 @@ export async function getOrganizationMembers(organizationId: string) {
     const session = await getServerSession();
     if (!session?.user) {
       throw new Error("Unauthorized");
+    }
+
+    if (!(await getMembership(session.user.id, organizationId))) {
+      throw new Error("Organization not found");
     }
 
     const members = await getMembers(organizationId);

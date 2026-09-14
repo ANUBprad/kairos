@@ -54,10 +54,13 @@ export async function finishTrace(
     outputTokens?: number;
     totalTokens?: number;
     cost?: number;
-  }
+  },
+  orgId?: string
 ) {
   const now = new Date();
-  const trace = await prisma.trace.findUnique({ where: { id: traceId } });
+  const trace = orgId
+    ? await prisma.trace.findFirst({ where: { id: traceId, organizationId: orgId } })
+    : await prisma.trace.findUnique({ where: { id: traceId } });
   if (!trace) throw new Error('Trace not found');
 
   const durationMs = now.getTime() - trace.startTime.getTime();
@@ -77,7 +80,11 @@ export async function finishTrace(
   });
 }
 
-export async function addSpan(traceId: string, span: TraceSpanInput) {
+export async function addSpan(traceId: string, span: TraceSpanInput, orgId?: string) {
+  if (orgId) {
+    const trace = await prisma.trace.findFirst({ where: { id: traceId, organizationId: orgId }, select: { id: true } });
+    if (!trace) throw new Error('Trace not found');
+  }
   return prisma.span.create({
     data: {
       traceId,
@@ -94,9 +101,11 @@ export async function addSpan(traceId: string, span: TraceSpanInput) {
   });
 }
 
-export async function finishSpan(spanId: string, output?: unknown) {
+export async function finishSpan(spanId: string, output?: unknown, orgId?: string) {
   const now = new Date();
-  const span = await prisma.span.findUnique({ where: { id: spanId } });
+  const span = orgId
+    ? await prisma.span.findFirst({ where: { id: spanId, trace: { organizationId: orgId } } })
+    : await prisma.span.findUnique({ where: { id: spanId } });
   if (!span) throw new Error('Span not found');
 
   return prisma.span.update({
@@ -112,8 +121,13 @@ export async function finishSpan(spanId: string, output?: unknown) {
 export async function addTraceEvent(
   traceId: string,
   name: string,
-  attributes?: Record<string, unknown>
+  attributes?: Record<string, unknown>,
+  orgId?: string
 ) {
+  if (orgId) {
+    const trace = await prisma.trace.findFirst({ where: { id: traceId, organizationId: orgId }, select: { id: true } });
+    if (!trace) throw new Error('Trace not found');
+  }
   return prisma.traceEvent.create({
     data: {
       traceId,
@@ -194,9 +208,9 @@ export async function searchTraces(orgId: string, filters: TraceFilter) {
   };
 }
 
-export async function getTraceById(traceId: string) {
+export async function getTraceById(traceId: string, orgId?: string) {
   return prisma.trace.findUnique({
-    where: { id: traceId },
+    where: orgId ? { id: traceId, organizationId: orgId } : { id: traceId },
     include: {
       spans: { orderBy: { startTime: 'asc' } },
       events: { orderBy: { timestamp: 'asc' } },
@@ -204,8 +218,8 @@ export async function getTraceById(traceId: string) {
   });
 }
 
-export async function replayTrace(traceId: string) {
-  const trace = await getTraceById(traceId);
+export async function replayTrace(traceId: string, orgId?: string) {
+  const trace = await getTraceById(traceId, orgId);
   if (!trace) throw new Error('Trace not found');
   return trace;
 }

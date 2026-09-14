@@ -167,6 +167,18 @@ export const getWorkspaceContext = cache(async (): Promise<WorkspaceContext | nu
   }
 });
 
+/**
+ * Returns the currently selected organization ID for the authenticated user.
+ * Throws if unauthenticated or no organization is resolved (including the
+ * zero-org auto-provision case).  Every organization-scoped server action
+ * should call this instead of rolling its own first-membership lookup.
+ */
+export async function getSelectedOrgId(): Promise<string> {
+  const ctx = await getWorkspaceContext();
+  if (!ctx?.selectedOrganization) throw new Error("No organization selected");
+  return ctx.selectedOrganization.id;
+}
+
 function isDynamicServerError(err: unknown): boolean {
   return (
     err instanceof Error &&

@@ -43,7 +43,7 @@ interface Invitation {
 
 const ROLES = ["OWNER", "ADMIN", "MEMBER", "VIEWER"];
 
-export function MembersSettingsClient() {
+export function MembersSettingsClient({ orgId }: { orgId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,8 +61,8 @@ export function MembersSettingsClient() {
     setLoading(true);
     try {
       const [membersResult, invitationsResult] = await Promise.all([
-        getOrganizationMembers("demo-org"),
-        listOrganizationInvitations("demo-org"),
+        getOrganizationMembers(orgId),
+        listOrganizationInvitations(orgId),
       ]);
 
       if (membersResult.success) {
@@ -83,7 +83,7 @@ export function MembersSettingsClient() {
     setError(null);
 
     try {
-      const result = await sendInvitation("demo-org", {
+      const result = await sendInvitation(orgId, {
         email: inviteEmail,
         role: inviteRole as "OWNER" | "ADMIN" | "MEMBER" | "VIEWER",
       });
@@ -104,7 +104,7 @@ export function MembersSettingsClient() {
   const handleRemoveMember = async (memberId: string) => {
     if (!confirm("Are you sure you want to remove this member?")) return;
 
-    const result = await removeOrganizationMember("demo-org", memberId);
+    const result = await removeOrganizationMember(orgId, memberId);
     if (result.success) {
       await loadData();
     }
@@ -112,7 +112,7 @@ export function MembersSettingsClient() {
 
   const handleUpdateRole = async (memberId: string, newRole: string) => {
     const result = await updateOrganizationMemberRole(
-      "demo-org",
+      orgId,
       memberId,
       newRole as "OWNER" | "ADMIN" | "MEMBER" | "VIEWER"
     );
@@ -122,7 +122,7 @@ export function MembersSettingsClient() {
   };
 
   const handleRevokeInvitation = async (invitationId: string) => {
-    const result = await revokeOrganizationInvitation("demo-org", invitationId);
+    const result = await revokeOrganizationInvitation(orgId, invitationId);
     if (result.success) {
       await loadData();
     }

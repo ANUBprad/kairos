@@ -1,7 +1,6 @@
 'use server';
 
-import { auth } from '@/auth';
-import { prisma } from '@/lib/db';
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createAlertRule,
@@ -18,13 +17,7 @@ import {
 import type { CreateAlertRuleInput } from '@/lib/observability/alerting';
 
 async function getOrgId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-  const membership = await prisma.member.findFirst({
-    where: { userId: session.user.id },
-  });
-  if (!membership) throw new Error('No organization');
-  return membership.organizationId;
+  return getSelectedOrgId();
 }
 
 export async function createRule(input: CreateAlertRuleInput) {
@@ -40,15 +33,15 @@ export async function listRules() {
 }
 
 export async function updateRule(ruleId: string, data: Partial<CreateAlertRuleInput>) {
-  return updateAlertRule(ruleId, data);
+  return updateAlertRule(ruleId, data, await getOrgId());
 }
 
 export async function deleteRule(ruleId: string) {
-  return deleteAlertRule(ruleId);
+  return deleteAlertRule(ruleId, await getOrgId());
 }
 
 export async function toggleRule(ruleId: string, enabled: boolean) {
-  return toggleAlertRule(ruleId, enabled);
+  return toggleAlertRule(ruleId, enabled, await getOrgId());
 }
 
 export async function checkAlerts() {
@@ -69,11 +62,11 @@ export async function listAlertEvents(filters?: { status?: string; ruleId?: stri
 }
 
 export async function resolveAlert(eventId: string) {
-  return resolveAlertEvent(eventId);
+  return resolveAlertEvent(eventId, await getOrgId());
 }
 
 export async function acknowledgeAlert(eventId: string) {
-  return acknowledgeAlertEvent(eventId);
+  return acknowledgeAlertEvent(eventId, await getOrgId());
 }
 
 export async function alertStats(days?: number) {

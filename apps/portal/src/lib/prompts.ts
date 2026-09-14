@@ -89,6 +89,24 @@ export interface ImportPromptData {
   }>;
 }
 
+async function assertPromptAccess(promptId: string, organizationId?: string) {
+  if (!organizationId) return;
+  const prompt = await prisma.prompt.findFirst({
+    where: { id: promptId, organizationId },
+    select: { id: true },
+  });
+  if (!prompt) throw new Error("Prompt not found");
+}
+
+async function assertFolderAccess(folderId: string, organizationId?: string) {
+  if (!organizationId) return;
+  const folder = await prisma.promptFolder.findFirst({
+    where: { id: folderId, organizationId },
+    select: { id: true },
+  });
+  if (!folder) throw new Error("Folder not found");
+}
+
 export async function createFolder(
   organizationId: string,
   input: CreateFolderInput
@@ -154,8 +172,9 @@ export async function listFolders(
   }
 }
 
-export async function deleteFolder(folderId: string): Promise<boolean> {
+export async function deleteFolder(folderId: string, organizationId?: string): Promise<boolean> {
   try {
+    await assertFolderAccess(folderId, organizationId);
     const folder = await prisma.promptFolder.findUnique({
       where: { id: folderId },
       select: { id: true },
@@ -261,8 +280,9 @@ export async function createPrompt(
   }
 }
 
-export async function getPrompt(promptId: string): Promise<PromptInfo | null> {
+export async function getPrompt(promptId: string, organizationId?: string): Promise<PromptInfo | null> {
   try {
+    await assertPromptAccess(promptId, organizationId);
     const prompt = await prisma.prompt.findUnique({
       where: { id: promptId },
       include: {
@@ -383,9 +403,11 @@ export async function listPrompts(
 
 export async function updatePrompt(
   promptId: string,
-  input: UpdatePromptInput
+  input: UpdatePromptInput,
+  organizationId?: string
 ): Promise<PromptInfo | null> {
   try {
+    await assertPromptAccess(promptId, organizationId);
     const prompt = await prisma.prompt.findUnique({
       where: { id: promptId },
       select: { id: true },
@@ -446,8 +468,9 @@ export async function updatePrompt(
   }
 }
 
-export async function deletePrompt(promptId: string): Promise<boolean> {
+export async function deletePrompt(promptId: string, organizationId?: string): Promise<boolean> {
   try {
+    await assertPromptAccess(promptId, organizationId);
     const prompt = await prisma.prompt.findUnique({
       where: { id: promptId },
       select: { id: true },
@@ -466,9 +489,11 @@ export async function deletePrompt(promptId: string): Promise<boolean> {
 
 export async function clonePrompt(
   promptId: string,
-  userId: string
+  userId: string,
+  organizationId?: string
 ): Promise<PromptInfo> {
   try {
+    await assertPromptAccess(promptId, organizationId);
     const source = await prisma.prompt.findUnique({
       where: { id: promptId },
       include: { versions: { orderBy: { version: "asc" } } },
@@ -573,9 +598,11 @@ export async function createVersion(
     model?: string;
     temperature?: number;
     maxTokens?: number;
-  }
+  },
+  organizationId?: string
 ): Promise<PromptVersionInfo> {
   try {
+    await assertPromptAccess(promptId, organizationId);
     const prompt = await prisma.prompt.findUnique({
       where: { id: promptId },
       select: { id: true, version: true, title: true, description: true },
@@ -667,9 +694,11 @@ export async function getVersion(
 }
 
 export async function listVersions(
-  promptId: string
+  promptId: string,
+  organizationId?: string
 ): Promise<PromptVersionInfo[]> {
   try {
+    await assertPromptAccess(promptId, organizationId);
     const versions = await prisma.promptVersion.findMany({
       where: { promptId },
       orderBy: { version: "desc" },
@@ -698,9 +727,17 @@ export async function listVersions(
 }
 
 export async function publishVersion(
-  versionId: string
+  versionId: string,
+  organizationId?: string
 ): Promise<PromptVersionInfo> {
   try {
+    if (organizationId) {
+      const version = await prisma.promptVersion.findFirst({
+        where: { id: versionId, prompt: { organizationId } },
+        select: { id: true },
+      });
+      if (!version) throw new Error("Version not found");
+    }
     const version = await prisma.promptVersion.findUnique({
       where: { id: versionId },
       select: { id: true, promptId: true, version: true },
@@ -750,9 +787,11 @@ export async function publishVersion(
 
 export async function rollbackToVersion(
   promptId: string,
-  version: number
+  version: number,
+  organizationId?: string
 ): Promise<PromptVersionInfo> {
   try {
+    await assertPromptAccess(promptId, organizationId);
     const targetVersion = await prisma.promptVersion.findUnique({
       where: { promptId_version: { promptId, version } },
     });
@@ -849,9 +888,11 @@ export async function searchPrompts(
 }
 
 export async function exportPrompt(
-  promptId: string
+  promptId: string,
+  organizationId?: string
 ): Promise<{ prompt: Omit<PromptInfo, "currentVersion">; versions: PromptVersionInfo[] } | null> {
   try {
+    await assertPromptAccess(promptId, organizationId);
     const prompt = await prisma.prompt.findUnique({
       where: { id: promptId },
       include: {

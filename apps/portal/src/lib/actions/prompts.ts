@@ -1,6 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import {
   createFolder,
   listFolders,
@@ -38,7 +39,7 @@ export async function createPromptFolder(input: CreateFolderInput) {
       throw new Error("Unauthorized");
     }
 
-    const folder = await createFolder("demo-org", input);
+    const folder = await createFolder(await getSelectedOrgId(), input);
     revalidatePath("/app/prompts");
     return { success: true, folder };
   } catch (error) {
@@ -59,7 +60,7 @@ export async function listPromptFolders() {
       throw new Error("Unauthorized");
     }
 
-    const folders = await listFolders("demo-org");
+    const folders = await listFolders(await getSelectedOrgId());
     return { success: true, folders };
   } catch (error) {
     logger.error("Failed to list prompt folders", {
@@ -79,7 +80,7 @@ export async function deletePromptFolder(folderId: string) {
       throw new Error("Unauthorized");
     }
 
-    const deleted = await deleteFolder(folderId);
+    const deleted = await deleteFolder(folderId, await getSelectedOrgId());
     revalidatePath("/app/prompts");
     return { success: true, deleted };
   } catch (error) {
@@ -104,7 +105,7 @@ export async function createNewPrompt(input: CreatePromptInput) {
       throw new Error("Unauthorized");
     }
 
-    const prompt = await createPrompt("demo-org", session.user.id, input);
+    const prompt = await createPrompt(await getSelectedOrgId(), session.user.id, input);
     revalidatePath("/app/prompts");
     return { success: true, prompt };
   } catch (error) {
@@ -125,7 +126,7 @@ export async function getPromptDetails(promptId: string) {
       throw new Error("Unauthorized");
     }
 
-    const prompt = await getPrompt(promptId);
+    const prompt = await getPrompt(promptId, await getSelectedOrgId());
     return { success: true, prompt };
   } catch (error) {
     logger.error("Failed to get prompt details", {
@@ -152,7 +153,7 @@ export async function listAllPrompts(
       throw new Error("Unauthorized");
     }
 
-    const prompts = await listPrompts("demo-org", options);
+    const prompts = await listPrompts(await getSelectedOrgId(), options);
     return { success: true, prompts };
   } catch (error) {
     logger.error("Failed to list prompts", {
@@ -172,7 +173,7 @@ export async function updatePromptDetails(promptId: string, input: UpdatePromptI
       throw new Error("Unauthorized");
     }
 
-    const prompt = await updatePrompt(promptId, input);
+    const prompt = await updatePrompt(promptId, input, await getSelectedOrgId());
     revalidatePath("/app/prompts");
     return { success: true, prompt };
   } catch (error) {
@@ -193,7 +194,7 @@ export async function deletePromptAction(promptId: string) {
       throw new Error("Unauthorized");
     }
 
-    const deleted = await deletePrompt(promptId);
+    const deleted = await deletePrompt(promptId, await getSelectedOrgId());
     revalidatePath("/app/prompts");
     return { success: true, deleted };
   } catch (error) {
@@ -214,7 +215,7 @@ export async function clonePromptAction(promptId: string) {
       throw new Error("Unauthorized");
     }
 
-    const prompt = await clonePrompt(promptId, session.user.id);
+    const prompt = await clonePrompt(promptId, session.user.id, await getSelectedOrgId());
     revalidatePath("/app/prompts");
     return { success: true, prompt };
   } catch (error) {
@@ -252,7 +253,7 @@ export async function createNewVersion(
     const version = await createVersion(promptId, session.user.id, {
       ...input,
       variables: input.variables as Prisma.JsonValue | undefined,
-    });
+    }, await getSelectedOrgId());
     revalidatePath("/app/prompts");
     return { success: true, version };
   } catch (error) {
@@ -273,7 +274,7 @@ export async function listPromptVersions(promptId: string) {
       throw new Error("Unauthorized");
     }
 
-    const versions = await listVersions(promptId);
+    const versions = await listVersions(promptId, await getSelectedOrgId());
     return { success: true, versions };
   } catch (error) {
     logger.error("Failed to list versions", {
@@ -293,7 +294,7 @@ export async function publishPromptVersion(versionId: string) {
       throw new Error("Unauthorized");
     }
 
-    const version = await publishVersion(versionId);
+    const version = await publishVersion(versionId, await getSelectedOrgId());
     revalidatePath("/app/prompts");
     return { success: true, version };
   } catch (error) {
@@ -314,7 +315,7 @@ export async function rollbackPromptVersion(promptId: string, version: number) {
       throw new Error("Unauthorized");
     }
 
-    const rolledBack = await rollbackToVersion(promptId, version);
+    const rolledBack = await rollbackToVersion(promptId, version, await getSelectedOrgId());
     revalidatePath("/app/prompts");
     return { success: true, version: rolledBack };
   } catch (error) {
@@ -339,7 +340,7 @@ export async function searchAllPrompts(query: string) {
       throw new Error("Unauthorized");
     }
 
-    const prompts = await searchPrompts("demo-org", query);
+    const prompts = await searchPrompts(await getSelectedOrgId(), query);
     return { success: true, prompts };
   } catch (error) {
     logger.error("Failed to search prompts", {
@@ -359,7 +360,7 @@ export async function exportPromptData(promptId: string) {
       throw new Error("Unauthorized");
     }
 
-    const data = await exportPrompt(promptId);
+    const data = await exportPrompt(promptId, await getSelectedOrgId());
     return { success: true, data };
   } catch (error) {
     logger.error("Failed to export prompt", {
@@ -379,7 +380,7 @@ export async function importPromptData(data: ImportPromptData) {
       throw new Error("Unauthorized");
     }
 
-    const prompt = await importPrompt("demo-org", session.user.id, data);
+    const prompt = await importPrompt(await getSelectedOrgId(), session.user.id, data);
     revalidatePath("/app/prompts");
     return { success: true, prompt };
   } catch (error) {

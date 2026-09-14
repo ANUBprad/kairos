@@ -1,7 +1,6 @@
 'use server';
 
-import { auth } from '@/auth';
-import { prisma } from '@/lib/db';
+import { getSelectedOrgId } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createDriftAlert,
@@ -17,13 +16,7 @@ import {
 import type { CreateDriftInput } from '@/lib/observability/drift-detection';
 
 async function getOrgId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-  const membership = await prisma.member.findFirst({
-    where: { userId: session.user.id },
-  });
-  if (!membership) throw new Error('No organization');
-  return membership.organizationId;
+  return getSelectedOrgId();
 }
 
 export async function reportDrift(input: CreateDriftInput) {
@@ -39,15 +32,15 @@ export async function listDriftAlerts(filters?: { type?: string; status?: string
 }
 
 export async function acknowledgeDriftAlert(driftId: string) {
-  return acknowledgeDrift(driftId);
+  return acknowledgeDrift(driftId, await getOrgId());
 }
 
 export async function resolveDriftAlert(driftId: string) {
-  return resolveDrift(driftId);
+  return resolveDrift(driftId, await getOrgId());
 }
 
 export async function ignoreDriftAlert(driftId: string) {
-  return ignoreDrift(driftId);
+  return ignoreDrift(driftId, await getOrgId());
 }
 
 export async function runDriftDetection() {
