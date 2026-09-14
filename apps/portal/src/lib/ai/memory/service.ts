@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { AIMessage } from "@/lib/ai/types";
+import type { AIMessage, CitationSource } from "@/lib/ai/types";
 
 const MAX_CONTEXT_TOKENS = 8000;
 const TOKEN_ESTIMATE_RATIO = 4;
@@ -14,8 +14,12 @@ export interface ConversationData {
   updatedAt: Date;
 }
 
+export interface ConversationMessage extends AIMessage {
+  citations?: CitationSource[];
+}
+
 export interface ConversationWithMessages extends ConversationData {
-  messages: AIMessage[];
+  messages: ConversationMessage[];
 }
 
 function estimateTokens(text: string): number {
@@ -69,7 +73,7 @@ export async function createConversation(
 
 export async function getConversation(
   conversationId: string,
-): Promise<(ConversationData & { userId: string; messages: AIMessage[] }) | null> {
+): Promise<(ConversationData & { userId: string; messages: ConversationMessage[] }) | null> {
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
     select: {
@@ -83,7 +87,23 @@ export async function getConversation(
       updatedAt: true,
       messages: {
         orderBy: { createdAt: "asc" },
-        select: { role: true, content: true, tokens: true },
+        select: {
+          role: true,
+          content: true,
+          tokens: true,
+          citations: {
+            orderBy: { createdAt: "asc" },
+            select: {
+              chunkId: true,
+              documentId: true,
+              documentName: true,
+              chunkIndex: true,
+              pageNumber: true,
+              excerpt: true,
+              similarity: true,
+            },
+          },
+        },
       },
     },
   });
@@ -95,6 +115,19 @@ export async function getConversation(
     messages: conversation.messages.map((m) => ({
       role: m.role as "user" | "assistant" | "system",
       content: m.content,
+      ...(m.citations.length > 0
+        ? {
+            citations: m.citations.map((c) => ({
+              chunkId: c.chunkId,
+              documentId: c.documentId,
+              documentName: c.documentName,
+              chunkIndex: c.chunkIndex,
+              pageNumber: c.pageNumber ?? null,
+              excerpt: c.excerpt,
+              similarity: c.similarity ?? 0,
+            })),
+          }
+        : {}),
     })),
   };
 }

@@ -8,4 +8,4 @@ export {
   updateConversationTitle,
 } from "./service";
 
-export type { ConversationData, ConversationWithMessages } from "./service";
+export type { ConversationData, ConversationWithMessages, ConversationMessage } from "./service";

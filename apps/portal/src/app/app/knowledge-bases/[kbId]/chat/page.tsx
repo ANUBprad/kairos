@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { ChatInterface } from "@/components/app/chat-interface";
+import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import { getServerSession } from "@/lib/server/auth-utils";
 
 export const metadata = {
   title: "Knowledge Base Chat",
@@ -23,6 +25,11 @@ export default async function ChatPage({ params }: Props) {
     });
 
     if (!kb) {
+      redirect("/app");
+    }
+
+    const session = await getServerSession();
+    if (!session?.user?.id || !(await canAccessKnowledgeBase(session.user.id, kbId))) {
       redirect("/app");
     }
 
