@@ -83,7 +83,7 @@ export async function createOrganization(
       projects: {
         create: {
           name: "Default Project",
-          slug: "default",
+          slug: `default-${randomBytes(3).toString("hex")}`,
           description: "Default project for the organization",
         },
       },

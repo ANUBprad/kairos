@@ -2,7 +2,10 @@
 
 import { getServerSession } from "@/lib/server/auth-utils";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
+import { getMembership } from "@/lib/rbac";
+import { APP_WORKSPACE_ORG_COOKIE } from "@/lib/server/workspace";
 import {
   createOrganization as createOrg,
   updateOrganization as updateOrg,
@@ -40,6 +43,34 @@ export async function createOrganization(input: CreateOrganizationInput) {
       error: error instanceof Error ? error.message : "Failed to create organization",
     };
   }
+}
+
+/**
+ * Switches the active workspace organization for the current session.
+ * The org id is validated against the caller's membership before it is
+ * persisted; a non-member (or forged) org id is rejected outright so a
+ * cookie can never be used to hop into another tenant.
+ */
+export async function switchWorkspaceOrganization(organizationId: string) {
+  const session = await getServerSession();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  const membership = await getMembership(session.user.id, organizationId);
+  if (!membership) {
+    throw new Error("Organization not found");
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(APP_WORKSPACE_ORG_COOKIE, organizationId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
+
+  revalidatePath("/app", "layout");
 }
 
 export async function updateOrganization(

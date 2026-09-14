@@ -34,7 +34,7 @@ export async function createKnowledgeBase(formData: FormData) {
   }
 
   const orgResult = await ensureDefaultOrg();
-  if (!orgResult) throw new Error("No organization found. Run `npx prisma db seed` first.");
+  if (!orgResult) throw new Error("No workspace available. Please try again.");
   const { project } = orgResult;
 
   const kb = await prisma.knowledgeBase.create({

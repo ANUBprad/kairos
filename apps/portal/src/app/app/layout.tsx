@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/server/auth-utils";
-import { getDemoOrgAndProject } from "@/lib/server/demo-user";
-import { prisma } from "@/lib/prisma";
+import { getWorkspaceContext } from "@/lib/server/workspace";
 import { AppSidebar } from "@/components/app/sidebar";
 import { AppHeader } from "@/components/app/app-header";
 import { PageTransition } from "@/components/shared/page-transition";
@@ -22,25 +21,8 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  const result = await getDemoOrgAndProject();
-
-  const organization = result
-    ? await prisma.organization.findUnique({
-        where: { id: result.orgId },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          projects: {
-            select: {
-              id: true,
-              name: true,
-              _count: { select: { knowledgeBases: true } },
-            },
-          },
-        },
-      })
-    : null;
+  const workspace = await getWorkspaceContext();
+  const organization = workspace?.selectedOrganization ?? null;
 
   return (
     <div className="flex min-h-screen bg-bg">
@@ -53,6 +35,7 @@ export default async function AppLayout({
       </a>
       <AppSidebar
         organization={organization}
+        organizations={workspace?.organizations ?? []}
       />
       <div className="flex flex-1 flex-col">
         <AppHeader

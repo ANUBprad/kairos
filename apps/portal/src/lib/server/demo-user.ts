@@ -5,8 +5,6 @@ const DEMO_USER_EMAIL = "demo@kairos.dev";
 const DEMO_USER_NAME = "Demo User";
 
 let cachedUserId: string | null = null;
-let cachedOrgId: string | null = null;
-let cachedProjectId: string | null = null;
 
 export interface DemoSession {
   user: {
@@ -80,49 +78,6 @@ export async function getDemoUserId(): Promise<string | null> {
     if (!user) return null;
     cachedUserId = user.id;
     return user.id;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Read-only lookup for the demo org and project. Returns null when the
- * demo data has not been seeded yet. Never creates any records.
- */
-export async function getDemoOrgAndProject(): Promise<{
-  orgId: string;
-  projectId: string;
-} | null> {
-  if (!isDemoModeEnabled()) return null;
-
-  if (cachedOrgId && cachedProjectId) {
-    return { orgId: cachedOrgId, projectId: cachedProjectId };
-  }
-
-  try {
-    const userId = await getDemoUserId();
-    if (!userId) return null;
-
-    const existing = await prisma.member.findFirst({
-      where: { userId },
-      select: { organizationId: true },
-    });
-
-    if (!existing) return null;
-
-    const orgWithProjects = await prisma.organization.findUnique({
-      where: { id: existing.organizationId },
-      select: {
-        id: true,
-        projects: { select: { id: true }, take: 1 },
-      },
-    });
-
-    if (!orgWithProjects || orgWithProjects.projects.length === 0) return null;
-
-    cachedOrgId = orgWithProjects.id;
-    cachedProjectId = orgWithProjects.projects[0].id;
-    return { orgId: orgWithProjects.id, projectId: orgWithProjects.projects[0].id };
   } catch {
     return null;
   }

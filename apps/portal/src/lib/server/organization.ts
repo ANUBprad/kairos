@@ -1,45 +1,24 @@
 import { cache } from "react";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "@/lib/server/auth-utils";
+import { getWorkspaceContext } from "@/lib/server/workspace";
 import { logger } from "@/lib/logger";
 
 /**
- * Returns the existing organization and its first project for the current
- * user. This is a **read-only** operation — it never creates database
- * records. Returns null if no organization/project exists or if the
- * database is unreachable (e.g. during build without a live DB).
+ * Returns the active workspace organization and its first project for the
+ * current user. This is a **read-only** resolution — it never creates
+ * knowledge-base records (the workspace context may provision a personal
+ * organization for a user who has none). Honors the user's selected
+ * workspace organization. Returns null if no organization/project exists or
+ * if the database is unreachable (e.g. during build without a live DB).
  */
 export const ensureDefaultOrg = cache(async () => {
   try {
-    const session = await getServerSession();
-    if (!session || !session.user.id) return null;
+    const context = await getWorkspaceContext();
+    if (!context?.selectedOrganization) return null;
 
-    const userId = session.user.id;
-
-    const member = await prisma.member.findFirst({
-      where: { userId },
-      select: { organizationId: true },
-    });
-
-    if (!member) return null;
-
-    const organization = await prisma.organization.findUnique({
-      where: { id: member.organizationId },
-      include: {
-        projects: {
-          include: { _count: { select: { knowledgeBases: true } } },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
-
-    if (!organization) return null;
-
-    const project = organization.projects[0];
-
+    const project = context.selectedOrganization.projects[0];
     if (!project) return null;
 
-    return { organization, project };
+    return { organization: context.selectedOrganization, project };
   } catch (err) {
     logger.warn("ensureDefaultOrg failed", { error: err instanceof Error ? err.message : String(err) });
     return null;

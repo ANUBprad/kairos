@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -32,10 +32,12 @@ import {
   Layers,
   CircleDot,
   HardDrive,
+  Check,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { switchWorkspaceOrganization } from "@/lib/actions/organization";
 
 interface SidebarProps {
   organization: {
@@ -48,6 +50,11 @@ interface SidebarProps {
       _count: { knowledgeBases: number };
     }[];
   } | null;
+  organizations: {
+    id: string;
+    name: string;
+    slug: string;
+  }[];
 }
 
 interface NavItem {
@@ -148,14 +155,24 @@ const navSections: NavSection[] = [
   },
 ];
 
-export function AppSidebar({ organization }: SidebarProps) {
+export function AppSidebar({ organization, organizations }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [experimentOpen, setExperimentOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  function handleSwitchOrganization(organizationId: string) {
+    startTransition(async () => {
+      await switchWorkspaceOrganization(organizationId);
+      setExperimentOpen(false);
+      router.refresh();
+    });
+  }
 
   return (
     <>
@@ -205,7 +222,7 @@ export function AppSidebar({ organization }: SidebarProps) {
       {organization && (
         <div className="border-b border-border px-4 py-3">
           <p className="text-[10px] font-medium uppercase tracking-wider text-text-tertiary/60 mb-1">
-            Project
+            Workspace
           </p>
           <button
             onClick={() => setExperimentOpen(!experimentOpen)}
@@ -224,6 +241,29 @@ export function AppSidebar({ organization }: SidebarProps) {
           </button>
           {experimentOpen && (
             <div className="mt-2 rounded-lg border border-border bg-bg/50 p-2">
+              {organizations.length > 1 && (
+                <div className="mb-1">
+                  <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-text-tertiary/60">
+                    Switch workspace
+                  </p>
+                  {organizations.map((org) => (
+                    <button
+                      key={org.id}
+                      onClick={() => handleSwitchOrganization(org.id)}
+                      disabled={org.id === organization.id || isPending}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                        org.id === organization.id
+                          ? "bg-brand/10 text-brand"
+                          : "text-text-secondary hover:bg-surface-hover hover:text-text-primary disabled:opacity-50"
+                      )}
+                    >
+                      <span className="flex-1 truncate text-left">{org.name}</span>
+                      {org.id === organization.id && <Check size={12} className="shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
               <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-text-tertiary/60">
                 Quick Actions
               </p>
