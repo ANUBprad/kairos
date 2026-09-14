@@ -2,7 +2,7 @@ import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
-import { assertDatasetAccess, assertRunAccess } from "@/lib/evaluation/access";
+import { assertDatasetAccess, assertRunAccess, benchmarkDatasetScopedToProject, benchmarkRunScopedToProject } from "@/lib/evaluation/access";
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
@@ -168,6 +168,28 @@ describe("dataset and run authorization against a real database", () => {
       await assert.rejects(() => assertRunAccess("no-such-run", memberUserId), {
         message: "Run not found",
       });
+
+      // Page-level scope helpers match assertDatasetAccess semantics for the
+      // list queries used by the Evaluation and Advanced Retrieval pages:
+      // owned + standalone visible, foreign excluded.
+      const dsScope = benchmarkDatasetScopedToProject(project.id);
+      const dsList = await client.benchmarkDataset.findMany({
+        where: { ...dsScope, id: { in: datasetIds } },
+        select: { id: true },
+      });
+      const dsIds = new Set(dsList.map((d) => d.id));
+      assert.ok(dsIds.has(owned.id), "owned dataset visible via page scope");
+      assert.ok(dsIds.has(standalone.id), "standalone dataset visible via page scope");
+      assert.ok(!dsIds.has(foreign.id), "foreign dataset excluded by page scope");
+
+      const runScope = benchmarkRunScopedToProject(project.id);
+      const runList = await client.benchmarkRun.findMany({
+        where: { ...runScope, id: { in: runIds } },
+        select: { id: true },
+      });
+      const runIdSet = new Set(runList.map((r) => r.id));
+      assert.ok(runIdSet.has(ownedRun.id), "owned run visible via page scope");
+      assert.ok(!runIdSet.has(foreignRun.id), "foreign run excluded by page scope");
     } finally {
       await client.$disconnect();
     }

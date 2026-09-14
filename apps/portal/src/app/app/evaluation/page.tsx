@@ -1,5 +1,9 @@
 import dynamic from "next/dynamic";
 import { prisma } from "@/lib/prisma";
+import {
+  benchmarkDatasetScopedToProject,
+  benchmarkRunScopedToProject,
+} from "@/lib/evaluation/access";
 
 const EvaluationDashboard = dynamic(() => import("./evaluation-client").then((m) => m.EvaluationDashboard), {
   loading: () => <div className="animate-pulse bg-surface rounded-lg h-96" />,
@@ -33,11 +37,12 @@ export default async function EvaluationPage() {
         },
       }),
       prisma.benchmarkDataset.findMany({
+        where: benchmarkDatasetScopedToProject(project.id),
         orderBy: { createdAt: "desc" },
         select: { id: true, name: true, description: true, createdAt: true, _count: { select: { questions: true, runs: true } } },
       }),
       prisma.benchmarkRun.findMany({
-        where: { status: "completed" },
+        where: benchmarkRunScopedToProject(project.id),
         orderBy: { createdAt: "desc" },
         take: 20,
         select: {

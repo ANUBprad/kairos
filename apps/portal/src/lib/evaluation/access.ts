@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 
@@ -32,4 +33,24 @@ export async function assertRunAccess(runId: string, userId: string) {
   if (!run) throw new Error("Run not found");
   await assertDatasetAccess(run.datasetId, userId);
   return run;
+}
+
+// Page-level list scoping matching assertDatasetAccess: a project sees datasets
+// anchored to its knowledge bases plus standalone (un-anchored) global material;
+// runs follow their dataset's scope.
+export function benchmarkDatasetScopedToProject(
+  projectId: string,
+): Prisma.BenchmarkDatasetWhereInput {
+  return {
+    OR: [{ knowledgeBaseId: null }, { knowledgeBase: { projectId } }],
+  };
+}
+
+export function benchmarkRunScopedToProject(
+  projectId: string,
+): Prisma.BenchmarkRunWhereInput {
+  return {
+    status: "completed",
+    dataset: { OR: [{ knowledgeBaseId: null }, { knowledgeBase: { projectId } }] },
+  };
 }

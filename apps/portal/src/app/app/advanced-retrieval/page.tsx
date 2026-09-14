@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
 import { prisma } from "@/lib/prisma";
+import { benchmarkRunScopedToProject } from "@/lib/evaluation/access";
 
 const AdvancedRetrievalDashboard = dynamic(() => import("./advanced-retrieval-client").then((m) => m.AdvancedRetrievalDashboard), {
   loading: () => <div className="animate-pulse bg-surface rounded-lg h-96" />,
@@ -23,7 +24,7 @@ export default async function AdvancedRetrievalPage() {
         orderBy: { name: "asc" },
       }),
       prisma.benchmarkRun.findMany({
-        where: { status: "completed" },
+        where: benchmarkRunScopedToProject(project.id),
         orderBy: { createdAt: "desc" },
         take: 20,
         select: {
