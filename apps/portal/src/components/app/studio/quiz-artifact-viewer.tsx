@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { AlertCircle, CheckCircle2, Loader2, RotateCcw, Sparkles, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
+import { ArtifactSourceList } from "./artifact-source-list";
 import { parseQuizContent } from "@/lib/artifacts/quiz-view";
-import { resolveSourceProvenance } from "@/lib/artifacts/summary-view";
 import {
   getQuizAttemptForWorkspace,
   getQuizAttemptHistoryForWorkspace,
@@ -335,7 +334,6 @@ function QuizResults({
 }) {
   const correct = attempt.answers.filter((a) => a.isCorrect).length;
   const byQuestion = new Map(attempt.answers.map((a) => [a.questionId, a]));
-  const provenance = resolveSourceProvenance(artifact.sourceIds, sources);
   const past = history.filter((h) => h.id !== attempt.id);
   return (
     <div>
@@ -434,7 +432,7 @@ function QuizResults({
         })}
       </ol>
 
-      {provenance.length > 0 && (
+      {artifact.sourceIds.length > 0 && (
         <div className="mt-6 rounded-lg border border-border p-4">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
             Revisit the sources behind this quiz
@@ -442,18 +440,7 @@ function QuizResults({
           <p className="mt-1 text-xs text-text-secondary">
             Missed something? Go back to where the material came from.
           </p>
-          <ul className="mt-2 space-y-1">
-            {provenance.map((source) => (
-              <li key={source.id}>
-                <Link
-                  href={`/app/knowledge-bases/${artifact.knowledgeBaseId}/${source.id}`}
-                  className="text-xs font-medium text-brand transition-colors hover:text-brand-hover hover:underline"
-                >
-                  {source.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <ArtifactSourceList artifact={artifact} sources={sources} />
         </div>
       )}
 
