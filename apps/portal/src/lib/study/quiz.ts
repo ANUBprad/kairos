@@ -37,6 +37,13 @@ export type QuizQuestionView = QuizViewContent["questions"][number];
 type QuizAttemptRow = QuizAttempt;
 type QuizAttemptAnswerRow = QuizAttemptAnswer;
 
+export interface QuizAttemptSummary {
+  id: string;
+  score: number;
+  totalQuestions: number;
+  completedAt: string;
+}
+
 export function assertAllQuestionsAnswered(
   questions: readonly QuizQuestionView[],
   answers: readonly QuizAnswerInput[],
@@ -239,4 +246,30 @@ export async function getQuizAttemptForUser(
   const artifact = await getLearningArtifactInKb(artifactId, knowledgeBaseId);
   const content = artifact ? parseQuizContent(artifact.content) : null;
   return toQuizAttemptData(attempt, attempt.answers, content?.questions ?? null);
+}
+
+// Score history for a quiz the user can access, newest first. Only completed
+// attempts carry a score; an in-progress attempt is resumed separately through
+// getQuizAttemptForUser.
+export async function getQuizAttemptHistoryForUser(
+  userId: string,
+  request: { knowledgeBaseId: string; artifactId: string },
+): Promise<QuizAttemptSummary[]> {
+  const { knowledgeBaseId, artifactId } = request;
+
+  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId))) {
+    throw new AppError("NOT_FOUND", "Knowledge base not found", 404);
+  }
+
+  const rows = await prisma.quizAttempt.findMany({
+    where: { userId, artifactId, knowledgeBaseId, status: "COMPLETED" },
+    orderBy: { completedAt: "desc" },
+    select: { id: true, score: true, totalQuestions: true, completedAt: true },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    score: row.score,
+    totalQuestions: row.totalQuestions,
+    completedAt: row.completedAt ? row.completedAt.toISOString() : "",
+  }));
 }

@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AlertCircle, CheckCircle2, Loader2, RotateCcw, Sparkles, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
 import { parseQuizContent } from "@/lib/artifacts/quiz-view";
+import { resolveSourceProvenance } from "@/lib/artifacts/summary-view";
 import {
   getQuizAttemptForWorkspace,
+  getQuizAttemptHistoryForWorkspace,
   startQuizAttemptForWorkspace,
   submitQuizAttemptForWorkspace,
   type QuizAttemptData,
+  type QuizAttemptSummary,
 } from "@/lib/actions/study-quiz";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
 
@@ -31,10 +35,11 @@ type View =
 // the final score live in the DB and survive reload. Correctness is always
 // computed by the server (submitQuizAttemptForWorkspace); this component only
 // collects the caller's { questionId, selectedAnswer } and renders the result.
-export function QuizArtifactViewer({ artifact, sources: _sources, onClose }: Props) {
+export function QuizArtifactViewer({ artifact, sources, onClose }: Props) {
   const content = parseQuizContent(artifact.content);
   const kbId = artifact.knowledgeBaseId;
   const [view, setView] = useState<View>({ kind: "loading" });
+  const [history, setHistory] = useState<QuizAttemptSummary[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -43,9 +48,13 @@ export function QuizArtifactViewer({ artifact, sources: _sources, onClose }: Pro
     let cancelled = false;
     setView({ kind: "loading" });
     setActionError(null);
-    getQuizAttemptForWorkspace(kbId, artifact.id)
-      .then((attempt) => {
+    Promise.all([
+      getQuizAttemptForWorkspace(kbId, artifact.id),
+      getQuizAttemptHistoryForWorkspace(kbId, artifact.id),
+    ])
+      .then(([attempt, history]) => {
         if (cancelled) return;
+        setHistory(history);
         setView(
           attempt && attempt.status === "COMPLETED"
             ? { kind: "results", attempt }
@@ -172,6 +181,9 @@ export function QuizArtifactViewer({ artifact, sources: _sources, onClose }: Pro
               content={content}
               attempt={resultsAttempt}
               artifactName={artifact.name ?? ""}
+              artifact={artifact}
+              sources={sources}
+              history={history}
               onClose={onClose}
               onTryAgain={tryAgain}
             />
@@ -197,6 +209,12 @@ export function QuizArtifactViewer({ artifact, sources: _sources, onClose }: Pro
                 <p className="mt-1 text-xs text-text-tertiary">
                   {content.questions.length} question{content.questions.length !== 1 ? "s" : ""}
                 </p>
+                {history.length > 0 && (
+                  <p className="mt-1 text-xs text-text-secondary">
+                    Taken {history.length}× · best{" "}
+                    {Math.max(...history.map((h) => h.score))}/{history[0].totalQuestions}
+                  </p>
+                )}
               </div>
               <Button variant="primary" size="sm" onClick={start}>
                 <Sparkles size={13} />
@@ -300,17 +318,25 @@ function QuizResults({
   content,
   attempt,
   artifactName,
+  artifact,
+  sources,
+  history,
   onClose,
   onTryAgain,
 }: {
   content: NonNullable<ReturnType<typeof parseQuizContent>>;
   attempt: QuizAttemptData;
   artifactName: string;
+  artifact: LearningArtifactData;
+  sources: { id: string; name: string | null }[];
+  history: QuizAttemptSummary[];
   onClose: () => void;
   onTryAgain: () => void;
 }) {
   const correct = attempt.answers.filter((a) => a.isCorrect).length;
   const byQuestion = new Map(attempt.answers.map((a) => [a.questionId, a]));
+  const provenance = resolveSourceProvenance(artifact.sourceIds, sources);
+  const past = history.filter((h) => h.id !== attempt.id);
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -407,6 +433,47 @@ function QuizResults({
           );
         })}
       </ol>
+
+      {provenance.length > 0 && (
+        <div className="mt-6 rounded-lg border border-border p-4">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+            Revisit the sources behind this quiz
+          </h4>
+          <p className="mt-1 text-xs text-text-secondary">
+            Missed something? Go back to where the material came from.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {provenance.map((source) => (
+              <li key={source.id}>
+                <Link
+                  href={`/app/knowledge-bases/${artifact.knowledgeBaseId}/${source.id}`}
+                  className="text-xs font-medium text-brand transition-colors hover:text-brand-hover hover:underline"
+                >
+                  {source.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {past.length > 0 && (
+        <div className="mt-4 rounded-lg border border-border p-4">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+            Past attempts
+          </h4>
+          <ul className="mt-2 space-y-1">
+            {past.map((h) => (
+              <li key={h.id} className="flex items-center justify-between text-xs text-text-secondary">
+                <span>{h.completedAt ? new Date(h.completedAt).toLocaleString() : "—"}</span>
+                <span className="font-medium tabular-nums">
+                  {h.score}/{h.totalQuestions}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

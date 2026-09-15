@@ -3,11 +3,12 @@
 import { requireSession } from "@/lib/server/auth-utils";
 import {
   getQuizAttemptForUser,
+  getQuizAttemptHistoryForUser,
   startQuizAttemptForUser,
   submitQuizAttemptForUser,
 } from "@/lib/study";
 
-export type { QuizAnswerInput, QuizAttemptData } from "@/lib/study";
+export type { QuizAnswerInput, QuizAttemptData, QuizAttemptSummary } from "@/lib/study";
 
 // Authenticated surface for the persistent quiz attempt flow. All authorization
 // happens below in the study layer (session user + KB scope); this file only
@@ -35,4 +36,12 @@ export async function getQuizAttemptForWorkspace(
 ) {
   const session = await requireSession();
   return getQuizAttemptForUser(session.user.id, { knowledgeBaseId, artifactId });
+}
+
+export async function getQuizAttemptHistoryForWorkspace(
+  knowledgeBaseId: string,
+  artifactId: string,
+) {
+  const session = await requireSession();
+  return getQuizAttemptHistoryForUser(session.user.id, { knowledgeBaseId, artifactId });
 }
