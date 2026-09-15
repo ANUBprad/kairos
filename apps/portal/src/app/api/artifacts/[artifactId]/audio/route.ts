@@ -6,8 +6,7 @@ import { sanitizeError } from "@/lib/errors";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { getStorageProvider } from "@/lib/storage";
 import { isValidEntityId } from "@/lib/validation";
-
-const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+import { mediaContentType, proxyMediaResponse } from "@/lib/audio/media-proxy";
 
 interface PodcastMetadata {
   audio?: { storageKey?: unknown; format?: unknown; provider?: unknown; durationSeconds?: unknown } | null;
@@ -17,7 +16,9 @@ interface PodcastMetadata {
 // browser only ever receives a same-origin audio response; the storage key
 // stays server-side and is fetched through a short-lived signed URL. Authorized
 // via the artifact's own knowledge base — a foreign artifact id resolves to
-// 404, never a 403 that leaks its existence.
+// 404, never a 403 that leaks its existence. The signed URL is handed to the
+// shared media proxy, which forwards byte ranges to Cloudinary and streams the
+// response instead of buffering the whole object.
 export async function GET(request: NextRequest, { params }: { params: Promise<{ artifactId: string }> }) {
   const session = await getServerSession();
   if (!session?.user?.id) {
@@ -59,23 +60,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const storage = getStorageProvider();
     const signedUrl = await storage.getSignedUrl(audio.storageKey);
-    const upstream = await fetch(signedUrl, { cache: "no-store" });
-    if (!upstream.ok) {
-      return NextResponse.json({ error: "Media upstream unavailable" }, { status: 502 });
-    }
-
-    const bytes = Buffer.from(await upstream.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > MAX_AUDIO_BYTES) {
-      return NextResponse.json({ error: "Media upstream unavailable" }, { status: 502 });
-    }
-
-    return new NextResponse(new Uint8Array(bytes), {
-      status: 200,
-      headers: {
-        "Content-Type": audio.format === "mp3" ? "audio/mpeg" : "audio/wav",
-        "Content-Length": String(bytes.length),
-        "Cache-Control": "private, max-age=3600",
-      },
+    return await proxyMediaResponse({
+      signedUrl,
+      rangeHeader: request.headers.get("range"),
+      contentType: mediaContentType(audio.format),
     });
   } catch (error) {
     const sanitized = sanitizeError(error);

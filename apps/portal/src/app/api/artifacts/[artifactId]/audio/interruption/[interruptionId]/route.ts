@@ -7,9 +7,9 @@ import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { getStorageProvider } from "@/lib/storage";
 import { parseStoredInterruptions } from "@/lib/artifacts";
 import { isValidEntityId } from "@/lib/validation";
+import { mediaContentType, proxyMediaResponse } from "@/lib/audio/media-proxy";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 
 // Session-authenticated streaming handler for a single podcast interruption.
 // The interruption history rides on the podcast's metadata; its audio is a
@@ -17,6 +17,8 @@ const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 // episode so playback swaps assets without ever exposing a storage identity.
 // Authorized via the artifact's own knowledge base — a foreign artifact or a
 // foreign interruption id both resolve to 404, never a 403 that leaks them.
+// Byte-range requests are proxied through the same shared media helper as the
+// episode route.
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ artifactId: string; interruptionId: string }> },
@@ -57,23 +59,10 @@ export async function GET(
   try {
     const storage = getStorageProvider();
     const signedUrl = await storage.getSignedUrl(interruption.audio.storageKey);
-    const upstream = await fetch(signedUrl, { cache: "no-store" });
-    if (!upstream.ok) {
-      return NextResponse.json({ error: "Media upstream unavailable" }, { status: 502 });
-    }
-
-    const bytes = Buffer.from(await upstream.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > MAX_AUDIO_BYTES) {
-      return NextResponse.json({ error: "Media upstream unavailable" }, { status: 502 });
-    }
-
-    return new NextResponse(new Uint8Array(bytes), {
-      status: 200,
-      headers: {
-        "Content-Type": interruption.audio.format === "mp3" ? "audio/mpeg" : "audio/wav",
-        "Content-Length": String(bytes.length),
-        "Cache-Control": "private, max-age=3600",
-      },
+    return await proxyMediaResponse({
+      signedUrl,
+      rangeHeader: request.headers.get("range"),
+      contentType: mediaContentType(interruption.audio.format),
     });
   } catch (error) {
     const sanitized = sanitizeError(error);
