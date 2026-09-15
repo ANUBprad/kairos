@@ -495,9 +495,10 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
                     </p>
                     <div className="space-y-1.5">
                       {msg.citations.map((c) => (
-                        <div
+                        <Link
                           key={c.chunkId}
-                          className="flex items-start gap-2 rounded-lg bg-bg/50 p-2 text-xs"
+                          href={`/app/knowledge-bases/${kbId}/${c.documentId}?chunk=${c.chunkIndex}`}
+                          className="flex items-start gap-2 rounded-lg bg-bg/50 p-2 text-xs transition-colors hover:bg-surface-hover"
                         >
                           <FileText size={12} className="shrink-0 mt-0.5 text-text-tertiary" />
                           <div className="min-w-0">
@@ -510,7 +511,7 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
                               {c.similarity && ` · ${Math.round(c.similarity * 100)}% match`}
                             </p>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>

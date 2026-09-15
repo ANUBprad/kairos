@@ -4,10 +4,14 @@ import { notFound } from "next/navigation";
 
 export default async function DocumentDetailsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ kbId: string; docId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { kbId, docId } = await params;
+  const sp = await searchParams;
+  const chunkIndex = typeof sp.chunk === "string" ? Number(sp.chunk) : undefined;
 
   try {
     const doc = await getDocumentDetails(docId);
@@ -16,7 +20,7 @@ export default async function DocumentDetailsPage({
       notFound();
     }
 
-    return <DocumentDetailsClient document={doc} kbId={kbId} />;
+    return <DocumentDetailsClient document={doc} kbId={kbId} initialChunkIndex={chunkIndex} />;
   } catch {
     notFound();
   }

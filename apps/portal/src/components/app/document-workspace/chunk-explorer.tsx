@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
   Search,
@@ -17,10 +17,13 @@ import type { DocumentChunkData } from "./types";
 interface ChunkExplorerProps {
   chunks: DocumentChunkData[];
   className?: string;
+  initialChunkIndex?: number;
 }
 
-export function ChunkExplorer({ chunks, className }: ChunkExplorerProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
+export function ChunkExplorer({ chunks, className, initialChunkIndex }: ChunkExplorerProps) {
+  const [selectedIndex, setSelectedIndex] = useState(
+    () => (initialChunkIndex != null ? chunks.findIndex((c) => c.index === initialChunkIndex) : -1) + 1 || 0,
+  );
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState<"content" | "metadata" | "split">("content");
@@ -31,6 +34,12 @@ export function ChunkExplorer({ chunks, className }: ChunkExplorerProps) {
         c.index.toString().includes(search)
       )
     : chunks;
+
+  useEffect(() => {
+    if (initialChunkIndex == null) return;
+    const el = document.getElementById(`chunk-${initialChunkIndex}`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [initialChunkIndex, filtered]);
 
   const currentChunk = filtered[selectedIndex] || filtered[0];
 
@@ -148,10 +157,11 @@ export function ChunkExplorer({ chunks, className }: ChunkExplorerProps) {
         {(viewMode === "content" || viewMode === "split") && (
           <div className="space-y-1.5 max-h-[400px] overflow-y-auto rounded-lg border border-border p-2">
             {filtered.map((chunk, i) => (
-              <button
-                key={chunk.id}
-                onClick={() => setSelectedIndex(i)}
-                className={cn(
+<button
+                  key={chunk.id}
+                  id={`chunk-${chunk.index}`}
+                  onClick={() => setSelectedIndex(i)}
+                  className={cn(
                   "w-full text-left rounded-md p-2.5 text-xs transition-colors",
                   i === selectedIndex
                     ? "bg-brand/10 border border-brand/20"

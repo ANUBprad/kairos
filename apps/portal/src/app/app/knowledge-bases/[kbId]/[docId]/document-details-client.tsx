@@ -38,6 +38,7 @@ import type { DocumentWithDetailsAndRelations } from "@/components/app/document-
 interface DocumentDetailsClientProps {
   document: DocumentWithDetailsAndRelations;
   kbId: string;
+  initialChunkIndex?: number;
 }
 
 type TabId = "overview" | "chunks" | "metadata" | "retrieval" | "versions" | "activity" | "suggestions";
@@ -52,9 +53,11 @@ const TABS: { id: TabId; label: string; icon: typeof FileText }[] = [
   { id: "suggestions", label: "AI Insights", icon: Sparkles },
 ];
 
-export function DocumentDetailsClient({ document, kbId }: DocumentDetailsClientProps) {
+export function DocumentDetailsClient({ document, kbId, initialChunkIndex }: DocumentDetailsClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [activeTab, setActiveTab] = useState<TabId>(
+    initialChunkIndex != null ? "chunks" : "overview",
+  );
   const [renameTarget, setRenameTarget] = useState<{ id: string; name: string; knowledgeBaseId: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; knowledgeBaseId: string } | null>(null);
 
@@ -171,7 +174,7 @@ export function DocumentDetailsClient({ document, kbId }: DocumentDetailsClientP
 
         {activeTab === "chunks" && (
           <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
-            <ChunkExplorer chunks={document.chunks} />
+            <ChunkExplorer chunks={document.chunks} initialChunkIndex={initialChunkIndex} />
           </div>
         )}
 
