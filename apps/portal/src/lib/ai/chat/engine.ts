@@ -2,7 +2,7 @@ import { getAIProvider } from "@/lib/ai/providers";
 import { searchSimilar } from "@/lib/ai/retrieval";
 import { buildChatPrompt, formatForProvider } from "@/lib/ai/prompts";
 import { addMessage, getConversationMessages } from "@/lib/ai/memory";
-import { extractCitationsFromChunks } from "@/lib/ai/citations";
+import { extractCitationsFromChunks, filterCitationsToContent } from "@/lib/ai/citations";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { createAbortError } from "@/lib/ai/abort";
 import { logger } from "@/lib/logger";
@@ -68,7 +68,10 @@ export async function generateChatResponse(
     signal: request.signal,
   });
 
-  const citations = extractCitationsFromChunks(retrieval.chunks);
+  const citations = filterCitationsToContent(
+    extractCitationsFromChunks(retrieval.chunks),
+    response.content,
+  );
 
   await addMessage(
     request.conversationId,
@@ -103,7 +106,7 @@ export async function* streamChatResponse(
 
     const retrieval = await searchSimilar(request.query, retrievalOptions);
 
-    const citations = extractCitationsFromChunks(retrieval.chunks);
+    const retrievedChunks = retrieval.chunks;
 
     const conversationMessages = await getConversationMessages(
       request.conversationId,
@@ -112,7 +115,7 @@ export async function* streamChatResponse(
     const prompt = buildChatPrompt({
       systemPrompt: "",
       conversationHistory: conversationMessages,
-      retrievedChunks: retrieval.chunks,
+      retrievedChunks,
       userQuery: request.query,
     });
 
@@ -132,6 +135,11 @@ export async function* streamChatResponse(
       fullContent += chunk.content;
       yield { content: chunk.content, done: false };
     }
+
+    const citations = filterCitationsToContent(
+      extractCitationsFromChunks(retrievedChunks),
+      fullContent,
+    );
 
     await addMessage(
       request.conversationId,
