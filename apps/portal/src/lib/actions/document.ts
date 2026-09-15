@@ -16,9 +16,14 @@ import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError
 import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError } from "@/lib/ingestion/youtube";
 import { buildTextDocumentData, normalizeTextInput, textDocumentFileHash } from "@/lib/ingestion/text";
 import { assertSameKnowledgeBase, MAX_BULK_OPERATIONS, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
-import type { Prisma } from "@prisma/client";
+import type { DocumentStatus, Prisma } from "@prisma/client";
 
 const ALLOWED_EXTENSIONS = ["pdf", "txt", "md", "markdown", "csv", "docx"];
+
+// Statuses a source must be in before a mutation (edit/repoint/reprocess) may
+// claim it. The claim itself is a compare-and-set transition IDLE -> QUEUED, so
+// concurrent mutations race on the database row and only one wins.
+const MUTATION_IDLE_STATUSES: DocumentStatus[] = ["STORED", "INDEXED", "READY", "ERROR"];
 
 const MIME_MAP: Record<string, string> = {
   "application/pdf": "pdf",
@@ -521,7 +526,84 @@ export async function ingestText(kbId: string, input: { title?: string; content:
   return doc;
 }
 
-async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer) {
+// If a mutation was staged (evictChunkIds passed), a pipeline failure must not
+// destroy the last known-good content: while every old chunk still exists, the
+// candidate chunks are dropped and the document returns to INDEXED so retrieval
+// keeps handing out the previous good version. Only when the staged swap has
+// already happened do we fall through to the plain ERROR state.
+async function rollbackOrError(
+  docId: string,
+  evictChunkIds: string[] | undefined,
+  meta: Record<string, unknown>,
+  errMsg: string,
+  stage: string,
+) {
+  if (evictChunkIds && evictChunkIds.length > 0) {
+    const remaining = await prisma.documentChunk
+      .count({ where: { id: { in: evictChunkIds } } })
+      .catch(() => -1);
+
+    if (remaining === evictChunkIds.length) {
+      const row = await prisma.document
+        .findUnique({
+          where: { id: docId },
+          select: { metadata: true, uploadedById: true },
+        })
+        .catch(() => null);
+      const currentMeta = (row?.metadata ?? {}) as Record<string, unknown> | null;
+      try {
+        await prisma.$transaction(async (tx) => {
+          await tx.documentChunk.deleteMany({
+            where: { documentId: docId, id: { notIn: evictChunkIds } },
+          });
+          await tx.document.update({
+            where: { id: docId },
+            data: {
+              status: "INDEXED",
+              metadata: {
+                ...(currentMeta || {}),
+                stage: "failed",
+                lastProcessFailedAt: new Date().toISOString(),
+                lastProcessError: errMsg,
+                retainedPreviousContent: true,
+              } as never,
+            },
+          });
+          if (row?.uploadedById) {
+            await tx.documentActivity.create({
+              data: {
+                documentId: docId,
+                userId: row.uploadedById,
+                action: "PROCESS_FAILED",
+                details: { error: errMsg, stage, retainedPreviousContent: true } as never,
+              },
+            });
+          }
+        });
+        logger.warn("[Pipeline] Failed update — restored previous known-good content", {
+          docId,
+          stage,
+          error: errMsg,
+        });
+        return;
+      } catch (rollbackErr) {
+        logger.error("[Pipeline] Rollback failed", {
+          docId,
+          error: rollbackErr instanceof Error ? rollbackErr.message : "unknown",
+        });
+      }
+    }
+  }
+
+  await prisma.document
+    .update({
+      where: { id: docId },
+      data: { status: "ERROR", metadata: meta as never },
+    })
+    .catch(() => {});
+}
+
+async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer, evictChunkIds?: string[]) {
   const pipelineStart = Date.now();
   let stage = "init";
 
@@ -689,24 +771,24 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
 
     stage = "embed";
     logger.info("[Embedding] Queuing embedding generation (fire-and-forget)", { docId });
-    generateEmbeddings(docId).catch((embedErr) => {
+    generateEmbeddings(docId, undefined, evictChunkIds).catch(async (embedErr) => {
       const errMsg = embedErr instanceof Error ? embedErr.message : String(embedErr);
       const errStack = embedErr instanceof Error ? embedErr.stack : undefined;
       logger.error("[Embedding] Failed", { docId, error: errMsg, stack: errStack });
 
-      prisma.document.update({
-        where: { id: docId },
-        data: {
-          status: "ERROR",
-          metadata: {
-            ...meta,
-            stage: "embed",
-            error: errMsg,
-            timestamp: new Date().toISOString(),
-            durationMs: Date.now() - pipelineStart,
-          } as never,
+      await rollbackOrError(
+        docId,
+        evictChunkIds,
+        {
+          ...meta,
+          stage: "embed",
+          error: errMsg,
+          timestamp: new Date().toISOString(),
+          durationMs: Date.now() - pipelineStart,
         },
-      }).catch(() => {});
+        errMsg,
+        "embed",
+      );
     });
 
     meta.stage = "completed";
@@ -735,10 +817,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       durationMs: meta.durationMs,
     });
 
-    await prisma.document.update({
-      where: { id: docId },
-      data: { status: "ERROR", metadata: meta as never },
-    }).catch(() => {});
+    await rollbackOrError(docId, evictChunkIds, meta, errMsg, stage);
   }
 }
 
@@ -871,17 +950,21 @@ export async function reprocessDocument(formData: FormData) {
     throw new Error("Text source has no stored content to reprocess");
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.documentChunk.deleteMany({ where: { documentId: id } });
-    await tx.document.update({
-      where: { id },
-      data: { status: "QUEUED" },
-    });
+  const existingChunkIds = (
+    await prisma.documentChunk.findMany({ where: { documentId: id }, select: { id: true } })
+  ).map((c) => c.id);
+
+  const claimed = await prisma.document.updateMany({
+    where: { id, status: { in: MUTATION_IDLE_STATUSES } },
+    data: { status: "QUEUED" },
   });
+  if (claimed.count !== 1) {
+    throw new Error("This source is currently being processed; try again shortly.");
+  }
 
   await logActivity(id, session.user.id, "REPROCESSED", { fileName: doc.name });
 
-  processDocument(id, doc.fileType, textBuffer).catch((err) => {
+  processDocument(id, doc.fileType, textBuffer, existingChunkIds).catch((err) => {
     logger.error(`Reprocessing failed for ${id}`, { error: err instanceof Error ? err.message : "unknown" });
   });
 
@@ -956,13 +1039,20 @@ export async function bulkReprocessDocuments(formData: FormData) {
     docs.filter((d) => d.sourceType === "TEXT").map((d) => d.id),
   );
 
+  const toProcess: { docId: string; fileType: string; buffer: Buffer | undefined; chunkIds: string[] }[] = [];
+
   await prisma.$transaction(async (tx) => {
     for (const doc of docs) {
-      await tx.documentChunk.deleteMany({ where: { documentId: doc.id } });
-      await tx.document.update({
-        where: { id: doc.id },
+      const chunkIds = (
+        await tx.documentChunk.findMany({ where: { documentId: doc.id }, select: { id: true } })
+      ).map((c) => c.id);
+
+      const claimed = await tx.document.updateMany({
+        where: { id: doc.id, status: { in: MUTATION_IDLE_STATUSES } },
         data: { status: "QUEUED" },
       });
+      if (claimed.count !== 1) continue; // already in flight; skip
+
       await tx.documentActivity.create({
         data: {
           documentId: doc.id,
@@ -971,12 +1061,14 @@ export async function bulkReprocessDocuments(formData: FormData) {
           details: { fileName: doc.name },
         },
       });
+
+      toProcess.push({ docId: doc.id, fileType: doc.fileType, buffer: textBuffers.get(doc.id), chunkIds });
     }
   });
 
-  for (const doc of docs) {
-    processDocument(doc.id, doc.fileType, textBuffers.get(doc.id)).catch((err) => {
-      logger.error(`Bulk reprocess failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
+  for (const { docId, fileType, buffer, chunkIds } of toProcess) {
+    processDocument(docId, fileType, buffer, chunkIds).catch((err) => {
+      logger.error(`Bulk reprocess failed for ${docId}`, { error: err instanceof Error ? err.message : "unknown" });
     });
   }
 
