@@ -349,11 +349,14 @@ describe("studio wiring", () => {
     assert.doesNotMatch(reportViewerSource, /from ["']@\/lib\/actions\//);
   });
 
-  it("keeps the quiz interaction local: client state only, no persistence or server access", () => {
+  it("persists quiz attempts through the study actions while grading stays server-side", () => {
     assert.match(quizViewerSource, /"use client"/);
     assert.match(quizViewerSource, /useState/);
     assert.match(quizViewerSource, /parseQuizContent/);
-    assert.doesNotMatch(quizViewerSource, /from ["']@\/lib\/actions\//);
+    assert.match(quizViewerSource, /from ["']@\/lib\/actions\/study-quiz["']/);
+    assert.match(quizViewerSource, /startQuizAttemptForWorkspace/);
+    assert.match(quizViewerSource, /submitQuizAttemptForWorkspace/);
+    assert.match(quizViewerSource, /getQuizAttemptForWorkspace/);
     assert.doesNotMatch(quizViewerSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(quizViewerSource, /from ["']@\/lib\/artifacts\/persistence["']/);
     assert.doesNotMatch(quizViewerSource, /generateQuizArtifact|getLearningArtifactForWorkspace|createLearningArtifact/);
@@ -364,13 +367,13 @@ describe("studio wiring", () => {
     assert.match(studioSource, /SourceListItem/);
   });
 
-  it("performs soft-swipe flashcards: reveal, navigate and reset all stay client-local", () => {
+  it("performs soft-swipe flashcards client-side while reviews persist through the study actions", () => {
     assert.match(flashcardsViewerSource, /"use client"/);
     assert.match(flashcardsViewerSource, /useState/);
     assert.match(flashcardsViewerSource, /parseFlashcardsContent/);
-    assert.match(flashcardsViewerSource, /goNext|goPrev|setIndex/);
-    assert.match(flashcardsViewerSource, /setRevealed/);
-    assert.doesNotMatch(flashcardsViewerSource, /from ["']@\/lib\/actions\//);
+    assert.match(flashcardsViewerSource, /getFlashcardReviewsForWorkspace/);
+    assert.match(flashcardsViewerSource, /markFlashcardReviewForWorkspace/);
+    assert.match(flashcardsViewerSource, /setIndex|setRevealed/);
     assert.doesNotMatch(flashcardsViewerSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(flashcardsViewerSource, /generateFlashcardsArtifact|getLearningArtifactForWorkspace/);
   });

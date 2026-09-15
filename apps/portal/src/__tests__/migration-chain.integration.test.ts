@@ -17,6 +17,9 @@ const HOTPATH_TABLES = [
   "Conversation",
   "Message",
   "MessageCitation",
+  "QuizAttempt",
+  "QuizAttemptAnswer",
+  "FlashcardReview",
 ];
 
 const HOTPATH_INDEXES = [
@@ -27,6 +30,13 @@ const HOTPATH_INDEXES = [
   "Conversation_knowledgeBaseId_userId_idx",
   "Message_conversationId_createdAt_idx",
   "MessageCitation_messageId_idx",
+  "QuizAttempt_artifactId_idx",
+  "QuizAttempt_knowledgeBaseId_userId_idx",
+  "QuizAttemptAnswer_attemptId_idx",
+  "QuizAttemptAnswer_attemptId_questionId_key",
+  "FlashcardReview_artifactId_idx",
+  "FlashcardReview_knowledgeBaseId_userId_idx",
+  "FlashcardReview_userId_artifactId_cardId_key",
 ];
 
 function makeClient(url: string): PrismaClient {
