@@ -13,7 +13,7 @@ import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
 import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError, type FetchUrlOptions } from "@/lib/ingestion/url";
-import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError } from "@/lib/ingestion/youtube";
+import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError, type FetchYoutubeOptions } from "@/lib/ingestion/youtube";
 import { buildTextDocumentData, normalizeTextInput, textDocumentFileHash } from "@/lib/ingestion/text";
 import { assertSameKnowledgeBase, MAX_BULK_OPERATIONS, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
 import type { DocumentStatus, Prisma } from "@prisma/client";
@@ -794,6 +794,169 @@ export async function repointUrlSource(
   processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity }).catch(
     (err) => {
       logger.error(`URL repoint processing failed for ${docId}`, {
+        error: err instanceof Error ? err.message : "unknown",
+      });
+    },
+  );
+
+  try {
+    revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
+  } catch (revalidateErr) {
+    logger.warn("Revalidation skipped for knowledge base", {
+      kbId: doc.knowledgeBaseId,
+      error: revalidateErr instanceof Error ? revalidateErr.message : "unknown",
+    });
+  }
+  return { id: docId, status: "QUEUED" };
+}
+
+/**
+ * Re-points an existing YouTube source at a new video. The new video's
+ * transcript is fetched and validated (fresh SSRF/redirect checks) BEFORE any
+ * change to the document row. `opts` mirrors FetchYoutubeOptions and exists
+ * purely as a test seam (the React action path always uses the real network).
+ */
+export async function repointYouTubeSource(
+  docId: string,
+  rawUrl: string,
+  opts: FetchYoutubeOptions = {},
+) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const rl = rateLimit(`repoint-youtube:${session.user.id}`, RATE_LIMITS.upload);
+  if (!rl.allowed) throw new Error("Rate limit exceeded. Please try again later.");
+
+  const url = (rawUrl || "").trim();
+  if (!url) throw new Error("A YouTube link is required");
+
+  const doc = await prisma.document.findUnique({
+    where: { id: docId },
+    select: {
+      id: true,
+      name: true,
+      knowledgeBaseId: true,
+      fileType: true,
+      sourceType: true,
+      sourceUrl: true,
+      fileHash: true,
+      size: true,
+      metadata: true,
+    },
+  });
+  if (!doc) throw new Error("Document not found");
+  await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
+  if (doc.sourceType !== "YOUTUBE") throw new Error("Only YouTube sources can be repointed");
+
+  // Fetch + re-validate the new video BEFORE touching the row.
+  let transcript;
+  try {
+    transcript = await fetchYouTubeTranscript(url, opts);
+  } catch (err) {
+    const code = err instanceof YouTubeTranscriptError ? err.code : "transcript_fetch";
+    logger.warn("YouTube repoint rejected", { docId, code, url });
+    serverTrackEvent("youtube_repoint_rejected", { code, kbId: doc.knowledgeBaseId }, session.user.id);
+    throw new Error(youtubeIngestErrorMessage(code), { cause: err });
+  }
+
+  if (transcript.canonicalUrl === doc.sourceUrl) {
+    throw new Error("This source already points to that video.");
+  }
+
+  const newHash = urlDocumentFileHash(transcript.text);
+  if (newHash === doc.fileHash) {
+    throw new Error("Repointing to that video would not change the source content.");
+  }
+
+  const baseName = (transcript.title || `YouTube ${transcript.videoId}`).slice(0, 255);
+
+  // Last known-good chunks + identity are kept until the new version is fully
+  // embedded; the pipeline only evicts them on success, and rolls the document
+  // back to INDEXED on failure.
+  const existingChunkIds = (
+    await prisma.documentChunk.findMany({ where: { documentId: docId }, select: { id: true } })
+  ).map((c) => c.id);
+
+  const existingMeta = (doc.metadata ?? {}) as Record<string, unknown>;
+  const revertIdentity = {
+    name: doc.name,
+    sourceUrl: doc.sourceUrl,
+    fileHash: doc.fileHash,
+    size: doc.size,
+    metadata: existingMeta,
+  };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const duplicate = await tx.document.findFirst({
+        where: { knowledgeBaseId: doc.knowledgeBaseId, fileHash: newHash, id: { not: docId } },
+        select: { id: true, name: true },
+      });
+      if (duplicate) {
+        throw new Error(`This video is a duplicate of "${duplicate.name}" (same content)`);
+      }
+
+      const claimed = await tx.document.updateMany({
+        where: { id: docId, status: { in: MUTATION_IDLE_STATUSES } },
+        data: { status: "QUEUED" },
+      });
+      if (claimed.count !== 1) {
+        throw new Error("This source is currently being processed; try again shortly.");
+      }
+
+      await tx.document.update({
+        where: { id: docId },
+        data: {
+          name: baseName,
+          sourceUrl: transcript.canonicalUrl,
+          fileHash: newHash,
+          size: Buffer.byteLength(transcript.text, "utf8"),
+          metadata: {
+            ...existingMeta,
+            mimeType: "text/plain",
+            source: "youtube",
+            videoId: transcript.videoId,
+            title: transcript.title,
+            languageCode: transcript.languageCode,
+            autoGenerated: transcript.autoGenerated,
+            cueCount: transcript.cueCount,
+          } as never,
+        },
+      });
+
+      await tx.documentActivity.create({
+        data: {
+          documentId: docId,
+          userId: session.user.id,
+          action: "UPDATED",
+          details: {
+            source: "YOUTUBE",
+            fromUrl: doc.sourceUrl,
+            toUrl: transcript.canonicalUrl,
+            previousName: doc.name,
+            title: transcript.title,
+            videoId: transcript.videoId,
+          } as never,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("This video is a duplicate of")) throw err;
+    throw err;
+  }
+
+  const buffer = Buffer.from(transcript.text, "utf8");
+  logger.info("YouTube source repoint staged", {
+    docId,
+    kbId: doc.knowledgeBaseId,
+    bytes: buffer.byteLength,
+    chars: transcript.text.length,
+  });
+  serverTrackEvent("youtube_source_repointed", { kbId: doc.knowledgeBaseId }, session.user.id);
+
+  processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity }).catch(
+    (err) => {
+      logger.error(`YouTube repoint processing failed for ${docId}`, {
         error: err instanceof Error ? err.message : "unknown",
       });
     },

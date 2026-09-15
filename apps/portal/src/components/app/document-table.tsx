@@ -28,6 +28,7 @@ SearchX,
   Sparkles,
   StickyNote,
   Globe,
+  Youtube,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
@@ -634,6 +635,15 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                             >
                               <Globe size={15} />
                               Change URL
+                            </button>
+                          )}
+                          {doc.sourceType === "YOUTUBE" && (
+                            <button
+                              onClick={() => { setEditTarget(doc); setMenuOpen(null); }}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                            >
+                              <Youtube size={15} />
+                              Change video
                             </button>
                           )}
                           {doc.storageUrl && (
