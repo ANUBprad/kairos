@@ -39,6 +39,8 @@ model User {
   experiments      Experiment[]
   benchmarkRuns    BenchmarkRun[]
   learningArtifacts LearningArtifact[]
+  quizAttempts     QuizAttempt[]
+  flashcardReviews FlashcardReview[]
 
   apiKeys          ApiKey[]
   notifications    Notification[]
@@ -224,6 +226,8 @@ model KnowledgeBase {
   experimentRuns    ExperimentRun[]
   benchmarkDatasets BenchmarkDataset[]
   learningArtifacts LearningArtifact[]
+  quizAttempts      QuizAttempt[]
+  flashcardReviews  FlashcardReview[]
 
   retrievalConfig Json? @default("{}")
 
@@ -326,9 +330,97 @@ model LearningArtifact {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
+  quizAttempts     QuizAttempt[]
+  flashcardReviews FlashcardReview[]
+
   @@index([knowledgeBaseId, type])
   @@index([knowledgeBaseId, status])
   @@index([knowledgeBaseId, createdAt])
+}
+
+/// Study Loop / Persistent study state
+
+enum QuizAttemptStatus {
+  PENDING
+  COMPLETED
+}
+
+enum FlashcardReviewStatus {
+  NEW
+  LEARNING
+  KNOWN
+}
+
+/// One user's attempt at a QUIZ artifact. Generated questions carry no ids of
+/// their own, so questionId is the 0-based index into the artifact's questions
+/// array, derived from the immutable content at grading time — the client never
+/// supplies correctness. Completed attempts are immutable: the row is written
+/// once at submit and never updated again.
+model QuizAttempt {
+  id             String            @id @default(cuid())
+  status         QuizAttemptStatus @default(PENDING)
+  score          Int               @default(0)
+  totalQuestions Int               @default(0)
+  completedAt    DateTime?
+
+  artifactId      String
+  artifact        LearningArtifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  knowledgeBaseId String
+  knowledgeBase   KnowledgeBase    @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  answers QuizAttemptAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([artifactId])
+  @@index([knowledgeBaseId, userId])
+}
+
+/// One graded question inside a quiz attempt. isCorrect is computed by the
+/// server from the artifact content at submit time; the correct option and its
+/// explanation stay in the (immutable) artifact and are resolved at read time,
+/// not duplicated here.
+model QuizAttemptAnswer {
+  id             String     @id @default(cuid())
+  attemptId      String
+  attempt        QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  questionId     Int
+  selectedAnswer Int
+  isCorrect      Boolean
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+}
+
+/// Per-card review state for one user on one FLASHCARDS artifact. cardId is the
+/// 0-based index into the artifact's cards array. Deliberately no spaced
+/// repetition: a deterministic NEW -> LEARNING -> KNOWN progression where a
+/// KNOWN card answered "Again" drops back to LEARNING.
+model FlashcardReview {
+  id                String                @id @default(cuid())
+  status            FlashcardReviewStatus @default(NEW)
+  knownCount        Int                   @default(0)
+  againCount        Int                   @default(0)
+  reviewCount       Int                   @default(0)
+  lastReviewedAt    DateTime?
+
+  cardId          Int
+  artifactId      String
+  artifact        LearningArtifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  knowledgeBaseId String
+  knowledgeBase   KnowledgeBase    @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, artifactId, cardId])
+  @@index([artifactId])
+  @@index([knowledgeBaseId, userId])
 }
 
 /// Documents / Uploads
