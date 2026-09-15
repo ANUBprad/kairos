@@ -94,27 +94,28 @@ export async function generateLearningArtifactForUser(
   });
   await updateLearningArtifactStatus(artifact.id, "PROCESSING");
 
-  const organizationId = await getKbOrganizationId(knowledgeBaseId);
-  const model = request.model ?? provider.getDefaultModel();
-  const startedTrace = organizationId
-    ? await createTrace(organizationId, {
-        requestId: randomUUID(),
-        name: `artifact.generate.${artifactType.toLowerCase()}`,
-        provider: provider.type,
-        model,
-        metadata: buildArtifactTraceMetadata({
-          artifactId: artifact.id,
-          knowledgeBaseId,
-          sourceIds: normalized,
-          artifactType,
-        }),
-        userId,
-      })
-    : null;
-
+  let startedTrace: Awaited<ReturnType<typeof createTrace>> | null = null;
   let uploadedAudioKey: string | null = null;
 
   try {
+    const organizationId = await getKbOrganizationId(knowledgeBaseId);
+    const model = request.model ?? provider.getDefaultModel();
+    startedTrace = organizationId
+      ? await createTrace(organizationId, {
+          requestId: randomUUID(),
+          name: `artifact.generate.${artifactType.toLowerCase()}`,
+          provider: provider.type,
+          model,
+          metadata: buildArtifactTraceMetadata({
+            artifactId: artifact.id,
+            knowledgeBaseId,
+            sourceIds: normalized,
+            artifactType,
+          }),
+          userId,
+        })
+      : null;
+
     const chunks = await loadArtifactSourceChunks(knowledgeBaseId, normalized);
     const bounded = buildBoundedContext(chunks, definition.contextTokenBudget);
     if (bounded.context === "") {
