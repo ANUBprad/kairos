@@ -26,6 +26,7 @@ SearchX,
   Filter,
   Bot,
   Sparkles,
+  StickyNote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
@@ -35,6 +36,7 @@ import { SourceAddDialog } from "@/components/app/source-add-dialog";
 import { DocumentPreviewDialog } from "@/components/app/document-preview-dialog";
 import { RenameDocumentDialog } from "@/components/app/rename-document-dialog";
 import { DeleteDocumentDialog } from "@/components/app/delete-document-dialog";
+import { SourceEditDialog } from "@/components/app/source-edit-dialog";
 import { toast } from "sonner";
 import {
   reprocessDocument,
@@ -82,6 +84,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<DocumentItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DocumentItem | null>(null);
+  const [editTarget, setEditTarget] = useState<DocumentItem | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("createdAt");
@@ -614,6 +617,15 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                             <Pencil size={15} />
                             Rename
                           </button>
+                          {doc.sourceType === "TEXT" && (
+                            <button
+                              onClick={() => { setEditTarget(doc); setMenuOpen(null); }}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                            >
+                              <StickyNote size={15} />
+                              Edit text
+                            </button>
+                          )}
                           {doc.storageUrl && (
                             <button
                               onClick={() => { handleDownload(doc); setMenuOpen(null); }}
@@ -712,6 +724,10 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
       <RenameDocumentDialog
         document={renameTarget ? { id: renameTarget.id, name: renameTarget.name, knowledgeBaseId: kbId } : null}
         onClose={() => setRenameTarget(null)}
+      />
+      <SourceEditDialog
+        document={editTarget ? { id: editTarget.id, name: editTarget.name, sourceType: editTarget.sourceType, sourceUrl: editTarget.sourceUrl } : null}
+        onClose={() => setEditTarget(null)}
       />
       <DeleteDocumentDialog
         document={deleteTarget ? { id: deleteTarget.id, name: deleteTarget.name, knowledgeBaseId: kbId } : null}

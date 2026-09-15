@@ -526,6 +526,146 @@ export async function ingestText(kbId: string, input: { title?: string; content:
   return doc;
 }
 
+export async function updateTextSource(docId: string, input: { title?: string; content: string }) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const rl = rateLimit(`edit-text:${session.user.id}`, RATE_LIMITS.upload);
+  if (!rl.allowed) throw new Error("Rate limit exceeded. Please try again later.");
+
+  const doc = await prisma.document.findUnique({
+    where: { id: docId },
+    select: {
+      id: true,
+      name: true,
+      knowledgeBaseId: true,
+      fileType: true,
+      sourceType: true,
+      fileHash: true,
+      size: true,
+      metadata: true,
+    },
+  });
+  if (!doc) throw new Error("Document not found");
+  await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
+  if (doc.sourceType !== "TEXT") throw new Error("Only text sources can be edited as text");
+
+  const normalized = normalizeTextInput(input?.title || "", input?.content || "");
+  const newHash = textDocumentFileHash(normalized.title, normalized.content);
+  if (newHash === doc.fileHash) throw new Error("No changes to save");
+
+  // Last known-good chunks are captured and kept until the new version is
+  // fully embedded; the pipeline only evicts them on success, and rolls the
+  // document back to INDEXED on failure.
+  const existingChunkIds = (
+    await prisma.documentChunk.findMany({ where: { documentId: docId }, select: { id: true } })
+  ).map((c) => c.id);
+
+  const existingMeta = (doc.metadata ?? {}) as Record<string, unknown>;
+  const revertIdentity = {
+    name: doc.name,
+    sourceUrl: null,
+    fileHash: doc.fileHash,
+    size: doc.size,
+    metadata: existingMeta,
+  };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const duplicate = await tx.document.findFirst({
+        where: { knowledgeBaseId: doc.knowledgeBaseId, fileHash: newHash, id: { not: docId } },
+        select: { id: true, name: true },
+      });
+      if (duplicate) {
+        throw new Error(`This text is a duplicate of "${duplicate.name}" (same content)`);
+      }
+
+      const claimed = await tx.document.updateMany({
+        where: { id: docId, status: { in: MUTATION_IDLE_STATUSES } },
+        data: { status: "QUEUED" },
+      });
+      if (claimed.count !== 1) {
+        throw new Error("This source is currently being processed; try again shortly.");
+      }
+
+      await tx.document.update({
+        where: { id: docId },
+        data: {
+          name: normalized.name,
+          fileHash: newHash,
+          size: Buffer.byteLength(normalized.content, "utf8"),
+          metadata: {
+            ...existingMeta,
+            mimeType: "text/plain",
+            source: "text",
+            title: normalized.title,
+          } as never,
+        },
+      });
+
+      await tx.documentActivity.create({
+        data: {
+          documentId: docId,
+          userId: session.user.id,
+          action: "UPDATED",
+          details: { source: "TEXT", previousName: doc.name, title: normalized.title } as never,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("This text is a duplicate of")) throw err;
+    throw err;
+  }
+
+  const buffer = Buffer.from(normalized.content, "utf8");
+  logger.info("Text source update staged", { docId, kbId: doc.knowledgeBaseId, bytes: buffer.byteLength, chars: normalized.content.length });
+  serverTrackEvent("text_source_updated", { kbId: doc.knowledgeBaseId }, session.user.id);
+
+  processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity }).catch((err) => {
+    logger.error(`Text source update processing failed for ${docId}`, { error: err instanceof Error ? err.message : "unknown" });
+  });
+
+  try {
+    revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
+  } catch (revalidateErr) {
+    logger.warn("Revalidation skipped for knowledge base", {
+      kbId: doc.knowledgeBaseId,
+      error: revalidateErr instanceof Error ? revalidateErr.message : "unknown",
+    });
+  }
+  return { id: docId, status: "QUEUED" as const };
+}
+
+export async function getEditableTextSourceContent(docId: string) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const doc = await assertDocAccess(docId, session.user.id);
+  if (doc.sourceType !== "TEXT") throw new Error("Only text sources can be edited as text");
+
+  const buffer = (await reconstructTextSourceBuffers([docId])).get(docId);
+  const meta = (doc.metadata ?? {}) as Record<string, unknown> | null;
+  return {
+    title: typeof meta?.title === "string" ? meta.title : undefined,
+    content: buffer ? buffer.toString("utf8") : "",
+  };
+}
+
+// A staged update (edit/repoint) keeps the last known-good chunks and identity
+// until the candidate version is fully embedded. `evictChunkIds` are the old
+// chunks to swap out on success; `revertIdentity` is the row identity to restore
+// if the update fails, so a failed mutation leaves the source exactly as it was.
+interface StagedSwap {
+  evictChunkIds: string[];
+  revertIdentity?: {
+    name?: string;
+    sourceUrl?: string | null;
+    fileHash?: string | null;
+    size?: number | null;
+    metadata?: Record<string, unknown> | null;
+  };
+}
+
 // If a mutation was staged (evictChunkIds passed), a pipeline failure must not
 // destroy the last known-good content: while every old chunk still exists, the
 // candidate chunks are dropped and the document returns to INDEXED so retrieval
@@ -533,11 +673,12 @@ export async function ingestText(kbId: string, input: { title?: string; content:
 // already happened do we fall through to the plain ERROR state.
 async function rollbackOrError(
   docId: string,
-  evictChunkIds: string[] | undefined,
+  staged: StagedSwap | undefined,
   meta: Record<string, unknown>,
   errMsg: string,
   stage: string,
 ) {
+  const evictChunkIds = staged?.evictChunkIds;
   if (evictChunkIds && evictChunkIds.length > 0) {
     const remaining = await prisma.documentChunk
       .count({ where: { id: { in: evictChunkIds } } })
@@ -550,25 +691,28 @@ async function rollbackOrError(
           select: { metadata: true, uploadedById: true },
         })
         .catch(() => null);
-      const currentMeta = (row?.metadata ?? {}) as Record<string, unknown> | null;
+      const revertIdentity = staged?.revertIdentity;
+      const baseMeta = revertIdentity?.metadata ?? (row?.metadata ?? {});
       try {
         await prisma.$transaction(async (tx) => {
           await tx.documentChunk.deleteMany({
             where: { documentId: docId, id: { notIn: evictChunkIds } },
           });
-          await tx.document.update({
-            where: { id: docId },
-            data: {
-              status: "INDEXED",
-              metadata: {
-                ...(currentMeta || {}),
-                stage: "failed",
-                lastProcessFailedAt: new Date().toISOString(),
-                lastProcessError: errMsg,
-                retainedPreviousContent: true,
-              } as never,
-            },
-          });
+          const data: Prisma.DocumentUncheckedUpdateInput = {
+            status: "INDEXED",
+            metadata: {
+              ...(baseMeta as Record<string, unknown>),
+              stage: "failed",
+              lastProcessFailedAt: new Date().toISOString(),
+              lastProcessError: errMsg,
+              retainedPreviousContent: true,
+            } as never,
+          };
+          if (revertIdentity?.name !== undefined) data.name = revertIdentity.name;
+          if (revertIdentity?.sourceUrl !== undefined) data.sourceUrl = revertIdentity.sourceUrl;
+          if (revertIdentity?.fileHash !== undefined) data.fileHash = revertIdentity.fileHash;
+          if (revertIdentity?.size !== undefined) data.size = revertIdentity.size;
+          await tx.document.update({ where: { id: docId }, data });
           if (row?.uploadedById) {
             await tx.documentActivity.create({
               data: {
@@ -603,7 +747,7 @@ async function rollbackOrError(
     .catch(() => {});
 }
 
-async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer, evictChunkIds?: string[]) {
+async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer, staged?: StagedSwap) {
   const pipelineStart = Date.now();
   let stage = "init";
 
@@ -771,14 +915,15 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
 
     stage = "embed";
     logger.info("[Embedding] Queuing embedding generation (fire-and-forget)", { docId });
-    generateEmbeddings(docId, undefined, evictChunkIds).catch(async (embedErr) => {
+    const stagedEvictIds = staged?.evictChunkIds;
+    generateEmbeddings(docId, undefined, stagedEvictIds).catch(async (embedErr) => {
       const errMsg = embedErr instanceof Error ? embedErr.message : String(embedErr);
       const errStack = embedErr instanceof Error ? embedErr.stack : undefined;
       logger.error("[Embedding] Failed", { docId, error: errMsg, stack: errStack });
 
       await rollbackOrError(
         docId,
-        evictChunkIds,
+        staged,
         {
           ...meta,
           stage: "embed",
@@ -817,7 +962,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       durationMs: meta.durationMs,
     });
 
-    await rollbackOrError(docId, evictChunkIds, meta, errMsg, stage);
+    await rollbackOrError(docId, staged, meta, errMsg, stage);
   }
 }
 
@@ -964,7 +1109,7 @@ export async function reprocessDocument(formData: FormData) {
 
   await logActivity(id, session.user.id, "REPROCESSED", { fileName: doc.name });
 
-  processDocument(id, doc.fileType, textBuffer, existingChunkIds).catch((err) => {
+  processDocument(id, doc.fileType, textBuffer, { evictChunkIds: existingChunkIds }).catch((err) => {
     logger.error(`Reprocessing failed for ${id}`, { error: err instanceof Error ? err.message : "unknown" });
   });
 
@@ -1067,7 +1212,7 @@ export async function bulkReprocessDocuments(formData: FormData) {
   });
 
   for (const { docId, fileType, buffer, chunkIds } of toProcess) {
-    processDocument(docId, fileType, buffer, chunkIds).catch((err) => {
+    processDocument(docId, fileType, buffer, { evictChunkIds: chunkIds }).catch((err) => {
       logger.error(`Bulk reprocess failed for ${docId}`, { error: err instanceof Error ? err.message : "unknown" });
     });
   }
