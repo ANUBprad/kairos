@@ -2,17 +2,20 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { X, Globe, Youtube, Upload, Loader2 } from "lucide-react";
+import { X, Globe, Youtube, Upload, Loader2, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ingestUrl, ingestYouTube } from "@/lib/actions/document";
+import { ingestUrl, ingestYouTube, ingestText } from "@/lib/actions/document";
 
-type Mode = "url" | "youtube";
+const MAX_TEXT_CHARS = 200_000;
 
-const MODES: { key: Mode; label: string; icon: typeof Globe; placeholder: string }[] = [
+type Mode = "url" | "youtube" | "text";
+
+const MODES: { key: Mode; label: string; icon: typeof Globe; placeholder?: string }[] = [
   { key: "url", label: "URL", icon: Globe, placeholder: "https://example.com/article" },
   { key: "youtube", label: "YouTube", icon: Youtube, placeholder: "https://www.youtube.com/watch?v=..." },
+  { key: "text", label: "Text", icon: StickyNote },
 ];
 
 interface Props {
@@ -26,14 +29,36 @@ export function SourceAddDialog({ kbId, open, onOpenChange, onOpenFileUpload }: 
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("url");
   const [url, setUrl] = useState("");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
 
   const active = MODES.find((m) => m.key === mode);
+  const charOver = content.length > MAX_TEXT_CHARS;
+  const canSubmit = mode === "text" ? content.trim().length > 0 && !charOver : url.trim().length > 0;
 
   const handleSubmit = async () => {
+    if (mode === "text") {
+      if (!content.trim() || charOver) return;
+      setIsLoading(true);
+      try {
+        await ingestText(kbId, { title, content });
+        toast.success("Text note added");
+        setTitle("");
+        setContent("");
+        onOpenChange(false);
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Failed to add text source");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     const value = url.trim();
     if (!value) {
       toast.error("Please enter a URL");
@@ -81,7 +106,7 @@ export function SourceAddDialog({ kbId, open, onOpenChange, onOpenFileUpload }: 
           </button>
         </div>
 
-        <p id="source-add-description" className="sr-only">Add a URL or YouTube video as a knowledge base source.</p>
+        <p id="source-add-description" className="sr-only">Add a URL, YouTube video, or raw text note as a knowledge base source.</p>
 
         <div className="flex gap-2">
           {MODES.map((m) => (
@@ -102,17 +127,44 @@ export function SourceAddDialog({ kbId, open, onOpenChange, onOpenFileUpload }: 
           ))}
         </div>
 
-        <input
-          ref={inputRef}
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          placeholder={active?.placeholder}
-          aria-label={active?.label + " URL"}
-          disabled={isLoading}
-          className="mt-4 w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none"
-        />
+        {mode === "text" ? (
+          <div className="mt-4 space-y-3">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Title (optional)"
+              aria-label="Text source title"
+              disabled={isLoading}
+              className="w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none"
+            />
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="Paste raw text, notes, or a transcript..."
+              aria-label="Text source content"
+              disabled={isLoading}
+              rows={8}
+              className="w-full resize-y rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none"
+            />
+            <p className={cn("text-right text-xs", charOver ? "text-error" : "text-text-tertiary")}>
+              {content.length.toLocaleString()} / {MAX_TEXT_CHARS.toLocaleString()} characters
+              {charOver && " — exceeds the limit"}
+            </p>
+          </div>
+        ) : (
+          <input
+            ref={inputRef}
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            placeholder={active?.placeholder}
+            aria-label={active?.label + " URL"}
+            disabled={isLoading}
+            className="mt-4 w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none"
+          />
+        )}
 
         <div className="mt-4 flex items-center justify-between">
           <button
@@ -126,7 +178,7 @@ export function SourceAddDialog({ kbId, open, onOpenChange, onOpenFileUpload }: 
             <Upload size={13} />
             Prefer to upload files?
           </button>
-          <Button variant="primary" onClick={handleSubmit} disabled={isLoading || !url.trim()}>
+          <Button variant="primary" onClick={handleSubmit} disabled={isLoading || !canSubmit}>
             {isLoading ? (
               <span className="flex items-center gap-2">
                 <Loader2 size={16} className="animate-spin" />

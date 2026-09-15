@@ -14,6 +14,7 @@ import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
 import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError } from "@/lib/ingestion/url";
 import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError } from "@/lib/ingestion/youtube";
+import { buildTextDocumentData, normalizeTextInput, textDocumentFileHash } from "@/lib/ingestion/text";
 import { assertSameKnowledgeBase, MAX_BULK_OPERATIONS, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
 import type { Prisma } from "@prisma/client";
 
@@ -447,6 +448,76 @@ export async function ingestUrl(kbId: string, rawUrl: string) {
   });
 
   revalidatePath(`/app/knowledge-bases/${kbId}`);
+  return doc;
+}
+
+export async function ingestText(kbId: string, input: { title?: string; content: string }) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const rl = rateLimit(`ingest-text:${session.user.id}`, RATE_LIMITS.upload);
+  if (!rl.allowed) throw new Error("Rate limit exceeded. Please try again later.");
+
+  // Tenancy is enforced BEFORE any document write.
+  await getOrgFromKb(kbId, session.user.id);
+
+  const normalized = normalizeTextInput(input?.title || "", input?.content || "");
+
+  let doc: Prisma.DocumentGetPayload<{ include: { uploadedBy: true } }>;
+  try {
+    doc = await prisma.$transaction(async (tx) => {
+      const existing = await tx.document.findFirst({
+        where: { knowledgeBaseId: kbId, fileHash: textDocumentFileHash(normalized.title, normalized.content) },
+        select: { id: true, name: true },
+      });
+      if (existing) {
+        throw new Error(`This text is a duplicate of "${existing.name}" (same content)`);
+      }
+
+      const created = await tx.document.create({
+        data: buildTextDocumentData({
+          kbId,
+          userId: session.user.id,
+          title: normalized.title,
+          content: normalized.content,
+        }),
+        include: { uploadedBy: true },
+      });
+
+      await tx.documentActivity.create({
+        data: {
+          documentId: created.id,
+          userId: session.user.id,
+          action: "UPLOADED",
+          details: { source: "TEXT", title: normalized.title } as never,
+        },
+      });
+
+      return created;
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("This text is a duplicate of")) throw err;
+    logger.error("Failed saving text document", { kbId, error: err instanceof Error ? err.message : "unknown" });
+    throw new Error("Failed to save the text source", { cause: err });
+  }
+
+  const buffer = Buffer.from(normalized.content, "utf8");
+  logger.info("Text document created", { docId: doc.id, kbId, bytes: buffer.byteLength, chars: normalized.content.length });
+
+  serverTrackEvent("text_source_added", { kbId }, session.user.id);
+  processDocument(doc.id, "txt", buffer).catch((err) => {
+    logger.error(`Processing failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
+  });
+
+  try {
+    revalidatePath(`/app/knowledge-bases/${kbId}`);
+  } catch (revalidateErr) {
+    logger.warn("Revalidation skipped for knowledge base", {
+      kbId,
+      error: revalidateErr instanceof Error ? revalidateErr.message : "unknown",
+    });
+  }
+
   return doc;
 }
 
