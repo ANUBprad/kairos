@@ -324,15 +324,22 @@ describe("studio wiring", () => {
     assert.doesNotMatch(pageSource, /type: "SUMMARY"/);
   });
 
-  it("opens artifacts through the O4-T3 read action and routes to a type-specific viewer", () => {
+  it("opens artifacts through the O4-T3 read action and routes to the shared viewer", () => {
+    const contentType = (name: string) =>
+      readFileSync(
+        new URL(`../components/app/studio/artifact-${name}.tsx`, import.meta.url),
+        "utf8",
+      );
+    const contentSource = contentType("content");
     assert.match(dialogSource, /getLearningArtifactForWorkspace/);
-    assert.match(dialogSource, /SummaryArtifactViewer/);
-    assert.match(dialogSource, /ReportArtifactViewer/);
-    assert.match(dialogSource, /QuizArtifactViewer/);
-    assert.match(dialogSource, /FlashcardsArtifactViewer/);
-    assert.match(dialogSource, /MindmapArtifactViewer/);
-    assert.match(dialogSource, /TakeawaysArtifactViewer/);
-    assert.match(dialogSource, /PodcastArtifactViewer/);
+    assert.match(dialogSource, /ArtifactContent/);
+    assert.match(contentSource, /SummaryArtifactViewer/);
+    assert.match(contentSource, /ReportArtifactViewer/);
+    assert.match(contentSource, /QuizArtifactViewer/);
+    assert.match(contentSource, /FlashcardsArtifactViewer/);
+    assert.match(contentSource, /MindmapArtifactViewer/);
+    assert.match(contentSource, /TakeawaysArtifactViewer/);
+    assert.match(contentSource, /PodcastArtifactViewer/);
     assert.doesNotMatch(dialogSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(dialogSource, /generateLearningArtifact|getAIProvider|generateChat/);
   });
@@ -460,6 +467,10 @@ describe("podcast artifact support", () => {
       new URL("../components/app/studio/artifact-dialog.tsx", import.meta.url),
       "utf8",
     );
+    const contentSource = readFileSync(
+      new URL("../components/app/studio/artifact-content.tsx", import.meta.url),
+      "utf8",
+    );
     const actionsSource = readFileSync(
       new URL("../lib/actions/artifacts.ts", import.meta.url),
       "utf8",
@@ -470,7 +481,8 @@ describe("podcast artifact support", () => {
     );
     assert.match(studioSource, /generatePodcastArtifact/);
     assert.doesNotMatch(studioSource, /generateLearningArtifact\(|getAIProvider|generateChat/);
-    assert.match(dialogSource, /PodcastArtifactViewer/);
+    assert.match(dialogSource, /ArtifactContent/);
+    assert.match(contentSource, /PodcastArtifactViewer/);
     assert.match(actionsSource, /generatePodcastArtifact[\s\S]*artifactType: "PODCAST"/);
     assert.match(metaSource, /PODCAST[\s\S]*label: "Podcast"/);
   });

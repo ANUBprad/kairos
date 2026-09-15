@@ -325,8 +325,8 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
           </p>
         )}
         <ArtifactList
+          kbId={kbId}
           artifacts={artifacts}
-          onOpen={setOpenArtifactId}
           onRegenerate={regenerate}
           onDelete={(artifact) => {
             setActionError(null);

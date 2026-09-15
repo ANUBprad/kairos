@@ -5,15 +5,7 @@ import { FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getLearningArtifactForWorkspace } from "@/lib/actions/artifacts";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
-import { isActiveStudioArtifactType } from "./artifact-type-meta";
-import { ArtifactStatusBadge } from "./artifact-status-badge";
-import { SummaryArtifactViewer } from "./summary-artifact-viewer";
-import { ReportArtifactViewer } from "./report-artifact-viewer";
-import { QuizArtifactViewer } from "./quiz-artifact-viewer";
-import { FlashcardsArtifactViewer } from "./flashcards-artifact-viewer";
-import { MindmapArtifactViewer } from "./mindmap-artifact-viewer";
-import { TakeawaysArtifactViewer } from "./takeaways-artifact-viewer";
-import { PodcastArtifactViewer } from "./podcast-artifact-viewer";
+import { ArtifactContent } from "./artifact-content";
 
 interface Props {
   kbId: string;
@@ -79,54 +71,9 @@ export function ArtifactDialog({ kbId, artifactId, sources, onClose }: Props) {
             </Button>
           </div>
         ) : artifact ? (
-          artifact.status === "COMPLETED" ? (
-            <div className="overflow-y-auto">
-              {artifact.type === "SUMMARY" && (
-                <SummaryArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
-              )}
-              {artifact.type === "REPORT" && (
-                <ReportArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
-              )}
-              {artifact.type === "QUIZ" && (
-                <QuizArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
-              )}
-              {artifact.type === "FLASHCARDS" && (
-                <FlashcardsArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
-              )}
-              {artifact.type === "MINDMAP" && (
-                <MindmapArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
-              )}
-              {artifact.type === "TAKEAWAYS" && (
-                <TakeawaysArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
-              )}
-              {artifact.type === "PODCAST" && (
-                <PodcastArtifactViewer artifact={artifact} sources={sources} onClose={onClose} />
-              )}
-              {!isActiveStudioArtifactType(artifact.type) && (
-                <div className="flex flex-col items-center justify-center gap-3 py-24">
-                  <ArtifactStatusBadge status={artifact.status} />
-                  <p className="text-sm text-text-secondary">
-                    This artifact type is not viewable yet.
-                  </p>
-                  <Button variant="secondary" size="sm" onClick={onClose}>
-                    Close
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-3 py-24">
-              <ArtifactStatusBadge status={artifact.status} />
-              <p className="max-w-sm text-center text-sm text-text-secondary">
-                {artifact.status === "FAILED"
-                  ? "Generation failed. Regenerate this artifact from the list to retry, or delete it."
-                  : "This artifact is still being generated. Close the dialog and check the list shortly."}
-              </p>
-              <Button variant="secondary" size="sm" onClick={onClose}>
-                Close
-              </Button>
-            </div>
-          )
+          <div className="overflow-y-auto">
+            <ArtifactContent artifact={artifact} sources={sources} onClose={onClose} />
+          </div>
         ) : (
           <div className="flex items-center justify-center py-24">
             <FileText size={24} className="text-text-tertiary" />

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FileText, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,8 +12,8 @@ import type { ArtifactStudyProgress } from "@/lib/study/progress";
 import type { LearningArtifactWithStudy } from "@/lib/artifacts/types";
 
 interface Props {
+  kbId: string;
   artifacts: LearningArtifactWithStudy[];
-  onOpen: (artifactId: string) => void;
   onRegenerate?: (artifact: LearningArtifactWithStudy) => void;
   onDelete?: (artifact: LearningArtifactWithStudy) => void;
   onRecover?: (artifact: LearningArtifactWithStudy) => void;
@@ -45,7 +46,14 @@ function flashcardsStudyLine(study: ArtifactStudyProgress, content: unknown): st
   return parts.join(" · ");
 }
 
-export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, onRecover, regeneratingId }: Props) {
+export function ArtifactList({
+  kbId,
+  artifacts,
+  onRegenerate,
+  onDelete,
+  onRecover,
+  regeneratingId,
+}: Props) {
   if (artifacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center px-5 py-12 text-center">
@@ -113,13 +121,13 @@ export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, onReco
                 </Button>
               )}
               {artifact.status === "COMPLETED" && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => onOpen(artifact.id)}
-                  aria-label={`Open ${artifact.name || "artifact"}`}
-                >
-                  View
+                <Button variant="secondary" size="sm" asChild>
+                  <Link
+                    href={`/app/knowledge-bases/${kbId}/artifacts/${artifact.id}`}
+                    aria-label={`Open ${artifact.name || "artifact"}`}
+                  >
+                    View
+                  </Link>
                 </Button>
               )}
               {terminal && onRegenerate && (
