@@ -5,6 +5,7 @@ import { addMessage, getConversationMessages } from "@/lib/ai/memory";
 import { extractCitationsFromChunks, filterCitationsToContent } from "@/lib/ai/citations";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { createAbortError } from "@/lib/ai/abort";
+import { GENERATION_FAILED_TEXT, GENERATION_STOPPED_TEXT } from "@/lib/ai/chat/stream-markers";
 import { logger } from "@/lib/logger";
 import type { ProviderType, CitationSource, StreamChunk } from "@/lib/ai/types";
 
@@ -98,6 +99,7 @@ export async function* streamChatResponse(
   request: ChatRequest,
 ): AsyncGenerator<StreamChunk, void, unknown> {
   let fullContent = "";
+  let userPersisted = false;
 
   try {
     const provider = getAIProvider(request.providerType);
@@ -122,6 +124,7 @@ export async function* streamChatResponse(
     const formattedMessages = formatForProvider(prompt.messages, provider.type);
 
     await addMessage(request.conversationId, "user", request.query);
+    userPersisted = true;
 
     const stream = provider.streamChat({
       model: request.model || provider.getDefaultModel(),
@@ -151,6 +154,21 @@ export async function* streamChatResponse(
 
     yield { content: "", done: true, citations };
   } catch (err) {
+    // Persist an assistant turn so the conversation stays coherent after reload.
+    // On client-initiated abort (stop button) the partial content is preserved
+    // with a brief note; on any other error a generic failure marker is written.
+    if (userPersisted) {
+      try {
+        const isAbort = err instanceof Error && err.name === "AbortError";
+        const content = isAbort
+          ? fullContent ? `${fullContent}\n\n_Generation stopped._` : GENERATION_STOPPED_TEXT
+          : GENERATION_FAILED_TEXT;
+        await addMessage(request.conversationId, "assistant", content);
+      } catch {
+        // Best-effort: if the DB write fails the error surfaces below anyway.
+      }
+    }
+
     logger.error("Chat stream error", { error: err instanceof Error ? err.message : "unknown" });
     // Surface the error to the caller so the route can emit an SSE error event
     // instead of silently ending the stream as if it had completed.

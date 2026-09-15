@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  RotateCcw,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,10 @@ import {
   generateTakeawaysArtifact,
   generatePodcastArtifact,
 } from "@/lib/actions/artifacts";
+import {
+  GENERATION_FAILED_TEXT,
+  GENERATION_STOPPED_TEXT,
+} from "@/lib/ai/chat/stream-markers";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
 
 interface Citation {
@@ -231,10 +236,17 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
     }
   };
 
-  const handleSubmit = async () => {
-    const query = input.trim();
-    if (!query || !activeConversation || isStreaming) return;
+  const isFailedMessage = (msg: Message) =>
+    msg.role === "assistant" &&
+    (msg.content === GENERATION_FAILED_TEXT ||
+      msg.content === GENERATION_STOPPED_TEXT ||
+      msg.content.endsWith("\n\n_Generation stopped._"));
 
+  const sendTurn = useCallback(async (query: string) => {
+    if (!query || !activeConversation || isStreaming) return;
+    const needsRename =
+      conversations.find((c) => c.id === activeConversation)?.title ===
+      `Chat about ${kbName}`;
     setInput("");
     setIsStreaming(true);
 
@@ -243,20 +255,14 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
       role: "user",
       content: query,
     };
-
     const assistantMsg: Message = {
       id: `assistant-${Date.now()}`,
       role: "assistant",
       content: "",
     };
-
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
-    // Abort any previous streaming request
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
-
+    if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
 
@@ -283,11 +289,9 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
-
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed.startsWith("data: ")) continue;
@@ -311,13 +315,26 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
             } else if (data.type === "citations") {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantMsg.id ? { ...m, citations: data.citations } : m,
+                  m.id === assistantMsg.id
+                    ? { ...m, citations: data.citations }
+                    : m,
                 ),
               );
             }
           } catch {
             // skip malformed SSE
           }
+        }
+      }
+
+      if (needsRename) {
+        const newTitle = query.slice(0, 60).trim();
+        if (newTitle) {
+          await fetch(`/api/ai/conversations/${activeConversation}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: newTitle }),
+          });
         }
       }
     } catch (err) {
@@ -335,19 +352,37 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
       abortRef.current = null;
       loadConversations();
     }
-  };
+  }, [activeConversation, isStreaming, selectedSourceIds, conversations, kbId, kbName, loadConversations]);
 
-  const stopGeneration = () => {
+  const handleSubmit = useCallback(() => {
+    sendTurn(input.trim());
+  }, [sendTurn, input]);
+
+  const retryMessage = useCallback(
+    (msgId: string) => {
+      const idx = messages.findIndex((m) => m.id === msgId);
+      if (idx < 1) return;
+      const userMsg = messages[idx - 1];
+      if (userMsg.role !== "user") return;
+      sendTurn(userMsg.content);
+    },
+    [messages, sendTurn],
+  );
+
+  const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
     setIsStreaming(false);
-  };
+  }, []);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSubmit();
+      }
+    },
+    [handleSubmit],
+  );
 
   return (
     <div className="flex h-[calc(100vh-7rem)] -m-6 overflow-hidden">
@@ -553,6 +588,18 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
                         )}
                       </div>
                     )}
+                  </div>
+                )}
+                {msg.role === "assistant" && isFailedMessage(msg) && !isStreaming && (
+                  <div className="mt-3 border-t border-border/50 pt-3">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => retryMessage(msg.id)}
+                    >
+                      <RotateCcw size={12} />
+                      Try again
+                    </Button>
                   </div>
                 )}
               </div>
