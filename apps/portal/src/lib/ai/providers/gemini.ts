@@ -6,6 +6,7 @@ import type {
   EmbeddingResponse,
   StreamChunk,
 } from "../types";
+import { createAbortError } from "../abort";
 
 const CHAT_MODELS = [
   "gemini-2.0-flash",
@@ -67,6 +68,7 @@ export class GeminiProvider implements AIProvider {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: request.signal ?? undefined,
     });
 
     if (!res.ok) {
@@ -123,6 +125,7 @@ export class GeminiProvider implements AIProvider {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal: request.signal ?? undefined,
       },
     );
 
@@ -138,6 +141,7 @@ export class GeminiProvider implements AIProvider {
     let buffer = "";
 
     while (true) {
+      if (request.signal?.aborted) throw createAbortError();
       const { done, value } = await reader.read();
       if (done) break;
 

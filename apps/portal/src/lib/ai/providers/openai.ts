@@ -42,15 +42,18 @@ export class OpenAIProvider implements AIProvider {
   async generateChat(
     request: ChatCompletionRequest,
   ): Promise<ChatCompletionResponse> {
-    const response = await this.client.chat.completions.create({
-      model: request.model || this.defaultChatModel,
-      messages: request.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      temperature: request.temperature ?? 0.7,
-      max_tokens: request.maxTokens,
-    });
+    const response = await this.client.chat.completions.create(
+      {
+        model: request.model || this.defaultChatModel,
+        messages: request.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+        temperature: request.temperature ?? 0.7,
+        max_tokens: request.maxTokens,
+      },
+      { signal: request.signal },
+    );
 
     const choice = response.choices[0];
     return {
@@ -69,16 +72,19 @@ export class OpenAIProvider implements AIProvider {
   async *streamChat(
     request: ChatCompletionRequest,
   ): AsyncGenerator<StreamChunk, void, unknown> {
-    const stream = await this.client.chat.completions.create({
-      model: request.model || this.defaultChatModel,
-      messages: request.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      })),
-      temperature: request.temperature ?? 0.7,
-      max_tokens: request.maxTokens,
-      stream: true,
-    });
+    const stream = await this.client.chat.completions.create(
+      {
+        model: request.model || this.defaultChatModel,
+        messages: request.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+        temperature: request.temperature ?? 0.7,
+        max_tokens: request.maxTokens,
+        stream: true,
+      },
+      { signal: request.signal },
+    );
 
     for await (const chunk of stream) {
       const content = chunk.choices?.[0]?.delta?.content || "";

@@ -9,6 +9,7 @@ export interface ChatCompletionRequest {
   temperature?: number;
   maxTokens?: number;
   stream?: boolean;
+  signal?: AbortSignal | null;
 }
 
 export interface ChatCompletionResponse {

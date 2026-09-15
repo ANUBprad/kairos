@@ -264,6 +264,7 @@ ${contextStr || "No relevant documents found."}`;
           sourceIds: scopedSourceIds,
           providerType: typedProvider,
           model: model || undefined,
+          signal: abortController.signal,
         });
 
         for await (const chunk of gen) {

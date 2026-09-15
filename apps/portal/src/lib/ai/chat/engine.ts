@@ -4,6 +4,7 @@ import { buildChatPrompt, formatForProvider } from "@/lib/ai/prompts";
 import { addMessage, getConversationMessages } from "@/lib/ai/memory";
 import { extractCitationsFromChunks } from "@/lib/ai/citations";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
+import { createAbortError } from "@/lib/ai/abort";
 import { logger } from "@/lib/logger";
 import type { ProviderType, CitationSource, StreamChunk } from "@/lib/ai/types";
 
@@ -14,6 +15,7 @@ export interface ChatRequest {
   sourceIds?: string[];
   providerType?: ProviderType;
   model?: string;
+  signal?: AbortSignal;
 }
 
 export interface ChatResponse {
@@ -63,6 +65,7 @@ export async function generateChatResponse(
   const response = await provider.generateChat({
     model: request.model || provider.getDefaultModel(),
     messages: formattedMessages,
+    signal: request.signal,
   });
 
   const citations = extractCitationsFromChunks(retrieval.chunks);
@@ -120,9 +123,11 @@ export async function* streamChatResponse(
     const stream = provider.streamChat({
       model: request.model || provider.getDefaultModel(),
       messages: formattedMessages,
+      signal: request.signal,
     });
 
     for await (const chunk of stream) {
+      if (request.signal?.aborted) throw createAbortError();
       if (chunk.done) break;
       fullContent += chunk.content;
       yield { content: chunk.content, done: false };
