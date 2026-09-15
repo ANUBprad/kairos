@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { streamChatResponse } from "@/lib/ai/chat";
+import { getAIProvider } from "@/lib/ai/providers";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { buildChatPrompt } from "@/lib/ai/prompts";
 import { executeRetrievalWithTrace } from "@/lib/retrieval/strategies";
@@ -12,6 +13,7 @@ import { isValidEntityId } from "@/lib/validation";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
+import type { ProviderType } from "@/lib/ai/types";
 
 
 export const runtime = "nodejs";
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
-    select: { userId: true, knowledgeBaseId: true },
+    select: { userId: true, knowledgeBaseId: true, model: true, provider: true },
   });
 
   // Conversation must belong to the requesting user AND the asked-for KB.
@@ -82,6 +84,22 @@ export async function POST(request: NextRequest) {
 
   if (!(await canAccessKnowledgeBase(session.user.id, kbId))) {
     return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
+  }
+
+  // The client-supplied model is free text; only accept it when it is one of
+  // the resolved provider's known models. Anything else falls back to the
+  // conversation default so a forged model can never reach the LLM API.
+  let resolvedModel = conversation!.model || undefined;
+  if (model) {
+    try {
+      const checkProvider: ProviderType | undefined =
+        typedProvider ?? (conversation!.provider as ProviderType) ?? undefined;
+      const available = getAIProvider(checkProvider).getAvailableModels();
+      if (available.includes(model)) resolvedModel = model;
+    } catch {
+      // Provider not configured; leave the conversation default in place and
+      // let the stream surface the real misconfiguration error.
+    }
   }
 
   // Server-side source scope validation: keep only ids that point at documents
@@ -263,7 +281,7 @@ ${contextStr || "No relevant documents found."}`;
           query,
           sourceIds: scopedSourceIds,
           providerType: typedProvider,
-          model: model || undefined,
+          model: resolvedModel,
           signal: abortController.signal,
         });
 
