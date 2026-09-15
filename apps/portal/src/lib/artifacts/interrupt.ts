@@ -100,6 +100,23 @@ export function parseStoredInterruptions(metadata: unknown): PodcastInterruption
   return records;
 }
 
+// Every storage key owned by a podcast artifact's metadata: the episode audio
+// plus each interruption's audio. Deletion cleans media by these exact keys
+// (captured from the artifact's own row), so cleanup can never reach a
+// different artifact. Episode audio is optional for legacy rows, so only
+// present string keys are collected.
+export function collectArtifactMediaKeys(metadata: unknown): string[] {
+  const keys: string[] = [];
+  const audio = (metadata as { audio?: { storageKey?: unknown } } | null)?.audio;
+  if (audio && typeof audio.storageKey === "string" && audio.storageKey !== "") {
+    keys.push(audio.storageKey);
+  }
+  for (const record of parseStoredInterruptions(metadata)) {
+    keys.push(record.audio.storageKey);
+  }
+  return keys;
+}
+
 // History is append-at-the-front, bounded, dropping the oldest silently. A
 // lost entry on a racing write is acceptable (the audio survives in storage);
 // the upgrade path if interruptions become multi-writer or independently

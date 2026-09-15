@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import { FileText, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
@@ -10,9 +10,15 @@ import type { LearningArtifactData } from "@/lib/artifacts/types";
 interface Props {
   artifacts: LearningArtifactData[];
   onOpen: (artifactId: string) => void;
+  onRegenerate?: (artifact: LearningArtifactData) => void;
+  onDelete?: (artifact: LearningArtifactData) => void;
+  regeneratingId?: string | null;
 }
 
-export function ArtifactList({ artifacts, onOpen }: Props) {
+const isTerminal = (status: LearningArtifactData["status"]) =>
+  status === "COMPLETED" || status === "FAILED";
+
+export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, regeneratingId }: Props) {
   if (artifacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center px-5 py-12 text-center">
@@ -29,6 +35,8 @@ export function ArtifactList({ artifacts, onOpen }: Props) {
         const meta = isActiveStudioArtifactType(artifact.type)
           ? ARTIFACT_TYPE_META[artifact.type]
           : null;
+        const terminal = isTerminal(artifact.status);
+        const busy = regeneratingId === artifact.id;
         return (
           <li key={artifact.id} className="flex items-center gap-3 px-5 py-3">
             <div className="min-w-0 flex-1">
@@ -49,15 +57,43 @@ export function ArtifactList({ artifacts, onOpen }: Props) {
                   ` · ${artifact.sourceIds.length} source${artifact.sourceIds.length !== 1 ? "s" : ""}`}
               </p>
             </div>
-            <ArtifactStatusBadge status={artifact.status} className="hidden sm:inline-flex" />
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onOpen(artifact.id)}
-              aria-label={`Open ${artifact.name || "artifact"}`}
-            >
-              View
-            </Button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <ArtifactStatusBadge status={artifact.status} className="hidden sm:inline-flex" />
+              {artifact.status === "COMPLETED" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onOpen(artifact.id)}
+                  aria-label={`Open ${artifact.name || "artifact"}`}
+                >
+                  View
+                </Button>
+              )}
+              {terminal && onRegenerate && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => onRegenerate(artifact)}
+                  aria-label={`Regenerate ${artifact.name || "artifact"}`}
+                >
+                  <RefreshCw size={13} />
+                  {busy ? "Regenerating…" : "Regenerate"}
+                </Button>
+              )}
+              {terminal && onDelete && (
+                <Button
+                  variant="danger-outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => onDelete(artifact)}
+                  aria-label={`Delete ${artifact.name || "artifact"}`}
+                >
+                  <Trash2 size={13} />
+                  Delete
+                </Button>
+              )}
+            </div>
           </li>
         );
       })}

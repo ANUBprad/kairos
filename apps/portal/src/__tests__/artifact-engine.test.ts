@@ -901,9 +901,9 @@ describe("artifact application wiring", () => {
     assert.match(actionsSource, /generatePodcastArtifact[\s\S]*generateLearningArtifact\(\{[\s\S]*artifactType: "PODCAST"/);
   });
 
-  it("authorizes reads and lists through canAccessKnowledgeBase, never a second check", () => {
+  it("authorizes reads, lists and deletion through canAccessKnowledgeBase; regeneration is authorized inside the engine like generation", () => {
     const authUses = actionsSource.match(/canAccessKnowledgeBase/g);
-    assert.equal(authUses?.length, 3); // one import + the read and list call sites
+    assert.equal(authUses?.length, 4); // one import + read, list and delete call sites (regeneration authorizes in the engine)
     assert.doesNotMatch(actionsSource, /API_KEY|session\.user\.id to|members/);
   });
 

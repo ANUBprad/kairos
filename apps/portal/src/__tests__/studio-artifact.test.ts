@@ -308,7 +308,7 @@ describe("studio wiring", () => {
     assert.match(studioSource, /generateMindmapArtifact/);
     assert.match(studioSource, /generateTakeawaysArtifact/);
     assert.match(studioSource, /generatePodcastArtifact/);
-    assert.doesNotMatch(studioSource, /generateLearningArtifact|getAIProvider|generateChat/);
+    assert.doesNotMatch(studioSource, /generateLearningArtifact\(|getAIProvider|generateChat/);
     assert.doesNotMatch(studioSource, /from ["']@\/lib\/prisma["']/);
     assert.doesNotMatch(studioSource, /from ["']openai["']/);
   });
@@ -451,7 +451,7 @@ describe("podcast artifact support", () => {
       "utf8",
     );
     assert.match(studioSource, /generatePodcastArtifact/);
-    assert.doesNotMatch(studioSource, /generateLearningArtifact|getAIProvider|generateChat/);
+    assert.doesNotMatch(studioSource, /generateLearningArtifact\(|getAIProvider|generateChat/);
     assert.match(dialogSource, /PodcastArtifactViewer/);
     assert.match(actionsSource, /generatePodcastArtifact[\s\S]*artifactType: "PODCAST"/);
     assert.match(metaSource, /PODCAST[\s\S]*label: "Podcast"/);

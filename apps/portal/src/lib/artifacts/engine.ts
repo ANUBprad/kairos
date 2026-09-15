@@ -14,6 +14,7 @@ import {
   assertNonEmptySourceScope,
   assertSourcesOwned,
   createLearningArtifact,
+  getLearningArtifactInKb,
   updateLearningArtifactStatus,
   completeLearningArtifact,
   failLearningArtifact,
@@ -33,6 +34,10 @@ export interface GenerateArtifactRequest {
   name?: string;
   model?: string;
   providerType?: ProviderType;
+  // Lineage: the id of the artifact this one was regenerated from, surfaced in
+  // the artifact's own metadata so history lives beside the data with no
+  // schema change (roadmap convention, not a versioning model).
+  parentArtifactId?: string;
 }
 
 export async function getKbOrganizationId(kbId: string): Promise<string | null> {
@@ -83,6 +88,9 @@ export async function generateLearningArtifactForUser(
     name: request.name,
     schemaVersion: definition.schemaVersion,
     createdById: userId,
+    metadata: request.parentArtifactId
+      ? ({ parentArtifactId: request.parentArtifactId } as Prisma.InputJsonValue)
+      : undefined,
   });
   await updateLearningArtifactStatus(artifact.id, "PROCESSING");
 
@@ -168,6 +176,9 @@ export async function generateLearningArtifactForUser(
           providerType: provider.type,
           model: response.model,
           ...(audioMetadata ? { audio: audioMetadata as Prisma.InputJsonValue } : {}),
+          ...(request.parentArtifactId
+            ? { parentArtifactId: request.parentArtifactId }
+            : {}),
         } as Prisma.InputJsonValue,
         schemaVersion: definition.schemaVersion,
       },
@@ -210,4 +221,54 @@ export async function generateLearningArtifactForUser(
     if (error instanceof AppError) throw error;
     throw new AppError("ARTIFACT_GENERATION_FAILED", "Artifact generation failed", 502);
   }
+}
+
+// Authenticated entrypoint for regeneration from a server action.
+export async function regenerateLearningArtifact(request: {
+  knowledgeBaseId: string;
+  artifactId: string;
+}): Promise<LearningArtifactData> {
+  const session = await requireSession();
+  return regenerateLearningArtifactForUser(session.user.id, request);
+}
+
+// Core regeneration for an explicitly identified user. The caller passes only
+// the knowledge base and the id it wants regenerated — the source scope and
+// type come from the stored row, never from the browser, and ownership is
+// revalidated before any new artifact exists. The original is never mutated:
+// success or failure both leave it untouched, and a brand-new artifact row
+// captures the result with parentArtifactId lineage in its metadata.
+export async function regenerateLearningArtifactForUser(
+  userId: string,
+  request: { knowledgeBaseId: string; artifactId: string },
+): Promise<LearningArtifactData> {
+  const { knowledgeBaseId, artifactId } = request;
+
+  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId))) {
+    throw new AppError("NOT_FOUND", "Knowledge base not found", 404);
+  }
+
+  const original = await getLearningArtifactInKb(artifactId, knowledgeBaseId);
+  if (!original) {
+    // A foreign or unknown artifact id resolves to the same safe failure —
+    // no existence leak across KB tenancies.
+    throw new AppError("NOT_FOUND", "Artifact not found", 404);
+  }
+
+  if (original.status === "PENDING" || original.status === "PROCESSING") {
+    throw new AppError(
+      "ARTIFACT_IN_PROGRESS",
+      "The artifact is still being generated",
+      409,
+    );
+  }
+
+  return generateLearningArtifactForUser({
+    userId,
+    knowledgeBaseId: original.knowledgeBaseId,
+    artifactType: original.type,
+    sourceIds: original.sourceIds,
+    name: original.name ?? undefined,
+    parentArtifactId: original.id,
+  });
 }

@@ -51,6 +51,22 @@ export async function getLearningArtifactInKb(
   return artifact ? toLearningArtifactData(artifact) : null;
 }
 
+// KB-scoped hard delete. Returns the removed artifact (so the caller can clean
+// up its media) or null when the id is missing/foreign. The deleteMany guard
+// means a foreign or concurrently-deleted id resolves to "nothing happened"
+// without ever touching another KB's rows; deleting twice is a safe no-op.
+export async function deleteLearningArtifact(
+  knowledgeBaseId: string,
+  artifactId: string,
+): Promise<LearningArtifactData | null> {
+  const artifact = await prisma.learningArtifact.findFirst({
+    where: { id: artifactId, knowledgeBaseId },
+  });
+  if (!artifact) return null;
+  await prisma.learningArtifact.deleteMany({ where: { id: artifactId, knowledgeBaseId } });
+  return toLearningArtifactData(artifact);
+}
+
 export async function listLearningArtifacts(
   knowledgeBaseId: string,
   filters: ListLearningArtifactsFilters = {},

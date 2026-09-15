@@ -15,6 +15,8 @@ import {
   generateMindmapArtifact,
   generateTakeawaysArtifact,
   generatePodcastArtifact,
+  regenerateLearningArtifactForWorkspace,
+  deleteLearningArtifactForWorkspace,
 } from "@/lib/actions/artifacts";
 import type { SourceListItem } from "@/lib/source-contract";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
@@ -25,6 +27,7 @@ import {
 } from "./artifact-type-meta";
 import { ArtifactList } from "./artifact-list";
 import { ArtifactDialog } from "./artifact-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Props {
   kbId: string;
@@ -60,6 +63,10 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
   const [error, setError] = useState<string | null>(null);
   const [artifacts, setArtifacts] = useState<LearningArtifactData[]>(initialArtifacts);
   const [openArtifactId, setOpenArtifactId] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<LearningArtifactData | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const selectedCount = selectedIds.length;
   const typeMeta = ARTIFACT_TYPE_META[artifactType];
@@ -88,6 +95,38 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
       setError(err instanceof Error ? err.message : "Artifact generation failed");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const regenerate = async (artifact: LearningArtifactData) => {
+    if (regeneratingId || artifact.status === "PENDING" || artifact.status === "PROCESSING") return;
+    setRegeneratingId(artifact.id);
+    setActionError(null);
+    try {
+      const next = await regenerateLearningArtifactForWorkspace(kbId, artifact.id);
+      setArtifacts((prev) => [next, ...prev]);
+      setOpenArtifactId(next.id);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Artifact regeneration failed");
+    } finally {
+      setRegeneratingId(null);
+    }
+  };
+
+  const deleteArtifact = async () => {
+    if (!pendingDelete || deleting) return;
+    setDeleting(true);
+    setActionError(null);
+    try {
+      await deleteLearningArtifactForWorkspace(kbId, pendingDelete.id);
+      setArtifacts((prev) => prev.filter((a) => a.id !== pendingDelete.id));
+      if (openArtifactId === pendingDelete.id) setOpenArtifactId(null);
+      setPendingDelete(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Artifact deletion failed");
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -252,7 +291,24 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
             {artifacts.length} artifact{artifacts.length !== 1 ? "s" : ""}
           </span>
         </header>
-        <ArtifactList artifacts={artifacts} onOpen={setOpenArtifactId} />
+        {actionError && (
+          <p
+            role="alert"
+            className="mx-5 mt-4 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error"
+          >
+            {actionError}
+          </p>
+        )}
+        <ArtifactList
+          artifacts={artifacts}
+          onOpen={setOpenArtifactId}
+          onRegenerate={regenerate}
+          onDelete={(artifact) => {
+            setActionError(null);
+            setPendingDelete(artifact);
+          }}
+          regeneratingId={regeneratingId}
+        />
       </section>
 
       <ArtifactDialog
@@ -260,6 +316,16 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
         artifactId={openArtifactId}
         sources={sources}
         onClose={() => setOpenArtifactId(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onClose={() => !deleting && setPendingDelete(null)}
+        onConfirm={deleteArtifact}
+        isLoading={deleting}
+        title="Delete artifact?"
+        description={`"${pendingDelete?.name ?? "Untitled artifact"}" will be permanently deleted, along with its stored media (podcast audio). This cannot be undone.`}
+        confirmLabel="Delete"
       />
     </div>
   );
