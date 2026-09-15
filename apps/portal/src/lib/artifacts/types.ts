@@ -1,5 +1,6 @@
 import { isValidEntityId } from "@/lib/validation";
 import { AppError } from "@/lib/errors";
+import type { ArtifactStudyProgress } from "@/lib/study/progress";
 import type { ArtifactType, ArtifactStatus, Prisma } from "@prisma/client";
 
 export const ARTIFACT_TYPE_VALUES: ReadonlyArray<ArtifactType> = [
@@ -105,6 +106,13 @@ export interface LearningArtifactData {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Studio artifact list DTO: the workspace-safe artifact plus the signed-in
+// learner's own study summary (or null when the artifact has no study rows and
+// is not a study type, or simply not started yet).
+export type LearningArtifactWithStudy = LearningArtifactData & {
+  study: ArtifactStudyProgress | null;
+};
 
 // Persistence rows are never returned to callers directly; map through this so
 // artifact code depends on the DTO shape, not on Prisma row layout. sourceIds

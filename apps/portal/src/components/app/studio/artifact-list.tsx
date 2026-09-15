@@ -5,17 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
 import { ARTIFACT_TYPE_META, isActiveStudioArtifactType } from "./artifact-type-meta";
-import type { LearningArtifactData } from "@/lib/artifacts/types";
+import type { LearningArtifactWithStudy } from "@/lib/artifacts/types";
 
 interface Props {
-  artifacts: LearningArtifactData[];
+  artifacts: LearningArtifactWithStudy[];
   onOpen: (artifactId: string) => void;
-  onRegenerate?: (artifact: LearningArtifactData) => void;
-  onDelete?: (artifact: LearningArtifactData) => void;
+  onRegenerate?: (artifact: LearningArtifactWithStudy) => void;
+  onDelete?: (artifact: LearningArtifactWithStudy) => void;
   regeneratingId?: string | null;
 }
 
-const isTerminal = (status: LearningArtifactData["status"]) =>
+const isTerminal = (status: LearningArtifactWithStudy["status"]) =>
   status === "COMPLETED" || status === "FAILED";
 
 export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, regeneratingId }: Props) {
@@ -56,6 +56,20 @@ export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, regene
                 {artifact.sourceIds.length > 0 &&
                   ` · ${artifact.sourceIds.length} source${artifact.sourceIds.length !== 1 ? "s" : ""}`}
               </p>
+              {artifact.study && artifact.type === "QUIZ" && (
+                <p className="mt-0.5 text-xs text-text-secondary">
+                  {artifact.study.attempts > 0
+                    ? `Took it ${artifact.study.attempts}× · best ${artifact.study.bestScore ?? 0}/${artifact.study.totalQuestions ?? 0}`
+                    : "Not taken yet"}
+                </p>
+              )}
+              {artifact.study && artifact.type === "FLASHCARDS" && (
+                <p className="mt-0.5 text-xs text-text-secondary">
+                  {artifact.study.attempts > 0
+                    ? `${artifact.study.knownCount ?? 0} of ${artifact.study.attempts} reviewed card${artifact.study.attempts !== 1 ? "s" : ""} known`
+                    : "Not reviewed yet"}
+                </p>
+              )}
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <ArtifactStatusBadge status={artifact.status} className="hidden sm:inline-flex" />

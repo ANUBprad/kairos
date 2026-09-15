@@ -13,7 +13,8 @@ import { toWorkspaceArtifactData } from "@/lib/artifacts/dto";
 import { collectArtifactMediaKeys } from "@/lib/artifacts/interrupt";
 import { getStorageProvider } from "@/lib/storage";
 import { logError } from "@/lib/errors";
-import type { LearningArtifactData } from "@/lib/artifacts/types";
+import type { LearningArtifactData, LearningArtifactWithStudy } from "@/lib/artifacts/types";
+import { getStudyProgressForUser } from "@/lib/study";
 
 // Application contract for the artifact Studio. The engine authenticates the
 // session, authorizes the knowledge base, validates the source scope and
@@ -145,7 +146,7 @@ export async function getLearningArtifactForWorkspace(
 export async function listLearningArtifactsForWorkspace(
   knowledgeBaseId: string,
   filters?: { type?: ArtifactType; status?: ArtifactStatus },
-): Promise<LearningArtifactData[]> {
+): Promise<LearningArtifactWithStudy[]> {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
@@ -153,7 +154,14 @@ export async function listLearningArtifactsForWorkspace(
     throw new Error("Knowledge base not found");
   }
 
-  return (await listLearningArtifacts(knowledgeBaseId, filters)).map(toWorkspaceArtifactData);
+  const [artifacts, progress] = await Promise.all([
+    listLearningArtifacts(knowledgeBaseId, filters),
+    getStudyProgressForUser(session.user.id, knowledgeBaseId),
+  ]);
+  return artifacts.map((artifact) => ({
+    ...toWorkspaceArtifactData(artifact),
+    study: progress[artifact.id] ?? null,
+  }));
 }
 
 // Regenerates an existing artifact. Only the id + KB are accepted from the

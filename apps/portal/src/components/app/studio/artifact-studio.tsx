@@ -17,9 +17,10 @@ import {
   generatePodcastArtifact,
   regenerateLearningArtifactForWorkspace,
   deleteLearningArtifactForWorkspace,
+  listLearningArtifactsForWorkspace,
 } from "@/lib/actions/artifacts";
 import type { SourceListItem } from "@/lib/source-contract";
-import type { LearningArtifactData } from "@/lib/artifacts/types";
+import type { LearningArtifactData, LearningArtifactWithStudy } from "@/lib/artifacts/types";
 import {
   ACTIVE_STUDIO_ARTIFACT_TYPES,
   ARTIFACT_TYPE_META,
@@ -33,7 +34,7 @@ interface Props {
   kbId: string;
   kbName: string;
   sources: SourceListItem[];
-  initialArtifacts: LearningArtifactData[];
+  initialArtifacts: LearningArtifactWithStudy[];
 }
 
 const TABS = [
@@ -61,7 +62,7 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
   const [artifactName, setArtifactName] = useState("");
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [artifacts, setArtifacts] = useState<LearningArtifactData[]>(initialArtifacts);
+  const [artifacts, setArtifacts] = useState<LearningArtifactWithStudy[]>(initialArtifacts);
   const [openArtifactId, setOpenArtifactId] = useState<string | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -87,7 +88,9 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
         selectedIds,
         artifactName.trim() || undefined,
       );
-      setArtifacts((prev) => [artifact, ...prev]);
+      // A brand-new artifact has no study history yet; the list projection
+      // fills it in on the next refresh.
+      setArtifacts((prev) => [{ ...artifact, study: null }, ...prev]);
       setOpenArtifactId(artifact.id);
       setSelectedIds([]);
       setArtifactName("");
@@ -104,12 +107,23 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
     setActionError(null);
     try {
       const next = await regenerateLearningArtifactForWorkspace(kbId, artifact.id);
-      setArtifacts((prev) => [next, ...prev]);
+      setArtifacts((prev) => [{ ...next, study: null }, ...prev]);
       setOpenArtifactId(next.id);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Artifact regeneration failed");
     } finally {
       setRegeneratingId(null);
+    }
+  };
+
+  const handleDialogClose = async () => {
+    setOpenArtifactId(null);
+    try {
+      // Study interactions happen inside the dialog, so re-pull the list
+      // projection so per-artifact progress stays current without a reload.
+      setArtifacts(await listLearningArtifactsForWorkspace(kbId));
+    } catch {
+      // Keep the current list; the next interaction will surface the error.
     }
   };
 
@@ -315,7 +329,7 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
         kbId={kbId}
         artifactId={openArtifactId}
         sources={sources}
-        onClose={() => setOpenArtifactId(null)}
+        onClose={handleDialogClose}
       />
 
       <ConfirmDialog
