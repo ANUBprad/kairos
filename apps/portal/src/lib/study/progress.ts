@@ -19,6 +19,10 @@ export interface ArtifactStudyProgress {
   totalQuestions: number | null;
   // Flashcards: cards whose current status is KNOWN. Quiz: null.
   knownCount: number | null;
+  // Flashcards: sum of every per-card reviewCount — total verdict marks
+  // recorded, which exceeds "distinct cards reviewed" (attempts) whenever any
+  // card was reviewed more than once. Quiz: null.
+  reviewCount: number | null;
   lastStudiedAt: string | null;
 }
 
@@ -44,6 +48,7 @@ export async function getStudyProgressForUser(
       by: ["artifactId", "status"],
       where: { userId, knowledgeBaseId },
       _count: { _all: true },
+      _sum: { reviewCount: true },
       _max: { lastReviewedAt: true },
     }),
   ]);
@@ -55,6 +60,7 @@ export async function getStudyProgressForUser(
       bestScore: row._max.score ?? null,
       totalQuestions: row._max.totalQuestions ?? null,
       knownCount: null,
+      reviewCount: null,
       lastStudiedAt: row._max.completedAt ? row._max.completedAt.toISOString() : null,
     };
   }
@@ -64,10 +70,12 @@ export async function getStudyProgressForUser(
       bestScore: null,
       totalQuestions: null,
       knownCount: 0,
+      reviewCount: 0,
       lastStudiedAt: null,
     };
     entry.attempts += row._count._all;
     if (row.status === "KNOWN") entry.knownCount = (entry.knownCount ?? 0) + row._count._all;
+    entry.reviewCount = (entry.reviewCount ?? 0) + (row._sum.reviewCount ?? 0);
     if (row._max.lastReviewedAt && (!entry.lastStudiedAt || row._max.lastReviewedAt > new Date(entry.lastStudiedAt))) {
       entry.lastStudiedAt = row._max.lastReviewedAt.toISOString();
     }

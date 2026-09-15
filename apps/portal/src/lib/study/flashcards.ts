@@ -37,6 +37,41 @@ function toFlashcardReviewData(row: FlashcardReviewRow): FlashcardReviewData {
   };
 }
 
+// Derived completion/progress over a deck's per-card review rows. A card counts
+// as reviewed once it has at least one recorded verdict (reviewCount > 0 — the
+// row itself only exists once the card was ever marked), so completion is
+// "every card reviewed at least once", never a stored flag.
+export interface FlashcardDeckProgress {
+  cardCount: number;
+  reviewedCount: number;
+  learningCount: number;
+  knownCount: number;
+  totalReviews: number;
+  complete: boolean;
+}
+
+export function summarizeFlashcardDeckProgress(
+  reviews: readonly FlashcardReviewData[],
+): FlashcardDeckProgress {
+  let reviewedCount = 0;
+  let knownCount = 0;
+  let totalReviews = 0;
+  for (const review of reviews) {
+    if (review.reviewCount > 0) reviewedCount += 1;
+    if (review.status === "KNOWN") knownCount += 1;
+    totalReviews += review.reviewCount;
+  }
+  const cardCount = reviews.length;
+  return {
+    cardCount,
+    reviewedCount,
+    learningCount: reviewedCount - knownCount,
+    knownCount,
+    totalReviews,
+    complete: cardCount > 0 && reviewedCount === cardCount,
+  };
+}
+
 async function loadDeckForReview(
   knowledgeBaseId: string,
   artifactId: string,

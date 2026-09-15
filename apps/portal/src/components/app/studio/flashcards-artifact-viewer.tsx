@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   CheckCircle2,
@@ -15,6 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
 import { parseFlashcardsContent } from "@/lib/artifacts/flashcards-view";
+import { resolveSourceProvenance } from "@/lib/artifacts/summary-view";
+import { summarizeFlashcardDeckProgress } from "@/lib/study/flashcards";
 import {
   getFlashcardReviewsForWorkspace,
   markFlashcardReviewForWorkspace,
@@ -29,9 +32,10 @@ interface Props {
 }
 
 // Review state is now persisted: per-card status + counts live in the DB and
-// survive reload. Marking a card records a verdict server-side; progress is the
-// share of cards currently KNOWN.
-export function FlashcardsArtifactViewer({ artifact, sources: _sources, onClose }: Props) {
+// survive reload. Marking a card records a verdict server-side; progress and
+// deck completion are always derived from those rows (a card counts as
+// reviewed once it has reviewCount > 0), never from a stored flag.
+export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) {
   const content = parseFlashcardsContent(artifact.content);
   const kbId = artifact.knowledgeBaseId;
   const [reviews, setReviews] = useState<FlashcardReviewData[] | null>(null);
@@ -43,7 +47,10 @@ export function FlashcardsArtifactViewer({ artifact, sources: _sources, onClose 
 
   const cardCount = content?.cards.length ?? 0;
   const current = content?.cards[index];
-  const knownCount = reviews?.filter((r) => r.status === "KNOWN").length ?? 0;
+  const progress = reviews ? summarizeFlashcardDeckProgress(reviews) : null;
+  const currentReview = reviews ? reviews[index] : undefined;
+  const provenance = resolveSourceProvenance(artifact.sourceIds, sources);
+  const availableSourceIds = new Set(sources.map((s) => s.id));
 
   useEffect(() => {
     if (artifact.status !== "COMPLETED" || !content) return;
@@ -140,6 +147,15 @@ export function FlashcardsArtifactViewer({ artifact, sources: _sources, onClose 
                   <h3 className="text-sm font-semibold text-text-primary">{content.title}</h3>
                   <p className="mt-1 text-xs text-text-tertiary">
                     Card {index + 1} of {cardCount}
+                    {currentReview && (
+                      <span
+                        className={`ml-2 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                          STATUS_CHIP[currentReview.status].klass
+                        }`}
+                      >
+                        {STATUS_CHIP[currentReview.status].label}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-text-secondary">
@@ -148,7 +164,13 @@ export function FlashcardsArtifactViewer({ artifact, sources: _sources, onClose 
                   ) : (
                     <CheckCircle2 size={14} className="text-success" />
                   )}
-                  {knownCount}/{cardCount} known
+                  {progress
+                    ? `${progress.reviewedCount}/${progress.cardCount} reviewed · ${progress.knownCount} known · ${progress.learningCount} learning${
+                        progress.totalReviews > progress.reviewedCount
+                          ? ` · ${progress.totalReviews} total reviews`
+                          : ""
+                      }`
+                    : `${cardCount} cards`}
                 </span>
               </div>
 
@@ -203,10 +225,19 @@ export function FlashcardsArtifactViewer({ artifact, sources: _sources, onClose 
                 </div>
               )}
 
-              {reviewedAll(cardCount, index) && reviews && (
-                <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-brand/5 px-3 py-3 text-sm text-brand">
+              {progress && progress.complete && (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2 rounded-lg bg-brand/5 px-3 py-3 text-sm text-brand">
                   <PartyPopper size={15} />
-                  You&apos;ve reviewed every card. Keep going to lock them all as known.
+                  <span>Deck complete — every card has been reviewed at least once.</span>
+                  <button
+                    onClick={() => {
+                      setRevealed(false);
+                      setIndex(0);
+                    }}
+                    className="rounded-md font-semibold underline-offset-2 transition-colors hover:underline"
+                  >
+                    Review again
+                  </button>
                 </div>
               )}
 
@@ -245,6 +276,35 @@ export function FlashcardsArtifactViewer({ artifact, sources: _sources, onClose 
                   <ChevronRight size={13} />
                 </Button>
               </div>
+
+              {provenance.length > 0 && (
+                <div className="mt-5 rounded-lg border border-border p-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                    Revisit the sources behind this deck
+                  </h4>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    Missed something? Go back to where the material came from.
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {provenance.map((source) =>
+                      availableSourceIds.has(source.id) ? (
+                        <li key={source.id}>
+                          <Link
+                            href={`/app/knowledge-bases/${kbId}/${source.id}`}
+                            className="text-xs font-medium text-brand transition-colors hover:text-brand-hover hover:underline"
+                          >
+                            {source.name}
+                          </Link>
+                        </li>
+                      ) : (
+                        <li key={source.id} className="text-xs text-text-tertiary">
+                          Unavailable source · {source.id.slice(0, 8)}…
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
           ))}
       </div>
@@ -252,6 +312,8 @@ export function FlashcardsArtifactViewer({ artifact, sources: _sources, onClose 
   );
 }
 
-function reviewedAll(cardCount: number, index: number): boolean {
-  return cardCount > 0 && index >= cardCount - 1;
-}
+const STATUS_CHIP: Record<FlashcardReviewData["status"], { label: string; klass: string }> = {
+  NEW: { label: "Not reviewed", klass: "bg-surface-hover text-text-tertiary" },
+  LEARNING: { label: "Learning", klass: "bg-brand/10 text-brand" },
+  KNOWN: { label: "Known", klass: "bg-success/10 text-success" },
+};

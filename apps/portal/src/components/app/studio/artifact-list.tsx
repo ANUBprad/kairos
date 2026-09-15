@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
 import { ARTIFACT_TYPE_META, isActiveStudioArtifactType } from "./artifact-type-meta";
+import { parseFlashcardsContent } from "@/lib/artifacts/flashcards-view";
+import type { ArtifactStudyProgress } from "@/lib/study/progress";
 import type { LearningArtifactWithStudy } from "@/lib/artifacts/types";
 
 interface Props {
@@ -17,6 +19,25 @@ interface Props {
 
 const isTerminal = (status: LearningArtifactWithStudy["status"]) =>
   status === "COMPLETED" || status === "FAILED";
+
+// Compact deck study line for the list: distinct reviewed cards vs the deck
+// size from the artifact content, current known/learning split, and — where a
+// card was reviewed more than once — the honest total tally of verdict marks.
+function flashcardsStudyLine(study: ArtifactStudyProgress, content: unknown): string {
+  const cardCount = parseFlashcardsContent(content)?.cards.length ?? null;
+  const reviewed = study.attempts;
+  const known = study.knownCount ?? 0;
+  const learning = Math.max(reviewed - known, 0);
+  const parts = [
+    cardCount !== null ? `${reviewed}/${cardCount} reviewed` : `${reviewed} reviewed`,
+    `${known} known`,
+    `${learning} learning`,
+  ];
+  if (study.reviewCount !== null && study.reviewCount > reviewed) {
+    parts.push(`${study.reviewCount} total reviews`);
+  }
+  return parts.join(" · ");
+}
 
 export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, regeneratingId }: Props) {
   if (artifacts.length === 0) {
@@ -66,7 +87,7 @@ export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, regene
               {artifact.study && artifact.type === "FLASHCARDS" && (
                 <p className="mt-0.5 text-xs text-text-secondary">
                   {artifact.study.attempts > 0
-                    ? `${artifact.study.knownCount ?? 0} of ${artifact.study.attempts} reviewed card${artifact.study.attempts !== 1 ? "s" : ""} known`
+                    ? flashcardsStudyLine(artifact.study, artifact.content)
                     : "Not reviewed yet"}
                 </p>
               )}
