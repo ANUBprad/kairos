@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ChatInterface } from "@/components/app/chat-interface";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { getServerSession } from "@/lib/server/auth-utils";
+import { isValidEntityId } from "@/lib/validation";
 
 export const metadata = {
   title: "Knowledge Base Chat",
@@ -10,11 +11,17 @@ export const metadata = {
 
 interface Props {
   params: Promise<{ kbId: string }>;
+  searchParams: Promise<{ conversation?: string | string[] }>;
 }
 
-export default async function ChatPage({ params }: Props) {
+export default async function ChatPage({ params, searchParams }: Props) {
   try {
     const { kbId } = await params;
+    const sp = await searchParams;
+    const conversationId =
+      typeof sp.conversation === "string" && isValidEntityId(sp.conversation)
+        ? sp.conversation
+        : undefined;
 
     const kb = await prisma.knowledgeBase.findUnique({
       where: { id: kbId },
@@ -39,7 +46,7 @@ export default async function ChatPage({ params }: Props) {
       orderBy: { name: "asc" },
     });
 
-    return <ChatInterface kbId={kbId} kbName={kb.name} documents={documents} />;
+    return <ChatInterface kbId={kbId} kbName={kb.name} documents={documents} initialConversationId={conversationId} />;
   } catch {
     redirect("/app");
   }

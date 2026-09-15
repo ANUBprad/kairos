@@ -73,11 +73,12 @@ interface Props {
   kbId: string;
   kbName: string;
   documents: { id: string; name: string }[];
+  initialConversationId?: string | null;
 }
 
-export function ChatInterface({ kbId, kbName, documents }: Props) {
+export function ChatInterface({ kbId, kbName, documents, initialConversationId = null }: Props) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversation, setActiveConversation] = useState<string | null>(null);
+  const [activeConversation, setActiveConversation] = useState<string | null>(initialConversationId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -545,10 +546,12 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
                       )}
                       {createdArtifact && createdArtifact.msgId === msg.id && (
                         <Link
-                          href={`/app/knowledge-bases/${kbId}/studio`}
+                          href={`/app/knowledge-bases/${kbId}/artifacts/${createdArtifact.id}${
+                            activeConversation ? `?conversation=${activeConversation}` : ""
+                          }`}
                           className="text-xs font-medium text-brand transition-colors hover:underline"
                         >
-                          View in Studio
+                          View artifact
                         </Link>
                       )}
                     </div>
