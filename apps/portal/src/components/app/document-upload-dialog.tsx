@@ -23,7 +23,6 @@ import { uploadDocument } from "@/lib/actions/document";
 interface UploadFile {
   file: File;
   id: string;
-  progress: number;
   status: "pending" | "uploading" | "done" | "error" | "cancelled";
   error?: string;
 }
@@ -65,7 +64,6 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const abortRef = useRef<Map<string, boolean>>(new Map());
-  const intervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const dropRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -74,10 +72,6 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
       setUploadQueue([]);
       setIsUploading(false);
       abortRef.current.clear();
-      for (const interval of intervalsRef.current.values()) {
-        clearInterval(interval);
-      }
-      intervalsRef.current.clear();
     }
   }, [open]);
 
@@ -139,7 +133,6 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         newFiles.push({
           file,
           id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          progress: 0,
           status: error ? "error" : "pending",
           error: error || undefined,
         });
@@ -188,7 +181,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
     setUploadQueue((prev) =>
       prev.map((f) =>
         f.id === id && f.status === "error"
-          ? { ...f, status: "pending" as const, progress: 0, error: undefined }
+          ? { ...f, status: "pending" as const, error: undefined }
           : f,
       ),
     );
@@ -216,20 +209,9 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
 
       setUploadQueue((prev) =>
         prev.map((f) =>
-          f.id === item.id ? { ...f, status: "uploading" as const, progress: 0 } : f,
+          f.id === item.id ? { ...f, status: "uploading" as const } : f,
         ),
       );
-
-      const progressInterval = setInterval(() => {
-        setUploadQueue((prev) =>
-          prev.map((f) =>
-            f.id === item.id && f.progress < 85
-              ? { ...f, progress: f.progress + Math.random() * 15 }
-              : f,
-          ),
-        );
-      }, 300);
-      intervalsRef.current.set(item.id, progressInterval);
 
       try {
         const formData = new FormData();
@@ -237,21 +219,15 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
 
         await uploadDocument(kbId, formData);
 
-        clearInterval(progressInterval);
-        intervalsRef.current.delete(item.id);
-
         if (abortRef.current.get(item.id)) continue;
 
         setUploadQueue((prev) =>
           prev.map((f) =>
-            f.id === item.id ? { ...f, progress: 100, status: "done" as const } : f,
+            f.id === item.id ? { ...f, status: "done" as const } : f,
           ),
         );
         successCount++;
       } catch (err) {
-        clearInterval(progressInterval);
-        intervalsRef.current.delete(item.id);
-
         if (abortRef.current.get(item.id)) continue;
 
         setUploadQueue((prev) =>
@@ -404,10 +380,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
                     </p>
                     {item.status === "uploading" && (
                       <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-hover">
-                        <div
-                          className="h-full rounded-full bg-brand transition-all duration-300 ease-out"
-                          style={{ width: `${Math.min(item.progress, 100)}%` }}
-                        />
+                        <div className="h-full w-1/3 rounded-full bg-brand/60 animate-[pulse_1.5s_ease-in-out_infinite]" />
                       </div>
                     )}
                     {item.status === "error" && item.error && (
