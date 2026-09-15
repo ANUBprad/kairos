@@ -903,7 +903,7 @@ describe("artifact application wiring", () => {
 
   it("authorizes reads, lists and deletion through canAccessKnowledgeBase; regeneration is authorized inside the engine like generation", () => {
     const authUses = actionsSource.match(/canAccessKnowledgeBase/g);
-    assert.equal(authUses?.length, 4); // one import + read, list and delete call sites (regeneration authorizes in the engine)
+    assert.equal(authUses?.length, 5); // one import + read, list, delete and recover call sites (regeneration authorizes in the engine)
     assert.doesNotMatch(actionsSource, /API_KEY|session\.user\.id to|members/);
   });
 

@@ -156,6 +156,11 @@ export function assertNonEmptySourceScope(sourceIds: readonly string[]): string[
 // Every requested source must belong to the knowledge base. A partial or
 // cross-KB scope is rejected as a whole rather than silently narrowed, so the
 // caller's intent is preserved and nothing leaks a foreign source's existence.
+// The generation path fails an artifact on every post-row failure, so a
+// PROCESSING row untouched beyond this window can only be a crash casualty
+// (process died mid-generation) rather than a legitimately slow run.
+export const ARTIFACT_STALE_PROCESSING_MS = 30 * 60 * 1000;
+
 export function assertSourcesOwned(
   sourceIds: readonly string[],
   ownedIds: ReadonlySet<string>,

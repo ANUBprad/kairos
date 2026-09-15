@@ -82,6 +82,23 @@ export async function listLearningArtifacts(
   return artifacts.map(toLearningArtifactData);
 }
 
+// Heals artifacts stranded mid-generation: a PROCESSING row not touched since
+// staleBefore is flipped to FAILED in one atomic guarded UPDATE. The
+// status + updatedAt conditions make recovery idempotent and safe under
+// concurrency — an already COMPLETED/FAILED row or a heartbeat that pushed
+// updatedAt past the cutoff matches nothing, a deleted row is never
+// resurrected, and repeating recovery is a no-op. It never creates rows.
+export async function recoverStaleProcessingArtifacts(
+  knowledgeBaseId: string,
+  staleBefore: Date,
+): Promise<number> {
+  const result = await prisma.learningArtifact.updateMany({
+    where: { knowledgeBaseId, status: "PROCESSING", updatedAt: { lt: staleBefore } },
+    data: { status: "FAILED" },
+  });
+  return result.count;
+}
+
 // Appends a completed interruption to the podcast's bounded history window,
 // preserving every other metadata field (prompt provenance, media reference,
 // ...). Interruptions are a single-writer append on an already COMPLETED

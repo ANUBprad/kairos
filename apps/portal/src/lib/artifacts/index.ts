@@ -1,6 +1,7 @@
 export {
   ARTIFACT_TYPE_VALUES,
   ARTIFACT_STATUS_VALUES,
+  ARTIFACT_STALE_PROCESSING_MS,
   parseArtifactType,
   parseArtifactStatus,
   canTransitionArtifactStatus,
@@ -26,6 +27,7 @@ export {
   updateLearningArtifactContent,
   completeLearningArtifact,
   failLearningArtifact,
+  recoverStaleProcessingArtifacts,
 } from "./persistence";
 export {
   resolveArtifactDefinition,

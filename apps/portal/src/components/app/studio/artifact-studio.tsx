@@ -17,6 +17,7 @@ import {
   generatePodcastArtifact,
   regenerateLearningArtifactForWorkspace,
   deleteLearningArtifactForWorkspace,
+  recoverStaleLearningArtifactsForWorkspace,
   listLearningArtifactsForWorkspace,
 } from "@/lib/actions/artifacts";
 import type { SourceListItem } from "@/lib/source-contract";
@@ -141,6 +142,16 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
       setPendingDelete(null);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const recoverStale = async () => {
+    setActionError(null);
+    try {
+      await recoverStaleLearningArtifactsForWorkspace(kbId);
+      setArtifacts(await listLearningArtifactsForWorkspace(kbId));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Recovery failed");
     }
   };
 
@@ -321,6 +332,7 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
             setActionError(null);
             setPendingDelete(artifact);
           }}
+          onRecover={recoverStale}
           regeneratingId={regeneratingId}
         />
       </section>

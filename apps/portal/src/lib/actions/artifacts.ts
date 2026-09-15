@@ -8,7 +8,9 @@ import {
   getLearningArtifactInKb,
   listLearningArtifacts,
   deleteLearningArtifact,
+  recoverStaleProcessingArtifacts,
 } from "@/lib/artifacts/persistence";
+import { ARTIFACT_STALE_PROCESSING_MS } from "@/lib/artifacts/types";
 import { toWorkspaceArtifactData } from "@/lib/artifacts/dto";
 import { collectArtifactMediaKeys } from "@/lib/artifacts/interrupt";
 import { getStorageProvider } from "@/lib/storage";
@@ -215,4 +217,25 @@ export async function deleteLearningArtifactForWorkspace(
       logError("artifact.delete.media-cleanup", cleanupError, { artifactId: deleted.id });
     }
   }
+}
+
+// Recovers artifacts stranded mid-generation by a crashed process. KB-authorized
+// like every other write, then flips PROCESSING rows untouched beyond the
+// staleness window to FAILED so they become reachable for regenerate/delete.
+// Returns the number of rows healed; safe to call any time (a live PROCESSING
+// row never matches and recovery is idempotent).
+export async function recoverStaleLearningArtifactsForWorkspace(
+  knowledgeBaseId: string,
+): Promise<number> {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  if (!(await canAccessKnowledgeBase(session.user.id, knowledgeBaseId))) {
+    throw new Error("Knowledge base not found");
+  }
+
+  return recoverStaleProcessingArtifacts(
+    knowledgeBaseId,
+    new Date(Date.now() - ARTIFACT_STALE_PROCESSING_MS),
+  );
 }

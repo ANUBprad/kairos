@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
 import { ARTIFACT_TYPE_META, isActiveStudioArtifactType } from "./artifact-type-meta";
+import { ARTIFACT_STALE_PROCESSING_MS } from "@/lib/artifacts/types";
 import { parseFlashcardsContent } from "@/lib/artifacts/flashcards-view";
 import type { ArtifactStudyProgress } from "@/lib/study/progress";
 import type { LearningArtifactWithStudy } from "@/lib/artifacts/types";
@@ -14,11 +15,16 @@ interface Props {
   onOpen: (artifactId: string) => void;
   onRegenerate?: (artifact: LearningArtifactWithStudy) => void;
   onDelete?: (artifact: LearningArtifactWithStudy) => void;
+  onRecover?: (artifact: LearningArtifactWithStudy) => void;
   regeneratingId?: string | null;
 }
 
 const isTerminal = (status: LearningArtifactWithStudy["status"]) =>
   status === "COMPLETED" || status === "FAILED";
+
+const isStaleProcessing = (artifact: LearningArtifactWithStudy) =>
+  artifact.status === "PROCESSING" &&
+  Date.now() - new Date(artifact.updatedAt).getTime() > ARTIFACT_STALE_PROCESSING_MS;
 
 // Compact deck study line for the list: distinct reviewed cards vs the deck
 // size from the artifact content, current known/learning split, and — where a
@@ -39,7 +45,7 @@ function flashcardsStudyLine(study: ArtifactStudyProgress, content: unknown): st
   return parts.join(" · ");
 }
 
-export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, regeneratingId }: Props) {
+export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, onRecover, regeneratingId }: Props) {
   if (artifacts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center px-5 py-12 text-center">
@@ -94,6 +100,18 @@ export function ArtifactList({ artifacts, onOpen, onRegenerate, onDelete, regene
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <ArtifactStatusBadge status={artifact.status} className="hidden sm:inline-flex" />
+              {isStaleProcessing(artifact) && onRecover && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => onRecover(artifact)}
+                  aria-label={`Recover ${artifact.name || "artifact"}`}
+                >
+                  <RefreshCw size={13} />
+                  Recover
+                </Button>
+              )}
               {artifact.status === "COMPLETED" && (
                 <Button
                   variant="secondary"
