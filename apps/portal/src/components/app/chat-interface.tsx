@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   Send,
   Square,
@@ -10,13 +11,31 @@ import {
   Bot,
   FileText,
   BookOpen,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Loader2,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "@/components/shared/markdown-renderer";
 import { formatSourceScopeLabel, MAX_CHAT_SOURCES } from "@/lib/ai/chat/source-scope";
+import {
+  ACTIVE_STUDIO_ARTIFACT_TYPES,
+  ARTIFACT_TYPE_META,
+} from "@/components/app/studio/artifact-type-meta";
+import type { ActiveStudioArtifactType } from "@/components/app/studio/artifact-type-meta";
+import {
+  generateSummaryArtifact,
+  generateReportArtifact,
+  generateQuizArtifact,
+  generateFlashcardsArtifact,
+  generateMindmapArtifact,
+  generateTakeawaysArtifact,
+  generatePodcastArtifact,
+} from "@/lib/actions/artifacts";
+import type { LearningArtifactData } from "@/lib/artifacts/types";
 
 interface Citation {
   chunkId: string;
@@ -60,6 +79,17 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
   const [showSidebar, setShowSidebar] = useState(true);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [artifactMenuFor, setArtifactMenuFor] = useState<string | null>(null);
+  const [generatingArtifactFor, setGeneratingArtifactFor] = useState<{
+    msgId: string;
+    type: ActiveStudioArtifactType;
+  } | null>(null);
+  const [createdArtifact, setCreatedArtifact] = useState<{
+    msgId: string;
+    type: ActiveStudioArtifactType;
+    id: string;
+  } | null>(null);
+  const [artifactError, setArtifactError] = useState<string | null>(null);
   const scopeRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -157,6 +187,47 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
       }
     } catch {
       // ignore
+    }
+  };
+
+  // Exactly the seven studio generation actions; the engine re-validates the
+  // session, the KB tenant boundary and every cited source before persisting.
+  const ARTIFACT_GENERATORS: Readonly<
+    Record<
+      ActiveStudioArtifactType,
+      (kbId: string, sourceIds: string[], name?: string) => Promise<LearningArtifactData>
+    >
+  > = {
+    SUMMARY: generateSummaryArtifact,
+    REPORT: generateReportArtifact,
+    QUIZ: generateQuizArtifact,
+    FLASHCARDS: generateFlashcardsArtifact,
+    MINDMAP: generateMindmapArtifact,
+    TAKEAWAYS: generateTakeawaysArtifact,
+    PODCAST: generatePodcastArtifact,
+  };
+
+  // The source scope for a one-click artifact is the set of documents the
+  // assistant turn actually cited; never the whole KB.
+  const turnSourceIds = (msg: Message): string[] =>
+    msg.citations ? [...new Set(msg.citations.map((c) => c.documentId))] : [];
+
+  const generateArtifactFromTurn = async (
+    msgId: string,
+    type: ActiveStudioArtifactType,
+    sourceIds: string[],
+  ) => {
+    if (generatingArtifactFor) return;
+    setGeneratingArtifactFor({ msgId, type });
+    setArtifactError(null);
+    try {
+      const artifact = await ARTIFACT_GENERATORS[type](kbId, sourceIds);
+      setCreatedArtifact({ msgId, type, id: artifact.id });
+      setArtifactMenuFor(null);
+    } catch (err) {
+      setArtifactError(err instanceof Error ? err.message : "Artifact generation failed");
+    } finally {
+      setGeneratingArtifactFor(null);
     }
   };
 
@@ -339,6 +410,13 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
           <h2 className="text-sm font-medium text-text-primary truncate">
             {kbName} — AI Chat
           </h2>
+          <Link
+            href={`/app/knowledge-bases/${kbId}/studio`}
+            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+          >
+            <Sparkles size={12} />
+            Studio
+          </Link>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-label="Chat messages" aria-live="polite">
@@ -400,6 +478,81 @@ export function ChatInterface({ kbId, kbName, documents }: Props) {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+                {msg.role === "assistant" && !isStreaming && turnSourceIds(msg).length > 0 && (
+                  <div className="mt-3 border-t border-border/50 pt-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setArtifactError(null);
+                          setArtifactMenuFor(artifactMenuFor === msg.id ? null : msg.id);
+                        }}
+                        disabled={generatingArtifactFor?.msgId === msg.id}
+                        aria-expanded={artifactMenuFor === msg.id}
+                        aria-label={`Create an artifact from this answer (${turnSourceIds(msg).length} cited sources)`}
+                      >
+                        {generatingArtifactFor?.msgId === msg.id ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Sparkles size={12} />
+                        )}
+                        Create artifact
+                      </Button>
+                      {createdArtifact && createdArtifact.msgId === msg.id && (
+                        <span className="inline-flex items-center gap-1 text-xs text-text-primary">
+                          <Check size={12} className="text-brand" />
+                          {ARTIFACT_TYPE_META[createdArtifact.type].label} created
+                        </span>
+                      )}
+                      {createdArtifact && createdArtifact.msgId === msg.id && (
+                        <Link
+                          href={`/app/knowledge-bases/${kbId}/studio`}
+                          className="text-xs font-medium text-brand transition-colors hover:underline"
+                        >
+                          View in Studio
+                        </Link>
+                      )}
+                    </div>
+
+                    {artifactMenuFor === msg.id && (
+                      <div className="mt-2 rounded-lg border border-border bg-bg p-1">
+                        {ACTIVE_STUDIO_ARTIFACT_TYPES.map((type) => {
+                          const meta = ARTIFACT_TYPE_META[type];
+                          const busy =
+                            generatingArtifactFor?.msgId === msg.id &&
+                            generatingArtifactFor.type === type;
+                          const count = turnSourceIds(msg).length;
+                          return (
+                            <button
+                              key={type}
+                              disabled={!!generatingArtifactFor}
+                              onClick={() =>
+                                generateArtifactFromTurn(msg.id, type, turnSourceIds(msg))
+                              }
+                              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:opacity-50"
+                            >
+                              {busy ? (
+                                <Loader2 size={12} className="shrink-0 animate-spin" />
+                              ) : (
+                                <meta.Icon size={12} className="shrink-0" />
+                              )}
+                              <span className="flex-1 text-left">{meta.label}</span>
+                              <span className="text-[10px] font-normal text-text-tertiary">
+                                {count} source{count !== 1 ? "s" : ""}
+                              </span>
+                            </button>
+                          );
+                        })}
+                        {artifactError && (
+                          <p role="alert" className="px-3 py-2 text-xs text-error">
+                            {artifactError}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
