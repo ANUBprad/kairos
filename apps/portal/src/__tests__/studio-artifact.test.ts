@@ -407,6 +407,21 @@ describe("studio wiring", () => {
     assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/artifacts\/persistence["']/);
   });
 
+  it("links podcast sources back to the knowledge base like the quiz and flashcard viewers", () => {
+    const podcastViewerSource = readFileSync(
+      new URL("../components/app/studio/podcast-artifact-viewer.tsx", import.meta.url),
+      "utf8",
+    );
+    assert.match(podcastViewerSource, /Revisit the sources behind this podcast/);
+    assert.match(podcastViewerSource, /availableSourceIds/);
+    assert.match(
+      podcastViewerSource,
+      /href=\{`\/app\/knowledge-bases\/\$\{artifact\.knowledgeBaseId\}\/\$\{ref\.id\}`\}/,
+    );
+    assert.match(podcastViewerSource, /Unavailable source/);
+    assert.doesNotMatch(podcastViewerSource, /<h4[\s\S]*>\s*Sources\s*<\/h4>/);
+  });
+
   it("grounds questions exclusively in the podcast interrupt action and resumes the episode from its stored position", () => {
     const podcastViewerSource = readFileSync(
       new URL("../components/app/studio/podcast-artifact-viewer.tsx", import.meta.url),
