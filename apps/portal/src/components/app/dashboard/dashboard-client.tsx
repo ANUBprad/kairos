@@ -14,6 +14,8 @@ import {
   GitBranch,
   ArrowRight,
   BookOpen,
+  ListChecks,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardCard, CardSectionHeader, CardSectionTitle, CardSectionLink } from "@/components/app/dashboard/dashboard-card";
@@ -35,6 +37,8 @@ interface DashboardData {
   docCount: number;
   chunkCount: number;
   experimentCount: number;
+  quizzesTaken: number;
+  cardsKnown: number;
   latestBenchmark: {
     name: string | null;
     createdAt: Date;
@@ -91,7 +95,7 @@ function QuickActionCard({
 }
 
 export function DashboardClient({ data }: DashboardClientProps) {
-  const { knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark } = data;
+  const { knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark, quizzesTaken, cardsKnown } = data;
 
   const hasKb = knowledgeBases.length > 0;
   const hasDocs = docCount > 0;
@@ -207,7 +211,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
           </div>
 
           {/* Stats Strip */}
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
             <StatCard
               label="Knowledge Bases"
               value={knowledgeBases.length}
@@ -233,6 +237,18 @@ export function DashboardClient({ data }: DashboardClientProps) {
               status={hasExperiments ? "success" : "default"}
               trend={avgRecall !== null ? "up" : undefined}
               trendValue={avgRecall !== null ? `${(avgRecall * 100).toFixed(0)}% recall` : undefined}
+            />
+            <StatCard
+              label="Quizzes Taken"
+              value={quizzesTaken}
+              icon={ListChecks}
+              status={quizzesTaken > 0 ? "success" : "default"}
+            />
+            <StatCard
+              label="Cards Known"
+              value={cardsKnown}
+              icon={Layers}
+              status={cardsKnown > 0 ? "success" : "default"}
             />
           </div>
         </div>

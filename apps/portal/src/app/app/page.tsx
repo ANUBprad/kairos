@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
+import { getServerSession } from "@/lib/server/auth-utils";
+import { getStudyCountsForProject, type StudyCounts } from "@/lib/study";
 import { DashboardClient } from "@/components/app/dashboard/dashboard-client";
 
 export default async function AppPage() {
@@ -22,26 +24,30 @@ export default async function AppPage() {
     createdAt: Date;
     aggregatedMetrics: import("@prisma/client").Prisma.JsonValue | null;
   } | null = null;
+  let studies: StudyCounts = { quizzesTaken: 0, cardsKnown: 0 };
 
   try {
-    if (project) {
-      [knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark] = await Promise.all([
-        listKnowledgeBases(),
-        prisma.document.count({
-          where: { knowledgeBase: { projectId: project.id } },
-        }),
-        prisma.documentChunk.count({
-          where: { document: { knowledgeBase: { projectId: project.id } } },
-        }),
-        prisma.experimentRun.count({
-          where: { knowledgeBase: { projectId: project.id } },
-        }),
-        prisma.benchmarkRun.findFirst({
-          where: { status: "completed", dataset: { knowledgeBase: { projectId: project.id } } },
-          orderBy: { createdAt: "desc" },
-          select: { name: true, createdAt: true, aggregatedMetrics: true },
-        }),
-      ]);
+    const session = project ? await getServerSession() : null;
+    if (project && session?.user?.id) {
+      [knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark, studies] =
+        await Promise.all([
+          listKnowledgeBases(),
+          prisma.document.count({
+            where: { knowledgeBase: { projectId: project.id } },
+          }),
+          prisma.documentChunk.count({
+            where: { document: { knowledgeBase: { projectId: project.id } } },
+          }),
+          prisma.experimentRun.count({
+            where: { knowledgeBase: { projectId: project.id } },
+          }),
+          prisma.benchmarkRun.findFirst({
+            where: { status: "completed", dataset: { knowledgeBase: { projectId: project.id } } },
+            orderBy: { createdAt: "desc" },
+            select: { name: true, createdAt: true, aggregatedMetrics: true },
+          }),
+          getStudyCountsForProject(session.user.id, project.id),
+        ]);
     }
   } catch {
     // Dashboard will render with empty/default data
@@ -65,6 +71,8 @@ export default async function AppPage() {
               aggregatedMetrics: latestBenchmark.aggregatedMetrics as Record<string, number> | null,
             }
           : null,
+        quizzesTaken: studies.quizzesTaken,
+        cardsKnown: studies.cardsKnown,
       }}
     />
   );
