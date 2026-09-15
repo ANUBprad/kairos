@@ -184,8 +184,11 @@ describe("podcast interruption media route wiring", () => {
     assert.match(routeSource, /rateLimit\(`audio:\$\{session\.user\.id\}`, RATE_LIMITS\.api\)/);
     assert.match(routeSource, /canAccessKnowledgeBase/);
     assert.match(routeSource, /getSignedUrl/);
-    assert.match(routeSource, /audio\/mpeg|audio\/wav/);
-    assert.match(routeSource, /Cache-Control/);
+    assert.match(routeSource, /proxyMediaResponse/);
+    assert.match(routeSource, /mediaContentType\(interruption\.audio\.format\)/);
+    assert.doesNotMatch(routeSource, /arrayBuffer|Buffer\.from/, "media is streamed, never fully buffered");
+    const proxySource = readFileSync(new URL("../lib/audio/media-proxy.ts", import.meta.url), "utf8");
+    assert.match(proxySource, /Cache-Control/, "the private cache posture lives in the shared media proxy");
   });
 
   it("resolves a foreign artifact or interruption to 404, never a leaking 403", () => {
@@ -201,9 +204,11 @@ describe("podcast interruption media route wiring", () => {
 
   it("validates both route ids and guards upstream bytes like the episode route", () => {
     assert.match(routeSource, /isValidEntityId\(artifactId\) \|\| !UUID_REGEX\.test\(interruptionId\)/);
-    assert.match(routeSource, /MAX_AUDIO_BYTES/);
-    assert.match(routeSource, /Media upstream unavailable/);
+    assert.match(routeSource, /proxyMediaResponse/);
     assert.match(routeSource, /sanitizeError/);
+    const proxySource = readFileSync(new URL("../lib/audio/media-proxy.ts", import.meta.url), "utf8");
+    assert.match(proxySource, /Media upstream unavailable/, "the 502 text lives in the shared media proxy");
+    assert.match(proxySource, /MAX_AUDIO_BYTES/, "the byte ceiling lives in the shared media proxy");
   });
 
   it("never returns a storage identity to the client", () => {

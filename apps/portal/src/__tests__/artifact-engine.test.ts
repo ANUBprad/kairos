@@ -951,7 +951,9 @@ describe("podcast engine media wiring", () => {
     assert.match(routeSource, /canAccessKnowledgeBase/);
     assert.match(routeSource, /getSignedUrl/);
     assert.match(routeSource, /type !== "PODCAST"/);
-    assert.match(routeSource, /audio\/mpeg|audio\/wav/);
+    assert.match(routeSource, /proxyMediaResponse/);
+    assert.match(routeSource, /mediaContentType\(audio\.format\)/);
+    assert.doesNotMatch(routeSource, /arrayBuffer|Buffer\.from/, "media is streamed, never fully buffered");
   });
 
   it("keeps the storage key out of the client-safe projection at the action boundary", () => {
