@@ -828,6 +828,30 @@ export async function deleteDocument(formData: FormData) {
   revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
 }
 
+async function reconstructTextSourceBuffers(documentIds: string[]): Promise<Map<string, Buffer>> {
+  const buffers = new Map<string, Buffer>();
+  if (documentIds.length === 0) return buffers;
+
+  const rows = await prisma.documentChunk.findMany({
+    where: { documentId: { in: documentIds } },
+    orderBy: { index: "asc" },
+    select: { documentId: true, content: true },
+  });
+  const partsByDoc = new Map<string, string[]>();
+  for (const row of rows) {
+    const parts = partsByDoc.get(row.documentId) ?? [];
+    parts.push(row.content);
+    partsByDoc.set(row.documentId, parts);
+  }
+  for (const documentId of documentIds) {
+    const parts = partsByDoc.get(documentId);
+    if (parts && parts.length > 0) {
+      buffers.set(documentId, Buffer.from(parts.join("\n\n"), "utf8"));
+    }
+  }
+  return buffers;
+}
+
 export async function reprocessDocument(formData: FormData) {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
@@ -837,10 +861,15 @@ export async function reprocessDocument(formData: FormData) {
 
   const doc = await prisma.document.findUnique({
     where: { id },
-    select: { id: true, name: true, knowledgeBaseId: true, fileType: true },
+    select: { id: true, name: true, knowledgeBaseId: true, fileType: true, sourceType: true },
   });
   if (!doc) throw new Error("Document not found");
   await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
+
+  const textBuffer = (await reconstructTextSourceBuffers(doc.sourceType === "TEXT" ? [id] : [])).get(id);
+  if (doc.sourceType === "TEXT" && !textBuffer) {
+    throw new Error("Text source has no stored content to reprocess");
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.documentChunk.deleteMany({ where: { documentId: id } });
@@ -852,11 +881,18 @@ export async function reprocessDocument(formData: FormData) {
 
   await logActivity(id, session.user.id, "REPROCESSED", { fileName: doc.name });
 
-  processDocument(id, doc.fileType).catch((err) => {
+  processDocument(id, doc.fileType, textBuffer).catch((err) => {
     logger.error(`Reprocessing failed for ${id}`, { error: err instanceof Error ? err.message : "unknown" });
   });
 
-  revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
+  try {
+    revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
+  } catch (revalidateErr) {
+    logger.warn("Revalidation skipped for knowledge base", {
+      kbId: doc.knowledgeBaseId,
+      error: revalidateErr instanceof Error ? revalidateErr.message : "unknown",
+    });
+  }
   return { ...doc, status: "QUEUED" as const };
 }
 
@@ -908,13 +944,17 @@ export async function bulkReprocessDocuments(formData: FormData) {
 
   const docs = await prisma.document.findMany({
     where: { id: { in: ids } },
-    select: { id: true, knowledgeBaseId: true, fileType: true, name: true },
+    select: { id: true, knowledgeBaseId: true, fileType: true, name: true, sourceType: true },
   });
 
   if (docs.length === 0) throw new Error("No documents found");
 
   const bulkKbId = assertSameKnowledgeBase(docs);
   await getOrgFromKb(bulkKbId, session.user.id);
+
+  const textBuffers = await reconstructTextSourceBuffers(
+    docs.filter((d) => d.sourceType === "TEXT").map((d) => d.id),
+  );
 
   await prisma.$transaction(async (tx) => {
     for (const doc of docs) {
@@ -935,12 +975,19 @@ export async function bulkReprocessDocuments(formData: FormData) {
   });
 
   for (const doc of docs) {
-    processDocument(doc.id, doc.fileType).catch((err) => {
+    processDocument(doc.id, doc.fileType, textBuffers.get(doc.id)).catch((err) => {
       logger.error(`Bulk reprocess failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
     });
   }
 
-  revalidatePath(`/app/knowledge-bases/${docs[0].knowledgeBaseId}`);
+  try {
+    revalidatePath(`/app/knowledge-bases/${docs[0].knowledgeBaseId}`);
+  } catch (revalidateErr) {
+    logger.warn("Revalidation skipped for knowledge base", {
+      kbId: docs[0].knowledgeBaseId,
+      error: revalidateErr instanceof Error ? revalidateErr.message : "unknown",
+    });
+  }
 }
 
 export async function getDocumentPreviewContent(docId: string) {

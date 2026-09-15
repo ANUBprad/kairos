@@ -2,8 +2,11 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
-import { ingestText } from "@/lib/actions/document";
+import { ingestText, reprocessDocument } from "@/lib/actions/document";
 import { ensureDemoUser } from "@/lib/server/demo-user";
+import { searchSimilar } from "@/lib/ai/retrieval";
+import { extractCitationsFromChunks } from "@/lib/ai/citations";
+import { buildChatPrompt } from "@/lib/ai/prompts";
 import { MAX_TEXT_CHARS } from "@/lib/ingestion/text";
 import { PgVectorStore } from "@/lib/vector/store";
 
@@ -21,6 +24,10 @@ function unitVectorBase64(hotIndex: number): string {
   const arr = new Float32Array(DIM);
   arr[hotIndex] = 1;
   return Buffer.from(arr.buffer).toString("base64");
+}
+
+function reprocessFormData(id: string): FormData {
+  return { get: () => id } as unknown as FormData;
 }
 
 async function waitForStatus(
@@ -279,5 +286,138 @@ describe("raw text source ingestion against a real database", () => {
 
     const count = await clientRef.document.count({ where: { knowledgeBaseId: foreignKbId } });
     assert.equal(count, 0);
+  });
+
+  it("reprocessing a raw text source preserves its content and embedding", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
+      return;
+    }
+    const clientRef = client as PrismaClient;
+    const demoUser = await ensureDemoUser();
+    const kbId = await makeKbForDemo(demoUser);
+
+    const title = "Reprocessable note";
+    const content = "Draft v1.\n\nDraft v2, the revision that matters.";
+    const doc = await ingestText(kbId, { title, content });
+    docIds.push(doc.id);
+
+    const indexed = await waitForStatus(clientRef, doc.id, "INDEXED");
+    assert.equal(indexed.status, "INDEXED");
+    const beforeChunks = await clientRef.documentChunk.findMany({
+      where: { documentId: doc.id },
+      orderBy: { index: "asc" },
+      select: { content: true },
+    });
+    assert.ok(beforeChunks.length > 0);
+
+    await reprocessDocument(reprocessFormData(doc.id));
+
+    const reprocessed = await waitForStatus(clientRef, doc.id, "INDEXED");
+    assert.equal(reprocessed.status, "INDEXED");
+
+    const afterChunks = await clientRef.documentChunk.findMany({
+      where: { documentId: doc.id },
+      orderBy: { index: "asc" },
+      select: { id: true, content: true },
+    });
+    assert.equal(afterChunks.length, beforeChunks.length);
+    assert.equal(beforeChunks.map((c) => c.content).join("\n"),
+      afterChunks.map((c) => c.content).join("\n"));
+
+    const embedded = await clientRef.documentEmbedding.findMany({
+      where: { chunkId: { in: afterChunks.map((c) => c.id) } },
+      select: { status: true, dimensions: true },
+    });
+    assert.equal(embedded.length, afterChunks.length);
+    assert.ok(embedded.every((e) => e.status === "completed"));
+    assert.ok(embedded.every((e) => e.dimensions === DIM));
+
+    const activities = await clientRef.documentActivity.findMany({
+      where: { documentId: doc.id },
+      select: { action: true },
+    });
+    const actions = activities.map((a) => a.action).sort();
+    assert.ok(actions.includes("REPROCESSED"), `actions: ${actions.join(", ")}`);
+    assert.ok(actions.filter((a) => a === "PROCESSED").length >= 2,
+      `expected at least 2 PROCESSED actions: ${actions.join(", ")}`);
+
+    const store = new PgVectorStore(clientRef);
+    const retrieved = await store.similaritySearch(unitVector(0), {
+      knowledgeBaseIds: [kbId],
+      topK: 5,
+      minSimilarity: 0,
+    });
+    assert.equal(retrieved.length, afterChunks.length);
+  });
+
+  it("raw text sources are retrieved, cited, and prompted like any other source", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
+      return;
+    }
+    const clientRef = client as PrismaClient;
+    const demoUser = await ensureDemoUser();
+    const kbId = await makeKbForDemo(demoUser);
+
+    const title = "Chat-ready note";
+    const content = "Kairos answers questions with cited sources, plain text included.";
+    const doc = await ingestText(kbId, { title, content });
+    docIds.push(doc.id);
+    await waitForStatus(clientRef, doc.id, "INDEXED");
+
+    const result = await searchSimilar("grounded questions about pasted text", {
+      knowledgeBaseIds: [kbId],
+    });
+    const textChunk = result.chunks.find((c) => c.documentId === doc.id);
+    assert.ok(textChunk, `expected the TEXT chunk among ${result.chunks.length} results`);
+    assert.equal(textChunk.documentName, title);
+    assert.equal(textChunk.pageNumber, null);
+
+    const citations = extractCitationsFromChunks(result.chunks);
+    const citation = citations.find((c) => c.documentId === doc.id);
+    assert.ok(citation);
+    assert.equal(citation.documentName, title);
+    assert.equal(citation.pageNumber, null);
+    assert.equal(citation.excerpt, content);
+
+    const prompt = buildChatPrompt({
+      systemPrompt: "",
+      conversationHistory: [],
+      retrievedChunks: [textChunk],
+      userQuery: "Summarize it",
+    });
+    const systemContent = prompt.messages[0].content;
+    assert.ok(systemContent.includes(`Document: "${title}"`));
+    assert.ok(systemContent.includes("Chunk #0"));
+    assert.ok(systemContent.includes(content.slice(0, 40)));
+  });
+
+  it("reprocess refuses a text source that has no stored content", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
+      return;
+    }
+    const clientRef = client as PrismaClient;
+    const demoUser = await ensureDemoUser();
+    const kbId = await makeKbForDemo(demoUser);
+
+    const doc = await clientRef.document.create({
+      data: {
+        name: "Empty text",
+        fileType: "txt",
+        sourceType: "TEXT",
+        knowledgeBaseId: kbId,
+        status: "ERROR",
+        metadata: { source: "text", title: "Empty text" },
+      },
+      select: { id: true },
+    });
+    docIds.push(doc.id);
+
+    await assert.rejects(
+      reprocessDocument(reprocessFormData(doc.id)),
+      /no stored content/,
+    );
   });
 });
