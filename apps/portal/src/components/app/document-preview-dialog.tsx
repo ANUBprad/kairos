@@ -380,7 +380,7 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
                 <div>
                   <p className="text-[11px] text-text-tertiary">Storage</p>
                   <p className="mt-0.5 text-sm text-text-primary">
-                    {doc?.storageProvider || "cloudinary"}
+                    {doc?.storageProvider || "—"}
                   </p>
                 </div>
                 {metadata?.pages != null && (

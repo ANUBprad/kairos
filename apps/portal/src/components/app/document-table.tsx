@@ -614,13 +614,15 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                             <Pencil size={15} />
                             Rename
                           </button>
-                          <button
-                            onClick={() => { handleDownload(doc); setMenuOpen(null); }}
-                            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                          >
-                            <Download size={15} />
-                            Download
-                          </button>
+                          {doc.storageUrl && (
+                            <button
+                              onClick={() => { handleDownload(doc); setMenuOpen(null); }}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                            >
+                              <Download size={15} />
+                              Download
+                            </button>
+                          )}
                           <button
                             onClick={() => { handleReprocess(doc); setMenuOpen(null); }}
                             className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
