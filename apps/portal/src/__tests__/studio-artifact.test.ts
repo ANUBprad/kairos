@@ -346,13 +346,13 @@ describe("studio wiring", () => {
 
   it("renders summary content strictly through the view helpers (no crashing on legacy data)", () => {
     assert.match(summaryViewerSource, /parseSummaryContent/);
-    assert.match(summaryViewerSource, /resolveSourceProvenance/);
+    assert.match(summaryViewerSource, /ArtifactSourceList/);
     assert.doesNotMatch(summaryViewerSource, /from ["']@\/lib\/actions\//);
   });
 
-  it("renders report content through the view helpers with provenance and no action access", () => {
+  it("renders report content through the view helpers with the shared provenance list and no action access", () => {
     assert.match(reportViewerSource, /parseReportContent/);
-    assert.match(reportViewerSource, /resolveSourceProvenance/);
+    assert.match(reportViewerSource, /ArtifactSourceList/);
     assert.doesNotMatch(reportViewerSource, /from ["']@\/lib\/actions\//);
   });
 
@@ -393,9 +393,9 @@ describe("studio wiring", () => {
     assert.doesNotMatch(mindmapViewerSource, /from ["']@\/lib\/actions\//);
   });
 
-  it("renders takeaways through the view helpers with provenance and no action access", () => {
+  it("renders takeaways through the view helpers with the shared provenance list and no action access", () => {
     assert.match(takeawaysViewerSource, /parseTakeawaysContent/);
-    assert.match(takeawaysViewerSource, /resolveSourceProvenance/);
+    assert.match(takeawaysViewerSource, /ArtifactSourceList/);
     assert.doesNotMatch(takeawaysViewerSource, /from ["']@\/lib\/actions\//);
   });
 
@@ -414,19 +414,21 @@ describe("studio wiring", () => {
     assert.doesNotMatch(podcastViewerSource, /from ["']@\/lib\/artifacts\/persistence["']/);
   });
 
-  it("links podcast sources back to the knowledge base like the quiz and flashcard viewers", () => {
+  it("unifies podcast source links through the shared provenance component", () => {
     const podcastViewerSource = readFileSync(
       new URL("../components/app/studio/podcast-artifact-viewer.tsx", import.meta.url),
       "utf8",
     );
-    assert.match(podcastViewerSource, /Revisit the sources behind this podcast/);
-    assert.match(podcastViewerSource, /availableSourceIds/);
-    assert.match(
-      podcastViewerSource,
-      /href=\{`\/app\/knowledge-bases\/\$\{artifact\.knowledgeBaseId\}\/\$\{ref\.id\}`\}/,
+    const sourceListSource = readFileSync(
+      new URL("../components/app/studio/artifact-source-list.tsx", import.meta.url),
+      "utf8",
     );
-    assert.match(podcastViewerSource, /Unavailable source/);
-    assert.doesNotMatch(podcastViewerSource, /<h4[\s\S]*>\s*Sources\s*<\/h4>/);
+    assert.match(podcastViewerSource, /Revisit the sources behind this podcast/);
+    assert.match(podcastViewerSource, /ArtifactSourceList/);
+    assert.doesNotMatch(podcastViewerSource, /availableSourceIds|resolveSourceProvenance/);
+    assert.match(sourceListSource, /resolveSourceProvenance/);
+    assert.match(sourceListSource, /new Set\(sources\.map/);
+    assert.match(sourceListSource, /Unavailable source/);
   });
 
   it("grounds questions exclusively in the podcast interrupt action and resumes the episode from its stored position", () => {

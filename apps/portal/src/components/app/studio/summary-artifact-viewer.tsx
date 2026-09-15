@@ -1,12 +1,10 @@
 "use client";
 
-import { AlertCircle, FileText, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
-import {
-  parseSummaryContent,
-  resolveSourceProvenance,
-} from "@/lib/artifacts/summary-view";
+import { ArtifactSourceList } from "./artifact-source-list";
+import { parseSummaryContent } from "@/lib/artifacts/summary-view";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
 
 interface Props {
@@ -17,7 +15,6 @@ interface Props {
 
 export function SummaryArtifactViewer({ artifact, sources, onClose }: Props) {
   const content = parseSummaryContent(artifact.content);
-  const provenance = resolveSourceProvenance(artifact.sourceIds, sources);
 
   return (
     <section className="rounded-xl border border-border bg-surface" aria-label="Summary artifact">
@@ -89,14 +86,7 @@ export function SummaryArtifactViewer({ artifact, sources, onClose }: Props) {
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                   Sources
                 </h4>
-                <ul className="mt-2 space-y-1.5">
-                  {provenance.map((ref) => (
-                    <li key={ref.id} className="flex items-center gap-2 text-sm text-text-secondary">
-                      <FileText size={13} className="shrink-0 text-text-tertiary" />
-                      <span className="truncate">{ref.name}</span>
-                    </li>
-                  ))}
-                </ul>
+                <ArtifactSourceList artifact={artifact} sources={sources} />
               </div>
             </div>
           ))}

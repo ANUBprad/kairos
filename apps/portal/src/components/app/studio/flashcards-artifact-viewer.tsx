@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   AlertCircle,
   CheckCircle2,
@@ -15,8 +14,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
+import { ArtifactSourceList } from "./artifact-source-list";
 import { parseFlashcardsContent } from "@/lib/artifacts/flashcards-view";
-import { resolveSourceProvenance } from "@/lib/artifacts/summary-view";
 import { summarizeFlashcardDeckProgress } from "@/lib/study/flashcards";
 import {
   getFlashcardReviewsForWorkspace,
@@ -49,8 +48,6 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
   const current = content?.cards[index];
   const progress = reviews ? summarizeFlashcardDeckProgress(reviews) : null;
   const currentReview = reviews ? reviews[index] : undefined;
-  const provenance = resolveSourceProvenance(artifact.sourceIds, sources);
-  const availableSourceIds = new Set(sources.map((s) => s.id));
 
   useEffect(() => {
     if (artifact.status !== "COMPLETED" || !content) return;
@@ -277,7 +274,7 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                 </Button>
               </div>
 
-              {provenance.length > 0 && (
+              {artifact.sourceIds.length > 0 && (
                 <div className="mt-5 rounded-lg border border-border p-4">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                     Revisit the sources behind this deck
@@ -285,24 +282,7 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                   <p className="mt-1 text-xs text-text-secondary">
                     Missed something? Go back to where the material came from.
                   </p>
-                  <ul className="mt-2 space-y-1">
-                    {provenance.map((source) =>
-                      availableSourceIds.has(source.id) ? (
-                        <li key={source.id}>
-                          <Link
-                            href={`/app/knowledge-bases/${kbId}/${source.id}`}
-                            className="text-xs font-medium text-brand transition-colors hover:text-brand-hover hover:underline"
-                          >
-                            {source.name}
-                          </Link>
-                        </li>
-                      ) : (
-                        <li key={source.id} className="text-xs text-text-tertiary">
-                          Unavailable source · {source.id.slice(0, 8)}…
-                        </li>
-                      ),
-                    )}
-                  </ul>
+                  <ArtifactSourceList artifact={artifact} sources={sources} />
                 </div>
               )}
             </div>

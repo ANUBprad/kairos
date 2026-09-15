@@ -1,10 +1,8 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
 import {
   AlertCircle,
-  FileText,
   Loader2,
   MessageCircleQuestion,
   Play,
@@ -13,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
-import { resolveSourceProvenance } from "@/lib/artifacts/summary-view";
+import { ArtifactSourceList } from "./artifact-source-list";
 import { parsePodcastContent, parsePodcastAudioMetadata } from "@/lib/artifacts/podcast-view";
 import { PODCAST_HOST_PERSONAS } from "@/lib/artifacts/podcast";
 import { askPodcastInterruption } from "@/lib/actions/podcast-interrupt";
@@ -48,8 +46,6 @@ function interruptionMediaUrl(artifactId: string, interruptionId: string): strin
 export function PodcastArtifactViewer({ artifact, sources, onClose }: Props) {
   const content = parsePodcastContent(artifact.content);
   const audio = parsePodcastAudioMetadata(artifact.metadata);
-  const provenance = resolveSourceProvenance(artifact.sourceIds, sources);
-  const availableSourceIds = new Set(sources.map((s) => s.id));
   const canInterrupt = artifact.status === "COMPLETED";
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -289,26 +285,7 @@ export function PodcastArtifactViewer({ artifact, sources, onClose }: Props) {
                 <p className="mt-1 text-xs text-text-secondary">
                   Missed something? Go back to where the material came from.
                 </p>
-                <ul className="mt-2 space-y-1.5">
-                  {provenance.map((ref) =>
-                    availableSourceIds.has(ref.id) ? (
-                      <li key={ref.id}>
-                        <Link
-                          href={`/app/knowledge-bases/${artifact.knowledgeBaseId}/${ref.id}`}
-                          className="flex items-center gap-2 text-sm font-medium text-brand transition-colors hover:text-brand-hover hover:underline"
-                        >
-                          <FileText size={13} className="shrink-0 text-text-tertiary" />
-                          <span className="truncate">{ref.name}</span>
-                        </Link>
-                      </li>
-                    ) : (
-                      <li key={ref.id} className="flex items-center gap-2 text-sm text-text-tertiary">
-                        <FileText size={13} className="shrink-0" />
-                        <span className="truncate">Unavailable source · {ref.id.slice(0, 8)}…</span>
-                      </li>
-                    ),
-                  )}
-                </ul>
+                <ArtifactSourceList artifact={artifact} sources={sources} />
               </div>
             </div>
           ))}

@@ -3,6 +3,7 @@
 import { AlertCircle, Loader2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
+import { ArtifactSourceList } from "./artifact-source-list";
 import { parseMindmapContent } from "@/lib/artifacts/mindmap-view";
 import type { MindMapNodeData } from "@/lib/artifacts/mindmap";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
@@ -35,7 +36,7 @@ function MindMapNodeTree({ node }: { node: MindMapNodeData }) {
   );
 }
 
-export function MindmapArtifactViewer({ artifact, sources: _sources, onClose }: Props) {
+export function MindmapArtifactViewer({ artifact, sources, onClose }: Props) {
   const content = parseMindmapContent(artifact.content);
 
   return (
@@ -100,6 +101,15 @@ export function MindmapArtifactViewer({ artifact, sources: _sources, onClose }: 
               <ul className="mt-3">
                 <MindMapNodeTree node={content.root} />
               </ul>
+
+              {artifact.sourceIds.length > 0 && (
+                <div className="mt-5 border-t border-border pt-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                    Sources
+                  </h4>
+                  <ArtifactSourceList artifact={artifact} sources={sources} />
+                </div>
+              )}
             </div>
           ))}
       </div>
