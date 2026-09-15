@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { updateTextSource, getEditableTextSourceContent } from "@/lib/actions/document";
+import {
+  updateTextSource,
+  getEditableTextSourceContent,
+  repointUrlSource,
+} from "@/lib/actions/document";
 import { cn } from "@/lib/utils";
 
 const MAX_TEXT_CHARS = 200_000;
@@ -21,12 +25,21 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
   const [loadingContent, setLoadingContent] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [url, setUrl] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
+  const isText = doc?.sourceType === "TEXT";
+  const isUrl = doc?.sourceType === "URL";
+
   useEffect(() => {
-    if (!doc || doc.sourceType !== "TEXT") return;
+    if (!doc) return;
+    if (isUrl) {
+      setUrl(doc.sourceUrl ?? "");
+      return;
+    }
+    if (!isText) return;
     let cancelled = false;
     setLoadingContent(true);
     setLoadError(null);
@@ -45,7 +58,7 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [doc]);
+  }, [doc, isText, isUrl]);
 
   useEffect(() => {
     if (doc) {
@@ -81,15 +94,17 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
   }, [doc, isLoading, onClose]);
 
   if (!doc) return null;
-  if (doc.sourceType !== "TEXT") return null;
+  if (!isText && !isUrl) return null;
 
-  const charOver = content.length > MAX_TEXT_CHARS;
-  const canSubmit =
-    content.trim().length > 0 && !charOver && !loadingContent && loadError === null;
+  const textCharOver = content.length > MAX_TEXT_CHARS;
+  const canSubmitText =
+    content.trim().length > 0 && !textCharOver && !loadingContent && loadError === null && !isLoading;
+  const trimmedUrl = url.trim();
+  const canSubmitUrl = trimmedUrl.length > 0 && !isLoading;
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmitText = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit || isLoading) return;
+    if (!canSubmitText || isLoading) return;
     setIsLoading(true);
     try {
       await updateTextSource(doc.id, { title, content });
@@ -98,6 +113,22 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update source");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onSubmitUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmitUrl) return;
+    setIsLoading(true);
+    try {
+      await repointUrlSource(doc.id, trimmedUrl);
+      toast.success("URL source updated");
+      onClose();
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update URL source");
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +147,9 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
         className="relative z-10 w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-xl outline-none"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="source-edit-title" className="text-lg font-semibold text-text-primary">Edit text source</h2>
+          <h2 id="source-edit-title" className="text-lg font-semibold text-text-primary">
+            {isText ? "Edit text source" : "Change the source URL"}
+          </h2>
           <button
             onClick={onClose}
             className="text-text-tertiary transition-colors hover:text-text-primary"
@@ -127,17 +160,18 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
           </button>
         </div>
         <p id="source-edit-description" className="sr-only">
-          Edit the title and raw text content of this source. The previous version stays available
-          until the new one finishes processing, and a failed update rolls back to it.
+          {isText
+            ? "Edit the title and raw text content of this source. The previous version stays available until the new one finishes processing, and a failed update rolls back to it."
+            : "Change the URL this source points to. The new address is validated before anything changes; on a failure the previous source stays intact."}
         </p>
 
-        {loadingContent ? (
+        {isText && loadingContent ? (
           <div className="flex items-center justify-center py-16 text-sm text-text-tertiary">
             <Loader2 size={16} className="mr-2 animate-spin" />
             Loading current content...
           </div>
-        ) : (
-          <form onSubmit={onSubmit} className="space-y-3">
+        ) : isText ? (
+          <form onSubmit={onSubmitText} className="space-y-3">
             <input
               type="text"
               value={title}
@@ -161,9 +195,9 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
               <p className="text-xs text-error">{loadError}</p>
             ) : (
               <>
-                <p className={cn("text-right text-xs", charOver ? "text-error" : "text-text-tertiary")}>
+                <p className={cn("text-right text-xs", textCharOver ? "text-error" : "text-text-tertiary")}>
                   {content.length.toLocaleString()} / {MAX_TEXT_CHARS.toLocaleString()} characters
-                  {charOver && " — exceeds the limit"}
+                  {textCharOver && " — exceeds the limit"}
                 </p>
                 <p className="text-xs text-text-tertiary">
                   Existing content stays available while the new version processes; a failed update
@@ -175,7 +209,7 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
               <Button type="button" variant="secondary" className="flex-1" onClick={onClose} disabled={isLoading}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" className="flex-1" disabled={isLoading || !canSubmit}>
+              <Button type="submit" variant="primary" className="flex-1" disabled={!canSubmitText}>
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 size={16} className="animate-spin" />
@@ -187,7 +221,41 @@ export function SourceEditDialog({ document: doc, onClose }: Props) {
               </Button>
             </div>
           </form>
-        )}
+        ) : isUrl ? (
+          <form onSubmit={onSubmitUrl} className="space-y-3">
+            <p className="text-xs text-text-tertiary">
+              Current URL: {doc.sourceUrl || "none"}
+            </p>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/article"
+              aria-label="New source URL"
+              disabled={isLoading}
+              className="w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none"
+            />
+            <p className="text-xs text-text-tertiary">
+              The new address is fully validated before anything changes; on a failure the previous
+              source stays intact.
+            </p>
+            <div className="flex gap-3 pt-1">
+              <Button type="button" variant="secondary" className="flex-1" onClick={onClose} disabled={isLoading}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" className="flex-1" disabled={!canSubmitUrl}>
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    Updating...
+                  </span>
+                ) : (
+                  "Update URL"
+                )}
+              </Button>
+            </div>
+          </form>
+        ) : null}
       </div>
     </div>
   );

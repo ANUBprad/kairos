@@ -27,6 +27,7 @@ SearchX,
   Bot,
   Sparkles,
   StickyNote,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProcessingBadge } from "@/components/app/processing-badge";
@@ -624,6 +625,15 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                             >
                               <StickyNote size={15} />
                               Edit text
+                            </button>
+                          )}
+                          {doc.sourceType === "URL" && (
+                            <button
+                              onClick={() => { setEditTarget(doc); setMenuOpen(null); }}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                            >
+                              <Globe size={15} />
+                              Change URL
                             </button>
                           )}
                           {doc.storageUrl && (

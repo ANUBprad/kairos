@@ -12,7 +12,7 @@ import { logger } from "@/lib/logger";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
-import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError } from "@/lib/ingestion/url";
+import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError, type FetchUrlOptions } from "@/lib/ingestion/url";
 import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError } from "@/lib/ingestion/youtube";
 import { buildTextDocumentData, normalizeTextInput, textDocumentFileHash } from "@/lib/ingestion/text";
 import { assertSameKnowledgeBase, MAX_BULK_OPERATIONS, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
@@ -649,6 +649,165 @@ export async function getEditableTextSourceContent(docId: string) {
     title: typeof meta?.title === "string" ? meta.title : undefined,
     content: buffer ? buffer.toString("utf8") : "",
   };
+}
+
+/**
+ * Re-points an existing URL source at a new address. The new URL is fetched and
+ * validated (full SSRF/redirect checks) BEFORE any change to the document row,
+ * and the fetch pipeline runs in the action itself so a bad URL fails fast and
+ * leaves the source untouched. `opts` mirrors FetchUrlOptions and exists purely
+ * as a test seam (the React action path always uses the real network).
+ */
+export async function repointUrlSource(
+  docId: string,
+  rawUrl: string,
+  opts: FetchUrlOptions = {},
+) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const rl = rateLimit(`repoint-url:${session.user.id}`, RATE_LIMITS.upload);
+  if (!rl.allowed) throw new Error("Rate limit exceeded. Please try again later.");
+
+  const url = (rawUrl || "").trim();
+  if (!url) throw new Error("A URL is required");
+
+  const doc = await prisma.document.findUnique({
+    where: { id: docId },
+    select: {
+      id: true,
+      name: true,
+      knowledgeBaseId: true,
+      fileType: true,
+      sourceType: true,
+      sourceUrl: true,
+      fileHash: true,
+      size: true,
+      metadata: true,
+    },
+  });
+  if (!doc) throw new Error("Document not found");
+  await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
+  if (doc.sourceType !== "URL") throw new Error("Only URL sources can be repointed");
+
+  // Fetch + re-validate the new URL BEFORE touching the row.
+  let article;
+  try {
+    article = await fetchArticle(url, opts);
+  } catch (err) {
+    const code = err instanceof UrlSourceError ? err.code : "fetch";
+    logger.warn("URL repoint rejected", { docId, code, url });
+    serverTrackEvent("url_repoint_rejected", { code, kbId: doc.knowledgeBaseId }, session.user.id);
+    throw new Error(urlIngestErrorMessage(code), { cause: err });
+  }
+
+  if (article.url === doc.sourceUrl) {
+    throw new Error("This source already points to that URL.");
+  }
+
+  const newHash = urlDocumentFileHash(article.markdown);
+  if (newHash === doc.fileHash) {
+    throw new Error("Repointing to that URL would not change the source content.");
+  }
+
+  const baseName = (article.title || new URL(article.url).hostname).slice(0, 255);
+
+  // Last known-good chunks + identity are kept until the new version is fully
+  // embedded; the pipeline only evicts them on success, and rolls the document
+  // back to INDEXED on failure.
+  const existingChunkIds = (
+    await prisma.documentChunk.findMany({ where: { documentId: docId }, select: { id: true } })
+  ).map((c) => c.id);
+
+  const existingMeta = (doc.metadata ?? {}) as Record<string, unknown>;
+  const revertIdentity = {
+    name: doc.name,
+    sourceUrl: doc.sourceUrl,
+    fileHash: doc.fileHash,
+    size: doc.size,
+    metadata: existingMeta,
+  };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const duplicate = await tx.document.findFirst({
+        where: { knowledgeBaseId: doc.knowledgeBaseId, fileHash: newHash, id: { not: docId } },
+        select: { id: true, name: true },
+      });
+      if (duplicate) {
+        throw new Error(`This URL is a duplicate of "${duplicate.name}" (same content)`);
+      }
+
+      const claimed = await tx.document.updateMany({
+        where: { id: docId, status: { in: MUTATION_IDLE_STATUSES } },
+        data: { status: "QUEUED" },
+      });
+      if (claimed.count !== 1) {
+        throw new Error("This source is currently being processed; try again shortly.");
+      }
+
+      await tx.document.update({
+        where: { id: docId },
+        data: {
+          name: baseName,
+          sourceUrl: article.url,
+          fileHash: newHash,
+          size: Buffer.byteLength(article.markdown, "utf8"),
+          metadata: {
+            ...existingMeta,
+            mimeType: "text/markdown",
+            source: "url",
+            title: article.title,
+          } as never,
+        },
+      });
+
+      await tx.documentActivity.create({
+        data: {
+          documentId: docId,
+          userId: session.user.id,
+          action: "UPDATED",
+          details: {
+            source: "URL",
+            fromUrl: doc.sourceUrl,
+            toUrl: article.url,
+            previousName: doc.name,
+            title: article.title,
+          } as never,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("This URL is a duplicate of")) throw err;
+    throw err;
+  }
+
+  const buffer = Buffer.from(article.markdown, "utf8");
+  logger.info("URL source repoint staged", {
+    docId,
+    kbId: doc.knowledgeBaseId,
+    bytes: buffer.byteLength,
+    chars: article.markdown.length,
+  });
+  serverTrackEvent("document_url_repointed", { kbId: doc.knowledgeBaseId }, session.user.id);
+
+  processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity }).catch(
+    (err) => {
+      logger.error(`URL repoint processing failed for ${docId}`, {
+        error: err instanceof Error ? err.message : "unknown",
+      });
+    },
+  );
+
+  try {
+    revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
+  } catch (revalidateErr) {
+    logger.warn("Revalidation skipped for knowledge base", {
+      kbId: doc.knowledgeBaseId,
+      error: revalidateErr instanceof Error ? revalidateErr.message : "unknown",
+    });
+  }
+  return { id: docId, status: "QUEUED" };
 }
 
 // A staged update (edit/repoint) keeps the last known-good chunks and identity
