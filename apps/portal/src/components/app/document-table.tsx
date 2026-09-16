@@ -26,6 +26,7 @@ SearchX,
   Filter,
   Bot,
   Sparkles,
+  BookOpen,
   StickyNote,
   Globe,
   Youtube,
@@ -303,6 +304,12 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
             <Button variant="secondary">
               <Sparkles size={16} />
               Studio
+            </Button>
+          </Link>
+          <Link href={`/app/knowledge-bases/${kbId}/study`}>
+            <Button variant="secondary">
+              <BookOpen size={16} />
+              Study
             </Button>
           </Link>
           <Button variant="primary" onClick={() => setSourceAddOpen(true)}>

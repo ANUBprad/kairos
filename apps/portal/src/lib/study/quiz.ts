@@ -273,3 +273,49 @@ export async function getQuizAttemptHistoryForUser(
     completedAt: row.completedAt ? row.completedAt.toISOString() : "",
   }));
 }
+
+export interface RecentQuizAttempt {
+  id: string;
+  artifactId: string;
+  artifactName: string | null;
+  score: number;
+  totalQuestions: number;
+  completedAt: string;
+}
+
+// Compact recent-attempt history across every quiz the user completed in one
+// knowledge base, newest first. Bounded (single attempt row per completed
+// attempt, capped by limit) so a dashboard never loads the full attempt graph.
+export async function getRecentQuizAttemptsForUser(
+  userId: string,
+  request: { knowledgeBaseId: string },
+  limit = 8,
+): Promise<RecentQuizAttempt[]> {
+  const { knowledgeBaseId } = request;
+
+  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId))) {
+    throw new AppError("NOT_FOUND", "Knowledge base not found", 404);
+  }
+
+  const rows = await prisma.quizAttempt.findMany({
+    where: { userId, knowledgeBaseId, status: "COMPLETED" },
+    orderBy: { completedAt: "desc" },
+    take: Math.max(1, Math.min(limit, 50)),
+    select: {
+      id: true,
+      score: true,
+      totalQuestions: true,
+      completedAt: true,
+      artifactId: true,
+      artifact: { select: { name: true } },
+    },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    artifactId: row.artifactId,
+    artifactName: row.artifact.name,
+    score: row.score,
+    totalQuestions: row.totalQuestions,
+    completedAt: row.completedAt ? row.completedAt.toISOString() : "",
+  }));
+}

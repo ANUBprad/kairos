@@ -30,7 +30,7 @@ const isStaleProcessing = (artifact: LearningArtifactWithStudy) =>
 // Compact deck study line for the list: distinct reviewed cards vs the deck
 // size from the artifact content, current known/learning split, and — where a
 // card was reviewed more than once — the honest total tally of verdict marks.
-function flashcardsStudyLine(study: ArtifactStudyProgress, content: unknown): string {
+export function flashcardsStudyLine(study: ArtifactStudyProgress, content: unknown): string {
   const cardCount = parseFlashcardsContent(content)?.cards.length ?? null;
   const reviewed = study.attempts;
   const known = study.knownCount ?? 0;

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus, type LucideIcon } from "lucide-react";
 
@@ -23,6 +24,9 @@ const statusColors = {
   brand: { icon: "text-brand", bg: "bg-brand/10" },
 };
 
+const cardClasses =
+  "block rounded-[var(--radius-lg)] border border-border bg-surface p-4 transition-colors hover:bg-surface-hover/50";
+
 function StatCard({
   label,
   value,
@@ -31,17 +35,15 @@ function StatCard({
   trend,
   trendValue,
   status = "default",
+  href,
   className,
 }: StatCardProps) {
   const colors = statusColors[status];
   const TrendIcon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : Minus;
   const trendColor = trend === "up" ? "text-success" : trend === "down" ? "text-error" : "text-text-tertiary";
 
-  return (
-    <div className={cn(
-      "rounded-[var(--radius-lg)] border border-border bg-surface p-4 transition-colors hover:bg-surface-hover/50",
-      className
-    )}>
+  const content = (
+    <>
       <div className="flex items-center justify-between mb-3">
         <span className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">
           {label}
@@ -64,8 +66,17 @@ function StatCard({
           {trendValue && <span className="text-[11px] font-medium">{trendValue}</span>}
         </div>
       )}
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={cn(cardClasses, className)}>
+        {content}
+      </Link>
+    );
+  }
+  return <div className={cn(cardClasses, className)}>{content}</div>;
 }
 
 export { StatCard };

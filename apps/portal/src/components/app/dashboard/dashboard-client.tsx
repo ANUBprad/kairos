@@ -103,6 +103,14 @@ export function DashboardClient({ data }: DashboardClientProps) {
   const hasExperiments = experimentCount > 0;
   const hasBenchmark = latestBenchmark !== null;
 
+  // The quiz/card stats span the whole project, so their card links to the
+  // nearest real study surface: a single KB opens straight into its Study
+  // dashboard, several land on the KB picker where every KB has one.
+  const studyHref =
+    knowledgeBases.length === 1
+      ? `/app/knowledge-bases/${knowledgeBases[0].id}/study`
+      : "/app/knowledge-bases";
+
   const healthScore = Math.round(
     ((hasKb ? 20 : 0) + (hasDocs ? 20 : 0) + (hasChunks ? 20 : 0) + (hasExperiments ? 20 : 0) + (hasBenchmark ? 20 : 0))
   );
@@ -243,12 +251,14 @@ export function DashboardClient({ data }: DashboardClientProps) {
               value={quizzesTaken}
               icon={ListChecks}
               status={quizzesTaken > 0 ? "success" : "default"}
+              href={studyHref}
             />
             <StatCard
               label="Cards Known"
               value={cardsKnown}
               icon={Layers}
               status={cardsKnown > 0 ? "success" : "default"}
+              href={studyHref}
             />
           </div>
         </div>

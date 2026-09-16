@@ -41,6 +41,7 @@ interface Props {
 const TABS = [
   { label: "Sources", href: (kbId: string) => `/app/knowledge-bases/${kbId}` },
   { label: "Chat", href: (kbId: string) => `/app/knowledge-bases/${kbId}/chat` },
+  { label: "Study", href: (kbId: string) => `/app/knowledge-bases/${kbId}/study` },
 ];
 
 // Exactly the seven supported artifact types. Everything else is intentionally

@@ -453,6 +453,13 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
             <Sparkles size={12} />
             Studio
           </Link>
+          <Link
+            href={`/app/knowledge-bases/${kbId}/study`}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+          >
+            <BookOpen size={12} />
+            Study
+          </Link>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-label="Chat messages" aria-live="polite">

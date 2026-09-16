@@ -21,6 +21,7 @@ const NAV_TABS = [
   { label: "Sources", href: (kbId: string) => `/app/knowledge-bases/${kbId}` },
   { label: "Chat", href: (kbId: string) => `/app/knowledge-bases/${kbId}/chat` },
   { label: "Studio", href: (kbId: string) => `/app/knowledge-bases/${kbId}/studio` },
+  { label: "Study", href: (kbId: string) => `/app/knowledge-bases/${kbId}/study` },
 ];
 
 // Full artifact detail page shell. Reuses the shared ArtifactContent viewer
