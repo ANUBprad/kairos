@@ -6,7 +6,11 @@ import * as path from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
-const HOTPATH_TABLES = [
+// The complete required hot path: every evaluation, quality, and observability
+// table the application queries at runtime. Previously this list only covered a
+// small subset, which let migration-orphaned tables fall out of the deploy chain
+// unnoticed.
+const REQUIRED_TABLES = [
   "Experiment",
   "BenchmarkDataset",
   "ExperimentRun",
@@ -20,9 +24,34 @@ const HOTPATH_TABLES = [
   "QuizAttempt",
   "QuizAttemptAnswer",
   "FlashcardReview",
+  "BenchmarkQuestion",
+  "BenchmarkResult",
+  "ExperimentArtifact",
+  "GoldenDataset",
+  "GoldenDatasetEntry",
+  "ReviewQueue",
+  "ReviewComment",
+  "QualityGate",
+  "QualityGateResult",
+  "LeaderboardEntry",
+  "Trace",
+  "Span",
+  "TraceEvent",
+  "CostRecord",
+  "DriftAlert",
+  "AlertRule",
+  "AlertEvent",
+  "Incident",
+  "IncidentEvent",
+  "PipelineRun",
+  "PipelineStep",
+  "TelemetryConfig",
+  "PromptFolder",
+  "Prompt",
+  "PromptVersion",
 ];
 
-const HOTPATH_INDEXES = [
+const REQUIRED_INDEXES = [
   "ApiKey_keyPrefix_idx",
   "ExperimentRun_knowledgeBaseId_createdAt_idx",
   "BenchmarkRun_status_idx",
@@ -37,6 +66,122 @@ const HOTPATH_INDEXES = [
   "FlashcardReview_artifactId_idx",
   "FlashcardReview_knowledgeBaseId_userId_idx",
   "FlashcardReview_userId_artifactId_cardId_key",
+  "BenchmarkQuestion_datasetId_idx",
+  "BenchmarkResult_runId_idx",
+  "BenchmarkResult_questionId_idx",
+  "ExperimentArtifact_experimentId_idx",
+  "ExperimentArtifact_experimentId_type_idx",
+  "GoldenDataset_organizationId_idx",
+  "GoldenDataset_ownerId_idx",
+  "GoldenDataset_difficulty_idx",
+  "GoldenDatasetEntry_datasetId_idx",
+  "GoldenDatasetEntry_category_idx",
+  "GoldenDatasetEntry_tags_idx",
+  "ReviewQueue_organizationId_idx",
+  "ReviewQueue_status_idx",
+  "ReviewQueue_assigneeId_idx",
+  "ReviewQueue_resourceType_resourceId_idx",
+  "ReviewComment_reviewId_idx",
+  "QualityGate_organizationId_idx",
+  "QualityGateResult_gateId_idx",
+  "QualityGateResult_passed_idx",
+  "LeaderboardEntry_organizationId_type_period_idx",
+  "LeaderboardEntry_score_idx",
+  "Trace_requestId_key",
+  "Trace_organizationId_startTime_idx",
+  "Trace_userId_startTime_idx",
+  "Trace_provider_model_idx",
+  "Trace_status_idx",
+  "Span_traceId_idx",
+  "Span_parentSpanId_idx",
+  "Span_name_idx",
+  "TraceEvent_traceId_idx",
+  "CostRecord_date_provider_model_operation_organizationId_key",
+  "CostRecord_organizationId_date_idx",
+  "CostRecord_provider_model_idx",
+  "DriftAlert_organizationId_type_status_idx",
+  "DriftAlert_createdAt_idx",
+  "AlertRule_organizationId_enabled_idx",
+  "AlertEvent_ruleId_firedAt_idx",
+  "AlertEvent_organizationId_status_idx",
+  "Incident_organizationId_status_idx",
+  "Incident_severity_status_idx",
+  "Incident_startedAt_idx",
+  "IncidentEvent_incidentId_timestamp_idx",
+  "PipelineRun_organizationId_startTime_idx",
+  "PipelineRun_status_idx",
+  "PipelineStep_pipelineId_idx",
+  "PromptFolder_organizationId_idx",
+  "PromptFolder_parentId_idx",
+  "Prompt_organizationId_idx",
+  "Prompt_folderId_idx",
+  "Prompt_ownerId_idx",
+  "Prompt_status_idx",
+  "Prompt_tags_idx",
+  "PromptVersion_promptId_idx",
+  "PromptVersion_status_idx",
+  "PromptVersion_promptId_version_key",
+];
+
+const REQUIRED_ENUMS = [
+  "DatasetDifficulty",
+  "ReviewStatus",
+  "ReviewPriority",
+  "TraceStatus",
+  "SpanStatus",
+  "DriftType",
+  "DriftStatus",
+  "AlertSeverity",
+  "AlertEventStatus",
+  "IncidentSeverity",
+  "IncidentStatus",
+  "PipelineStatus",
+  "PromptStatus",
+  "PromptVersionStatus",
+];
+
+const REQUIRED_FKS = [
+  "BenchmarkQuestion_datasetId_fkey",
+  "BenchmarkResult_questionId_fkey",
+  "BenchmarkResult_runId_fkey",
+  "ExperimentArtifact_experimentId_fkey",
+  "GoldenDataset_organizationId_fkey",
+  "GoldenDataset_ownerId_fkey",
+  "GoldenDataset_parentId_fkey",
+  "GoldenDatasetEntry_datasetId_fkey",
+  "ReviewQueue_organizationId_fkey",
+  "ReviewQueue_assigneeId_fkey",
+  "ReviewQueue_createdById_fkey",
+  "ReviewQueue_reviewerId_fkey",
+  "ReviewComment_reviewId_fkey",
+  "ReviewComment_authorId_fkey",
+  "QualityGate_organizationId_fkey",
+  "QualityGateResult_gateId_fkey",
+  "LeaderboardEntry_organizationId_fkey",
+  "Trace_organizationId_fkey",
+  "Trace_userId_fkey",
+  "Span_traceId_fkey",
+  "TraceEvent_traceId_fkey",
+  "CostRecord_organizationId_fkey",
+  "CostRecord_userId_fkey",
+  "DriftAlert_organizationId_fkey",
+  "AlertRule_organizationId_fkey",
+  "AlertEvent_ruleId_fkey",
+  "AlertEvent_organizationId_fkey",
+  "Incident_organizationId_fkey",
+  "Incident_ownerId_fkey",
+  "IncidentEvent_incidentId_fkey",
+  "PipelineRun_organizationId_fkey",
+  "PipelineStep_pipelineId_fkey",
+  "TelemetryConfig_organizationId_fkey",
+  "PromptFolder_organizationId_fkey",
+  "PromptFolder_parentId_fkey",
+  "Prompt_organizationId_fkey",
+  "Prompt_folderId_fkey",
+  "Prompt_ownerId_fkey",
+  "PromptVersion_promptId_fkey",
+  "PromptVersion_createdById_fkey",
+  "Prompt_currentVersionId_fkey",
 ];
 
 function makeClient(url: string): PrismaClient {
@@ -121,23 +266,39 @@ describe("prisma migration chain", () => {
         { n: bigint }[]
       >`SELECT count(*)::bigint AS n FROM information_schema.tables
          WHERE table_schema = 'public'
-           AND table_name = ANY(${HOTPATH_TABLES})`;
-      assert.equal(Number(tables[0].n), HOTPATH_TABLES.length);
+           AND table_name = ANY(${REQUIRED_TABLES})`;
+      assert.equal(Number(tables[0].n), REQUIRED_TABLES.length);
 
       // 3. The hotpath indexes exist after deploy.
       const indexes = await client.$queryRaw<
         { n: bigint }[]
       >`SELECT count(*)::bigint AS n FROM pg_indexes
-         WHERE indexname = ANY(${HOTPATH_INDEXES})`;
-      assert.equal(Number(indexes[0].n), HOTPATH_INDEXES.length);
+         WHERE indexname = ANY(${REQUIRED_INDEXES})`;
+      assert.equal(Number(indexes[0].n), REQUIRED_INDEXES.length);
 
-      // 4. pgvector extension exists.
+      // 4. The evaluation/observability enum types exist after deploy.
+      const enums = await client.$queryRaw<
+        { n: bigint }[]
+      >`SELECT count(*)::bigint AS n FROM pg_type
+        WHERE typname = ANY(${REQUIRED_ENUMS})
+          AND typtype = 'e'`;
+      assert.equal(Number(enums[0].n), REQUIRED_ENUMS.length);
+
+      // 5. The evaluation/observability foreign keys exist after deploy.
+      const fks = await client.$queryRaw<
+        { n: bigint }[]
+      >`SELECT count(*)::bigint AS n FROM information_schema.table_constraints
+        WHERE constraint_name = ANY(${REQUIRED_FKS})
+          AND constraint_type = 'FOREIGN KEY'`;
+      assert.equal(Number(fks[0].n), REQUIRED_FKS.length);
+
+      // 6. pgvector extension exists.
       const ext = await client.$queryRaw<
         { extname: string }[]
       >`SELECT extname FROM pg_extension WHERE extname = 'vector'`;
       assert.equal(ext.length, 1);
 
-      // 5. DocumentEmbedding.embedding exists with the vector type.
+      // 7. DocumentEmbedding.embedding exists with the vector type.
       const emb = await client.$queryRaw<
         { udt_name: string }[]
       >`SELECT udt_name FROM information_schema.columns
@@ -145,14 +306,14 @@ describe("prisma migration chain", () => {
       assert.equal(emb.length, 1);
       assert.equal(emb[0].udt_name, "vector");
 
-      // 6. Migration history is complete and up to date.
+      // 8. Migration history is complete and up to date.
       const applied = await client.$queryRaw<
         { n: bigint }[]
       >`SELECT count(*)::bigint AS n FROM "_prisma_migrations"
          WHERE rolled_back_at IS NOT NULL`;
       assert.equal(Number(applied[0].n), 0);
 
-      // 7. No data-destroying statement in any migration of the chain.
+      // 9. No data-destroying statement in any migration of the chain.
       const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
       for (const dir of readdirSync(migrationsDir, { withFileTypes: true })) {
         if (!dir.isDirectory()) continue;
