@@ -316,12 +316,31 @@ export async function runCampaign(
   }
 }
 
+export async function filterAccessibleRunIds(runIds: string[], userId: string) {
+  const allowed: string[] = [];
+  await Promise.all(
+    runIds.map(async (id) => {
+      try {
+        await assertRunAccess(id, userId);
+        allowed.push(id);
+      } catch {
+        // Foreign, fabricated, and deleted runs are omitted so a leaderboard
+        // request cannot probe another tenant's run existence.
+      }
+    }),
+  );
+  return allowed;
+}
+
 export async function getLeaderboard(runIds: string[]): Promise<LeaderboardEntry[]> {
   const session = await getServerSession();
   if (!session) return [];
 
+  const ids = await filterAccessibleRunIds(runIds, session.user.id);
+  if (ids.length === 0) return [];
+
   const runs = await prisma.benchmarkRun.findMany({
-    where: { id: { in: runIds } },
+    where: { id: { in: ids } },
     select: { name: true, aggregatedMetrics: true },
   });
 
@@ -340,8 +359,11 @@ export async function getScientificLeaderboard(runIds: string[]): Promise<{
   const session = await getServerSession();
   if (!session) return { entries: [], tiers: [] };
 
+  const ids = await filterAccessibleRunIds(runIds, session.user.id);
+  if (ids.length === 0) return { entries: [], tiers: [] };
+
   const runs = await prisma.benchmarkRun.findMany({
-    where: { id: { in: runIds } },
+    where: { id: { in: ids } },
     select: {
       name: true,
       aggregatedMetrics: true,

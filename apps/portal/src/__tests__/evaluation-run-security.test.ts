@@ -61,3 +61,18 @@ describe("dataset and run authorization shared boundary", () => {
     assert.equal(callCount, 5);
   });
 });
+
+describe("leaderboard run tenancy wiring", () => {
+  it("never queries leaderboard runs by raw caller-supplied ids without the shared boundary", () => {
+    assert.doesNotMatch(actionsSource, /benchmarkRun\.findMany\(\{\s*where: \{ id: \{ in: runIds \} \}/);
+  });
+
+  it("routes both leaderboard functions through filterAccessibleRunIds", () => {
+    assert.match(actionsSource, /filterAccessibleRunIds\(runIds, session\.user\.id\)/);
+    assert.equal((actionsSource.match(/filterAccessibleRunIds\(runIds, session\.user\.id\)/g) ?? []).length, 2);
+  });
+
+  it("derives leaderboard access from assertRunAccess through the shared boundary", () => {
+    assert.match(actionsSource, /filterAccessibleRunIds[\s\S]{0,300}await assertRunAccess\(id, userId\)/);
+  });
+});
