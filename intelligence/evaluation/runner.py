@@ -103,6 +103,7 @@ class EvaluationRunner:
             prompt_tokens = 0
             completion_tokens = 0
             model = ""
+            cost_usd = 0.0
 
             if self._config.generate and chunks:
                 with tracker.measure("generation"):
@@ -111,6 +112,7 @@ class EvaluationRunner:
                 prompt_tokens = gen["prompt_tokens"]
                 completion_tokens = gen["completion_tokens"]
                 model = gen["model"]
+                cost_usd = estimate_cost(model, prompt_tokens, completion_tokens)
 
             recall = None
             precision = None
@@ -154,7 +156,7 @@ class EvaluationRunner:
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 model=model,
-                cost_usd=estimate_cost(model, prompt_tokens, completion_tokens),
+                cost_usd=cost_usd,
                 trace_id=get_trace_id(),
                 recall=recall,
                 precision=precision,

@@ -998,6 +998,17 @@ function ReportView({ report, onClose }: { report: ReportViewProps; onClose: () 
           <MetricCard key={key} label={key} value={formatMetric(val as number)} higherIsBetter />
         ))}
         <MetricCard label="Avg Latency" value={`${report.metrics.latency.totalMs.toFixed(1)}ms`} higherIsBetter={false} />
+        <MetricCard
+          label="Token Usage"
+          value={report.metrics.tokenUsage ? report.metrics.tokenUsage.total.toLocaleString() : "Unavailable"}
+          secondary={report.metrics.tokenUsage ? `${report.metrics.tokenUsage.prompt.toLocaleString()} prompt + ${report.metrics.tokenUsage.completion.toLocaleString()} completion` : undefined}
+          higherIsBetter={false}
+        />
+        <MetricCard
+          label="Estimated Cost"
+          value={report.metrics.estimatedCost != null ? `$${report.metrics.estimatedCost.toFixed(4)}` : "Unavailable"}
+          higherIsBetter={false}
+        />
       </div>
 
       {report.observations.length > 0 && (

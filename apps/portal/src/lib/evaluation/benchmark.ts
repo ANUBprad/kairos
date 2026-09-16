@@ -136,6 +136,10 @@ export async function runBenchmark(
     configSnapshot: unknown;
   }> = [];
 
+  let promptTokensTotal = 0;
+  let completionTokensTotal = 0;
+  let usageComplete = true;
+
   for (let i = 0; i < dataset.questions.length; i++) {
     const q = dataset.questions[i];
 
@@ -174,8 +178,15 @@ export async function runBenchmark(
           maxTokens: 1024,
         });
         generatedAnswer = genResponse.content;
+        if (genResponse.usage) {
+          promptTokensTotal += genResponse.usage.promptTokens ?? 0;
+          completionTokensTotal += genResponse.usage.completionTokens ?? 0;
+        } else {
+          usageComplete = false;
+        }
       } catch {
         generatedAnswer = "";
+        usageComplete = false;
       }
 
       const generationMetrics = calculateGenerationMetrics({
@@ -201,6 +212,7 @@ export async function runBenchmark(
 
       onProgress?.({ current: i + 1, total: dataset.questions.length, question: q.question, status: "completed" });
     } catch (err) {
+      usageComplete = false;
       onProgress?.({ current: i + 1, total: dataset.questions.length, question: q.question, status: "error", error: String(err) });
     }
   }
@@ -239,6 +251,14 @@ export async function runBenchmark(
     aggregatedMetrics.avgLatencyMs = Math.round(avgLatency * 100) / 100;
   }
 
+  const allQuestionsHadUsage = usageComplete && results.length === dataset.questions.length;
+  if (allQuestionsHadUsage) {
+    (aggregatedMetrics as Record<string, unknown>).totalTokens = {
+      prompt_tokens: promptTokensTotal,
+      completion_tokens: completionTokensTotal,
+    };
+  }
+
   await prisma.benchmarkRun.update({
     where: { id: run.id },
     data: {
@@ -269,6 +289,24 @@ export function generateEvaluationReport(
     ? (run.dataset.questions as Array<unknown>).length
     : (run.dataset as { _count?: { questions: number } })._count?.questions || 0;
 
+  const agg = run.aggregatedMetrics as Record<string, unknown> | null;
+  const tokens = agg?.totalTokens as
+    | { prompt_tokens: unknown; completion_tokens: unknown }
+    | null
+    | undefined;
+  const tokenUsage =
+    tokens &&
+    typeof tokens.prompt_tokens === "number" &&
+    typeof tokens.completion_tokens === "number"
+      ? {
+          total: tokens.prompt_tokens + tokens.completion_tokens,
+          prompt: tokens.prompt_tokens,
+          completion: tokens.completion_tokens,
+        }
+      : null;
+  const rawCost = agg?.totalCostUsd;
+  const estimatedCost = typeof rawCost === "number" && Number.isFinite(rawCost) ? rawCost : null;
+
   const avgMetrics = {
     retrieval: {
       recallAtK: run.aggregatedMetrics?.avgRecallAtK ?? 0,
@@ -293,9 +331,9 @@ export function generateEvaluationReport(
       promptMs: 0,
       generationMs: 0,
     },
-    tokenUsage: { total: 0, prompt: 0, completion: 0 },
-    estimatedCost: 0,
-    chunkCount: 0,
+    tokenUsage,
+    estimatedCost,
+    chunkCount: null,
   };
 
   const recommendations: string[] = [];
@@ -439,9 +477,9 @@ export function compareBenchmarkRuns(
             }
           : undefined,
         latency: { totalMs: metrics.avgLatencyMs ?? 0, embeddingMs: 0, searchMs: 0, promptMs: 0, generationMs: 0 },
-        tokenUsage: { total: 0, prompt: 0, completion: 0 },
-        estimatedCost: 0,
-        chunkCount: 0,
+        tokenUsage: null,
+        estimatedCost: null,
+        chunkCount: null,
       },
     },
     configB: {
@@ -464,9 +502,9 @@ export function compareBenchmarkRuns(
             }
           : undefined,
         latency: { totalMs: metricsB.avgLatencyMs ?? 0, embeddingMs: 0, searchMs: 0, promptMs: 0, generationMs: 0 },
-        tokenUsage: { total: 0, prompt: 0, completion: 0 },
-        estimatedCost: 0,
-        chunkCount: 0,
+        tokenUsage: null,
+        estimatedCost: null,
+        chunkCount: null,
       },
     },
     winner,

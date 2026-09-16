@@ -24,11 +24,9 @@ class TestEstimateCost:
     def test_known_model_gpt4_mini(self) -> None:
         assert estimate_cost("gpt-4o-mini", 1_000_000, 1_000_000) == pytest.approx(0.75)
 
-    def test_unknown_model_uses_default(self) -> None:
-        # default $2.50/M in, $10/M out
-        assert estimate_cost("some-exotic-model", 1_000_000, 1_000_000) == (
-            2.50 + 10.00
-        )
+    def test_unknown_model_cost_unavailable(self) -> None:
+        # Unknown model pricing is not fabricated: None means "cannot estimate".
+        assert estimate_cost("some-exotic-model", 1_000_000, 1_000_000) is None
 
     def test_ollama_free(self) -> None:
         assert estimate_cost("llama3", 1_000_000, 1_000_000) == 0.0
@@ -97,6 +95,22 @@ class TestEntryResultCostAndTrace:
         r = EntryResult(entry_id="Q1", query="q", query_type="simple")
         assert "cost_usd" not in r.to_dict()
 
+    def test_to_dict_omits_cost_when_pricing_unknown(self) -> None:
+        r = EntryResult(
+            entry_id="Q1",
+            query="q",
+            query_type="simple",
+            generated_answer="a",
+            prompt_tokens=100,
+            completion_tokens=50,
+            model="some-exotic-model",
+            cost_usd=None,
+        )
+        d = r.to_dict()
+        assert "cost_usd" not in d
+        assert d["prompt_tokens"] == 100
+        assert d["model"] == "some-exotic-model"
+
     def test_trace_id_empty_omitted(self) -> None:
         r = EntryResult(entry_id="Q1", query="q", query_type="simple")
         assert "trace_id" not in r.to_dict()
@@ -115,6 +129,22 @@ class TestRunResultCost:
     def test_total_cost_empty(self) -> None:
         assert RunResult(results=()).total_cost() == 0.0
 
+    def test_total_cost_none_when_any_pricing_unknown(self) -> None:
+        r = RunResult(
+            results=(
+                EntryResult(
+                    entry_id="Q1",
+                    query="q",
+                    query_type="s",
+                    generated_answer="a",
+                    model="some-exotic-model",
+                    cost_usd=None,
+                ),
+                EntryResult(entry_id="Q2", query="q", query_type="s", cost_usd=0.2),
+            )
+        )
+        assert r.total_cost() is None
+
     def test_to_dict_includes_total_cost(self) -> None:
         r = RunResult(
             results=(
@@ -122,3 +152,19 @@ class TestRunResultCost:
             )
         )
         assert r.to_dict()["total_cost_usd"] == pytest.approx(0.15)
+
+    def test_to_dict_omits_total_cost_when_none(self) -> None:
+        r = RunResult(
+            results=(
+                EntryResult(
+                    entry_id="Q1",
+                    query="q",
+                    query_type="s",
+                    generated_answer="a",
+                    model="some-exotic-model",
+                    cost_usd=None,
+                ),
+                EntryResult(entry_id="Q2", query="q", query_type="s", cost_usd=0.0),
+            )
+        )
+        assert "total_cost_usd" not in r.to_dict()

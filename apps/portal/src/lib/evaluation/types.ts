@@ -110,9 +110,9 @@ export interface EvaluationMetrics {
     total: number;
     prompt: number;
     completion: number;
-  };
-  estimatedCost: number;
-  chunkCount: number;
+  } | null;
+  estimatedCost: number | null;
+  chunkCount: number | null;
 }
 
 export interface EvaluationReport {

@@ -39,7 +39,7 @@ export interface IntelligenceOutcome {
   success_rate: number;
   mean_latency: { classify: number; retrieval: number; generation: number; total: number };
   total_tokens: { prompt_tokens: number; completion_tokens: number };
-  total_cost_usd: number;
+  total_cost_usd?: number | null;
   mean_recall?: number | null;
   mean_precision?: number | null;
   mean_judge_scores?: Record<string, number>;
@@ -99,8 +99,14 @@ function aggregateMetricsFor(outcome: IntelligenceOutcome): Record<string, unkno
   agg.total = outcome.total;
   agg.succeeded = outcome.succeeded;
   agg.failed = outcome.failed;
-  agg.totalTokens = outcome.total_tokens;
-  agg.totalCostUsd = outcome.total_cost_usd;
+  const hasAnyTokens =
+    outcome.total_tokens != null &&
+    typeof outcome.total_tokens.prompt_tokens === "number" &&
+    typeof outcome.total_tokens.completion_tokens === "number";
+  if (hasAnyTokens) agg.totalTokens = outcome.total_tokens;
+  if (typeof outcome.total_cost_usd === "number" && Number.isFinite(outcome.total_cost_usd)) {
+    agg.totalCostUsd = outcome.total_cost_usd;
+  }
   return agg;
 }
 

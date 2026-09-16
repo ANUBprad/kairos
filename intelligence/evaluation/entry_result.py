@@ -44,7 +44,7 @@ class EntryResult:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     model: str = ""
-    cost_usd: float = 0.0
+    cost_usd: Optional[float] = 0.0
     trace_id: str = ""
 
     recall: Optional[float] = None
@@ -80,7 +80,8 @@ class EntryResult:
             d["prompt_tokens"] = self.prompt_tokens
             d["completion_tokens"] = self.completion_tokens
             d["model"] = self.model
-            d["cost_usd"] = self.cost_usd
+            if self.cost_usd is not None:
+                d["cost_usd"] = self.cost_usd
         if self.trace_id:
             d["trace_id"] = self.trace_id
         if self.composite_judge_score is not None:
@@ -144,8 +145,10 @@ class RunResult:
         completion = sum(r.completion_tokens for r in self.results)
         return {"prompt_tokens": prompt, "completion_tokens": completion}
 
-    def total_cost(self) -> float:
-        return sum(r.cost_usd for r in self.results)
+    def total_cost(self) -> Optional[float]:
+        if any(r.cost_usd is None for r in self.results):
+            return None
+        return sum(r.cost_usd for r in self.results)  # type: ignore[arg-type]
 
     def per_type_results(self) -> Dict[str, List[EntryResult]]:
         groups: Dict[str, List[EntryResult]] = {}
@@ -161,8 +164,10 @@ class RunResult:
             "success_rate": self.success_rate,
             "mean_latency": self.mean_latency(),
             "total_tokens": self.total_tokens(),
-            "total_cost_usd": self.total_cost(),
         }
+        total_cost = self.total_cost()
+        if total_cost is not None:
+            agg["total_cost_usd"] = total_cost
         mr = self.mean_recall()
         mp = self.mean_precision()
         if mr is not None:

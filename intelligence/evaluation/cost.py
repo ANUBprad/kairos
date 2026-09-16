@@ -3,8 +3,9 @@ from __future__ import annotations
 """Per-token cost estimation for evaluation entries.
 
 Pricing is driven by model name + measured token counts; unknown models
-fall back to a default rate so cost is always recorded. Ollama models
-are priced at zero (self-hosted, free per-token).
+have no known price, so cost is reported as ``None`` (unavailable) rather
+than fabricated from a guessed default rate. Ollama models are priced at
+zero (self-hosted, free per-token).
 """
 
 # USD per 1M tokens: input, output. Source: public list prices 2026.
@@ -22,16 +23,14 @@ _PRICES_PER_MTOK = {
     "llama3.3-70b": (0.59, 0.79),
 }
 
-_DEFAULT_PER_MTOK = (2.50, 10.00)
 
-
-def _per_mtok(model: str) -> tuple[float, float]:
+def _per_mtok(model: str) -> tuple[float, float] | None:
     if _is_self_hosted(model):
         return (0.0, 0.0)
     exact = _PRICES_PER_MTOK.get(model)
     if exact is not None:
         return exact
-    return _DEFAULT_PER_MTOK
+    return None
 
 
 def _is_self_hosted(model: str) -> bool:
@@ -45,9 +44,12 @@ def _is_self_hosted(model: str) -> bool:
     return False
 
 
-def estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
-    """Estimated USD cost of one LLM interaction."""
-    input_price, output_price = _per_mtok(model)
+def estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float | None:
+    """Estimated USD cost of one LLM interaction, or None when the model has no known price."""
+    per_mtok = _per_mtok(model)
+    if per_mtok is None:
+        return None
+    input_price, output_price = per_mtok
     return (prompt_tokens / 1_000_000) * input_price + (
         completion_tokens / 1_000_000
     ) * output_price
