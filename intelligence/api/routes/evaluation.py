@@ -38,6 +38,7 @@ class RunRequest(BaseModel):
     generate: bool = True
     judge: bool = True
     use_llm_judges: bool = False
+    include_results: bool = False
 
 
 @router.post("/evaluate")
@@ -72,7 +73,7 @@ def run_evaluation_entry(body: RunRequest) -> Dict[str, object]:
         config,
         use_llm_judges=body.use_llm_judges,
     )
-    payload = result.to_dict()
+    payload = result.to_dict(include_results=body.include_results)
     payload["trace_id"] = result.results[0].trace_id if result.results else ""
     return payload
 

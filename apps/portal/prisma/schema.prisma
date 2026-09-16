@@ -713,6 +713,7 @@ model BenchmarkResult {
 
   retrievalMetrics  Json?
   generationMetrics Json?
+  error             Json?
 
   latencyEmbeddingMs  Float?
   latencySearchMs     Float?

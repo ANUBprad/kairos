@@ -50,6 +50,30 @@ describe("evaluation run HTTP boundary wiring", () => {
   });
 });
 
+describe("intelligence persistence wiring", () => {
+  it("requires a knowledge base anchor when persisting", () => {
+    assert.match(routeSource, /persist && !knowledgeBaseId/);
+    assert.match(routeSource, /knowledge_base_id is required when persist=true/);
+  });
+
+  it("forwards include_results only when persisting", () => {
+    assert.match(routeSource, /\? \{ include_results: true \} : \{\}/);
+  });
+
+  it("derives the persisted run's ownership from the server session and validated namespace", () => {
+    assert.match(routeSource, /createIntelligenceRun\(\{[\s\S]{0,240}knowledgeBaseId: namespace,[\s\S]{0,160}userId: session\.user\.id/);
+    assert.doesNotMatch(routeSource, /body\.run_id/);
+    assert.doesNotMatch(routeSource, /body\.user_id|body\.organization_id/);
+  });
+
+  it("lets the server own the run lifecycle, never the client", () => {
+    assert.doesNotMatch(routeSource, /body\.run_id[\s\S]{0,60}JSON\.stringify/);
+    assert.doesNotMatch(routeSource, /run_id[\s\S]{0,60}createIntelligenceRun/);
+    assert.match(routeSource, /failIntelligenceRun\(runId\)/);
+    assert.match(routeSource, /completeIntelligenceRun\(runId, outcome/);
+  });
+});
+
 describe("dataset and run authorization shared boundary", () => {
   it("resolves dataset tenancy through the caller identity, not dataset existence", () => {
     assert.match(accessSource, /canAccessKnowledgeBase\(userId, dataset\.knowledgeBaseId\)/);

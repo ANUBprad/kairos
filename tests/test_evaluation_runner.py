@@ -267,6 +267,32 @@ class TestRunResult:
         assert d["succeeded"] == 1
         assert d["mean_recall"] == pytest.approx(0.8)
         assert d["mean_precision"] == pytest.approx(0.5)
+        assert "results" not in d, "per-entry data must stay off the aggregate contract by default"
+
+    def test_to_dict_include_results(self) -> None:
+        r = RunResult(
+            results=(
+                self._make_entry("Q1", recall=0.8, precision=0.5),
+                EntryResult(
+                    entry_id="Q2",
+                    query="query Q2",
+                    query_type="simple",
+                    status="error",
+                    error_type="OOMError",
+                    error_message="out of memory",
+                ),
+            )
+        )
+        d = r.to_dict(include_results=True)
+        assert len(d["results"]) == 2
+        first = d["results"][0]
+        assert first["entry_id"] == "Q1"
+        assert first["recall"] == 0.8
+        assert "generated_answer" not in first  # no answer on this synthetic entry
+        second = d["results"][1]
+        assert second["status"] == "error"
+        assert second["error_type"] == "OOMError"
+        assert second["recall"] is None
 
 
 # ── EvaluationRunner ─────────────────────────────────────────────────────────

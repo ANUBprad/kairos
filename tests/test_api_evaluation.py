@@ -96,6 +96,37 @@ def test_run_endpoint_rejects_client_dataset_paths(monkeypatch: MonkeyPatch) -> 
         assert resp.status_code == 422, f"dataset_path {attack!r} was accepted"
 
 
+def test_run_endpoint_include_results_opt_in(monkeypatch: MonkeyPatch) -> None:
+    from intelligence.evaluation import factory
+
+    def fake_run_dataset(config: RunConfig, dataset_path=None, use_llm_judges=False):
+        return SAMPLE_RESULT
+
+    monkeypatch.setattr(factory, "run_dataset", fake_run_dataset)
+
+    client = _client()
+
+    resp = client.post(
+        "/api/v1/evaluation/run",
+        json={"namespace": "ns1", "dataset_name": "golden"},
+    )
+    assert resp.status_code == 200
+    assert "results" not in resp.json(), "aggregate-only contract preserved by default"
+
+    resp = client.post(
+        "/api/v1/evaluation/run",
+        json={"namespace": "ns1", "dataset_name": "golden", "include_results": True},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert len(data["results"]) == 1
+    entry = data["results"][0]
+    assert entry["entry_id"] == "SIMPLE-001"
+    assert entry["recall"] == 1.0
+    assert entry["generated_answer"] == "An AI system is a machine-based system."
+
+
 def test_run_endpoint_wires_to_runner(monkeypatch: MonkeyPatch) -> None:
     from intelligence.evaluation import factory
 

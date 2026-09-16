@@ -153,7 +153,7 @@ class RunResult:
             groups.setdefault(r.query_type, []).append(r)
         return groups
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self, include_results: bool = False) -> Dict[str, object]:
         agg: Dict[str, object] = {
             "total": self.total,
             "succeeded": self.succeeded,
@@ -172,4 +172,6 @@ class RunResult:
         mjs = self.mean_judge_scores()
         if mjs:
             agg["mean_judge_scores"] = mjs
+        if include_results:
+            agg["results"] = [r.to_dict() for r in self.results]
         return agg

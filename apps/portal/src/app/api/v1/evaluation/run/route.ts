@@ -4,6 +4,12 @@ import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import {
+  completeIntelligenceRun,
+  createIntelligenceRun,
+  failIntelligenceRun,
+  type IntelligenceOutcome,
+} from "@/lib/evaluation/intelligence-persistence";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +49,7 @@ export async function POST(request: NextRequest) {
 
   const datasetName = typeof body.dataset_name === "string" ? body.dataset_name.trim() : "";
   const knowledgeBaseId = typeof body.knowledge_base_id === "string" ? body.knowledge_base_id.trim() : "";
+  const persist = body.persist === true;
 
   if (!datasetName) {
     return NextResponse.json(
@@ -52,6 +59,12 @@ export async function POST(request: NextRequest) {
   }
   if (datasetName.length > MAX_DATASET_LENGTH) {
     return NextResponse.json({ error: "dataset_name too long" }, { status: 400 });
+  }
+  if (persist && !knowledgeBaseId) {
+    return NextResponse.json(
+      { error: "knowledge_base_id is required when persist=true" },
+      { status: 400 },
+    );
   }
 
   // The namespace is never taken from the client: it is anchored to a
@@ -86,6 +99,24 @@ export async function POST(request: NextRequest) {
   const topK = typeof body.top_k === "number" && Number.isFinite(body.top_k)
     ? Math.max(Math.trunc(body.top_k), 1)
     : undefined;
+  const label = typeof body.label === "string" ? body.label.trim().slice(0, 255) || undefined : undefined;
+
+  let runId: string | undefined;
+  if (persist) {
+    const created = await createIntelligenceRun({
+      datasetName,
+      knowledgeBaseId: namespace,
+      userId: session.user.id,
+      label,
+      config: {
+        topK,
+        generate: typeof body.generate === "boolean" ? body.generate : undefined,
+        judge: typeof body.judge === "boolean" ? body.judge : undefined,
+        useLlmJudges: typeof body.use_llm_judges === "boolean" ? body.use_llm_judges : undefined,
+      },
+    });
+    runId = created.runId;
+  }
 
   try {
     const upstream = await fetch(`${INTELLIGENCE_URL}/api/v1/evaluation/run`, {
@@ -102,6 +133,7 @@ export async function POST(request: NextRequest) {
         ...(typeof body.generate === "boolean" ? { generate: body.generate } : {}),
         ...(typeof body.judge === "boolean" ? { judge: body.judge } : {}),
         ...(typeof body.use_llm_judges === "boolean" ? { use_llm_judges: body.use_llm_judges } : {}),
+        ...(persist ? { include_results: true } : {}),
       }),
       signal: AbortSignal.timeout(15 * 60 * 1000),
     });
@@ -109,6 +141,7 @@ export async function POST(request: NextRequest) {
     const payload: unknown = await upstream.json().catch(() => null);
 
     if (!upstream.ok) {
+      if (runId) await failIntelligenceRun(runId);
       const detail =
         payload &&
         typeof payload === "object" &&
@@ -121,8 +154,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (runId) {
+      const outcome = payload as Partial<IntelligenceOutcome> | null;
+      if (!outcome || !Array.isArray(outcome.results)) {
+        await failIntelligenceRun(runId);
+        return NextResponse.json({ error: "Evaluation returned no per-entry results" }, { status: 502 });
+      }
+      await completeIntelligenceRun(runId, outcome as IntelligenceOutcome);
+      const aggregates = { ...(payload as Record<string, unknown>) };
+      delete aggregates.results;
+      return NextResponse.json({ ...aggregates, run_id: runId });
+    }
+
     return NextResponse.json(payload);
   } catch (error) {
+    if (runId) await failIntelligenceRun(runId);
     const sanitized = sanitizeError(error);
     return NextResponse.json(
       { error: "Failed to reach evaluation API", errorId: sanitized.errorId },
