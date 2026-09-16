@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/prisma";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 import { runRetrieval } from "@/lib/retrieval/service";
+import { resolveRunDataset } from "./benchmark";
 import { calculateRetrievalMetrics } from "./metrics/retrieval";
 import { calculateDescriptiveStats, type DescriptiveStats } from "./statistics";
 
@@ -50,12 +50,10 @@ export async function runBenchmarkCampaign(
 ): Promise<CampaignResult> {
   onProgress?.({ phase: "initializing", current: 0, total: 0, message: "Loading dataset..." });
 
-  const dataset = await prisma.benchmarkDataset.findUnique({
-    where: { id: config.datasetId },
-    include: { questions: true },
-  });
-
-  if (!dataset || dataset.questions.length === 0) {
+  // Campaigns evaluate what is published: when snapshots exist the run targets
+  // the latest version (without creating rows), otherwise the mutable root.
+  const target = await resolveRunDataset(config.datasetId, { createIfMissing: false });
+  if (target.questions.length === 0) {
     throw new Error("Dataset not found or empty");
   }
 
@@ -108,13 +106,13 @@ export async function runBenchmarkCampaign(
     const perQuestionHitRate: number[] = [];
     const perQuestionLatency: number[] = [];
 
-    for (let qi = 0; qi < dataset.questions.length; qi++) {
-      const q = dataset.questions[qi];
+    for (let qi = 0; qi < target.questions.length; qi++) {
+      const q = target.questions[qi];
       onProgress?.({
         phase: "running",
-        current: expIdx * dataset.questions.length + qi + 1,
-        total: totalExperiments * dataset.questions.length,
-        message: `${exp.strategyLabel}: Q${qi + 1}/${dataset.questions.length}`,
+        current: expIdx * target.questions.length + qi + 1,
+        total: totalExperiments * target.questions.length,
+        message: `${exp.strategyLabel}: Q${qi + 1}/${target.questions.length}`,
       });
 
       try {

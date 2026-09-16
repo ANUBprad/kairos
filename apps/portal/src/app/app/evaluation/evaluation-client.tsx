@@ -23,6 +23,8 @@ import {
   getReport,
   compareRuns,
   getScientificLeaderboard,
+  createDatasetVersion,
+  listDatasetVersions,
 } from "@/lib/actions/evaluation";
 import { listKbsForLab } from "@/lib/actions/retrieval-lab";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
@@ -46,6 +48,7 @@ interface DatasetSummary {
   id: string;
   name: string;
   description: string | null;
+  version: number;
   createdAt: Date;
   _count: { questions: number; runs: number };
 }
@@ -340,6 +343,14 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
     questions: Array<{ id: string; question: string; expectedAnswer: string | null }>;
     runs: Array<{ id: string; name: string | null; status: string; createdAt: Date }>;
   } | null>(null);
+  const [versionList, setVersionList] = useState<{
+    rootId: string;
+    versions: Array<{
+      id: string; name: string; version: number; createdAt: Date;
+      _count: { questions: number; runs: number };
+    }>;
+  } | null>(null);
+  const [versionLoading, setVersionLoading] = useState(false);
 
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -353,14 +364,32 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
   const [availableKbs, setAvailableKbs] = useState<Array<{ name: string; id: string }>>([]);
 
   const loadDetail = useCallback(async (id: string) => {
-    const d = await getDataset(id) as {
-      id: string; name: string; description: string | null;
-      questions: Array<{ id: string; question: string; expectedAnswer: string | null }>;
-      runs: Array<{ id: string; name: string | null; status: string; createdAt: Date }>;
-    };
+    const [d, versions] = await Promise.all([
+      getDataset(id) as Promise<{
+        id: string; name: string; description: string | null;
+        questions: Array<{ id: string; question: string; expectedAnswer: string | null }>;
+        runs: Array<{ id: string; name: string | null; status: string; createdAt: Date }>;
+      }>,
+      listDatasetVersions(id),
+    ]);
     setDatasetDetail(d);
+    setVersionList(versions);
     onSelect(id);
   }, [onSelect]);
+
+  const handleCreateVersion = async () => {
+    if (!datasetDetail) return;
+    setVersionLoading(true);
+    try {
+      await createDatasetVersion(datasetDetail.id);
+      toast.success("Version created");
+      await loadDetail(datasetDetail.id);
+    } catch (err) {
+      toast.error(`Error: ${err}`);
+    } finally {
+      setVersionLoading(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!name.trim() || !questionsText.trim()) return;
@@ -583,22 +612,66 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
       </div>
 
       {datasetDetail && (
-        <Card className="!p-4 space-y-3">
-          <h3 className="text-sm font-medium">{datasetDetail.name} — Questions</h3>
-          <div className="max-h-60 overflow-y-auto space-y-1">
-            {datasetDetail.questions.map((q, i) => (
-              <div key={q.id} className="flex items-start gap-2 text-sm p-2 rounded hover:bg-surface-hover">
-                <span className="text-text-secondary w-6 shrink-0">#{i + 1}</span>
-                <div className="flex-1">
-                  <p>{q.question}</p>
-                  {q.expectedAnswer && (
-                    <p className="text-xs text-text-secondary mt-0.5">Expected: {q.expectedAnswer}</p>
-                  )}
+        <div className="space-y-3">
+          <Card className="!p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">{datasetDetail.name} — Questions</h3>
+              <button
+                onClick={handleCreateVersion}
+                disabled={versionLoading || !versionList}
+                className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-brand text-white hover:bg-brand-hover disabled:opacity-50"
+              >
+                <Plus size={12} />
+                {versionLoading ? "Creating..." : "Create Version"}
+              </button>
+            </div>
+            <div className="max-h-60 overflow-y-auto space-y-1">
+              {datasetDetail.questions.map((q, i) => (
+                <div key={q.id} className="flex items-start gap-2 text-sm p-2 rounded hover:bg-surface-hover">
+                  <span className="text-text-secondary w-6 shrink-0">#{i + 1}</span>
+                  <div className="flex-1">
+                    <p>{q.question}</p>
+                    {q.expectedAnswer && (
+                      <p className="text-xs text-text-secondary mt-0.5">Expected: {q.expectedAnswer}</p>
+                    )}
+                  </div>
                 </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="!p-4 space-y-3">
+            <h3 className="text-sm font-medium">Versions</h3>
+            {versionList && versionList.versions.length === 0 ? (
+              <p className="text-xs text-text-secondary">
+                No published versions yet. Creating a version pins this dataset for reproducible runs.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {(versionList?.versions ?? []).map((v) => (
+                  <div key={v.id} className="flex items-center justify-between gap-3 text-sm p-2 rounded hover:bg-surface-hover">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-bg-secondary text-text-secondary font-mono shrink-0">
+                        v{v.version}
+                      </span>
+                      <span className="truncate">{v.name}</span>
+                      <span className="text-xs text-text-secondary shrink-0">
+                        · {v._count.questions} questions · {v._count.runs} runs · {new Date(v.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openBenchmarkDialog(v.id); }}
+                      className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-brand/10 text-brand hover:bg-brand-hover shrink-0"
+                    >
+                      <Play size={12} />
+                      Run
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </Card>
+            )}
+          </Card>
+        </div>
       )}
 
       {/* Delete Confirmation Dialog */}

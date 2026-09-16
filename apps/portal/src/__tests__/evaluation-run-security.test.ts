@@ -97,7 +97,7 @@ describe("dataset and run authorization shared boundary", () => {
 
   it("gates dataset and benchmark entry points with the caller's session identity", () => {
     const callCount = actionsSource.match(/await assertDatasetAccess\(datasetId, session\.user\.id\)/g)?.length ?? 0;
-    assert.equal(callCount, 5);
+    assert.equal(callCount, 7);
   });
 });
 

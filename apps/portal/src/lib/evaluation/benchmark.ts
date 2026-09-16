@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { round } from "@/lib/utils";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
@@ -45,6 +46,151 @@ export async function createBenchmarkDataset(data: {
   });
 }
 
+// Deterministic canonical serialization: object keys are sorted, so two
+// objects with the same members in different key order hash identically.
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(record[k])}`).join(",")}}`;
+}
+
+// Sha256 over the evaluation-relevant question content (no ids, no timestamps):
+// identical question sets always hash identically, so snapshot versions from
+// unchanged content deduplicate to the same row instead of stacking duplicates.
+export function datasetContentHash(
+  questions: Array<{
+    question: string;
+    expectedAnswer?: string | null;
+    expectedContext?: string | null;
+    referenceDocId?: string | null;
+    metadata?: unknown;
+  }>,
+): string {
+  const canonical = questions
+    .map((q) =>
+      stableStringify([
+        q.question,
+        q.expectedAnswer ?? null,
+        q.expectedContext ?? null,
+        q.referenceDocId ?? null,
+        q.metadata ?? null,
+      ]),
+    )
+    .sort()
+    .join("\n");
+  return createHash("sha256").update(canonical).digest("hex");
+}
+
+export interface BenchmarkDatasetVersionInput {
+  name?: string;
+  description?: string;
+  source?: string;
+  tags?: string[];
+}
+
+type VersionableQuestions = Array<{
+  id: string;
+  question: string;
+  expectedAnswer: string | null;
+  expectedContext: string | null;
+  referenceDocId: string | null;
+  metadata: unknown;
+}>;
+
+// Copies the parent dataset into an immutable snapshot row with a fresh
+// version number. The unique (parentVersionId, version) constraint resets the
+// race: on a duplicate-version collision (two concurrent creates) we recompute
+// and retry once — a lazy senior's idempotence without a lock.
+async function createVersionRow(
+  parent: {
+    id: string;
+    name: string;
+    version: number;
+    description: string | null;
+    source: string | null;
+    tags: string[];
+    knowledgeBaseId: string | null;
+    questions: VersionableQuestions;
+  },
+  hash: string,
+  input?: BenchmarkDatasetVersionInput,
+  attempt = 1,
+) {
+  const { _max } = await prisma.benchmarkDataset.aggregate({
+    where: { OR: [{ id: parent.id }, { parentVersionId: parent.id }] },
+    _max: { version: true },
+  });
+  const nextVersion = Math.max(parent.version, _max?.version ?? 0) + 1;
+
+  try {
+    return await prisma.benchmarkDataset.create({
+      data: {
+        name: input?.name?.trim() ? input.name.trim() : `${parent.name} v${nextVersion}`,
+        description: input?.description ?? parent.description,
+        source: parent.source,
+        tags: input?.tags ?? parent.tags,
+        version: nextVersion,
+        contentHash: hash,
+        parentVersionId: parent.id,
+        knowledgeBaseId: parent.knowledgeBaseId,
+        questions: {
+          create: parent.questions.map((q) => ({
+            question: q.question,
+            expectedAnswer: q.expectedAnswer,
+            expectedContext: q.expectedContext,
+            referenceDocId: q.referenceDocId,
+            metadata: q.metadata as never,
+          })),
+        },
+      },
+      include: { questions: true },
+    });
+  } catch (err) {
+    if ((err as { code?: string })?.code === "P2002" && attempt < 3) {
+      return createVersionRow(parent, hash, input, attempt + 1);
+    }
+    throw err;
+  }
+}
+
+export async function createBenchmarkDatasetVersion(
+  datasetId: string,
+  input?: BenchmarkDatasetVersionInput,
+) {
+  const parent = await prisma.benchmarkDataset.findUnique({
+    where: { id: datasetId },
+    include: { questions: true },
+  });
+  if (!parent) throw new Error("Dataset not found");
+  if (parent.parentVersionId) {
+    throw new Error("Published dataset versions are immutable; create a new version from the root dataset only");
+  }
+
+  const hash = datasetContentHash(parent.questions);
+
+  const existing = await prisma.benchmarkDataset.findFirst({
+    where: { parentVersionId: datasetId, contentHash: hash },
+    include: { questions: true },
+  });
+  if (existing) return existing;
+
+  return createVersionRow(parent, hash, input);
+}
+
+export async function listBenchmarkDatasetVersions(datasetId: string) {
+  const row = await prisma.benchmarkDataset.findUnique({ where: { id: datasetId } });
+  if (!row) throw new Error("Dataset not found");
+  const rootId = row.parentVersionId ?? row.id;
+  const versions = await prisma.benchmarkDataset.findMany({
+    where: { parentVersionId: rootId },
+    orderBy: { version: "asc" },
+    include: { _count: { select: { questions: true, runs: true } } },
+  });
+  return { rootId, versions };
+}
+
 export async function getBenchmarkDatasets(userId?: string) {
   return prisma.benchmarkDataset.findMany({
     ...(userId
@@ -63,10 +209,22 @@ export async function getBenchmarkDatasets(userId?: string) {
 }
 
 export async function getBenchmarkDataset(id: string) {
-  return prisma.benchmarkDataset.findUnique({
+  const detail = await prisma.benchmarkDataset.findUnique({
     where: { id },
-    include: { questions: true, runs: { orderBy: { createdAt: "desc" }, take: 20 } },
+    include: { questions: true },
   });
+  if (!detail) return null;
+
+  // Child-version runs are not reachable through the root row's `runs`
+  // relation (it is anchored to datasetId = root.id), so collect family
+  // runs with a top-level filter instead.
+  const runs = await prisma.benchmarkRun.findMany({
+    where: { OR: [{ datasetId: id }, { dataset: { parentVersionId: id } }] },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+
+  return { ...detail, runs };
 }
 
 export async function getBenchmarkRuns(datasetId: string, userId?: string) {
@@ -74,7 +232,12 @@ export async function getBenchmarkRuns(datasetId: string, userId?: string) {
     await assertDatasetAccess(datasetId, userId);
   }
   return prisma.benchmarkRun.findMany({
-    where: { datasetId },
+    where: {
+      OR: [
+        { datasetId },
+        { dataset: { parentVersionId: datasetId } },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { results: true } } },
   });
@@ -91,11 +254,69 @@ export async function getBenchmarkRun(runId: string) {
 }
 
 export async function deleteBenchmarkDataset(id: string) {
+  const dataset = await prisma.benchmarkDataset.findUnique({ where: { id } });
+  if (!dataset) throw new Error("Dataset not found");
+  if (dataset.parentVersionId) {
+    throw new Error("Published dataset versions are immutable and cannot be deleted; delete the root dataset to remove the version chain");
+  }
+  await prisma.benchmarkDataset.deleteMany({ where: { parentVersionId: id } });
   return prisma.benchmarkDataset.delete({ where: { id } });
 }
 
 export async function deleteBenchmarkRun(id: string) {
   return prisma.benchmarkRun.delete({ where: { id } });
+}
+
+export interface RunTarget {
+  id: string;
+  name: string;
+  questions: VersionableQuestions;
+}
+
+// Evaluation always runs against what is published, never against the mutable
+// root as currently edited. A root resolves to the snapshot whose content
+// matches it today; when the content drifted (or no snapshot exists yet) a
+// fresh immutable version is created so the persisted run pins exactly the
+// questions that were evaluated. Non-persisting experiments resolve without
+// creating rows and fall back to the latest snapshot, then the root.
+export async function resolveRunDataset(
+  datasetId: string,
+  opts: { createIfMissing: boolean },
+): Promise<RunTarget> {
+  const parent = await prisma.benchmarkDataset.findUnique({
+    where: { id: datasetId },
+    include: { questions: true },
+  });
+  if (!parent) throw new Error("Dataset not found");
+  if (parent.parentVersionId) {
+    return { id: parent.id, name: parent.name, questions: parent.questions };
+  }
+
+  const hash = datasetContentHash(parent.questions);
+
+  const matching = await prisma.benchmarkDataset.findFirst({
+    where: { parentVersionId: parent.id, contentHash: hash },
+  });
+  if (matching) {
+    const questions = await prisma.benchmarkQuestion.findMany({ where: { datasetId: matching.id } });
+    return { id: matching.id, name: matching.name, questions };
+  }
+
+  if (opts.createIfMissing) {
+    const created = await createBenchmarkDatasetVersion(parent.id);
+    return { id: created.id, name: created.name, questions: created.questions };
+  }
+
+  const latest = await prisma.benchmarkDataset.findFirst({
+    where: { parentVersionId: parent.id },
+    orderBy: { version: "desc" },
+  });
+  if (latest) {
+    const questions = await prisma.benchmarkQuestion.findMany({ where: { datasetId: latest.id } });
+    return { id: latest.id, name: latest.name, questions };
+  }
+
+  return { id: parent.id, name: parent.name, questions: parent.questions };
 }
 
 export async function runBenchmark(
@@ -105,18 +326,13 @@ export async function runBenchmark(
   label?: string,
   onProgress?: ProgressCallback,
 ): Promise<string> {
-  const dataset = await prisma.benchmarkDataset.findUnique({
-    where: { id: datasetId },
-    include: { questions: true },
-  });
-
-  if (!dataset) throw new Error("Dataset not found");
-  if (dataset.questions.length === 0) throw new Error("Dataset has no questions");
+  const target = await resolveRunDataset(datasetId, { createIfMissing: true });
+  if (target.questions.length === 0) throw new Error("Dataset has no questions");
 
   const run = await prisma.benchmarkRun.create({
     data: {
       name: label || `Run ${new Date().toISOString().split(".")[0].replace("T", " ")}`,
-      datasetId,
+      datasetId: target.id,
       configSnapshot: config as never,
       status: "running",
     },
@@ -140,11 +356,11 @@ export async function runBenchmark(
   let completionTokensTotal = 0;
   let usageComplete = true;
 
-  for (let i = 0; i < dataset.questions.length; i++) {
-    const q = dataset.questions[i];
+  for (let i = 0; i < target.questions.length; i++) {
+    const q = target.questions[i];
 
     try {
-      onProgress?.({ current: i + 1, total: dataset.questions.length, question: q.question, status: "running" });
+      onProgress?.({ current: i + 1, total: target.questions.length, question: q.question, status: "running" });
 
       const retrievalResult = await runRetrieval(knowledgeBaseId, q.question, config, true);
 
@@ -210,10 +426,10 @@ export async function runBenchmark(
         configSnapshot: config as never,
       });
 
-      onProgress?.({ current: i + 1, total: dataset.questions.length, question: q.question, status: "completed" });
+      onProgress?.({ current: i + 1, total: target.questions.length, question: q.question, status: "completed" });
     } catch (err) {
       usageComplete = false;
-      onProgress?.({ current: i + 1, total: dataset.questions.length, question: q.question, status: "error", error: String(err) });
+      onProgress?.({ current: i + 1, total: target.questions.length, question: q.question, status: "error", error: String(err) });
     }
   }
 
@@ -251,7 +467,7 @@ export async function runBenchmark(
     aggregatedMetrics.avgLatencyMs = Math.round(avgLatency * 100) / 100;
   }
 
-  const allQuestionsHadUsage = usageComplete && results.length === dataset.questions.length;
+  const allQuestionsHadUsage = usageComplete && results.length === target.questions.length;
   if (allQuestionsHadUsage) {
     (aggregatedMetrics as Record<string, unknown>).totalTokens = {
       prompt_tokens: promptTokensTotal,
@@ -533,13 +749,8 @@ export async function runStrategyBenchmark(
   strategies: Array<{ name: string; config: Partial<RetrievalConfig> }>,
   onProgress?: (msg: string) => void,
 ): Promise<StrategyBenchmarkResult[]> {
-  const dataset = await prisma.benchmarkDataset.findUnique({
-    where: { id: datasetId },
-    include: { questions: true },
-  });
-
-  if (!dataset) throw new Error("Dataset not found");
-  if (dataset.questions.length === 0) throw new Error("Dataset has no questions");
+  const target = await resolveRunDataset(datasetId, { createIfMissing: false });
+  if (target.questions.length === 0) throw new Error("Dataset has no questions");
 
   const results: StrategyBenchmarkResult[] = [];
 
@@ -567,9 +778,9 @@ export async function runStrategyBenchmark(
       latencyMs: number;
     }> = [];
 
-    for (let i = 0; i < dataset.questions.length; i++) {
-      const q = dataset.questions[i];
-      onProgress?.(`${strategy.name}: ${i + 1}/${dataset.questions.length} - ${q.question.slice(0, 60)}`);
+    for (let i = 0; i < target.questions.length; i++) {
+      const q = target.questions[i];
+      onProgress?.(`${strategy.name}: ${i + 1}/${target.questions.length} - ${q.question.slice(0, 60)}`);
 
       try {
         const retrievalResult = await runRetrieval(knowledgeBaseId, q.question, baseConfig, false);

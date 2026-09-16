@@ -31,6 +31,9 @@ describe("runBenchmark failure lifecycle against a real database", () => {
       await client.$connect();
       await client.benchmarkResult.deleteMany({ where: { runId: { in: runIds } } });
       await client.benchmarkRun.deleteMany({ where: { id: { in: runIds } } });
+      // runBenchmark auto-pins runs to an immutable version row, so any
+      // auto-created child snapshots must be removed before the root is.
+      await client.benchmarkDataset.deleteMany({ where: { parentVersionId: { in: datasetIds } } });
       await client.benchmarkDataset.deleteMany({ where: { id: { in: datasetIds } } });
       await client.knowledgeBase.deleteMany({ where: { id: { in: knowledgeBaseIds } } });
       await client.project.deleteMany({ where: { id: { in: projectIds } } });

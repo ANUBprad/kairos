@@ -18,6 +18,8 @@ import {
   generateEvaluationReport,
   compareBenchmarkRuns,
   runStrategyBenchmark,
+  createBenchmarkDatasetVersion,
+  listBenchmarkDatasetVersions,
 } from "@/lib/evaluation/benchmark";
 import { compareRunsForUser } from "@/lib/evaluation/regression";
 import { runBenchmarkCampaign, type CampaignConfig, type CampaignResult } from "@/lib/evaluation/campaign";
@@ -110,6 +112,24 @@ export async function getDataset(datasetId: string) {
 
   await assertDatasetAccess(datasetId, session.user.id);
   return getBenchmarkDataset(datasetId);
+}
+
+export async function createDatasetVersion(datasetId: string) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  await assertDatasetAccess(datasetId, session.user.id);
+  const version = await createBenchmarkDatasetVersion(datasetId);
+  revalidatePath("/app/evaluation");
+  return version;
+}
+
+export async function listDatasetVersions(datasetId: string) {
+  const session = await getServerSession();
+  if (!session) return null;
+
+  await assertDatasetAccess(datasetId, session.user.id);
+  return listBenchmarkDatasetVersions(datasetId);
 }
 
 export async function getRun(runId: string) {

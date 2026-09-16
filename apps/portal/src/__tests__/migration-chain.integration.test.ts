@@ -55,6 +55,7 @@ const REQUIRED_INDEXES = [
   "ApiKey_keyPrefix_idx",
   "ExperimentRun_knowledgeBaseId_createdAt_idx",
   "BenchmarkRun_status_idx",
+  "BenchmarkDataset_parentVersionId_version_key",
   "ProviderHealth_organizationId_date_idx",
   "Conversation_knowledgeBaseId_userId_idx",
   "Message_conversationId_createdAt_idx",

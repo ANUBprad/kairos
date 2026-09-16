@@ -663,6 +663,7 @@ model BenchmarkDataset {
   source      String? @db.VarChar(128)
   tags        String[] @default([])
   version     Int     @default(1)
+  contentHash String? @db.VarChar(64)
 
   knowledgeBaseId String?
   knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: SetNull)
@@ -681,6 +682,7 @@ model BenchmarkDataset {
   @@index([knowledgeBaseId])
   @@index([parentVersionId])
   @@index([version])
+  @@unique([parentVersionId, version])
 }
 
 model BenchmarkQuestion {
