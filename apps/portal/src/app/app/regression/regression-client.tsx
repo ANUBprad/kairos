@@ -1,23 +1,23 @@
 "use client";
 
 import { PageHeader } from "@/components/app/page-header";
-import { RegressionRun } from "@/components/evaluation/regression-run";
+import { RegressionCompare } from "@/components/evaluation/regression-compare";
 
 export function RegressionClient() {
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="Regression Testing"
-        description="Test prompt versions against golden datasets and detect regressions."
-        purpose="Ensure prompt changes don't degrade performance."
+        description="Compare two benchmark runs on the same dataset and detect statistically significant regressions."
+        purpose="Make sure performance doesn't regress between runs."
         relatedPages={[
           { label: "Golden Datasets", href: "/app/datasets" },
-          { label: "Prompt Library", href: "/app/prompts" },
+          { label: "Evaluation", href: "/app/evaluation" },
           { label: "Quality Gates", href: "/app/quality-gates" },
         ]}
       />
 
-      <RegressionRun />
+      <RegressionCompare />
     </div>
   );
 }

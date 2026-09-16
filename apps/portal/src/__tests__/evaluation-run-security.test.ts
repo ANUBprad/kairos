@@ -17,6 +17,21 @@ const actionsSource = readFileSync(
   "utf8",
 );
 
+const regressionSource = readFileSync(
+  new URL("../lib/evaluation/regression.ts", import.meta.url),
+  "utf8",
+);
+
+const regressionPageSource = readFileSync(
+  new URL("../components/evaluation/regression-compare.tsx", import.meta.url),
+  "utf8",
+);
+
+const regressionClientSource = readFileSync(
+  new URL("../app/app/regression/regression-client.tsx", import.meta.url),
+  "utf8",
+);
+
 describe("evaluation run HTTP boundary wiring", () => {
   it("rejects client filesystem paths instead of forwarding them", () => {
     assert.match(routeSource, /dataset_path is not accepted/);
@@ -74,5 +89,38 @@ describe("leaderboard run tenancy wiring", () => {
 
   it("derives leaderboard access from assertRunAccess through the shared boundary", () => {
     assert.match(actionsSource, /filterAccessibleRunIds[\s\S]{0,300}await assertRunAccess\(id, userId\)/);
+  });
+});
+
+describe("regression run comparison wiring", () => {
+  it("delegates the comparison action to a session-scoped core", () => {
+    assert.match(actionsSource, /compareEvaluationRuns\(baselineRunId: string, candidateRunId: string\)[\s\S]{0,200}getServerSession\(\)/);
+    assert.match(actionsSource, /compareRunsForUser\(baselineRunId, candidateRunId, session\.user\.id\)/);
+  });
+
+  it("keeps foreign, fabricated, and deleted runs indistinguishable at the comparison boundary", () => {
+    assert.match(regressionSource, /await assertRunAccess\(baselineRunId, userId\)[\s\S]{0,120}throw new Error\("Run not found"\)/);
+    assert.match(regressionSource, /await assertRunAccess\(candidateRunId, userId\)[\s\S]{0,120}throw new Error\("Run not found"\)/);
+  });
+
+  it("scopes the run picker through the shared dataset accessor", () => {
+    assert.match(actionsSource, /listRunsForDataset\(datasetId: string\)[\s\S]{0,300}getBenchmarkRuns\(datasetId, session\.user\.id\)/);
+  });
+
+  it("connects the regression page to the real comparison action", () => {
+    assert.match(regressionPageSource, /import \{[\s\S]*compareEvaluationRuns[\s\S]*\} from "@\/lib\/actions\/evaluation"/);
+    assert.match(regressionPageSource, /listRunsForDataset/);
+    assert.doesNotMatch(regressionPageSource, /fetch\("\/api\/v1\/evaluation\/run"/);
+    assert.match(regressionClientSource, /RegressionCompare/);
+  });
+
+  it("removes the dead namespace input from the regression surface", () => {
+    assert.doesNotMatch(regressionPageSource, /namespace/);
+  });
+
+  it("renders a per-metric verdict with the comparison statistics", () => {
+    assert.match(regressionPageSource, /VerdictBadge/);
+    assert.match(regressionPageSource, /p-value/);
+    assert.match(regressionPageSource, /pairedCount/);
   });
 });
