@@ -234,13 +234,15 @@ export async function runBenchmark(
     aggregatedMetrics.avgAnswerRelevancy = avgGeneration.answerRelevancy;
   }
 
-  const avgLatency = results.reduce((s, r) => s + (r.totalLatencyMs || 0), 0) / results.length;
-  aggregatedMetrics.avgLatencyMs = Math.round(avgLatency * 100) / 100;
+  if (results.length > 0) {
+    const avgLatency = results.reduce((s, r) => s + (r.totalLatencyMs || 0), 0) / results.length;
+    aggregatedMetrics.avgLatencyMs = Math.round(avgLatency * 100) / 100;
+  }
 
   await prisma.benchmarkRun.update({
     where: { id: run.id },
     data: {
-      status: "completed",
+      status: results.length === 0 ? "failed" : "completed",
       completedAt: new Date(),
       aggregatedMetrics: aggregatedMetrics as never,
     },

@@ -270,6 +270,76 @@ describe("intelligence evaluation persistence against a real database", () => {
     }
   });
 
+  it("drops non-finite metric values before they reach the database", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres)");
+      return;
+    }
+    const client = makeTestClient(testDbUrl);
+    try {
+      await client.$connect();
+      const { userId, kbId } = await seedTenant(client, "nan");
+
+      const datasetName = `ip-nan-${randomUUID()}`;
+      const { runId, datasetId } = await createIntelligenceRun({
+        datasetName,
+        knowledgeBaseId: kbId,
+        userId,
+        config: {},
+      });
+      datasetIds.push(datasetId);
+      runIds.push(runId);
+
+      const outcome = makeOutcome([
+        { query: "n1", recall: 0.5 },
+        { query: "n2", recall: 0.5 },
+      ]);
+      outcome.mean_recall = NaN;
+      outcome.mean_precision = Infinity;
+      outcome.success_rate = NaN;
+      outcome.mean_judge_scores = { faithfulness: NaN, relevance: 0.8, hallucination: 0.1, grounding: 0.85 };
+      const entryJudgeScores = outcome.results[0].judge_scores!;
+      entryJudgeScores.faithfulness = NaN;
+      entryJudgeScores.relevance = Infinity;
+      outcome.results[0].composite_judge_score = Infinity;
+
+      await completeIntelligenceRun(runId, outcome);
+
+      const completed = await client.benchmarkRun.findUniqueOrThrow({
+        where: { id: runId },
+        include: { results: true },
+      });
+      // JSONB cannot hold NaN/Infinity: the run must still finalize and the
+      // non-finite values must be dropped rather than poisoning the write.
+      assert.equal(completed.status, "completed");
+      const agg = completed.aggregatedMetrics as Record<string, unknown>;
+      assert.equal("avgRecallAtK" in agg, false, "NaN mean_recall is dropped");
+      assert.equal("avgPrecisionAtK" in agg, false, "Infinity mean_precision is dropped");
+      assert.equal("successRate" in agg, false, "NaN success_rate is dropped");
+      assert.equal("avgFaithfulness" in agg, false, "NaN mean judge score is dropped");
+      assert.equal(agg.avgLatencyMs, 60);
+      const fromDb = JSON.stringify(completed.aggregatedMetrics);
+      assert.doesNotMatch(fromDb, /NaN|Infinity/, "no non-finite values in persisted metrics");
+      for (const r of completed.results) {
+        if (r.generationMetrics) {
+          const g = JSON.stringify(r.generationMetrics);
+          assert.doesNotMatch(g, /NaN|Infinity/, "per-entry generation metrics are finite");
+        }
+      }
+      const q1 = completed.results.find((r) => (r.configSnapshot as Record<string, unknown>).traceId === "trace-x");
+      assert.ok(q1, "at least one row persisted");
+      if (q1.generationMetrics) {
+        const gm = q1.generationMetrics as Record<string, number>;
+        assert.equal("faithfulness" in gm, false, "NaN per-entry score dropped");
+        assert.equal("relevance" in gm, false, "Infinity per-entry score dropped");
+        assert.equal("compositeJudgeScore" in gm, false, "Infinity composite score dropped");
+        assert.equal(gm.hallucination, 0.1, "finite per-entry score retained");
+      }
+    } finally {
+      await client.$disconnect();
+    }
+  });
+
   it("finalizes a run once and treats re-execution as a fresh run, never coalescing results", async (t) => {
     if (!testDbUrl) {
       t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres)");

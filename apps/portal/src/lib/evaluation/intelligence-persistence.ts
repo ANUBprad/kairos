@@ -72,10 +72,11 @@ function generationMetricsFor(entry: IntelligenceEntryResult): Record<string, nu
   const scores = entry.judge_scores ?? {};
   const metrics: Record<string, number> = {};
   for (const [dimension, score] of Object.entries(scores)) {
+    if (typeof score !== "number" || !Number.isFinite(score)) continue;
     const key = dimension === "llm_answer_relevancy" ? "answerRelevancy" : dimension;
     metrics[key] = score;
   }
-  if (typeof entry.composite_judge_score === "number") {
+  if (typeof entry.composite_judge_score === "number" && Number.isFinite(entry.composite_judge_score)) {
     metrics.compositeJudgeScore = entry.composite_judge_score;
   }
   return Object.keys(metrics).length > 0 ? metrics : null;
@@ -83,17 +84,18 @@ function generationMetricsFor(entry: IntelligenceEntryResult): Record<string, nu
 
 function aggregateMetricsFor(outcome: IntelligenceOutcome): Record<string, unknown> {
   const agg: Record<string, unknown> = {};
-  if (typeof outcome.mean_recall === "number") agg.avgRecallAtK = outcome.mean_recall;
-  if (typeof outcome.mean_precision === "number") agg.avgPrecisionAtK = outcome.mean_precision;
+  if (typeof outcome.mean_recall === "number" && Number.isFinite(outcome.mean_recall)) agg.avgRecallAtK = outcome.mean_recall;
+  if (typeof outcome.mean_precision === "number" && Number.isFinite(outcome.mean_precision)) agg.avgPrecisionAtK = outcome.mean_precision;
   if (outcome.mean_judge_scores) {
     for (const [dimension, score] of Object.entries(outcome.mean_judge_scores)) {
+      if (typeof score !== "number" || !Number.isFinite(score)) continue;
       const key = dimension === "llm_answer_relevancy" ? "avgAnswerRelevancy" : `avg${dimension[0].toUpperCase()}${dimension.slice(1)}`;
       agg[key] = score;
     }
   }
   const latencyMs = intMs(outcome.mean_latency.total);
   if (latencyMs !== null) agg.avgLatencyMs = latencyMs;
-  agg.successRate = outcome.success_rate;
+  if (typeof outcome.success_rate === "number" && Number.isFinite(outcome.success_rate)) agg.successRate = outcome.success_rate;
   agg.total = outcome.total;
   agg.succeeded = outcome.succeeded;
   agg.failed = outcome.failed;
