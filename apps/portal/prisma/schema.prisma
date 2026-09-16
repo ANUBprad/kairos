@@ -675,6 +675,7 @@ model BenchmarkDataset {
   questions    BenchmarkQuestion[]
   runs         BenchmarkRun[]
   experiments  Experiment[]
+  regressions  BenchmarkRegression[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -752,6 +753,9 @@ model BenchmarkRun {
 
   results BenchmarkResult[]
 
+  baselineRegressions  BenchmarkRegression[] @relation("BenchmarkRegressionBaseline")
+  candidateRegressions BenchmarkRegression[] @relation("BenchmarkRegressionCandidate")
+
   startedAt   DateTime  @default(now())
   completedAt DateTime?
 
@@ -761,6 +765,28 @@ model BenchmarkRun {
   @@index([datasetId])
   @@index([createdById])
   @@index([status])
+}
+
+// Persisted statistical regression comparison between two completed benchmark
+// runs, stored once per (baseline, candidate) pair. `result` is a
+// deterministic machine-readable snapshot of the comparison produced by the
+// shared Slice B engine; the whole record is rewritten in place on repeat.
+model BenchmarkRegression {
+  id             String  @id @default(cuid())
+  baselineRunId  String
+  baselineRun    BenchmarkRun    @relation("BenchmarkRegressionBaseline", fields: [baselineRunId], references: [id], onDelete: Cascade)
+  candidateRunId String
+  candidateRun   BenchmarkRun    @relation("BenchmarkRegressionCandidate", fields: [candidateRunId], references: [id], onDelete: Cascade)
+  datasetId      String
+  dataset        BenchmarkDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  overallVerdict String          @db.VarChar(32)
+  result         Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([baselineRunId, candidateRunId])
+  @@index([datasetId])
 }
 
 /// Activity / Audit Logs

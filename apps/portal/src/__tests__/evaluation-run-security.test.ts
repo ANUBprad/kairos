@@ -32,6 +32,16 @@ const regressionClientSource = readFileSync(
   "utf8",
 );
 
+const regressionTrackingSource = readFileSync(
+  new URL("../lib/evaluation/regression-tracking.ts", import.meta.url),
+  "utf8",
+);
+
+const regressionRouteSource = readFileSync(
+  new URL("../app/api/v1/regression/route.ts", import.meta.url),
+  "utf8",
+);
+
 describe("evaluation run HTTP boundary wiring", () => {
   it("rejects client filesystem paths instead of forwarding them", () => {
     assert.match(routeSource, /dataset_path is not accepted/);
@@ -146,5 +156,46 @@ describe("regression run comparison wiring", () => {
     assert.match(regressionPageSource, /VerdictBadge/);
     assert.match(regressionPageSource, /p-value/);
     assert.match(regressionPageSource, /pairedCount/);
+  });
+});
+
+describe("regression tracking API route wiring", () => {
+  it("authenticates the tracking route the same way as the other v1 routes", () => {
+    assert.match(regressionRouteSource, /const auth = await validateApiKey\(request\)/);
+    assert.match(regressionRouteSource, /rateLimit\(`v1:\$\{auth\.organizationId\}`, RATE_LIMITS\.api\)/);
+  });
+
+  it("never trusts a client-supplied identity or run state", () => {
+    assert.doesNotMatch(regressionRouteSource, /body\.organizationId|body\.organization_id/);
+    assert.doesNotMatch(regressionRouteSource, /body\.userId|body\.user_id/);
+    assert.doesNotMatch(regressionRouteSource, /body\.status|body\.verdict/);
+  });
+
+  it("only accepts the two run ids and validates their UUID format", () => {
+    assert.match(regressionRouteSource, /body\.baselineRunId/);
+    assert.match(regressionRouteSource, /body\.candidateRunId/);
+    assert.match(regressionRouteSource, /UUID_REGEX\.test\(baselineRunId\)/);
+    assert.match(regressionRouteSource, /UUID_REGEX\.test\(candidateRunId\)/);
+  });
+
+  it("delegates the tracked comparison to the shared Slice B engine, unchanged", () => {
+    assert.match(regressionTrackingSource, /import \{[^}]*buildRegressionComparison[^}]*\} from "\.\/regression"/);
+    assert.doesNotMatch(regressionTrackingSource, /compareMetrics\(/);
+  });
+
+  it("resolves run tenancy through the API key organization, with standalone runs global", () => {
+    assert.match(regressionTrackingSource, /knowledgeBase: \{ project: \{ organizationId \} \}/);
+    assert.match(regressionTrackingSource, /knowledgeBaseId: null/);
+  });
+
+  it("keeps foreign, forged, and deleted runs indistinguishable as not-found", () => {
+    assert.match(regressionTrackingSource, /throw new Error\("Run not found"\)/);
+    assert.match(regressionRouteSource, /error\.message === "Run not found"/);
+    assert.match(regressionRouteSource, /One or both runs not found/);
+  });
+
+  it("derives the persisted verdict from the comparison without client input", () => {
+    assert.match(regressionTrackingSource, /overallVerdict = result\.ok \? result\.overall\.verdict : "incompatible"/);
+    assert.match(regressionTrackingSource, /baselineRunId_candidateRunId/);
   });
 });
