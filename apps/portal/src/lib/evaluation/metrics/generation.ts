@@ -19,8 +19,10 @@ function calculateFaithfulness(
   answer: string,
   contexts: string[],
 ): number {
+  if (!answer.trim()) return 0;
+
   const answerSentences = extractSentences(answer);
-  if (answerSentences.length === 0) return 1;
+  if (answerSentences.length === 0) return 0;
 
   const contextText = contexts.join(" ").toLowerCase();
 
