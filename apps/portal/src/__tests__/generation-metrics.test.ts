@@ -68,4 +68,64 @@ describe("generation faithfulness contract", () => {
       answerRelevancy: 0.5,
     });
   });
+
+  it("empty context cannot produce a perfect faithfulness score", () => {
+    const metrics = calculateGenerationMetrics({
+      question: "What is the capital of France?",
+      generatedAnswer: "The capital of France is Paris.",
+      retrievedContexts: [],
+    });
+    assert.equal(metrics.faithfulness, 0);
+  });
+
+  it("whitespace-only context cannot produce a perfect faithfulness score", () => {
+    const metrics = calculateGenerationMetrics({
+      question: "What is the capital of France?",
+      generatedAnswer: "The capital of France is Paris.",
+      retrievedContexts: ["   \n\t  ", "  "],
+    });
+    assert.equal(metrics.faithfulness, 0);
+  });
+
+  it("mixed valid and empty contexts score against the valid context only", () => {
+    const metrics = calculateGenerationMetrics({
+      question: "What is the capital of France?",
+      generatedAnswer: "The capital of France is Paris.",
+      retrievedContexts: ["", "The capital of France is Paris.", "   "],
+    });
+    assert.equal(metrics.faithfulness, 1);
+  });
+
+  it("empty context combined with empty generation is still not faithful", () => {
+    const metrics = calculateGenerationMetrics({
+      question: "What is the capital of France?",
+      generatedAnswer: "",
+      retrievedContexts: [],
+    });
+    assert.equal(metrics.faithfulness, 0);
+  });
+
+  it("empty context cannot fabricate context precision", () => {
+    const metrics = calculateGenerationMetrics({
+      question: "What is the capital of France?",
+      generatedAnswer: "The capital of France is Paris.",
+      retrievedContexts: [],
+    });
+    assert.equal(metrics.contextPrecision, 0);
+  });
+
+  it("aggregate does not fabricate a perfect score from missing evidence", () => {
+    const withContext = calculateGenerationMetrics({
+      question: "What is the capital of France?",
+      generatedAnswer: "The capital of France is Paris.",
+      retrievedContexts: CONTEXT,
+    });
+    const noContext = calculateGenerationMetrics({
+      question: "What is the capital of France?",
+      generatedAnswer: "The capital of France is Paris.",
+      retrievedContexts: [],
+    });
+    const avg = calculateAverageGenerationMetrics([withContext, noContext]);
+    assert.equal(avg.faithfulness, 0.5, "(1 + 0) / 2, not the fabricated 1");
+  });
 });

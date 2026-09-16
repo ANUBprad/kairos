@@ -52,6 +52,7 @@ class LLMJudge(BaseJudge):
 
     dimension: str = ""
     _dimension_label: str = ""
+    requires_context: bool = False
 
     def __init__(
         self,
@@ -92,6 +93,16 @@ class LLMJudge(BaseJudge):
                 score=0.0,
                 judgment=Judgment.FAIL,
                 explanation="Empty answer",
+            )
+
+        if self.requires_context and not any(
+            str(c).strip() for c in context
+        ):
+            return JudgeResult(
+                dimension=self.dimension,
+                score=0.0,
+                judgment=Judgment.FAIL,
+                explanation="No context provided — cannot verify faithfulness",
             )
 
         try:
@@ -157,6 +168,7 @@ class LLMJudge(BaseJudge):
 class FaithfulnessLLMJudge(LLMJudge):
     dimension: str = "llm_faithfulness"
     _dimension_label: str = "Faithfulness"
+    requires_context: bool = True
 
     def _make_default_fallback(
         self, threshold_pass: float, threshold_warn: float

@@ -100,6 +100,31 @@ class TestFaithfulnessLLMJudge:
         assert result.judgment == Judgment.FAIL
         assert llm.prompts == []
 
+    def test_empty_context_fails_without_llm_call(self) -> None:
+        llm = _FakeLLM(['{"score": 1.0, "reason": "nothing contradicts"}'])
+        judge = FaithfulnessLLMJudge(llm)
+        result = judge.evaluate(query="q", answer="the sky is blue", context=[])
+        assert result.judgment == Judgment.FAIL
+        assert result.score == 0.0
+        assert llm.prompts == []
+
+    def test_whitespace_only_context_fails_without_llm_call(self) -> None:
+        llm = _FakeLLM(['{"score": 1.0, "reason": "nothing contradicts"}'])
+        judge = FaithfulnessLLMJudge(llm)
+        result = judge.evaluate(query="q", answer="the sky is blue", context=["   ", "\n\t"])
+        assert result.judgment == Judgment.FAIL
+        assert result.score == 0.0
+        assert llm.prompts == []
+
+    def test_empty_context_with_empty_answer_stays_empty_answer(self) -> None:
+        llm = _FakeLLM([])
+        judge = FaithfulnessLLMJudge(llm)
+        result = judge.evaluate(query="q", answer="", context=[])
+        assert result.judgment == Judgment.FAIL
+        assert result.score == 0.0
+        assert "Empty answer" in result.explanation
+        assert llm.prompts == []
+
     def test_judgment_buckets(self) -> None:
         llm = _FakeLLM(['{"score": 0.8}', '{"score": 0.5}', '{"score": 0.1}'])
         judge = FaithfulnessLLMJudge(llm)

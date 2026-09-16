@@ -43,7 +43,7 @@ function calculateFaithfulness(
 
 function calculateContextPrecision(contexts: string[]): number {
   const allSentences = contexts.flatMap(extractSentences);
-  if (allSentences.length === 0) return 1;
+  if (allSentences.length === 0) return 0;
 
   const meaningfulSentences = allSentences.filter((s) => {
     const words = s.split(/\s+/).filter((w) => w.length > 2);

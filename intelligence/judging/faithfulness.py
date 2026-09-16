@@ -28,11 +28,11 @@ class FaithfulnessJudge(BaseJudge):
                 judgment=Judgment.FAIL,
                 explanation="Empty answer",
             )
-        if not context:
+        if not context or not any(str(c).strip() for c in context):
             return JudgeResult(
                 dimension=self.dimension,
-                score=1.0,
-                judgment=Judgment.PASS,
+                score=0.0,
+                judgment=Judgment.FAIL,
                 explanation="No context provided — cannot verify faithfulness",
             )
 

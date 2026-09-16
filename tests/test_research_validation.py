@@ -119,11 +119,37 @@ class TestFaithfulnessJudge:
         assert result.judgment == Judgment.FAIL
         assert result.score == 0.0
 
-    def test_no_context_passes_with_note(self) -> None:
+    def test_no_context_fails(self) -> None:
         judge = FaithfulnessJudge()
-        result = judge.evaluate("q", "answer", [])
+        result = judge.evaluate("q", "the answer is not verifiable", [])
+        assert result.judgment == Judgment.FAIL
+        assert result.score == 0.0
+
+    def test_whitespace_only_context_fails(self) -> None:
+        judge = FaithfulnessJudge()
+        result = judge.evaluate("q", "the answer is not verifiable", ["   ", "\n\t"])
+        assert result.judgment == Judgment.FAIL
+        assert result.score == 0.0
+
+    def test_none_context_fails(self) -> None:
+        judge = FaithfulnessJudge()
+        result = judge.evaluate("q", "the answer is not verifiable", None)
+        assert result.judgment == Judgment.FAIL
+        assert result.score == 0.0
+
+    def test_mixed_contexts_use_valid_evidence(self) -> None:
+        judge = FaithfulnessJudge()
+        answer = "the quick brown fox jumps over the lazy dog"
+        result = judge.evaluate("q", answer, ["", answer, "   "])
         assert result.judgment == Judgment.PASS
         assert result.score == 1.0
+
+    def test_empty_context_with_empty_answer_stays_empty_answer(self) -> None:
+        judge = FaithfulnessJudge()
+        result = judge.evaluate("q", "", [])
+        assert result.judgment == Judgment.FAIL
+        assert result.score == 0.0
+        assert "Empty answer" in result.explanation
 
     def test_perfect_faithfulness(self) -> None:
         judge = FaithfulnessJudge()
