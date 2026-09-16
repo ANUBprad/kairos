@@ -11,6 +11,7 @@ import {
   getBenchmarkDatasets,
   getBenchmarkDataset,
   getBenchmarkRun,
+  getBenchmarkRuns,
   deleteBenchmarkDataset,
   deleteBenchmarkRun,
   runBenchmark,
@@ -18,6 +19,7 @@ import {
   compareBenchmarkRuns,
   runStrategyBenchmark,
 } from "@/lib/evaluation/benchmark";
+import { compareRunsForUser } from "@/lib/evaluation/regression";
 import { runBenchmarkCampaign, type CampaignConfig, type CampaignResult } from "@/lib/evaluation/campaign";
 import { generateLeaderboard, type LeaderboardEntry, generateScientificLeaderboard } from "@/lib/evaluation/leaderboard";
 import { generateRecommendations, type StrategyConfig, type Recommendation } from "@/lib/evaluation/recommendations";
@@ -116,6 +118,21 @@ export async function getRun(runId: string) {
 
   await assertRunAccess(runId, session.user.id);
   return getBenchmarkRun(runId);
+}
+
+export async function listRunsForDataset(datasetId: string) {
+  const session = await getServerSession();
+  if (!session) return [];
+
+  const runs = await getBenchmarkRuns(datasetId, session.user.id);
+  return runs.map((r) => ({
+    id: r.id,
+    name: r.name,
+    status: r.status,
+    createdAt: r.createdAt,
+    resultCount: r._count.results,
+    aggregatedMetrics: r.aggregatedMetrics,
+  }));
 }
 
 export async function deleteDataset(datasetId: string) {
@@ -223,6 +240,13 @@ export async function compareRuns(runAId: string, runBId: string) {
     runA as { name: string | null; aggregatedMetrics: Record<string, number> | null },
     runB as { name: string | null; aggregatedMetrics: Record<string, number> | null },
   );
+}
+
+export async function compareEvaluationRuns(baselineRunId: string, candidateRunId: string) {
+  const session = await getServerSession();
+  if (!session) throw new Error("Not authenticated");
+
+  return compareRunsForUser(baselineRunId, candidateRunId, session.user.id);
 }
 
 export async function getDatasetsForSelector() {
