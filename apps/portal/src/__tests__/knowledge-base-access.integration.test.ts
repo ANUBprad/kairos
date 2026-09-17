@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import { getMembershipForResource, isRoleSufficient } from "@/lib/rbac";
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
@@ -116,6 +117,88 @@ describe("knowledge base member authorization against a real database", () => {
       // denied for an outsider and allowed for a member.
       assert.equal(await canAccessKnowledgeBase(outsiderUserId, kb.id), false);
       assert.equal(await canAccessKnowledgeBase(memberUserId, kb.id), true);
+    } finally {
+      await client.$disconnect();
+    }
+  });
+
+  it("enforces KB mutation permissions per org role on a real database", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres)");
+      return;
+    }
+    const client = makeTestClient(testDbUrl);
+    try {
+      await client.$connect();
+
+      const rbOrgId = randomUUID();
+      const rbOwnerUserId = randomUUID();
+      const rbAdminUserId = randomUUID();
+      const rbMemberUserId = randomUUID();
+      const rbViewerUserId = randomUUID();
+      const rbOutsiderUserId = randomUUID();
+      const rbForeignUserId = randomUUID();
+      const rbForeignOrgId = randomUUID();
+
+      orgIds.push(rbOrgId, rbForeignOrgId);
+      userIds.push(rbOwnerUserId, rbAdminUserId, rbMemberUserId, rbViewerUserId, rbForeignUserId, rbOutsiderUserId);
+      await client.user.createMany({
+        data: [
+          { id: rbOwnerUserId, email: `kb-r-owner-${randomUUID()}@test.local`, name: "Owner" },
+          { id: rbAdminUserId, email: `kb-r-admin-${randomUUID()}@test.local`, name: "Admin" },
+          { id: rbMemberUserId, email: `kb-r-member-${randomUUID()}@test.local`, name: "Member" },
+          { id: rbViewerUserId, email: `kb-r-viewer-${randomUUID()}@test.local`, name: "Viewer" },
+          { id: rbForeignUserId, email: `kb-r-foreign-${randomUUID()}@test.local`, name: "Foreign" },
+          { id: rbOutsiderUserId, email: `kb-r-out-${randomUUID()}@test.local`, name: "Outsider" },
+        ],
+      });
+
+      await client.organization.create({
+        data: {
+          id: rbOrgId,
+          name: "KB Role Org",
+          slug: `kb-role-${randomUUID()}`,
+          ownerId: rbOwnerUserId,
+          members: {
+            create: [
+              { userId: rbOwnerUserId, role: "OWNER" },
+              { userId: rbAdminUserId, role: "ADMIN" },
+              { userId: rbMemberUserId, role: "MEMBER" },
+              { userId: rbViewerUserId, role: "VIEWER" },
+            ],
+          },
+        },
+      });
+      await client.organization.create({
+        data: {
+          id: rbForeignOrgId,
+          name: "Foreign Org",
+          slug: `kb-role-f-${randomUUID()}`,
+          ownerId: rbForeignUserId,
+          members: { create: [{ userId: rbForeignUserId, role: "OWNER" }] },
+        },
+      });
+
+      const project = await client.project.create({
+        data: { name: "KB Role Project", slug: `kb-role-proj-${randomUUID()}`, organizationId: rbOrgId },
+        select: { id: true },
+      });
+      const kb = await client.knowledgeBase.create({
+        data: { name: "KB Role", projectId: project.id, retrievalConfig: {} },
+        select: { id: true },
+      });
+
+      // OWNER/ADMIN may mutate; MEMBER, VIEWER, and outsiders may not.
+      const admin = await getMembershipForResource(rbOwnerUserId, "knowledge_base", kb.id);
+      assert.ok(admin);
+      assert.equal(isRoleSufficient(admin.role, "ADMIN"), true, `${rbOwnerUserId} owner-admin`);
+      const mem = await getMembershipForResource(rbMemberUserId, "knowledge_base", kb.id);
+      assert.ok(mem);
+      for (const userId of [rbAdminUserId, rbMemberUserId, rbViewerUserId, rbOutsiderUserId, rbForeignUserId]) {
+        const membership = await getMembershipForResource(userId, "knowledge_base", kb.id);
+        const allowed = membership ? isRoleSufficient(membership.role, "ADMIN") : false;
+        assert.equal(allowed, userId === rbAdminUserId, `${userId} admin role check`);
+      }
     } finally {
       await client.$disconnect();
     }

@@ -18,8 +18,9 @@ const evaluationSource = readFileSync(
 );
 
 describe("knowledge base member authorization wiring", () => {
-  it("evaluates the supplied user identity through the canonical membership helper", () => {
-    assert.match(actionsSource, /canAccessKnowledgeBase\(userId, kbId\)/);
+  it("routes KB mutations through an admin-level guard keyed on the caller identity", () => {
+    const callCount = actionsSource.match(/assertCanMutateKnowledgeBase\(id, session\.user\.id\)/g)?.length ?? 0;
+    assert.equal(callCount, 2);
     assert.doesNotMatch(actionsSource, /_userId/);
   });
 
@@ -28,9 +29,12 @@ describe("knowledge base member authorization wiring", () => {
     assert.doesNotMatch(actionsSource, /assertMemberAccess[\s\S]{0,80}findUnique/);
   });
 
-  it("authorizes rename and delete with the caller's own session identity", () => {
-    const callCount = actionsSource.match(/assertMemberAccess\(id, session\.user\.id\)/g)?.length ?? 0;
-    assert.equal(callCount, 2);
+  it("requires the caller to be an OWNER or ADMIN of the KB's organization", () => {
+    assert.match(
+      actionsSource,
+      /isRoleSufficient\(membership\.role, "ADMIN"\)/,
+    );
+    assert.match(actionsSource, /getMembershipForResource\(userId, "knowledge_base", kbId\)/);
   });
 
   for (const [name, source] of [

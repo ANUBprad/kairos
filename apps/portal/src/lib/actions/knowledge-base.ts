@@ -3,16 +3,20 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { ensureDefaultOrg } from "@/lib/server/organization";
-import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { revalidatePath } from "next/cache";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
+import { getMembershipForResource, isRoleSufficient } from "@/lib/rbac";
 
 // The caller's identity is the authorization gate, not the KB's existence:
 // a foreign KB resolves to the same "not found" as a missing one, so probing
 // other organizations' knowledge bases cannot succeed or leak existence.
-async function assertMemberAccess(kbId: string, userId: string) {
-  if (!(await canAccessKnowledgeBase(userId, kbId))) {
-    throw new Error("Knowledge base not found");
+// Rename/delete are organization-admin mutations: only OWNER or ADMIN members
+// may perform them.
+async function assertCanMutateKnowledgeBase(kbId: string, userId: string) {
+  const membership = await getMembershipForResource(userId, "knowledge_base", kbId);
+  if (!membership) throw new Error("Knowledge base not found");
+  if (!isRoleSufficient(membership.role, "ADMIN")) {
+    throw new Error("You don't have permission to modify this knowledge base");
   }
 }
 
@@ -84,7 +88,7 @@ export async function renameKnowledgeBase(formData: FormData) {
   if (typeof name !== "string" || !name.trim()) throw new Error("Name is required");
   if (name.length > 255) throw new Error("Name is too long");
 
-  await assertMemberAccess(id, session.user.id);
+  await assertCanMutateKnowledgeBase(id, session.user.id);
 
   const updated = await prisma.knowledgeBase.update({
     where: { id },
@@ -103,7 +107,7 @@ export async function deleteKnowledgeBase(formData: FormData) {
   const id = formData.get("id");
   if (typeof id !== "string" || !id) throw new Error("ID is required");
 
-  await assertMemberAccess(id, session.user.id);
+  await assertCanMutateKnowledgeBase(id, session.user.id);
 
   await prisma.knowledgeBase.delete({ where: { id } });
 
