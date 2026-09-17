@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import * as path from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
+import { SOURCE_STATUS_VALUES } from "../lib/source-contract";
 
 // The complete required hot path: every evaluation, quality, and observability
 // table the application queries at runtime. Previously this list only covered a
@@ -53,6 +54,8 @@ const REQUIRED_TABLES = [
 
 const REQUIRED_INDEXES = [
   "ApiKey_keyPrefix_idx",
+  "Document_knowledgeBaseId_status_idx",
+  "Document_knowledgeBaseId_fileHash_key",
   "ExperimentRun_knowledgeBaseId_createdAt_idx",
   "BenchmarkRun_status_idx",
   "BenchmarkDataset_parentVersionId_version_key",
@@ -284,6 +287,54 @@ describe("prisma migration chain", () => {
         WHERE typname = ANY(${REQUIRED_ENUMS})
           AND typtype = 'e'`;
       assert.equal(Number(enums[0].n), REQUIRED_ENUMS.length);
+
+      // 4b. The DocumentStatus enum carries exactly the application's status
+      // contract after a fresh deploy (a migrate-deploy database must accept any
+      // status the application writes — previously the chain only created a
+      // legacy PROCESSING/READY/ERROR/DELETED subset).
+      const docStatusEnum = await client.$queryRaw<
+        { n: bigint }[]
+      >`SELECT count(*)::bigint AS n FROM pg_type
+        WHERE typname = 'DocumentStatus' AND typtype = 'e'`;
+      assert.equal(Number(docStatusEnum[0].n), 1);
+      const docStatusValues = await client.$queryRaw<
+        { enumlabel: string }[]
+      >`SELECT enumlabel FROM pg_enum e
+        JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = 'DocumentStatus'
+        ORDER BY e.enumsortorder`;
+      const deployed = docStatusValues.map((v) => v.enumlabel);
+      for (const status of SOURCE_STATUS_VALUES) {
+        assert.ok(
+          deployed.includes(status),
+          `fresh deploy must create DocumentStatus value "${status}"`,
+        );
+      }
+
+      const owner = await client.user.create({
+        data: { email: `chain-${randomUUID()}@test.local` },
+      });
+      const org = await client.organization.create({
+        data: {
+          name: `chain-${randomUUID()}`,
+          slug: `chain-${randomUUID().slice(0, 8)}`,
+          ownerId: owner.id,
+        },
+      });
+      const project = await client.project.create({
+        data: {
+          name: `chain-${randomUUID()}`,
+          slug: `chain-${randomUUID().slice(0, 8)}`,
+          organizationId: org.id,
+        },
+      });
+      const kb = await client.knowledgeBase.create({
+        data: { name: "chain-kb", projectId: project.id },
+      });
+      const doc = await client.document.create({
+        data: { name: "a.pdf", fileType: "pdf", knowledgeBaseId: kb.id },
+      });
+      assert.equal(doc.status, "QUEUED", "application default status must be QUEUED");
 
       // 5. The evaluation/observability foreign keys exist after deploy.
       const fks = await client.$queryRaw<
