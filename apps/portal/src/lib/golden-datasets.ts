@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { publishDatasetSnapshot } from "@/lib/evaluation/benchmark";
 import type { Prisma } from "@prisma/client";
 
 export interface GoldenDatasetInfo {
@@ -474,6 +475,77 @@ export async function createVersion(
   });
 
   return toDatasetInfo(newDataset, entryCount);
+}
+
+export interface PublishResult {
+  benchmarkDatasetId: string;
+  name: string;
+  version: number;
+  questionCount: number;
+}
+
+/**
+ * Publishes a golden dataset into the benchmark/regression platform as an
+ * immutable snapshot. The org-scoped golden dataset is the source of truth;
+ * the benchmark side gets a root dataset keyed by `source: "golden:<id>"` and
+ * one immutable version per distinct published content, so regression runs
+ * stay comparable across publishes. Rejecting empty or invalid datasets keeps
+ * broken ground truth out of the evaluation pipeline.
+ */
+export async function publishDataset(
+  datasetId: string,
+  organizationId?: string
+): Promise<PublishResult> {
+  await assertDatasetAccess(datasetId, organizationId);
+  const dataset = await prisma.goldenDataset.findUnique({
+    where: { id: datasetId },
+    include: {
+      entries: { orderBy: { createdAt: "asc" } },
+    },
+  });
+  if (!dataset) throw new Error("Dataset not found");
+  if (dataset.entries.length === 0) throw new Error("Cannot publish an empty dataset");
+
+  const validation = await validateDataset(datasetId, organizationId);
+  if (!validation.valid) {
+    throw new Error(
+      `Cannot publish a dataset with invalid entries (${validation.errors.length} entry check${validation.errors.length === 1 ? "" : "s"} failed)`
+    );
+  }
+
+  const snapshot = await publishDatasetSnapshot({
+    name: dataset.name,
+    description: dataset.description,
+    tags: dataset.tags,
+    source: `golden:${dataset.id}`,
+    questions: dataset.entries.map((e) => ({
+      question: e.question,
+      expectedAnswer: e.expectedAnswer,
+      expectedContext: e.context,
+      metadata: {
+        category: e.category,
+        tags: e.tags,
+        expectedCitations: e.expectedCitations,
+        ...(e.metadata && typeof e.metadata === "object" && !Array.isArray(e.metadata)
+          ? (e.metadata as Record<string, unknown>)
+          : {}),
+      },
+    })),
+  });
+
+  logger.info("Published golden dataset to benchmark platform", {
+    goldenDatasetId: dataset.id,
+    benchmarkDatasetId: snapshot.id,
+    version: snapshot.version,
+    questionCount: snapshot.questions.length,
+  });
+
+  return {
+    benchmarkDatasetId: snapshot.id,
+    name: snapshot.name,
+    version: snapshot.version,
+    questionCount: snapshot.questions.length,
+  };
 }
 
 export async function validateDataset(

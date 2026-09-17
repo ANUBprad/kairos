@@ -23,6 +23,7 @@ import {
   Trash2,
   Search,
   AlertTriangle,
+  Send,
 } from "lucide-react";
 import {
   listGoldenDatasets,
@@ -35,6 +36,7 @@ import {
   bulkAddGoldenDatasetEntries,
   deleteGoldenDatasetEntry,
   validateGoldenDataset,
+  publishGoldenDataset,
 } from "@/lib/actions/golden-datasets";
 import type {
   GoldenDatasetInfo,
@@ -386,6 +388,27 @@ function DatasetDetailView({
   const [showAddEntry, setShowAddEntry] = useState(false);
   const [showBulkAdd, setShowBulkAdd] = useState(false);
   const [deleteEntryId, setDeleteEntryId] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    setPublishError(null);
+    setPublishMessage(null);
+    try {
+      const result = await publishGoldenDataset(dataset.id);
+      if (result.success && result.published) {
+        setPublishMessage(
+          `Published as "${result.published.name}" v${result.published.version} (${result.published.questionCount} questions) — now available in Evaluations and Regression.`
+        );
+      } else {
+        setPublishError(result.error || "Failed to publish dataset");
+      }
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -449,7 +472,29 @@ function DatasetDetailView({
           <CheckCircle2 size={14} />
           Validate
         </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handlePublish}
+          disabled={publishing || actionLoading}
+        >
+          {publishing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+          {publishing ? "Publishing..." : "Publish to Benchmarks"}
+        </Button>
       </div>
+
+      {publishError && (
+        <div className="flex items-start gap-2 rounded-lg border border-error/20 bg-error/5 p-3 text-xs text-error">
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+          {publishError}
+        </div>
+      )}
+      {publishMessage && (
+        <div className="flex items-start gap-2 rounded-lg border border-success/20 bg-success/5 p-3 text-xs text-text-primary">
+          <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-success" />
+          {publishMessage}
+        </div>
+      )}
 
       {showValidation && validation && (
         <PremiumCard variant="elevated">

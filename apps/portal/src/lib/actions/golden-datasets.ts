@@ -15,12 +15,14 @@ import {
   importDataset,
   exportDataset,
   createVersion,
+  publishDataset,
   validateDataset,
   getDatasetStats,
   type CreateDatasetInput,
   type CreateEntryInput,
   type ImportDatasetInput,
   type DatasetStats,
+  type PublishResult,
 } from "@/lib/golden-datasets";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
@@ -224,6 +226,28 @@ export async function createGoldenDatasetVersion(datasetId: string) {
       error: error instanceof Error ? error.message : String(error),
     });
     return { success: false, error: error instanceof Error ? error.message : "Failed to create version" };
+  }
+}
+
+export async function publishGoldenDataset(datasetId: string): Promise<{
+  success: boolean;
+  published?: PublishResult;
+  error?: string;
+}> {
+  const session = await requireSession();
+
+  try {
+    const published = await publishDataset(datasetId, await getSelectedOrgId());
+    revalidatePath("/app/datasets");
+    revalidatePath("/app/evaluation");
+    return { success: true, published };
+  } catch (error) {
+    logger.error("Failed to publish golden dataset", {
+      userId: session.user.id,
+      datasetId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: error instanceof Error ? error.message : "Failed to publish dataset" };
   }
 }
 

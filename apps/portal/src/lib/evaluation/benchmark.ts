@@ -26,7 +26,13 @@ export async function createBenchmarkDataset(data: {
   description?: string;
   source?: string;
   knowledgeBaseId?: string;
-  questions: Array<{ question: string; expectedAnswer?: string; referenceDocId?: string }>;
+  questions: Array<{
+    question: string;
+    expectedAnswer?: string;
+    expectedContext?: string;
+    referenceDocId?: string;
+    metadata?: unknown;
+  }>;
 }) {
   return prisma.benchmarkDataset.create({
     data: {
@@ -38,7 +44,9 @@ export async function createBenchmarkDataset(data: {
         create: data.questions.map((q) => ({
           question: q.question,
           expectedAnswer: q.expectedAnswer,
+          expectedContext: q.expectedContext,
           referenceDocId: q.referenceDocId,
+          metadata: q.metadata as never,
         })),
       },
     },
@@ -177,6 +185,121 @@ export async function createBenchmarkDatasetVersion(
   if (existing) return existing;
 
   return createVersionRow(parent, hash, input);
+}
+
+export interface PublishSnapshotInput {
+  name: string;
+  description?: string | null;
+  tags?: string[];
+  source: string;
+  knowledgeBaseId?: string;
+  questions: Array<{
+    question: string;
+    expectedAnswer?: string | null;
+    expectedContext?: string | null;
+    referenceDocId?: string | null;
+    metadata?: unknown;
+  }>;
+}
+
+// Bridges curated external datasets (e.g. a golden dataset) into the benchmark
+// platform. The first publish creates a root dataset keyed by `source`;
+// re-publishing identical content deduplicates to the same row, and changed
+// content lands in a fresh immutable child version under the same root, so
+// runs from every publish stay comparable (regression tracking fans out to the
+// whole version family).
+export async function publishDatasetSnapshot(
+  input: PublishSnapshotInput,
+): Promise<{ id: string; name: string; version: number; questions: VersionableQuestions }> {
+  const hash = datasetContentHash(input.questions);
+
+  const root = await prisma.benchmarkDataset.findFirst({ where: { source: input.source } });
+  if (!root) {
+    return prisma.benchmarkDataset.create({
+      data: {
+        name: input.name,
+        description: input.description,
+        source: input.source,
+        tags: input.tags ?? [],
+        contentHash: hash,
+        knowledgeBaseId: input.knowledgeBaseId,
+        questions: { create: snapshotQuestions(input.questions) },
+      },
+      include: { questions: true },
+    });
+  }
+
+  const existing = await prisma.benchmarkDataset.findFirst({
+    where: { OR: [{ id: root.id }, { parentVersionId: root.id }], contentHash: hash },
+    include: { questions: true },
+  });
+  if (existing) return existing;
+
+  return createSnapshotVersion(root, hash, input);
+}
+
+function snapshotQuestions(
+  questions: PublishSnapshotInput["questions"],
+): Array<{
+  question: string;
+  expectedAnswer: string | null;
+  expectedContext: string | null;
+  referenceDocId: string | null;
+  metadata: never;
+}> {
+  return questions.map((q) => ({
+    question: q.question,
+    expectedAnswer: q.expectedAnswer ?? null,
+    expectedContext: q.expectedContext ?? null,
+    referenceDocId: q.referenceDocId ?? null,
+    metadata: q.metadata as never,
+  }));
+}
+
+// Immutable child snapshot for changed published content. Mirrors
+// createVersionRow: (parentVersionId, version) is unique, so a P2002
+// collision (concurrent publishes) recomputes the next version and retries.
+async function createSnapshotVersion(
+  root: {
+    id: string;
+    name: string;
+    version: number;
+    description: string | null;
+    source: string | null;
+    tags: string[];
+    knowledgeBaseId: string | null;
+  },
+  hash: string,
+  input: PublishSnapshotInput,
+  attempt = 1,
+) {
+  const { _max } = await prisma.benchmarkDataset.aggregate({
+    where: { OR: [{ id: root.id }, { parentVersionId: root.id }] },
+    _max: { version: true },
+  });
+  const nextVersion = Math.max(root.version, _max?.version ?? 0) + 1;
+
+  try {
+    return await prisma.benchmarkDataset.create({
+      data: {
+        name: `${root.name} v${nextVersion}`,
+        description: input.description ?? root.description,
+        source: root.source,
+        tags: input.tags ?? root.tags,
+        version: nextVersion,
+        contentHash: hash,
+        parentVersionId: root.id,
+        knowledgeBaseId: input.knowledgeBaseId ?? root.knowledgeBaseId,
+        questions: { create: snapshotQuestions(input.questions) },
+      },
+      include: { questions: true },
+    });
+  } catch (err) {
+    if ((err as { code?: string })?.code === "P2002" && attempt < 3) {
+      return createSnapshotVersion(root, hash, input, attempt + 1);
+    }
+    throw err;
+  }
 }
 
 export async function listBenchmarkDatasetVersions(datasetId: string) {
