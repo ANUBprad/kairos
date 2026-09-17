@@ -10,6 +10,12 @@ concurrency:
   group: ci-regression-${{ github.ref }}
   cancel-in-progress: true
 
+# Quality gate policy: optional JSON via repository variable
+# KAIROS_QUALITY_GATE_POLICY (metrics with tolerance/min/max per
+# apps/portal/src/lib/evaluation/quality-gate.ts); an unset variable uses the
+# documented state-only default. This job is a quality check for the evaluation
+# workflow, not a deployment gate.
+
 jobs:
   regression-tracking:
     runs-on: ubuntu-latest
@@ -51,7 +57,9 @@ jobs:
       - name: Apply migrations
         run: npx prisma migrate deploy
 
-      - name: Track a versioned regression comparison headlessly
+      - name: Track a regression comparison and enforce the quality gate headlessly
+        env:
+          KAIROS_QUALITY_GATE_POLICY: ${{ vars.KAIROS_QUALITY_GATE_POLICY }}
         run: node --import tsx scripts/verify-regression-tracking.ts
 
       - name: Upload machine-readable result artifact

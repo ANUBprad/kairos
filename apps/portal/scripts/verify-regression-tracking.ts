@@ -1,18 +1,46 @@
-// Headless proof that the regression tracking command works end to end against
-// a migrated database: seed an org chain with an immutable dataset version,
-// track a comparison, re-track it (idempotency), reject a foreign pair, and
-// emit the machine-readable result as a JSON artifact. Exit code is non-zero
-// on any failure so CI sees tracking break.
+// Headless proof that the regression tracking command and its quality gate work
+// end to end against a migrated database: seed an org chain with an immutable
+// dataset version, track a comparison, re-track it (idempotency), reject a
+// foreign pair, read the persisted comparison back through the org boundary,
+// evaluate the configured quality gate (PASS path), prove a deliberately
+// failing policy is blocked deterministically, and emit both machine-readable
+// results as a JSON artifact. Exit code is non-zero on any failure so CI sees
+// tracking or gating break. The gate runs on the persisted snapshot only, never
+// on a fresh comparison, so the outcome is deterministic.
+//
+// Policy: KAIROS_QUALITY_GATE_POLICY env var (JSON) or the documented default.
 //
 // Usage: KAIROS_TEST_DATABASE_URL=postgresql://... node --import tsx scripts/verify-regression-tracking.ts
 import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { prisma } from "@/lib/prisma";
 import { createBenchmarkDatasetVersion } from "@/lib/evaluation/benchmark";
-import { trackRegressionComparison, type MachineRegressionResult } from "@/lib/evaluation/regression-tracking";
+import {
+  trackRegressionComparison,
+  getBenchmarkRegressionForOrg,
+  type MachineRegressionResult,
+} from "@/lib/evaluation/regression-tracking";
+import {
+  evaluateQualityGate,
+  parseQualityGatePolicyJson,
+  DEFAULT_QUALITY_GATE_POLICY,
+  type QualityGatePolicy,
+} from "@/lib/evaluation/quality-gate";
 
 const BASELINE_RECALL = [0.1, 0.2, 0.25, 0.3, 0.15, 0.35, 0.2, 0.25];
 const CANDIDATE_RECALL = [0.6, 0.5, 0.7, 0.55, 0.8, 0.65, 0.7, 0.6];
+
+function loadPolicy(): QualityGatePolicy {
+  const raw = process.env.KAIROS_QUALITY_GATE_POLICY;
+  if (raw) {
+    const parsed = parseQualityGatePolicyJson(raw);
+    if (!parsed.policy) {
+      throw new Error(`invalid KAIROS_QUALITY_GATE_POLICY: ${parsed.errors.join("; ")}`);
+    }
+    return parsed.policy;
+  }
+  return DEFAULT_QUALITY_GATE_POLICY;
+}
 
 async function main() {
   const memberUserId = randomUUID();
@@ -125,6 +153,37 @@ async function main() {
       trackRegressionComparison({ baselineRunId: baseline.id, candidateRunId: candidate.id }, foreignOrgId),
     );
 
+    // 4. The persisted comparison is readable through the org boundary and the
+    //    quality gate passes under the configured policy.
+    const policy = loadPolicy();
+    const persisted = await getBenchmarkRegressionForOrg(tracked.record.id, orgId);
+    if (!persisted) throw new Error("persisted regression not readable by the owning org");
+    const gate = evaluateQualityGate(persisted.machine, policy);
+    if (gate.outcome !== "PASS") {
+      throw new Error(`expected quality gate PASS under ${policy.name}, got ${gate.outcome}: ${gate.reason ?? JSON.stringify(gate.errors)}`);
+    }
+    if (gate.blocked) throw new Error(`expected gate not blocked under ${policy.name}`);
+
+    // 5. A foreign organization cannot read this org's persisted regression,
+    //    and the gate outcome is deterministic over the same snapshot.
+    const foreignRead = await getBenchmarkRegressionForOrg(tracked.record.id, foreignOrgId);
+    if (foreignRead !== null) throw new Error("foreign org read the owning org's persisted regression");
+    const gateAgain = evaluateQualityGate(persisted.machine, policy);
+    if (JSON.stringify(gateAgain) !== JSON.stringify(gate)) throw new Error("quality gate outcome is not deterministic");
+
+    // 6. A deliberately failing policy is blocked on the same persisted
+    //    snapshot: proves the FAIL -> non-zero exit path headlessly.
+    const failingPolicy: QualityGatePolicy = {
+      version: 1,
+      name: "verify-failing",
+      onInsufficient: "block",
+      onIncompatible: "block",
+      metrics: [{ metric: "recallAtK", min: 0.99 }],
+    };
+    const gateFailing = evaluateQualityGate(persisted.machine, failingPolicy);
+    if (gateFailing.outcome !== "FAIL") throw new Error(`expected FAIL under failing policy, got ${gateFailing.outcome}`);
+    if (!gateFailing.blocked) throw new Error("expected failing gate to be blocked");
+
     const output = {
       ok: true,
       datasetVersionId: version.id,
@@ -132,9 +191,11 @@ async function main() {
       candidateRunId: candidate.id,
       record: tracked.record,
       result: tracked.machine,
+      qualityGate: { policy, gate },
     };
     writeFileSync("regression-tracking-result.json", JSON.stringify(output, null, 2));
     console.log(`REGRESSION-TRACKING-OK record=${tracked.record.id}`);
+    console.log(`QUALITY-GATE-OK policy=${policy.name} outcome=${gate.outcome} blocked=false`);
     console.log(JSON.stringify(tracked.machine, null, 2));
   } catch (error) {
     console.error("REGRESSION-TRACKING-FAILED", error);

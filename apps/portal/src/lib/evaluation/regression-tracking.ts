@@ -146,6 +146,27 @@ export interface TrackedRegression {
   machine: MachineRegressionResult;
 }
 
+function regressionRecord(row: {
+  id: string;
+  baselineRunId: string;
+  candidateRunId: string;
+  datasetId: string;
+  overallVerdict: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): TrackedRegression["record"] {
+  return {
+    id: row.id,
+    baselineRunId: row.baselineRunId,
+    candidateRunId: row.candidateRunId,
+    datasetId: row.datasetId,
+    overallVerdict: row.overallVerdict,
+    comparedAt: row.updatedAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 // Entry point used by automation (API route and CI). The ordered pair is the
 // identity of the tracking record: repeating the same pair recomputes and
 // overwrites the single row, so CI retries never stack duplicates. A reversed
@@ -185,18 +206,29 @@ export async function trackRegressionComparison(
     },
   });
 
-  return {
-    record: {
-      id: row.id,
-      baselineRunId: row.baselineRunId,
-      candidateRunId: row.candidateRunId,
-      datasetId: row.datasetId,
-      overallVerdict: row.overallVerdict,
-      comparedAt: row.updatedAt.toISOString(),
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+  return { record: regressionRecord(row), result, machine };
+}
+
+// Reads a persisted regression comparison through the same shared access
+// boundary as tracking: datasets anchored to a knowledge base resolve only
+// inside the caller's organization, standalone (unanchored) datasets stay
+// global, and a foreign, fabricated, or deleted id resolves identically to
+// null so the caller cannot probe another tenant's record existence.
+export async function getBenchmarkRegressionForOrg(
+  regressionId: string,
+  organizationId: string,
+): Promise<Pick<TrackedRegression, "record" | "machine"> | null> {
+  const row = await prisma.benchmarkRegression.findFirst({
+    where: {
+      id: regressionId,
+      dataset: {
+        OR: [{ knowledgeBaseId: null }, { knowledgeBase: { project: { organizationId } } }],
+      },
     },
-    result,
-    machine,
+  });
+  if (!row) return null;
+  return {
+    record: regressionRecord(row),
+    machine: row.result as unknown as MachineRegressionResult,
   };
 }
