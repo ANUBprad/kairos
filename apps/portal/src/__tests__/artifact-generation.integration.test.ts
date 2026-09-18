@@ -6,13 +6,83 @@ import { PrismaClient } from "@prisma/client";
 import { generateLearningArtifactForUser } from "@/lib/artifacts/engine";
 import { listLearningArtifacts } from "@/lib/artifacts/persistence";
 import { getAIProvider } from "@/lib/ai/providers";
+import { generateEmbeddings } from "@/lib/ai/embeddings";
+
+const DIM = 1536;
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
 }
 
+function unitVector(hotIndex: number): number[] {
+  return Array.from({ length: DIM }, (_, i) => (i === hotIndex ? 1 : 0));
+}
+
+function unitVectorBase64(hotIndex: number): string {
+  const arr = new Float32Array(DIM);
+  arr[hotIndex] = 1;
+  return Buffer.from(arr.buffer).toString("base64");
+}
+
 function metadataOf(artifact: { metadata: unknown }): Record<string, unknown> {
   return (artifact.metadata as Record<string, unknown> | null) ?? {};
+}
+
+function openaiEmbeddingResponse(count: number): Record<string, unknown> {
+  return {
+    object: "list",
+    data: Array.from({ length: count }, (_, i) => ({
+      object: "embedding",
+      index: i,
+      embedding: unitVectorBase64(i),
+    })),
+    model: "text-embedding-3-small",
+    usage: { prompt_tokens: count * 4, total_tokens: count * 4 },
+  };
+}
+
+function openaiChatCompletionResponse(): Record<string, unknown> {
+  return {
+    id: "chatcmpl-test",
+    object: "chat.completion",
+    created: 0,
+    model: "gpt-4o-mini",
+    choices: [
+      {
+        index: 0,
+        message: { role: "assistant", content: JSON.stringify(VALID_SUMMARY_CONTENT) },
+        finish_reason: "stop",
+      },
+    ],
+    usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+  };
+}
+
+// The OpenAI SDK pins globalThis.fetch when its client is constructed, and the
+// provider instance is cached (providerCache). The stub must be installed in
+// before(), before any test constructs the provider, and must route by URL so a
+// single stub serves both embeddings and chat.
+function routedOpenAIStub(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  if (url.includes("/embeddings")) {
+    const body = JSON.parse(String(init?.body ?? "{}"));
+    const count = Array.isArray(body?.input) ? body.input.length : 1;
+    return Promise.resolve(
+      new Response(JSON.stringify(openaiEmbeddingResponse(count)), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  }
+  if (url.includes("/chat/completions")) {
+    return Promise.resolve(
+      new Response(JSON.stringify(openaiChatCompletionResponse()), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  }
+  return Promise.resolve(new Response("unexpected fetch", { status: 500 }));
 }
 
 const VALID_SUMMARY_CONTENT = {
@@ -39,6 +109,9 @@ describe("artifact generation: happy path and crash-window recovery", () => {
 
     process.env.AI_PROVIDER = "openai";
     process.env.OPENAI_API_KEY = "test-dummy-key-do-not-call";
+
+    originalFetch = globalThis.fetch;
+    globalThis.fetch = routedOpenAIStub as typeof globalThis.fetch;
 
     client = makeTestClient(testDbUrl);
     await client.$connect();
@@ -96,29 +169,7 @@ describe("artifact generation: happy path and crash-window recovery", () => {
   it("generates a completed SUMMARY artifact with correct content and metadata", async (t) => {
     if (!testDbUrl) { t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres)"); return; }
 
-    originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () => {
-      return new Response(
-        JSON.stringify({
-          id: "chatcmpl-test",
-          object: "chat.completion",
-          created: 0,
-          model: "gpt-4o-mini",
-          choices: [
-            {
-              index: 0,
-              message: { role: "assistant", content: JSON.stringify(VALID_SUMMARY_CONTENT) },
-              finish_reason: "stop",
-            },
-          ],
-          usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
-        }),
-        { status: 200, headers: { "content-type": "application/json" } },
-      );
-    }) as typeof globalThis.fetch;
-
-    try {
-      const artifact = await generateLearningArtifactForUser({
+    const artifact = await generateLearningArtifactForUser({
         userId: aliceId,
         knowledgeBaseId: kbAId,
         artifactType: "SUMMARY",
@@ -149,9 +200,6 @@ describe("artifact generation: happy path and crash-window recovery", () => {
       });
       assert.ok(trace, "a Trace row must be recorded for the successful generation");
       assert.equal(trace.status, "OK");
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
   });
 
   // ---- Crash-window regression ----
@@ -244,6 +292,159 @@ describe("artifact generation: happy path and crash-window recovery", () => {
       assert.ok(failed, "the artifact must have been marked FAILED after schema error");
     } finally {
       mock.restoreAll();
+    }
+  });
+
+  // ---- Real-provider E2E: embed an INDEXED source, generate it, persist, retrieve ----
+
+  it("embeds a new source through the real embedding service, then generates, persists and retrieves the artifact", async (t) => {
+    if (!testDbUrl) { t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)"); return; }
+
+    const hasVector = await client.$queryRaw<{ extname: string }[]>`SELECT extname FROM pg_extension WHERE extname = 'vector'`;
+    if (hasVector.length === 0) {
+      t.skip("pgvector extension is not installed in the test database");
+      return;
+    }
+
+    const docEmbedId = randomUUID();
+    const chunkEmbedId = randomUUID();
+    await client.document.create({
+      data: {
+        id: docEmbedId,
+        name: "e2e-source.txt",
+        fileType: "txt",
+        knowledgeBaseId: kbAId,
+        status: "EMBEDDING_PENDING",
+      },
+    });
+    await client.documentChunk.create({
+      data: {
+        id: chunkEmbedId,
+        documentId: docEmbedId,
+        index: 0,
+        content: "End-to-end source that must reach INDEXED through the embedding provider.",
+        tokenCount: 200,
+      },
+    });
+
+    const embed = await generateEmbeddings(docEmbedId);
+
+      assert.equal(embed.model, "text-embedding-3-small");
+      assert.equal(embed.chunkCount, 1);
+
+      const indexed = await client.document.findUniqueOrThrow({
+        where: { id: docEmbedId },
+        select: { status: true },
+      });
+      assert.equal(indexed.status, "INDEXED");
+
+      const stored = await client.documentEmbedding.findUniqueOrThrow({
+        where: { chunkId: chunkEmbedId },
+        select: { model: true, dimensions: true, status: true },
+      });
+      assert.equal(stored.status, "completed");
+      assert.equal(stored.model, "text-embedding-3-small");
+      assert.equal(stored.dimensions, DIM);
+
+      const dims = await client.$queryRaw<{ dims: number }[]>`
+        SELECT vector_dims("embedding")::int AS dims FROM "DocumentEmbedding" WHERE "chunkId" = ${chunkEmbedId}
+      `;
+      assert.equal(dims[0].dims, DIM);
+
+      const artifact = await generateLearningArtifactForUser({
+        userId: aliceId,
+        knowledgeBaseId: kbAId,
+        artifactType: "SUMMARY",
+        sourceIds: [docEmbedId],
+      });
+
+      assert.equal(artifact.status, "COMPLETED");
+      assert.deepEqual(artifact.content, VALID_SUMMARY_CONTENT);
+      assert.deepEqual(artifact.sourceIds, [docEmbedId]);
+
+      const rows = (await listLearningArtifacts(kbAId)).filter(
+        (a) => a.type === "SUMMARY" && a.sourceIds.includes(docEmbedId),
+      );
+      assert.equal(rows.length, 1, "the freshly-embedded source must be retrievable after generation");
+
+      const trace = await client.trace.findFirst({
+        where: {
+          name: "artifact.generate.summary",
+          metadata: { path: ["artifactId"], equals: artifact.id },
+        },
+      });
+      assert.ok(trace, "a Trace row must be recorded for the E2E generation");
+      assert.equal(trace.status, "OK");
+  });
+
+  it("uses the resolved embedding provider's model when providerType is omitted", async (t) => {
+    if (!testDbUrl) { t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)"); return; }
+
+    const hasVector = await client.$queryRaw<{ extname: string }[]>`SELECT extname FROM pg_extension WHERE extname = 'vector'`;
+    if (hasVector.length === 0) {
+      t.skip("pgvector extension is not installed in the test database");
+      return;
+    }
+
+    const docGemId = randomUUID();
+    const chunkGemId = randomUUID();
+    await client.document.create({
+      data: {
+        id: docGemId,
+        name: "gem-model-source.txt",
+        fileType: "txt",
+        knowledgeBaseId: kbAId,
+        status: "EMBEDDING_PENDING",
+      },
+    });
+    await client.documentChunk.create({
+      data: {
+        id: chunkGemId,
+        documentId: docGemId,
+        index: 0,
+        content: "Gemini-model source for the provider/model join.",
+        tokenCount: 100,
+      },
+    });
+
+    process.env.AI_PROVIDER = "gemini";
+    process.env.GEMINI_API_KEY = "test-dummy-key-do-not-call";
+    process.env.GEMINI_EMBEDDING_MODEL = "text-embedding-004";
+
+    originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes(":embedContent")) {
+        return new Response(
+          JSON.stringify({ embedding: { values: unitVector(0) } }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("unexpected fetch", { status: 500 });
+    }) as typeof globalThis.fetch;
+
+    try {
+      const embed = await generateEmbeddings(docGemId);
+
+      assert.equal(embed.model, "text-embedding-004", "model must come from the resolved gemini provider");
+
+      const indexed = await client.document.findUniqueOrThrow({
+        where: { id: docGemId },
+        select: { status: true },
+      });
+      assert.equal(indexed.status, "INDEXED");
+
+      const stored = await client.documentEmbedding.findUniqueOrThrow({
+        where: { chunkId: chunkGemId },
+        select: { model: true, status: true },
+      });
+      assert.equal(stored.status, "completed");
+      assert.equal(stored.model, "text-embedding-004");
+    } finally {
+      globalThis.fetch = originalFetch;
+      process.env.GEMINI_EMBEDDING_MODEL = "";
+      process.env.GEMINI_API_KEY = "";
+      process.env.AI_PROVIDER = "openai";
     }
   });
 });

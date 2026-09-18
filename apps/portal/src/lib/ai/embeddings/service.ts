@@ -79,7 +79,7 @@ export async function generateEmbeddings(
 
   const provider = getEmbeddingProvider(providerType);
   const model =
-    providerType === "gemini"
+    provider.type === "gemini"
       ? process.env.GEMINI_EMBEDDING_MODEL || "text-embedding-004"
       : process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
 
