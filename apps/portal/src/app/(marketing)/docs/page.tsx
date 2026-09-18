@@ -40,7 +40,7 @@ const sections = [
     icon: Eye,
     title: "Explainable AI",
     description: "View which chunks were retrieved, why they matched, and how they influenced the answer.",
-    href: "/app/rag-chat",
+    href: "/app/knowledge-bases",
   },
   {
     icon: BarChart3,
@@ -77,7 +77,7 @@ const researchConcepts = [
   { title: "Embeddings", description: "Dense vector representations that capture semantic meaning.", href: "/app/retrieval-lab" },
   { title: "Hybrid Retrieval", description: "Combining vector search with BM25 using Reciprocal Rank Fusion.", href: "/app/retrieval-lab" },
   { title: "Reranking", description: "Second-pass scoring that improves Precision@K by 10-15%.", href: "/app/retrieval-lab" },
-  { title: "Explainability", description: "Full visibility into which chunks were retrieved and why.", href: "/app/rag-chat" },
+  { title: "Explainability", description: "Full visibility into which chunks were retrieved and why.", href: "/app/knowledge-bases" },
   { title: "Benchmarking", description: "Systematic comparison of configurations with statistical rigor.", href: "/app/evaluation" },
 ];
 

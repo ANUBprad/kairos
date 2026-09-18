@@ -52,7 +52,7 @@ const modules = [
     what: "View which chunks were retrieved, why they matched (similarity scores), and how they influenced the generated answer. Full prompt visibility with citations.",
     why: "A RAG system that cannot explain its answers is a black box. Explainability is required for debugging, validation, and trust.",
     learn: "How to identify retrieval failures. Why some chunks are retrieved but not used. How prompt construction affects answer quality.",
-    href: "/app/rag-chat",
+    href: "/app/knowledge-bases",
   },
   {
     icon: BarChart3,

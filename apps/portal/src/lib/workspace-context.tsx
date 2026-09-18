@@ -122,7 +122,6 @@ const PAGE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
     { label: "Advanced Retrieval" },
   ],
   "/app/evaluation": [{ label: "Evaluate" }, { label: "Evaluation" }],
-  "/app/rag-chat": [{ label: "Explain" }, { label: "RAG Chat" }],
   "/app/architecture": [{ label: "Learn" }, { label: "Architecture" }],
   "/app/project-guide": [{ label: "Learn" }, { label: "Project Guide" }],
   "/app/settings": [{ label: "System" }, { label: "Configuration" }],

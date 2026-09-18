@@ -159,7 +159,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mt-4">
             <QuickActionCard href="/app/knowledge-bases" icon={Upload} title="Upload Document" description="Add files to a knowledge base" shortcut="U" />
             <QuickActionCard href="/app/knowledge-bases" icon={FolderOpen} title="Create Knowledge Base" description="Start a new knowledge base" color="text-blue-500" shortcut="N" />
-            <QuickActionCard href="/app/rag-chat" icon={MessageSquare} title="Open RAG Chat" description="Ask questions about your docs" color="text-emerald-500" shortcut="R" />
+<QuickActionCard href="/app/knowledge-bases" icon={MessageSquare} title="Open Chat" description="Ask questions about your docs" color="text-emerald-500" shortcut="R" />
             <QuickActionCard href="/app/evaluation" icon={BarChart3} title="Run Evaluation" description="Benchmark retrieval performance" color="text-violet-500" shortcut="E" />
           </div>
         </DashboardCard>
@@ -267,7 +267,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
       {/* Quick Actions */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <QuickActionCard href="/app/knowledge-bases" icon={Upload} title="Upload Document" description="Add files to a knowledge base" shortcut="U" />
-        <QuickActionCard href="/app/rag-chat" icon={MessageSquare} title="Open RAG Chat" description="Ask questions about your docs" color="text-emerald-500" shortcut="R" />
+        <QuickActionCard href="/app/knowledge-bases" icon={MessageSquare} title="Open Chat" description="Ask questions about your docs" color="text-emerald-500" shortcut="R" />
         <QuickActionCard href="/app/evaluation" icon={BarChart3} title="Run Evaluation" description="Benchmark retrieval performance" color="text-violet-500" shortcut="E" />
         <QuickActionCard href="/app/knowledge-bases" icon={BookOpen} title="Manage Documents" description="Organize knowledge base sources" color="text-blue-500" shortcut="M" />
       </div>

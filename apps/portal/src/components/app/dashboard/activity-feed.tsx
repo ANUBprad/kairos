@@ -107,7 +107,7 @@ const DEMO_ACTIVITIES: ActivityItem[] = [
     description: "5 questions answered",
     timestamp: new Date(Date.now() - 3600000).toISOString(),
     status: "completed",
-    href: "/app/rag-chat",
+    href: "/app/knowledge-bases",
   },
 ];
 

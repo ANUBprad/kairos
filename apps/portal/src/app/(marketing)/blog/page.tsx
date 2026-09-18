@@ -63,7 +63,7 @@ const articles = [
     title: "Building Explainable AI Systems",
     description: "Why black-box AI is insufficient for serious applications. How retrieval traces, similarity scores, and citation tracking create transparency.",
     readTime: "7 min",
-    href: "/app/rag-chat",
+    href: "/app/knowledge-bases",
   },
 ];
 

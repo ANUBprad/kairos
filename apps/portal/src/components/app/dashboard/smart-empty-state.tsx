@@ -46,7 +46,7 @@ const DEFAULT_STEPS: OnboardingStep[] = [
     id: 3,
     label: "Ask your first question",
     description: "Chat with your knowledge base using RAG",
-    href: "/app/rag-chat",
+    href: "/app/knowledge-bases",
     icon: MessageSquare,
   },
   {

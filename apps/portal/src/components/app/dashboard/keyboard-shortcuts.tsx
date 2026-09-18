@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 const SHORTCUTS: Record<string, string> = {
   u: "/app/knowledge-bases",
   n: "/app/knowledge-bases",
-  r: "/app/rag-chat",
+  r: "/app/knowledge-bases",
   e: "/app/evaluation",
 };
 
