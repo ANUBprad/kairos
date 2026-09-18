@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getEmbeddingProvider } from "@/lib/ai/providers";
 import { vectorStore } from "@/lib/vector";
+import { revalidateSourcePage } from "@/lib/revalidation";
 import type { ProviderType } from "@/lib/ai/types";
 
 const BATCH_SIZE = 20;
@@ -41,7 +42,7 @@ export async function generateEmbeddings(
 ): Promise<EmbeddingResult> {
   const doc = await prisma.document.findUnique({
     where: { id: documentId },
-    select: { id: true, fileType: true, status: true, uploadedById: true },
+    select: { id: true, fileType: true, status: true, uploadedById: true, knowledgeBaseId: true },
   });
 
   if (!doc) throw new Error("Document not found");
@@ -67,6 +68,7 @@ export async function generateEmbeddings(
       where: { id: documentId },
       data: { status: "INDEXED" },
     });
+    revalidateSourcePage(doc.knowledgeBaseId);
     return {
       documentId,
       chunkCount: 0,
@@ -172,6 +174,8 @@ export async function generateEmbeddings(
       });
     }
   });
+
+  revalidateSourcePage(doc.knowledgeBaseId);
 
   return {
     documentId,

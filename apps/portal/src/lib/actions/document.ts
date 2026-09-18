@@ -10,6 +10,7 @@ import { chunkText } from "@/lib/chunking";
 import { generateEmbeddings } from "@/lib/ai/embeddings";
 import { logger } from "@/lib/logger";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
+import { revalidateSourcePage } from "@/lib/revalidation";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeFilename } from "@/lib/validation";
 import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError, type FetchUrlOptions } from "@/lib/ingestion/url";
@@ -1002,20 +1003,22 @@ async function rollbackOrError(
   stage: string,
 ) {
   const evictChunkIds = staged?.evictChunkIds;
+
+  const docRow = await prisma.document
+    .findUnique({
+      where: { id: docId },
+      select: { metadata: true, uploadedById: true, knowledgeBaseId: true },
+    })
+    .catch(() => null);
+
   if (evictChunkIds && evictChunkIds.length > 0) {
     const remaining = await prisma.documentChunk
       .count({ where: { id: { in: evictChunkIds } } })
       .catch(() => -1);
 
     if (remaining === evictChunkIds.length) {
-      const row = await prisma.document
-        .findUnique({
-          where: { id: docId },
-          select: { metadata: true, uploadedById: true },
-        })
-        .catch(() => null);
       const revertIdentity = staged?.revertIdentity;
-      const baseMeta = revertIdentity?.metadata ?? (row?.metadata ?? {});
+      const baseMeta = revertIdentity?.metadata ?? (docRow?.metadata ?? {});
       try {
         await prisma.$transaction(async (tx) => {
           await tx.documentChunk.deleteMany({
@@ -1036,17 +1039,18 @@ async function rollbackOrError(
           if (revertIdentity?.fileHash !== undefined) data.fileHash = revertIdentity.fileHash;
           if (revertIdentity?.size !== undefined) data.size = revertIdentity.size;
           await tx.document.update({ where: { id: docId }, data });
-          if (row?.uploadedById) {
+          if (docRow?.uploadedById) {
             await tx.documentActivity.create({
               data: {
                 documentId: docId,
-                userId: row.uploadedById,
+                userId: docRow.uploadedById,
                 action: "PROCESS_FAILED",
                 details: { error: errMsg, stage, retainedPreviousContent: true } as never,
               },
             });
           }
         });
+        revalidateSourcePage(docRow?.knowledgeBaseId);
         logger.warn("[Pipeline] Failed update — restored previous known-good content", {
           docId,
           stage,
@@ -1068,6 +1072,7 @@ async function rollbackOrError(
       data: { status: "ERROR", metadata: meta as never },
     })
     .catch(() => {});
+  revalidateSourcePage(docRow?.knowledgeBaseId);
 }
 
 async function processDocument(docId: string, fileType: string, existingBuffer?: Buffer, staged?: StagedSwap) {
