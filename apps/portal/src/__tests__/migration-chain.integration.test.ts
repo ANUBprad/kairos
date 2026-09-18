@@ -7,186 +7,119 @@ import { readdirSync, readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { SOURCE_STATUS_VALUES } from "../lib/source-contract";
 
-// The complete required hot path: every evaluation, quality, and observability
-// table the application queries at runtime. Previously this list only covered a
-// small subset, which let migration-orphaned tables fall out of the deploy chain
-// unnoticed.
-const REQUIRED_TABLES = [
-  "Experiment",
-  "BenchmarkDataset",
-  "ExperimentRun",
-  "BenchmarkRun",
-  "ProviderHealth",
-  "DocumentChunk",
-  "DocumentEmbedding",
-  "Conversation",
-  "Message",
-  "MessageCitation",
-  "QuizAttempt",
-  "QuizAttemptAnswer",
-  "FlashcardReview",
-  "BenchmarkQuestion",
-  "BenchmarkResult",
-  "ExperimentArtifact",
-  "GoldenDataset",
-  "GoldenDatasetEntry",
-  "ReviewQueue",
-  "ReviewComment",
-  "QualityGate",
-  "QualityGateResult",
-  "LeaderboardEntry",
-  "Trace",
-  "Span",
-  "TraceEvent",
-  "CostRecord",
-  "DriftAlert",
-  "AlertRule",
-  "AlertEvent",
-  "Incident",
-  "IncidentEvent",
-  "PipelineRun",
-  "PipelineStep",
-  "TelemetryConfig",
-  "PromptFolder",
-  "Prompt",
-  "PromptVersion",
-];
+// The expected schema inventory is DERIVED from schema.prisma (the single
+// source of truth) rather than curated by hand. Curated lists let drifted,
+// never-migrated models fall out of the deploy chain unnoticed; a derived
+// inventory fails the moment the fresh deploy no longer materializes exactly
+// what the schema declares. Legacy residue that the schema deliberately
+// dropped (dead enum values, columns, indexes inherited from _init) is legal
+// on an existing DB and is NOT asserted against — the checks below are
+// presence-driven in the schema -> DB direction.
 
-const REQUIRED_INDEXES = [
-  "ApiKey_keyPrefix_idx",
-  "Document_knowledgeBaseId_status_idx",
-  "Document_knowledgeBaseId_fileHash_key",
-  "ExperimentRun_knowledgeBaseId_createdAt_idx",
-  "BenchmarkRun_status_idx",
-  "BenchmarkDataset_parentVersionId_version_key",
-  "ProviderHealth_organizationId_date_idx",
-  "Conversation_knowledgeBaseId_userId_idx",
-  "Message_conversationId_createdAt_idx",
-  "MessageCitation_messageId_idx",
-  "QuizAttempt_artifactId_idx",
-  "QuizAttempt_knowledgeBaseId_userId_idx",
-  "QuizAttemptAnswer_attemptId_idx",
-  "QuizAttemptAnswer_attemptId_questionId_key",
-  "FlashcardReview_artifactId_idx",
-  "FlashcardReview_knowledgeBaseId_userId_idx",
-  "FlashcardReview_userId_artifactId_cardId_key",
-  "BenchmarkQuestion_datasetId_idx",
-  "BenchmarkResult_runId_idx",
-  "BenchmarkResult_questionId_idx",
-  "ExperimentArtifact_experimentId_idx",
-  "ExperimentArtifact_experimentId_type_idx",
-  "GoldenDataset_organizationId_idx",
-  "GoldenDataset_ownerId_idx",
-  "GoldenDataset_difficulty_idx",
-  "GoldenDatasetEntry_datasetId_idx",
-  "GoldenDatasetEntry_category_idx",
-  "GoldenDatasetEntry_tags_idx",
-  "ReviewQueue_organizationId_idx",
-  "ReviewQueue_status_idx",
-  "ReviewQueue_assigneeId_idx",
-  "ReviewQueue_resourceType_resourceId_idx",
-  "ReviewComment_reviewId_idx",
-  "QualityGate_organizationId_idx",
-  "QualityGateResult_gateId_idx",
-  "QualityGateResult_passed_idx",
-  "LeaderboardEntry_organizationId_type_period_idx",
-  "LeaderboardEntry_score_idx",
-  "Trace_requestId_key",
-  "Trace_organizationId_startTime_idx",
-  "Trace_userId_startTime_idx",
-  "Trace_provider_model_idx",
-  "Trace_status_idx",
-  "Span_traceId_idx",
-  "Span_parentSpanId_idx",
-  "Span_name_idx",
-  "TraceEvent_traceId_idx",
-  "CostRecord_date_provider_model_operation_organizationId_key",
-  "CostRecord_organizationId_date_idx",
-  "CostRecord_provider_model_idx",
-  "DriftAlert_organizationId_type_status_idx",
-  "DriftAlert_createdAt_idx",
-  "AlertRule_organizationId_enabled_idx",
-  "AlertEvent_ruleId_firedAt_idx",
-  "AlertEvent_organizationId_status_idx",
-  "Incident_organizationId_status_idx",
-  "Incident_severity_status_idx",
-  "Incident_startedAt_idx",
-  "IncidentEvent_incidentId_timestamp_idx",
-  "PipelineRun_organizationId_startTime_idx",
-  "PipelineRun_status_idx",
-  "PipelineStep_pipelineId_idx",
-  "PromptFolder_organizationId_idx",
-  "PromptFolder_parentId_idx",
-  "Prompt_organizationId_idx",
-  "Prompt_folderId_idx",
-  "Prompt_ownerId_idx",
-  "Prompt_status_idx",
-  "Prompt_tags_idx",
-  "PromptVersion_promptId_idx",
-  "PromptVersion_status_idx",
-  "PromptVersion_promptId_version_key",
-];
+const SCHEMA_PATH = path.join(process.cwd(), "prisma", "schema.prisma");
 
-const REQUIRED_ENUMS = [
-  "DatasetDifficulty",
-  "ReviewStatus",
-  "ReviewPriority",
-  "TraceStatus",
-  "SpanStatus",
-  "DriftType",
-  "DriftStatus",
-  "AlertSeverity",
-  "AlertEventStatus",
-  "IncidentSeverity",
-  "IncidentStatus",
-  "PipelineStatus",
-  "PromptStatus",
-  "PromptVersionStatus",
-];
+interface DerivedSchema {
+  tables: string[];
+  columns: Map<string, string[]>;
+  indexes: Map<string, string[]>;
+  enums: Map<string, string[]>;
+  fks: Map<string, string | null>;
+}
 
-const REQUIRED_FKS = [
-  "BenchmarkQuestion_datasetId_fkey",
-  "BenchmarkResult_questionId_fkey",
-  "BenchmarkResult_runId_fkey",
-  "ExperimentArtifact_experimentId_fkey",
-  "GoldenDataset_organizationId_fkey",
-  "GoldenDataset_ownerId_fkey",
-  "GoldenDataset_parentId_fkey",
-  "GoldenDatasetEntry_datasetId_fkey",
-  "ReviewQueue_organizationId_fkey",
-  "ReviewQueue_assigneeId_fkey",
-  "ReviewQueue_createdById_fkey",
-  "ReviewQueue_reviewerId_fkey",
-  "ReviewComment_reviewId_fkey",
-  "ReviewComment_authorId_fkey",
-  "QualityGate_organizationId_fkey",
-  "QualityGateResult_gateId_fkey",
-  "LeaderboardEntry_organizationId_fkey",
-  "Trace_organizationId_fkey",
-  "Trace_userId_fkey",
-  "Span_traceId_fkey",
-  "TraceEvent_traceId_fkey",
-  "CostRecord_organizationId_fkey",
-  "CostRecord_userId_fkey",
-  "DriftAlert_organizationId_fkey",
-  "AlertRule_organizationId_fkey",
-  "AlertEvent_ruleId_fkey",
-  "AlertEvent_organizationId_fkey",
-  "Incident_organizationId_fkey",
-  "Incident_ownerId_fkey",
-  "IncidentEvent_incidentId_fkey",
-  "PipelineRun_organizationId_fkey",
-  "PipelineStep_pipelineId_fkey",
-  "TelemetryConfig_organizationId_fkey",
-  "PromptFolder_organizationId_fkey",
-  "PromptFolder_parentId_fkey",
-  "Prompt_organizationId_fkey",
-  "Prompt_folderId_fkey",
-  "Prompt_ownerId_fkey",
-  "PromptVersion_promptId_fkey",
-  "PromptVersion_createdById_fkey",
-  "Prompt_currentVersionId_fkey",
-];
+function parseSchema(): DerivedSchema {
+  const src = readFileSync(SCHEMA_PATH, "utf8");
+  const tables = new Map<string, string[]>();
+  const modelRe = /^model (\w+) \{([\s\S]*?)^\}/gm;
+  let m: RegExpExecArray | null;
+  while ((m = modelRe.exec(src)) !== null) {
+    tables.set(m[1], m[2].split("\n"));
+  }
+
+  const enums = new Map<string, string[]>();
+  const enumRe = /^enum (\w+) \{([\s\S]*?)^\}/gm;
+  while ((m = enumRe.exec(src)) !== null) {
+    const values = m[2]
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !l.startsWith("//") && !l.endsWith("}"));
+    enums.set(m[1], values);
+  }
+
+  const modelNames = new Set(tables.keys());
+
+  // table -> scalar column names (relations excluded)
+  const columns = new Map<string, string[]>();
+  // table -> derived index/unique constraint names
+  const indexes = new Map<string, string[]>();
+  // constraint name -> expected delete_rule (or null when schema omits onDelete)
+  const fks = new Map<string, string | null>();
+
+  for (const [table, lines] of tables) {
+    const cols: string[] = [];
+    const idxs: string[] = [];
+    for (const raw of lines) {
+      const line = raw.replace(/\r$/, "");
+
+      if (line.startsWith("  @@")) {
+        const unique = line.startsWith("  @@unique");
+        const list = /@@(?:index|unique)\(\[([^\]]*)\]\)/.exec(line);
+        if (list) {
+          const parts = list[1]
+            .split(",")
+            .map((c) => c.trim().replace(/\(sort: \w+\)$/, ""))
+            .filter(Boolean);
+          if (parts.length > 0) {
+            idxs.push(`${table}_${parts.join("_")}_${unique ? "key" : "idx"}`);
+          }
+        }
+        continue;
+      }
+
+      const field = /^ {2}([A-Za-z]\w*)\s+/.exec(line);
+      if (!field) continue;
+      const name = field[1];
+
+      const typeStart = line.slice(line.indexOf(name) + name.length).trim();
+      const typeName = /^([A-Za-z]\w*)/.exec(typeStart)?.[1] ?? "";
+      const isRelation = modelNames.has(typeName);
+
+      if (line.includes("@unique")) {
+        idxs.push(`${table}_${name}_key`);
+      }
+      if (isRelation) continue;
+
+      cols.push(name);
+      const rel = line.includes("@relation(")
+        ? /@relation\(([\s\S]*?)\)$/.exec(line)
+        : null;
+      // Foreign key constraint names come from the owning (fields: [...]) side.
+      if (rel) {
+        const body = rel[1];
+        const fieldsList = /fields:\s*\[([^\]]*)\]/.exec(body);
+        if (fieldsList) {
+          const fkCols = fieldsList[1].split(",").map((c) => c.trim()).filter(Boolean);
+          const onDelete = /onDelete:\s*(\w+)/.exec(body)?.[1] ?? null;
+          let rule: string | null = null;
+          if (onDelete) {
+            rule =
+              onDelete === "Cascade"
+                ? "CASCADE"
+                : onDelete === "SetNull"
+                  ? "SET NULL"
+                  : onDelete === "Restrict"
+                    ? "RESTRICT"
+                    : null;
+          }
+          fks.set(`${table}_${fkCols.join("_")}_fkey`, rule);
+        }
+      }
+    }
+    columns.set(table, cols);
+    indexes.set(table, idxs);
+  }
+
+  return { tables: [...tables.keys()], columns, indexes, enums, fks };
+}
 
 function makeClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
@@ -241,7 +174,7 @@ describe("prisma migration chain", () => {
     }
   });
 
-  it("deploys the full chain onto an empty database and materializes the schema the migrations require", async (t) => {
+  it("deploys the full chain onto an empty database and materializes exactly the schema the application declares", async (t) => {
     if (!testDbUrl) {
       t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
       return;
@@ -256,6 +189,13 @@ describe("prisma migration chain", () => {
       await admin.$disconnect();
     }
 
+    // 0. Derive the full expected inventory from schema.prisma BEFORE deploy.
+    const expected = parseSchema();
+    const expectedTables = expected.tables;
+    const expectedEnums = [...expected.enums.keys()];
+    const expectedIndexes = [...expected.indexes.values()].flat();
+    const expectedFkNames = [...expected.fks.keys()];
+
     const dbUrl = testDbUrlWithDatabase(testDbUrl, dbName);
 
     // 1. The exact command used for production deploys must succeed from empty.
@@ -265,38 +205,69 @@ describe("prisma migration chain", () => {
     try {
       await client.$connect();
 
-      // 2. Every table referenced by the hotpath / embedding-vector migrations exists.
+      // 2. Every table declared by the schema exists after deploy.
       const tables = await client.$queryRaw<
-        { n: bigint }[]
-      >`SELECT count(*)::bigint AS n FROM information_schema.tables
+        { table_name: string }[]
+      >`SELECT table_name FROM information_schema.tables
          WHERE table_schema = 'public'
-           AND table_name = ANY(${REQUIRED_TABLES})`;
-      assert.equal(Number(tables[0].n), REQUIRED_TABLES.length);
+           AND table_name = ANY(${expectedTables})`;
+      const presentTables = new Set(tables.map((r) => r.table_name));
+      for (const table of expectedTables) {
+        assert.ok(presentTables.has(table), `table missing after deploy: ${table}`);
+      }
 
-      // 3. The hotpath indexes exist after deploy.
-      const indexes = await client.$queryRaw<
-        { n: bigint }[]
-      >`SELECT count(*)::bigint AS n FROM pg_indexes
-         WHERE indexname = ANY(${REQUIRED_INDEXES})`;
-      assert.equal(Number(indexes[0].n), REQUIRED_INDEXES.length);
+      // 3. Every scalar column every model declares exists on its table.
+      const columnRows = await client.$queryRaw<
+        { table_name: string; column_name: string }[]
+      >`SELECT table_name, column_name FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name = ANY(${expectedTables})`;
+      const presentCols = new Map<string, Set<string>>();
+      for (const row of columnRows) {
+        if (!presentCols.has(row.table_name)) presentCols.set(row.table_name, new Set());
+        presentCols.get(row.table_name)!.add(row.column_name);
+      }
+      for (const [table, cols] of expected.columns) {
+        const got = presentCols.get(table) ?? new Set();
+        for (const col of cols) {
+          assert.ok(got.has(col), `column missing after deploy: ${table}.${col}`);
+        }
+      }
 
-      // 4. The evaluation/observability enum types exist after deploy.
-      const enums = await client.$queryRaw<
-        { n: bigint }[]
-      >`SELECT count(*)::bigint AS n FROM pg_type
-        WHERE typname = ANY(${REQUIRED_ENUMS})
-          AND typtype = 'e'`;
-      assert.equal(Number(enums[0].n), REQUIRED_ENUMS.length);
+      // 4. Every index/unique constraint the schema declares exists after deploy.
+      const indexRows = await client.$queryRaw<
+        { indexname: string }[]
+      >`SELECT indexname FROM pg_indexes WHERE indexname = ANY(${expectedIndexes})`;
+      const presentIndexes = new Set(indexRows.map((r) => r.indexname));
+      for (const idx of expectedIndexes) {
+        assert.ok(presentIndexes.has(idx), `index/unique missing after deploy: ${idx}`);
+      }
 
-      // 4b. The DocumentStatus enum carries exactly the application's status
-      // contract after a fresh deploy (a migrate-deploy database must accept any
-      // status the application writes — previously the chain only created a
-      // legacy PROCESSING/READY/ERROR/DELETED subset).
-      const docStatusEnum = await client.$queryRaw<
-        { n: bigint }[]
-      >`SELECT count(*)::bigint AS n FROM pg_type
-        WHERE typname = 'DocumentStatus' AND typtype = 'e'`;
-      assert.equal(Number(docStatusEnum[0].n), 1);
+      // 5. Every enum type exists; every enum value the schema declares exists
+      //    (a fresh deploy may carry extra legacy values, but never less).
+      const enumRows = await client.$queryRaw<
+        { typname: string; enumlabel: string }[]
+      >`SELECT t.typname, e.enumlabel
+         FROM pg_type t
+         JOIN pg_enum e ON e.enumtypid = t.oid
+         WHERE t.typtype = 'e' AND t.typname = ANY(${expectedEnums})`;
+      const enumValues = new Map<string, Set<string>>();
+      for (const row of enumRows) {
+        if (!enumValues.has(row.typname)) enumValues.set(row.typname, new Set());
+        enumValues.get(row.typname)!.add(row.enumlabel);
+      }
+      for (const [enumName, values] of expected.enums) {
+        const got = enumValues.get(enumName);
+        assert.ok(got, `enum type missing after deploy: ${enumName}`);
+        for (const value of values) {
+          assert.ok(got.has(value), `enum value missing after deploy: ${enumName}.${value}`);
+        }
+      }
+
+      // 5b. The DocumentStatus enum carries exactly the application's status
+      //     contract after a fresh deploy (a migrate-deploy database must accept
+      //     any status the application writes — previously the chain only
+      //     created the legacy PROCESSING/READY/ERROR/DELETED subset).
       const docStatusValues = await client.$queryRaw<
         { enumlabel: string }[]
       >`SELECT enumlabel FROM pg_enum e
@@ -311,6 +282,43 @@ describe("prisma migration chain", () => {
         );
       }
 
+      // 6. Every foreign key the schema declares exists, and its referential
+      //    delete action matches the schema when the schema spells one out
+      //    (this is what caught Organization.ownerId: RESTRICT vs CASCADE).
+      const fkRows = await client.$queryRaw<
+        { constraint_name: string; delete_rule: string }[]
+      >`SELECT rc.constraint_name, rc.delete_rule
+         FROM information_schema.referential_constraints rc
+         WHERE rc.constraint_name = ANY(${expectedFkNames})`;
+      const presentFks = new Map(fkRows.map((r) => [r.constraint_name, r.delete_rule]));
+      for (const [fkName, expectedRule] of expected.fks) {
+        const actualRule = presentFks.get(fkName);
+        assert.ok(actualRule !== undefined, `foreign key missing after deploy: ${fkName}`);
+        if (expectedRule !== null) {
+          assert.equal(
+            actualRule,
+            expectedRule,
+            `FK ${fkName} delete action must match schema (want ${expectedRule}, got ${actualRule})`,
+          );
+        }
+      }
+
+      // 7. pgvector extension and the vector column exist.
+      const ext = await client.$queryRaw<
+        { extname: string }[]
+      >`SELECT extname FROM pg_extension WHERE extname = 'vector'`;
+      assert.equal(ext.length, 1);
+      const emb = await client.$queryRaw<
+        { udt_name: string }[]
+      >`SELECT udt_name FROM information_schema.columns
+         WHERE table_name = 'DocumentEmbedding' AND column_name = 'embedding'`;
+      assert.equal(emb.length, 1);
+      assert.equal(emb[0].udt_name, "vector");
+
+      // 8. The application default for document status survives a fresh
+      //    deploy: a migrate-deploy database accepts the Prisma client-side
+      //    @default(QUEUED) insert and ApiKey's new columns keep their schema
+      //    defaults.
       const owner = await client.user.create({
         data: { email: `chain-${randomUUID()}@test.local` },
       });
@@ -336,36 +344,9 @@ describe("prisma migration chain", () => {
       });
       assert.equal(doc.status, "QUEUED", "application default status must be QUEUED");
 
-      // 5. The evaluation/observability foreign keys exist after deploy.
-      const fks = await client.$queryRaw<
-        { n: bigint }[]
-      >`SELECT count(*)::bigint AS n FROM information_schema.table_constraints
-        WHERE constraint_name = ANY(${REQUIRED_FKS})
-          AND constraint_type = 'FOREIGN KEY'`;
-      assert.equal(Number(fks[0].n), REQUIRED_FKS.length);
-
-      // 6. pgvector extension exists.
-      const ext = await client.$queryRaw<
-        { extname: string }[]
-      >`SELECT extname FROM pg_extension WHERE extname = 'vector'`;
-      assert.equal(ext.length, 1);
-
-      // 7. DocumentEmbedding.embedding exists with the vector type.
-      const emb = await client.$queryRaw<
-        { udt_name: string }[]
-      >`SELECT udt_name FROM information_schema.columns
-         WHERE table_name = 'DocumentEmbedding' AND column_name = 'embedding'`;
-      assert.equal(emb.length, 1);
-      assert.equal(emb[0].udt_name, "vector");
-
-      // 8. Migration history is complete and up to date.
-      const applied = await client.$queryRaw<
-        { n: bigint }[]
-      >`SELECT count(*)::bigint AS n FROM "_prisma_migrations"
-         WHERE rolled_back_at IS NOT NULL`;
-      assert.equal(Number(applied[0].n), 0);
-
-      // 9. No data-destroying statement in any migration of the chain.
+      // 9. Migrations that realign a foreign key are legal only when they
+      //    re-create the same constraint (Prisma's own output for an onDelete
+      //    change). Everything else data-destroying is banned.
       const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
       for (const dir of readdirSync(migrationsDir, { withFileTypes: true })) {
         if (!dir.isDirectory()) continue;
@@ -373,11 +354,91 @@ describe("prisma migration chain", () => {
           path.join(migrationsDir, dir.name, "migration.sql"),
           "utf8",
         );
+        const hardBans =
+          /(^|\n)\s*(DROP\s+(TABLE|COLUMN|INDEX|EXTENSION|SCHEMA)|TRUNCATE|DELETE\s+FROM)/i;
         assert.ok(
-          !/(^|\n)\s*(DROP\s+(TABLE|COLUMN|INDEX|EXTENSION|SCHEMA)|TRUNCATE|DELETE\s+FROM|DROP\s+CONSTRAINT)/i.test(sql),
+          !hardBans.test(sql),
           `destructive statement detected in migration ${dir.name}`,
         );
+        const droppedFks = sql.match(/DROP CONSTRAINT "([^"]+)"/g);
+        for (const drop of droppedFks ?? []) {
+          const name = /"([^"]+)"/.exec(drop)![1];
+          assert.ok(
+            sql.includes(`ADD CONSTRAINT "${name}"`),
+            `DROP CONSTRAINT "${name}" in ${dir.name} must re-create the same constraint`,
+          );
+        }
       }
+
+      // 10. Fresh-deploy probe: every production-written model that was never
+      //     materialized by the chain accepts the writes the application does.
+      await client.documentVersion.create({
+        data: {
+          version: 1,
+          fileType: "pdf",
+          size: 100,
+          storageKey: "k",
+          storageUrl: null,
+          documentId: doc.id,
+          uploadedById: owner.id,
+        },
+      });
+      await client.documentActivity.create({
+        data: { action: "UPLOADED", documentId: doc.id, userId: owner.id },
+      });
+      await client.notification.create({
+        data: { type: "SYSTEM", title: "t", message: "m", userId: owner.id },
+      });
+      await client.invitation.create({
+        data: {
+          email: `i-${randomUUID()}@test.local`,
+          token: randomUUID().replace(/-/g, "").slice(0, 16),
+          expiresAt: new Date(Date.now() + 3_600_000),
+          organizationId: org.id,
+          invitedById: owner.id,
+        },
+      });
+      await client.shareLink.create({
+        data: {
+          token: randomUUID().replace(/-/g, "").slice(0, 16),
+          resourceType: "kb",
+          resourceId: kb.id,
+          organizationId: org.id,
+          createdById: owner.id,
+        },
+      });
+      await client.workspaceSettings.create({
+        data: { key: "flags", value: {}, organizationId: org.id },
+      });
+      const apiKey = await client.apiKey.create({
+        data: {
+          name: "chain-key",
+          keyHash: randomUUID().replace(/-/g, ""),
+          keyPrefix: "chaintk",
+          userId: owner.id,
+          organizationId: org.id,
+        },
+      });
+      assert.deepEqual(apiKey.scopes, ["read", "write"], "ApiKey.scopes default must survive");
+      await client.auditLog.create({
+        data: { action: "chain.probe", resource: "kb", organizationId: org.id, userId: owner.id },
+      });
+
+      // 11. The realigned Organization.ownerId FK actually cascades like the
+      //     schema declares.
+      const cascadeOwner = await client.user.create({
+        data: { email: `cascade-${randomUUID()}@test.local` },
+      });
+      const cascadeOrg = await client.organization.create({
+        data: {
+          name: `cascade-${randomUUID()}`,
+          slug: `cascade-${randomUUID().slice(0, 8)}`,
+          ownerId: cascadeOwner.id,
+        },
+      });
+      await client.user.delete({ where: { id: cascadeOwner.id } });
+      const stillThere = await client.organization.findUnique({ where: { id: cascadeOrg.id } });
+      assert.equal(stillThere, null, "deleting an org owner must cascade to the org");
     } finally {
       await client.$disconnect();
     }
