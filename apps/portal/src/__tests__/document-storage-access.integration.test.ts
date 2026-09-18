@@ -218,10 +218,11 @@ describe("document storage media access against a real database with a mocked up
     return true;
   }
 
-  async function requestMedia(docId: string, init?: RequestInit) {
-    const headers = new Headers(init?.headers);
+  type NextRequestInit = ConstructorParameters<typeof NextRequest>[1];
+
+  async function requestMedia(docId: string, init?: NextRequestInit) {
     return documentMediaGet(
-      new NextRequest(`http://localhost:3000/api/documents/${docId}/media`, { ...init, headers }),
+      new NextRequest(`http://localhost:3000/api/documents/${docId}/media`, init ?? {}),
       { params: Promise.resolve({ docId }) },
     );
   }
