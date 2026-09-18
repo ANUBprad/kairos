@@ -291,7 +291,7 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
                       </pre>
                     )}
                   </div>
-                ) : preview?.status === "READY" && preview?.chunkCount === 0 ? (
+                ) : preview?.chunkCount === 0 && (preview?.status === "INDEXED" || preview?.status === "READY") ? (
                   <div className="flex flex-col items-center justify-center py-16">
                     <BookOpen size={32} className="text-text-tertiary" />
                     <p className="mt-4 text-sm text-text-secondary">
