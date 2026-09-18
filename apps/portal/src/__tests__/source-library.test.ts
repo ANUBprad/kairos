@@ -10,7 +10,7 @@ import {
   canAddToBulkSelection,
   type SourceRow,
 } from "@/lib/source-library";
-import { MAX_BULK_OPERATIONS, SOURCE_TYPE_VALUES } from "@/lib/source-contract";
+import { MAX_BULK_OPERATIONS, SOURCE_STATUS_VALUES, SOURCE_TYPE_VALUES } from "@/lib/source-contract";
 
 const sample: SourceRow[] = [
   { id: "1", name: "Report.pdf", fileType: "pdf", sourceType: "FILE", sourceUrl: null, status: "READY" },
@@ -41,9 +41,27 @@ describe("Source type filter options", () => {
 });
 
 describe("Status filter options", () => {
-  it("uses stored status values plus the processing grouping", () => {
+  it("surfaces the current pipeline's success state and the processing grouping", () => {
     const values = STATUS_FILTER_OPTIONS.map((o) => o.value);
-    assert.deepEqual(values, ["", "READY", "PROCESSING", "ERROR", "QUEUED"]);
+    assert.deepEqual(values, ["", "INDEXED", "PROCESSING", "ERROR", "QUEUED"]);
+  });
+
+  it("does not advertise legacy statuses the pipeline cannot produce", () => {
+    const values = STATUS_FILTER_OPTIONS.map((o) => o.value);
+    assert.ok(!values.includes("READY"), "READY is legacy — never a selectable status");
+    assert.ok(!values.includes("UPLOADING"), "UPLOADING is legacy — never a selectable status");
+  });
+
+  it("labels the current success terminal as Indexed", () => {
+    const indexed = STATUS_FILTER_OPTIONS.find((o) => o.value === "INDEXED");
+    assert.equal(indexed?.label, "Indexed");
+  });
+
+  it("only offers real stored statuses plus the processing grouping", () => {
+    for (const option of STATUS_FILTER_OPTIONS) {
+      if (option.value === "" || option.value === "PROCESSING") continue;
+      assert.ok(SOURCE_STATUS_VALUES.includes(option.value as never), `chip advertises a state that cannot exist: ${option.value}`);
+    }
   });
 
   it("derives the processing set from the stored statuses minus terminal states", () => {

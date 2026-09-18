@@ -41,7 +41,7 @@ export const SOURCE_TYPE_OPTIONS: ReadonlyArray<{ value: DocumentSourceType | ""
 
 export const STATUS_FILTER_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "", label: "All" },
-  { value: "READY", label: "Ready" },
+  { value: "INDEXED", label: "Indexed" },
   { value: "PROCESSING", label: "Processing" },
   { value: "ERROR", label: "Error" },
   { value: "QUEUED", label: "Queued" },
