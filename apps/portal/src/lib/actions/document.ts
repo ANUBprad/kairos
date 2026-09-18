@@ -85,8 +85,6 @@ async function assertDocAccess(docId: string, userId: string) {
       status: true,
       sourceType: true,
       sourceUrl: true,
-      storageUrl: true,
-      storageKey: true,
       storageProvider: true,
       metadata: true,
       knowledgeBaseId: true,
@@ -190,7 +188,10 @@ export async function uploadDocument(kbId: string, formData: FormData) {
     const safeName = sanitizeFilename(file.name.replace(`.${ext}`, ""));
     const storageKey = `${kbId}/${Date.now()}-${safeName}`;
 
-    const stored = await storage.upload(buffer, file.name, storageKey);
+    // Stored objects are authenticated (signed delivery only), so a raw CDN
+    // URL can never be used to fetch another document's object. Callers reach
+    // the bytes through the session-authorized media route.
+    const stored = await storage.upload(buffer, file.name, storageKey, { accessMode: "authenticated" });
 
     const doc = await prisma.$transaction(async (tx) => {
       const created = await tx.document.create({
@@ -1083,7 +1084,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
   try {
     const doc = await prisma.document.findUnique({
       where: { id: docId },
-      select: { id: true, storageUrl: true, knowledgeBaseId: true, fileType: true, metadata: true, uploadedById: true, sourceType: true, sourceUrl: true },
+      select: { id: true, storageKey: true, knowledgeBaseId: true, fileType: true, metadata: true, uploadedById: true, sourceType: true, sourceUrl: true },
     });
     if (!doc) {
       logger.warn("[Init] Document not found, aborting", { docId });
@@ -1100,13 +1101,16 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
 
     let buffer = existingBuffer;
 
-    if (!buffer && doc.storageUrl) {
-      logger.info("[Download] Fetching from storage", { docId, storageUrl: doc.storageUrl });
+    if (!buffer && doc.storageKey) {
+      logger.info("[Download] Fetching from storage via signed URL", { docId });
       const t0 = Date.now();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       try {
-        const res = await fetch(doc.storageUrl, { signal: controller.signal });
+        // Objects are authenticated; the public URL is no longer fetchable.
+        // Resolve a short-lived signed URL from the trusted DB key instead.
+        const signedUrl = await getStorageProvider().getSignedUrl(doc.storageKey);
+        const res = await fetch(signedUrl, { signal: controller.signal });
         clearTimeout(timeout);
         if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} fetching from storage`);
 
@@ -1157,7 +1161,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       logger.info("[Download] Using provided buffer", { docId, bytes: buffer.byteLength });
     }
 
-    if (!buffer) throw new Error("No file data available — no buffer, storageUrl, or source URL on document");
+    if (!buffer) throw new Error("No file data available — no buffer, storage key, or source URL on document");
 
     stage = "extract";
     logger.info("[Extraction] Converting buffer → ArrayBuffer", {
@@ -1305,7 +1309,6 @@ export async function listDocuments(kbId: string, filters?: SourceListFilters): 
       status: true,
       sourceType: true,
       sourceUrl: true,
-      storageUrl: true,
       createdAt: true,
       updatedAt: true,
       metadata: true,
@@ -1592,7 +1595,6 @@ export async function getDocumentPreviewContent(docId: string) {
     chunkCount,
     status: doc.status,
     fileType: doc.fileType,
-    storageUrl: doc.storageUrl,
     type,
     metadata: doc.metadata as Record<string, unknown> | null,
     uploadedBy: doc.uploadedBy?.name || "Unknown",
@@ -1648,7 +1650,13 @@ export async function getDocumentDetails(docId: string) {
       metadata: c.metadata as Record<string, unknown> | null,
     })),
     versions: versions.map((v) => ({
-      ...v,
+      id: v.id,
+      version: v.version,
+      fileType: v.fileType,
+      size: v.size,
+      changeNote: v.changeNote,
+      createdAt: v.createdAt,
+      uploadedBy: v.uploadedBy,
       metadata: v.metadata as Record<string, unknown> | null,
     })),
     activities: activities.map((a) => ({

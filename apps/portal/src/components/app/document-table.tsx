@@ -64,7 +64,6 @@ interface DocumentItem {
   status: string;
   sourceType: DocumentSourceType;
   sourceUrl: string | null;
-  storageUrl: string | null;
   uploadedBy: { id: string; name: string | null; image: string | null } | null;
   createdAt: Date;
   updatedAt: Date;
@@ -200,7 +199,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
   };
 
   const handleDownload = (doc: DocumentItem) => {
-    if (doc.storageUrl) window.open(doc.storageUrl, "_blank");
+    if (doc.sourceType === "FILE") window.open(`/api/documents/${doc.id}/media`, "_blank");
   };
 
   const handleBulkDelete = async () => {
@@ -653,7 +652,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                               Change video
                             </button>
                           )}
-                          {doc.storageUrl && (
+                          {doc.sourceType === "FILE" && (
                             <button
                               onClick={() => { handleDownload(doc); setMenuOpen(null); }}
                               className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"

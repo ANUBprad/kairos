@@ -20,7 +20,6 @@ interface PreviewResult {
   chunkCount: number;
   status: string;
   fileType: string;
-  storageUrl: string | null;
   type: "pdf" | "docx" | "csv" | "text" | "markdown";
   metadata: Record<string, unknown> | null;
   uploadedBy: string;
@@ -37,7 +36,6 @@ interface DocumentData {
   sourceType?: string;
   sourceUrl?: string | null;
   storageProvider: string | null;
-  storageUrl: string | null;
   metadata: unknown;
   createdAt: Date;
   updatedAt?: Date;
@@ -239,7 +237,7 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
         ) : (
           <div className="flex flex-1 overflow-hidden">
             <div className="flex flex-1 flex-col overflow-hidden">
-              {preview?.type === "pdf" && preview.storageUrl && (
+              {preview?.type === "pdf" && (
                 <div className="flex gap-2 border-b border-border px-4 py-2">
                   <button
                     onClick={() => setViewMode("original")}
@@ -265,9 +263,9 @@ export function DocumentPreviewDialog({ docId, onClose }: Props) {
               )}
 
               <div className="flex-1 overflow-y-auto p-6">
-                {viewMode === "original" && preview?.type === "pdf" && preview.storageUrl ? (
+                {viewMode === "original" && preview?.type === "pdf" ? (
                   <iframe
-                    src={preview.storageUrl}
+                    src={`/api/documents/${docId}/media`}
                     className="h-full w-full rounded-lg border border-border"
                     title="PDF Preview"
                   />

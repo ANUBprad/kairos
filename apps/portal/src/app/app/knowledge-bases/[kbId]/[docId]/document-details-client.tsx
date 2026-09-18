@@ -76,7 +76,7 @@ export function DocumentDetailsClient({ document, kbId, initialChunkIndex }: Doc
   };
 
   const handleDownload = () => {
-    if (document.storageUrl) window.open(document.storageUrl, "_blank");
+    if (document.sourceType === "FILE") window.open(`/api/documents/${document.id}/media`, "_blank");
   };
 
   const handleMetadataUpdate = async (metadata: Record<string, unknown>) => {

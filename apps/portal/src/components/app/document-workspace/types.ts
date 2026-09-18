@@ -30,8 +30,6 @@ export interface DocumentVersion {
   version: number;
   fileType: string;
   size: number;
-  storageKey: string;
-  storageUrl: string | null;
   metadata: Record<string, unknown> | null;
   changeNote: string | null;
   createdAt: Date;
@@ -68,9 +66,8 @@ export interface DocumentWithDetails {
   fileType: string;
   size: number | null;
   fileHash: string | null;
+  sourceType: string;
   storageProvider: string | null;
-  storageKey: string | null;
-  storageUrl: string | null;
   metadata: DocumentMetadata | null;
   status: DocumentStatus;
   createdAt: Date;

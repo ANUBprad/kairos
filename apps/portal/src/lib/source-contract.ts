@@ -30,7 +30,6 @@ export interface SourceListItem {
   fileType: string;
   size: number | null;
   status: DocumentStatus;
-  storageUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
   metadata: unknown;
