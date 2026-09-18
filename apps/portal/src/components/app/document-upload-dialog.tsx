@@ -10,21 +10,29 @@ import {
   CheckCircle2,
   FileWarning,
   RefreshCw,
-  XCircle,
-  Ban,
   FileSpreadsheet,
   FileType,
 } from "lucide-react";
+import type { DocumentStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { uploadDocument } from "@/lib/actions/document";
+import { uploadDocument, listDocuments, reprocessDocument } from "@/lib/actions/document";
+import {
+  POLL_INTERVAL_MS,
+  allTerminal,
+  anyLiveTracking,
+  tickBudget,
+  processingPresentation,
+} from "@/lib/upload-progress";
 
 interface UploadFile {
   file: File;
   id: string;
-  status: "pending" | "uploading" | "done" | "error" | "cancelled";
+  status: "pending" | "uploading" | "processing" | "done" | "error";
   error?: string;
+  docId?: string;
+  backendStatus?: DocumentStatus;
 }
 
 const ALLOWED_EXTENSIONS = [".pdf", ".txt", ".md", ".csv", ".docx"];
@@ -63,21 +71,93 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
   const [uploadQueue, setUploadQueue] = useState<UploadFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const abortRef = useRef<Map<string, boolean>>(new Map());
+  const [pollExpired, setPollExpired] = useState(false);
+  const queueRef = useRef<UploadFile[]>(uploadQueue);
+  const ticksRef = useRef(0);
+  const autoClosedRef = useRef(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    queueRef.current = uploadQueue;
+  }, [uploadQueue]);
 
   useEffect(() => {
     if (!open) {
       setUploadQueue([]);
       setIsUploading(false);
-      abortRef.current.clear();
+      setPollExpired(false);
+      ticksRef.current = 0;
+      autoClosedRef.current = false;
     }
   }, [open]);
 
+  // Bounded polling: while any accepted source is non-terminal, read its real
+  // status from the KB-scoped (session-authorized) listDocuments action and
+  // stop at terminal success/error, dialog close, or the tick budget.
+  useEffect(() => {
+    if (!open) return;
+    ticksRef.current = 0;
+    setPollExpired(false);
+
+    const timer = setInterval(async () => {
+      const tracked = queueRef.current.filter((f) => f.docId !== undefined);
+      if (tracked.length === 0) return;
+      if (allTerminal(tracked.map((f) => f.backendStatus))) return;
+
+      ticksRef.current += 1;
+      if (tickBudget(ticksRef.current) === "expired") {
+        setPollExpired(true);
+        return;
+      }
+
+      try {
+        const docs = await listDocuments(kbId);
+        const byId = new Map(docs.map((d) => [d.id, d.status]));
+        setUploadQueue((prev) =>
+          prev.map((f) => {
+            if (f.docId === undefined) return f;
+            const status = byId.get(f.docId);
+            if (status === undefined) return f;
+            if (status === "INDEXED" || status === "READY") {
+              return { ...f, backendStatus: status, status: "done" };
+            }
+            if (status === "ERROR") {
+              return { ...f, backendStatus: status, status: "error", error: "Processing failed" };
+            }
+            return { ...f, backendStatus: status as DocumentStatus, status: "processing" };
+          }),
+        );
+      } catch {
+        // transient failure; the next tick retries
+      }
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, [open, kbId]);
+
+  // Auto-close only once every submitted source has reached a terminal state;
+  // claiming "done" on submission would lie about a source that is still being
+  // embedded.
+  useEffect(() => {
+    if (!open || autoClosedRef.current) return;
+    if (isUploading || uploadQueue.length === 0) return;
+    if (uploadQueue.some((f) => f.status === "pending" || f.status === "uploading")) return;
+
+    const submitted = uploadQueue.filter((f) => f.docId !== undefined);
+    if (!anyLiveTracking(submitted.map((f) => f.backendStatus))) return;
+    if (!allTerminal(submitted.map((f) => f.backendStatus))) return;
+
+    autoClosedRef.current = true;
+    const ready = submitted.filter((f) => f.backendStatus === "INDEXED" || f.backendStatus === "READY").length;
+    if (ready > 0) toast.success(`${ready} source${ready !== 1 ? "s" : ""} ready`);
+    router.refresh();
+    onOpenChange(false);
+  }, [open, isUploading, uploadQueue, router, onOpenChange]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !isUploading) onOpenChange(false);
+      if (e.key === "Escape") onOpenChange(false);
       if (e.key === "Tab" && dropRef.current) {
         const dialog = dropRef.current.closest('[role="dialog"]');
         if (!dialog) return;
@@ -100,7 +180,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
       document.addEventListener("keydown", handleKeyDown);
       return () => document.removeEventListener("keydown", handleKeyDown);
     }
-  }, [open, isUploading, onOpenChange]);
+  }, [open, onOpenChange]);
 
   const validateFile = useCallback(
     (file: File): string | null => {
@@ -161,36 +241,47 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
     setIsDragging(false);
   }, []);
 
+  // Remove only sources that were never submitted; anything already accepted
+  // keeps processing server-side and is removed from the queue view alone.
   const removeFile = useCallback((id: string) => {
-    abortRef.current.set(id, true);
-    setUploadQueue((prev) => prev.filter((f) => f.id !== id));
-  }, []);
-
-  const cancelUpload = useCallback((id: string) => {
-    abortRef.current.set(id, true);
     setUploadQueue((prev) =>
-      prev.map((f) =>
-        f.id === id && (f.status === "pending" || f.status === "uploading")
-          ? { ...f, status: "cancelled" as const, error: "Upload cancelled" }
-          : f,
-      ),
+      prev.filter((f) => f.id !== id || (f.status !== "pending" && !(f.status === "error" && f.docId === undefined))),
     );
   }, []);
 
-  const retryFile = useCallback((id: string) => {
+  const retrySubmission = useCallback((id: string) => {
     setUploadQueue((prev) =>
       prev.map((f) =>
-        f.id === id && f.status === "error"
+        f.id === id && f.status === "error" && f.docId === undefined
           ? { ...f, status: "pending" as const, error: undefined }
           : f,
       ),
     );
   }, []);
 
+  const retryProcessing = useCallback(
+    async (id: string) => {
+      try {
+        const formData = new FormData();
+        formData.append("id", id);
+        await reprocessDocument(formData);
+        setUploadQueue((prev) =>
+          prev.map((f) =>
+            f.id === id
+              ? { ...f, status: "processing" as const, backendStatus: "QUEUED" as DocumentStatus, error: undefined }
+              : f,
+          ),
+        );
+        toast.info("Reprocessing started");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not restart processing");
+      }
+    },
+    [],
+  );
+
   const clearErrors = useCallback(() => {
-    setUploadQueue((prev) =>
-      prev.filter((f) => f.status !== "error" || !f.error),
-    );
+    setUploadQueue((prev) => prev.filter((f) => f.status !== "error"));
   }, []);
 
   const startUpload = async () => {
@@ -205,8 +296,6 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
     let failCount = 0;
 
     for (const item of pending) {
-      if (abortRef.current.get(item.id)) continue;
-
       setUploadQueue((prev) =>
         prev.map((f) =>
           f.id === item.id ? { ...f, status: "uploading" as const } : f,
@@ -217,19 +306,18 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         const formData = new FormData();
         formData.append("files", item.file);
 
-        await uploadDocument(kbId, formData);
-
-        if (abortRef.current.get(item.id)) continue;
+        const results = await uploadDocument(kbId, formData);
+        const created = results[0];
 
         setUploadQueue((prev) =>
           prev.map((f) =>
-            f.id === item.id ? { ...f, status: "done" as const } : f,
+            f.id === item.id
+              ? { ...f, status: "processing" as const, docId: created.id, backendStatus: created.status as DocumentStatus }
+              : f,
           ),
         );
         successCount++;
       } catch (err) {
-        if (abortRef.current.get(item.id)) continue;
-
         setUploadQueue((prev) =>
           prev.map((f) =>
             f.id === item.id
@@ -248,16 +336,10 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
     setIsUploading(false);
 
     if (successCount > 0) {
-      toast.success(`${successCount} file(s) uploaded successfully`);
-      router.refresh();
+      toast.info(`${successCount} file${successCount !== 1 ? "s" : ""} accepted — processing in the background`);
     }
-
     if (failCount > 0) {
-      toast.error(`${failCount} file(s) failed to upload`);
-    }
-
-    if (successCount > 0 && failCount === 0) {
-      onOpenChange(false);
+      toast.error(`${failCount} file${failCount !== 1 ? "s" : ""} failed to upload`);
     }
   };
 
@@ -265,6 +347,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
 
   const pendingCount = uploadQueue.filter((f) => f.status === "pending").length;
   const uploadingCount = uploadQueue.filter((f) => f.status === "uploading").length;
+  const processingCount = uploadQueue.filter((f) => f.status === "processing").length;
   const doneCount = uploadQueue.filter((f) => f.status === "done").length;
   const errorCount = uploadQueue.filter((f) => f.status === "error").length;
 
@@ -272,7 +355,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => !isUploading && onOpenChange(false)}
+        onClick={() => onOpenChange(false)}
       />
       <div
         ref={dropRef}
@@ -288,7 +371,6 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
           <button
             onClick={() => onOpenChange(false)}
             className="text-text-tertiary transition-colors hover:text-text-primary"
-            disabled={isUploading}
             aria-label="Close"
           >
             <X size={20} />
@@ -299,7 +381,6 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
 
         <div className="flex-1 overflow-y-auto p-6">
           <div
-            ref={dropRef}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -335,7 +416,9 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-text-primary">
                   {uploadQueue.length} file{uploadQueue.length !== 1 ? "s" : ""}
-                  {doneCount > 0 && ` (${doneCount} done)`}
+                  {pendingCount > 0 && ` · ${pendingCount} ready`}
+                  {uploadingCount + processingCount > 0 && ` · ${uploadingCount + processingCount} processing`}
+                  {doneCount > 0 && ` · ${doneCount} ready`}
                 </p>
                 {!isUploading && errorCount > 0 && (
                   <button
@@ -347,96 +430,103 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
                 )}
               </div>
 
-              {uploadQueue.map((item) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl border p-3 transition-all",
-                    item.status === "error" && "border-error/20 bg-error/5",
-                    item.status === "cancelled" && "border-text-tertiary/20 opacity-50",
-                    item.status !== "error" &&
-                      item.status !== "cancelled" &&
-                      "border-border",
-                  )}
-                >
-                  {item.status === "done" ? (
-                    <CheckCircle2 size={18} className="shrink-0 text-success" />
-                  ) : item.status === "error" ? (
-                    <FileWarning size={18} className="shrink-0 text-error" />
-                  ) : item.status === "cancelled" ? (
-                    <Ban size={18} className="shrink-0 text-text-tertiary" />
-                  ) : item.status === "uploading" ? (
-                    <Loader2 size={18} className="shrink-0 animate-spin text-brand" />
-                  ) : (
-                    getFileIcon(item.file.name)
-                  )}
+              {uploadQueue.map((item) => {
+                const presentation = processingPresentation(item.backendStatus);
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl border p-3 transition-all",
+                      item.status === "error" && "border-error/20 bg-error/5",
+                      item.status === "done" && "border-success/20",
+                      item.status !== "error" && item.status !== "done" && "border-border",
+                    )}
+                  >
+                    {item.status === "done" ? (
+                      <CheckCircle2 size={18} className="shrink-0 text-success" />
+                    ) : item.status === "error" ? (
+                      <FileWarning size={18} className="shrink-0 text-error" />
+                    ) : item.status === "uploading" || item.status === "processing" ? (
+                      <Loader2 size={18} className="shrink-0 animate-spin text-brand" />
+                    ) : (
+                      getFileIcon(item.file.name)
+                    )}
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-text-primary">
-                      {item.file.name}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {(item.file.size / 1024).toFixed(1)} KB
-                    </p>
-                    {item.status === "uploading" && (
-                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-hover">
-                        <div className="h-full w-1/3 rounded-full bg-brand/60 animate-[pulse_1.5s_ease-in-out_infinite]" />
-                      </div>
-                    )}
-                    {item.status === "error" && item.error && (
-                      <p className="mt-0.5 text-xs text-error">{item.error}</p>
-                    )}
-                    {item.status === "cancelled" && (
-                      <p className="mt-0.5 text-xs text-text-tertiary">Cancelled</p>
-                    )}
-                  </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-text-primary">
+                        {item.file.name}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-xs",
+                          item.status === "error"
+                            ? "text-error"
+                            : item.status === "done"
+                              ? "text-success"
+                              : "text-text-tertiary",
+                        )}
+                      >
+                        {item.status === "done"
+                          ? "Ready to use"
+                          : item.status === "error"
+                            ? (item.error ?? presentation.label)
+                            : item.status === "uploading"
+                              ? `${(item.file.size / 1024).toFixed(1)} KB · Uploading…`
+                              : item.status === "pending"
+                                ? `${(item.file.size / 1024).toFixed(1)} KB · Ready to upload`
+                                : `${(item.file.size / 1024).toFixed(1)} KB · ${presentation.label}`}
+                      </p>
+                      {item.status === "error" && item.docId === undefined && item.error && (
+                        <p className="mt-0.5 text-xs text-error">{item.error}</p>
+                      )}
+                    </div>
 
-                  <div className="flex shrink-0 items-center gap-1">
-                    {item.status === "error" && !isUploading && (
-                      <button
-                        onClick={() => retryFile(item.id)}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                        title="Retry"
-                      >
-                        <RefreshCw size={14} />
-                      </button>
-                    )}
-                    {(item.status === "uploading" || item.status === "pending") && (
-                      <button
-                        onClick={() => cancelUpload(item.id)}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-error"
-                        title="Cancel"
-                      >
-                        <XCircle size={14} />
-                      </button>
-                    )}
-                    {!isUploading && item.status !== "uploading" && item.status !== "done" && (
-                      <button
-                        onClick={() => removeFile(item.id)}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                        title="Remove"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
+                    <div className="flex shrink-0 items-center gap-1">
+                      {item.status === "error" && !isUploading && (
+                        <button
+                          onClick={() =>
+                            item.docId === undefined ? retrySubmission(item.id) : retryProcessing(item.id)
+                          }
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                          title="Retry"
+                        >
+                          <RefreshCw size={14} />
+                        </button>
+                      )}
+                      {item.status === "pending" && (
+                        <button
+                          onClick={() => removeFile(item.id)}
+                          className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                          title="Remove"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+
+              {pollExpired && (
+                <p className="text-xs text-text-tertiary">
+                  Sources are still processing — they continue in the background and will appear in the table when done.
+                </p>
+              )}
             </div>
           )}
         </div>
 
         <div className="flex items-center justify-between border-t border-border px-6 py-4">
           <p className="text-xs text-text-tertiary">
-            {pendingCount} file{pendingCount !== 1 ? "s" : ""} ready
-            {uploadingCount > 0 && `, ${uploadingCount} uploading`}
+            {uploadingCount + processingCount > 0 || doneCount > 0
+              ? "Processing continues in the background — closing keeps it running."
+              : `${pendingCount} file${pendingCount !== 1 ? "s" : ""} ready`}
           </p>
           <div className="flex gap-3">
             <Button
               type="button"
               variant="secondary"
               onClick={() => onOpenChange(false)}
-              disabled={isUploading}
             >
               Close
             </Button>
