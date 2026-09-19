@@ -226,7 +226,7 @@ registry.register(
 
 **Location:** `docker-compose.yml`
 
-The compose stack serves eight services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`.
+The compose stack serves seven services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`.
 
 | Service | Build / Image | Port | Notes |
 |---------|---------------|------|-------|
@@ -234,7 +234,6 @@ The compose stack serves eight services. The Portal is **not** part of it — ru
 | `intelligence` | `docker/intelligence.Dockerfile` | 28080, 8001 | gRPC engine + metrics |
 | `api` | `docker/api.Dockerfile` | ${API_PORT:-8000} | FastAPI management API |
 | `internal-dashboard` | `docker/dashboard.Dockerfile` | ${DASHBOARD_PORT:-8501} | Streamlit dashboard |
-| `worker` | `docker/worker.Dockerfile` | — | Background ingestion worker |
 | `gateway` | `docker/gateway.Dockerfile` | ${GATEWAY_PORT:-8080} | HTTP API gateway |
 | `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Metrics collection |
 | `grafana` | `grafana/grafana:10.4.2` | 3000 | Dashboards (provisioned from `docker/grafana/`) |

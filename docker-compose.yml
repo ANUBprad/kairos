@@ -115,33 +115,6 @@ services:
     networks:
       - kairos
 
-  worker:
-    build:
-      context: .
-      dockerfile: docker/worker.Dockerfile
-    env_file:
-      - .env
-    environment:
-      - CHROMA_STORE_HOST=chromadb
-      - CHROMA_STORE_PORT=8000
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: "2G"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import sys; sys.exit(0 if __import__('intelligence.worker', fromlist=['process_ingestion_job']).process_ingestion_job is not None else 1)"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    depends_on:
-      chromadb:
-        condition: service_healthy
-    networks:
-      - kairos
-
   gateway:
     build:
       context: .

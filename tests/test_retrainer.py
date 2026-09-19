@@ -1,4 +1,4 @@
-"""Tests for retraining pipeline — retrainer, model registry, scheduler."""
+"""Tests for retraining pipeline — retrainer, model registry."""
 
 from __future__ import annotations
 
@@ -15,7 +15,6 @@ from intelligence.retraining.model_registry import (
     compute_dataset_hash,
 )
 from intelligence.retraining.retrainer import BudgetRetrainer
-from intelligence.retraining.scheduler import RetrainingScheduler
 
 
 # ======================================================================
@@ -332,52 +331,6 @@ class TestBudgetRetrainer:
         assert len(entries) == 1
         assert entries[0].top_k == 3
         assert entries[0].success is True
-
-
-# ======================================================================
-# RetrainingScheduler
-# ======================================================================
-
-
-class TestRetrainingScheduler:
-    def test_start_stop(self) -> None:
-        scheduler = RetrainingScheduler(retrain_fn=lambda r: {}, min_records=1)
-        scheduler.start()
-        assert scheduler.is_running
-        scheduler.stop()
-        assert not scheduler.is_running
-
-    def test_start_twice(self) -> None:
-        scheduler = RetrainingScheduler(retrain_fn=lambda r: {}, min_records=1)
-        scheduler.start()
-        scheduler.start()  # should not raise
-        scheduler.stop()
-
-    def test_trigger_skipped(self) -> None:
-        scheduler = RetrainingScheduler(retrain_fn=lambda r: {}, min_records=10)
-        result = scheduler.trigger([{"a": 1}])
-        assert result["skipped"] is True
-
-    def test_trigger_runs(self) -> None:
-        called = []
-
-        def retrain_fn(records):
-            called.append(records)
-            return {"version": "v1", "status": "ok"}
-
-        scheduler = RetrainingScheduler(retrain_fn=retrain_fn, min_records=1)
-        result = scheduler.trigger([{"a": 1}])
-        assert result["version"] == "v1"
-        assert len(called) == 1
-
-    def test_last_run_initial_none(self) -> None:
-        scheduler = RetrainingScheduler(retrain_fn=lambda r: {}, min_records=1)
-        assert scheduler.last_run is None
-
-    def test_last_run_after_trigger(self) -> None:
-        scheduler = RetrainingScheduler(retrain_fn=lambda r: {}, min_records=1)
-        scheduler.trigger([{"a": 1}])
-        assert scheduler.last_run is not None
 
 
 # ======================================================================

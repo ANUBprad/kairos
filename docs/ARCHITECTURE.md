@@ -51,8 +51,7 @@ kairos/
 │   ├── evaluation/         # Metrics, evaluator, reporting
 │   ├── experiments/        # Experiment tracking
 │   ├── artifacts/          # Model/experiment/report registries
-│   ├── observability/      # Tracing, logging, metrics, alerting
-│   └── worker/             # Background ingestion jobs
+│   └── observability/      # Tracing, logging, metrics, alerting
 ├── proto/                  # gRPC contracts
 ├── sdk/                    # Python client SDK
 ├── benchmarks/             # Evaluation datasets, leaderboard
@@ -99,7 +98,6 @@ Python service. Responsibilities:
 - LLM response assembly and grounding
 - Evaluation framework (IR + generation metrics, statistics)
 - Experiment tracking and artifact registries
-- Background ingestion worker
 
 ### Actors alongside the core services
 
@@ -107,7 +105,6 @@ Python service. Responsibilities:
 |-----------|----------|---------|
 | FastAPI management API | `intelligence/api/` | Configuration/artifact/evaluation endpoints (`/api/v1/*`) |
 | Internal dashboard | `apps/internal-dashboard/` | Streamlit research/ops dashboard (ablations, benchmarks, observability, planner analysis) |
-| Worker | `intelligence/worker/` | Background ingestion job processing |
 | ChromaDB | docker service | Vector store |
 | PostgreSQL | external / via DATABASE_URL | Users, knowledge bases, artifacts, podcast interruptions |
 | Prometheus + Grafana | docker services | Metrics collection and dashboards |
@@ -169,7 +166,7 @@ The planner bakes in confidence-aware fallback: if a primary strategy under-perf
 
 ## Deployment
 
-The supported deployment is Docker Compose. Services: `chromadb`, `intelligence`, `api`, `internal-dashboard`, `worker`, `gateway`, `prometheus`, `grafana`. See `docker-compose.yml` and `docs/DEPLOYMENT.md` for details.
+The supported deployment is Docker Compose. Services: `chromadb`, `intelligence`, `api`, `internal-dashboard`, `gateway`, `prometheus`, `grafana`. See `docker-compose.yml` and `docs/DEPLOYMENT.md` for details.
 
 ---
 
