@@ -63,7 +63,7 @@ describe("raw text source ingestion against a real database", () => {
   const orgIds: string[] = [];
   const foreignUserIds: string[] = [];
 
-before(async () => {
+  before(async () => {
     if (!testDbUrl) return;
     process.env.AI_PROVIDER = "openai";
     process.env.OPENAI_API_KEY = "test-dummy-key-do-not-call";
