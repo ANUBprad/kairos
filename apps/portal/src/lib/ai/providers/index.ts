@@ -48,6 +48,13 @@ export function getEmbeddingProvider(type?: ProviderType): AIProvider {
   return getAIProvider(type);
 }
 
+// The provider SDK clients capture globalThis.fetch at construction, so cached
+// clients outlive any per-test fetch stub. Test code calls this to give each
+// test a fresh client bound to its own stub.
+export function resetAIProviderCache(): void {
+  providerCache.clear();
+}
+
 export type { AIProvider } from "./types";
 export { OpenAIProvider } from "./openai";
 export { GeminiProvider } from "./gemini";

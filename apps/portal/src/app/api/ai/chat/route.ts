@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { streamChatResponse } from "@/lib/ai/chat";
@@ -9,11 +10,13 @@ import { executeRetrievalWithTrace } from "@/lib/retrieval/strategies";
 import { getConversationMessages } from "@/lib/ai/memory";
 import { parseSourceIds, filterScopedSourceIds } from "@/lib/ai/chat/source-scope";
 import { canAccessKnowledgeBase, canUseConversationInKb } from "@/lib/ai/chat/access";
+import { getKbOrganizationId } from "@/lib/artifacts/engine";
 import { isValidEntityId } from "@/lib/validation";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
 import type { ProviderType } from "@/lib/ai/types";
+import type { ChatTraceContext } from "@/lib/ai/chat/engine";
 
 
 export const runtime = "nodejs";
@@ -85,6 +88,14 @@ export async function POST(request: NextRequest) {
   if (!(await canAccessKnowledgeBase(session.user.id, kbId))) {
     return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
   }
+
+  // Every chat turn must produce an org-scoped observability Trace. The user's
+  // KB residency determines the org; the user id rides on the Trace.userId
+  // column and the KB/conversation scope rides in its metadata JSON.
+  const organizationId = await getKbOrganizationId(kbId);
+  const traceContext: ChatTraceContext | undefined = organizationId
+    ? { requestId: randomUUID(), organizationId, userId: session.user.id }
+    : undefined;
 
   // The client-supplied model is free text; only accept it when it is one of
   // the resolved provider's known models. Anything else falls back to the
@@ -283,6 +294,7 @@ ${contextStr || "No relevant documents found."}`;
           providerType: typedProvider,
           model: resolvedModel,
           signal: abortController.signal,
+          trace: traceContext,
         });
 
         for await (const chunk of gen) {
