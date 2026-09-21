@@ -128,7 +128,7 @@ describe("audit-log reads require view_audit_logs against a real database", () =
 
     const stats = await getAuditLogStats(orgId);
     assert.equal(stats.success, true);
-    assert.equal(stats.stats.total, 2);
+    assert.equal(stats.stats!.total, 2);
 
     const exp = await exportAuditLogs(orgId);
     assert.equal(exp.success, true);
