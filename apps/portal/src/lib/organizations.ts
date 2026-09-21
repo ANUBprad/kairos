@@ -425,8 +425,11 @@ export async function inviteMember(
   input: InviteMemberInput
 ): Promise<{ invitationId: string; token: string }> {
   const membership = await getMembership(invitedById, organizationId);
-  if (!membership || (membership.role !== "OWNER" && membership.role !== "ADMIN")) {
+  if (!membership || !hasPermission(membership.role, "manage_invitations")) {
     throw new Error("Only owners and admins can invite members");
+  }
+  if (!isRoleSufficient(membership.role, input.role)) {
+    throw new Error("Cannot grant a role higher than your own role");
   }
 
   const existingMember = await prisma.member.findFirst({
