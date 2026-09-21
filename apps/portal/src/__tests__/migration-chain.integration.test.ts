@@ -134,12 +134,12 @@ function testDbUrlWithDatabase(url: string, dbName: string): string {
 }
 
 function maintenanceUrl(url: string): string {
-  const m = url.match(
-    /^postgres(ql)?:\/\/([^:]+):([^@]+)@([^:/]+):(\d+)\/[^?]+(\?.*)?$/,
-  );
-  assert.ok(m, `cannot parse database URL for maintenance connection: ${url}`);
-  const [, , user, pass, host, port, params] = m;
-  return `postgresql://${user}:${pass}@${host}:${port}/postgres${params ?? ""}`;
+  // Maintenance (server-level) connections hit the default `postgres` database
+  // on the same host. Handle host-provider URLs (no explicit port) as well as
+  // localhost URLs instead of assuming a ":port" segment.
+  const { protocol, username, password, hostname, port, search } = new URL(url);
+  const userInfo = password ? `${username}:${password}` : username;
+  return `${protocol}//${userInfo}@${hostname}${port ? `:${port}` : ""}/postgres${search}`;
 }
 
 function runMigrateDeploy(dbUrl: string): void {
