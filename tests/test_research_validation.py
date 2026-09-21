@@ -1870,57 +1870,6 @@ class TestDatasetFromGenerator:
 
 
 # ======================================================================
-# Dashboard Pages — smoke tests (import verification)
-# ======================================================================
-
-import sys  # noqa: E402
-
-_DASHBOARD_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "apps", "internal-dashboard"
-)
-if _DASHBOARD_PATH not in sys.path:
-    sys.path.insert(0, _DASHBOARD_PATH)
-
-
-class TestDashboardPagesImport:
-    def test_leaderboard_page_imports(self) -> None:
-        import importlib
-
-        spec = importlib.util.find_spec("dashboard.pages.leaderboard")
-        assert spec is not None, "leaderboard.py should be importable"
-
-    def test_domain_analysis_page_imports(self) -> None:
-        import importlib
-
-        spec = importlib.util.find_spec("dashboard.pages.domain_analysis")
-        assert spec is not None
-
-    def test_planner_analysis_page_imports(self) -> None:
-        import importlib
-
-        spec = importlib.util.find_spec("dashboard.pages.planner_analysis")
-        assert spec is not None
-
-    def test_cost_analysis_page_imports(self) -> None:
-        import importlib
-
-        spec = importlib.util.find_spec("dashboard.pages.cost_analysis")
-        assert spec is not None
-
-    def test_judge_dashboard_page_imports(self) -> None:
-        import importlib
-
-        spec = importlib.util.find_spec("dashboard.pages.judge_dashboard")
-        assert spec is not None
-
-    def test_comparisons_page_imports(self) -> None:
-        import importlib
-
-        spec = importlib.util.find_spec("dashboard.pages.comparisons")
-        assert spec is not None
-
-
-# ======================================================================
 # CorpusManager
 # ======================================================================
 
@@ -2232,65 +2181,6 @@ class TestE2EBenchmarkResultEdgeCases:
             execution_mode="kairos", domain="f", avg_composite_score=0.8
         )
         assert br.improvement_vs_baseline("nonexistent") == {}
-
-
-# ======================================================================
-# Debug dashboard pages load (import-level only, no streamlit runtime)
-# ======================================================================
-
-
-class TestDashboardPageContent:
-    def test_leaderboard_functions_exist(self) -> None:
-        from dashboard.pages import leaderboard
-
-        assert leaderboard is not None
-        # Verify main function exists
-        assert hasattr(leaderboard, "main")
-
-    def test_domain_analysis_functions_exist(self) -> None:
-        from dashboard.pages import domain_analysis
-
-        assert hasattr(domain_analysis, "main")
-
-    def test_planner_analysis_functions_exist(self) -> None:
-        from dashboard.pages import planner_analysis
-
-        assert hasattr(planner_analysis, "main")
-
-    def test_cost_analysis_functions_exist(self) -> None:
-        from dashboard.pages import cost_analysis
-
-        assert hasattr(cost_analysis, "main")
-
-    def test_judge_dashboard_functions_exist(self) -> None:
-        from dashboard.pages import judge_dashboard
-
-        assert hasattr(judge_dashboard, "main")
-
-    def test_comparisons_functions_exist(self) -> None:
-        from dashboard.pages import comparisons
-
-        assert hasattr(comparisons, "main")
-
-    def test_dashboard_app_functions_exist(self) -> None:
-        from dashboard import app
-
-        assert hasattr(app, "main")
-
-    def test_all_pages_have_set_page_config(self) -> None:
-        pages = [
-            "leaderboard",
-            "domain_analysis",
-            "planner_analysis",
-            "cost_analysis",
-            "judge_dashboard",
-            "comparisons",
-        ]
-        for page_name in pages:
-            import importlib
-
-            module = importlib.import_module(f"dashboard.pages.{page_name}")
-            assert hasattr(module, "main"), f"{page_name}.py missing main()"
 
 
 # ======================================================================

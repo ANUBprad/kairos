@@ -41,7 +41,7 @@ Kairos is a *workspace*, not just an API:
 - **Artifact Studio** — turn knowledge base material into reusable learning artifacts (text pieces, illustrations, and audio podcast renditions), each with source grounding.
 - **Explainable podcast Q&A** — a podcast artifact can be interrupted mid-play to ask questions about what you just heard; the answers are grounded in the source material and surfaced inline.
 - **Evaluation & benchmarks** — a statistical evaluation framework and a leaderboard for comparing retrieval configurations.
-- **Ops-friendly** — Docker Compose stack with Prometheus/Grafana observability and an internal Streamlit research dashboard.
+- **Ops-friendly** — Docker Compose stack with Prometheus/Grafana observability.
 
 ---
 
@@ -82,7 +82,6 @@ docker compose ps   # wait until all services report healthy
 | Gateway | http://localhost:8080 | Go HTTP API gateway |
 | Intelligence | http://localhost:28080 | Python RAG engine (gRPC) |
 | API | http://localhost:8000 | FastAPI management API |
-| Internal Dashboard | http://localhost:8501 | Streamlit research/ops dashboard |
 | ChromaDB | http://localhost:7777 | Vector store |
 | Prometheus | http://localhost:9090 | Metrics collection |
 | Grafana | http://localhost:3000 | Metrics dashboards — conflicts with the Portal dev server; run them one at a time |
@@ -127,7 +126,7 @@ PostgreSQL                 ChromaDB
 - **Gateway** (`gateway/`) — Go HTTP gateway: routing, auth, rate limiting, caching, Prometheus metrics.
 - **Intelligence** (`intelligence/`) — Python engine: ingestion, classification, adaptive retrieval planning, multiple retriever backends, reranking, evaluation.
 - **Data** — PostgreSQL via Prisma; ChromaDB for vector search; Cloudinary for artifact media.
-- **Observability** — Prometheus + Grafana, structured logging, and an internal Streamlit dashboard.
+- **Observability** — Prometheus + Grafana, structured logging.
 
 A dedicated [ARCHITECTURE.md](docs/ARCHITECTURE.md) covers component responsibilities, the retrieval pipeline, and the evaluation framework.
 
@@ -165,7 +164,6 @@ Honest gaps and planned work:
 ```text
 kairos/
 ├── apps/portal/          # Next.js workspace (auth, knowledge bases, chat, artifact studio)
-├── apps/internal-dashboard/ # Streamlit research/ops dashboard
 ├── gateway/              # Go API gateway (Chi, gRPC, caching, rate limiting)
 ├── intelligence/         # Python RAG engine (ingestion, retrieval, evaluation, telemetry)
 ├── proto/                # gRPC contract definitions

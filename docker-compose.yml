@@ -81,40 +81,6 @@ services:
     networks:
       - kairos
 
-  internal-dashboard:
-    build:
-      context: .
-      dockerfile: docker/dashboard.Dockerfile
-    ports:
-      - "${DASHBOARD_PORT:-8501}:8501"
-    env_file:
-      - .env
-    environment:
-      - CHROMA_STORE_HOST=chromadb
-      - CHROMA_STORE_PORT=8000
-      - KAIROS_INTELLIGENCE_HOST=intelligence
-      - STREAMLIT_SERVER_HEADLESS=true
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: "1G"
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    restart: unless-stopped
-    depends_on:
-      intelligence:
-        condition: service_healthy
-    labels:
-      - "kairos.component=internal-dashboard"
-      - "kairos.description=Internal Developer Dashboard (not for public deployment)"
-    networks:
-      - kairos
-
   gateway:
     build:
       context: .

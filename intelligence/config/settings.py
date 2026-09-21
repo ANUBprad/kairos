@@ -143,9 +143,6 @@ class Settings(BaseSettings):
         default=30.0, description="Seconds before half-open retry"
     )
 
-    # --- Dashboard ----------------------------------------------------
-    dashboard_port: int = Field(default=8501, description="Streamlit dashboard port")
-
     # --- Artifacts ----------------------------------------------------
     artifacts_dir: str = Field(
         default="./artifacts", description="Artifact storage directory"

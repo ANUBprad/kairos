@@ -43,7 +43,6 @@ docker compose ps   # wait for services to become healthy
 | Gateway | 8080 | Go HTTP gateway |
 | Intelligence | 28080 / 8001 | Python RAG engine (gRPC / metrics) |
 | API | 8000 | FastAPI management API |
-| Internal Dashboard | 8501 | Streamlit research/ops dashboard |
 | ChromaDB | 7777 | Vector store |
 | Prometheus | 9090 | Metrics collection |
 | Grafana | 3000 | Metrics dashboards (conflicts with a locally-run Portal on 3000) |

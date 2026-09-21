@@ -41,7 +41,6 @@ PostgreSQL                 ChromaDB
 ```text
 kairos/
 ├── apps/portal/            # Next.js workspace (auth, knowledge bases, chat, artifact studio)
-├── apps/internal-dashboard/# Streamlit research/ops dashboard
 ├── gateway/                # Go API gateway
 ├── intelligence/           # Python intelligence engine
 │   ├── api/                # FastAPI management API
@@ -104,7 +103,6 @@ Python service. Responsibilities:
 | Component | Location | Purpose |
 |-----------|----------|---------|
 | FastAPI management API | `intelligence/api/` | Configuration/artifact/evaluation endpoints (`/api/v1/*`) |
-| Internal dashboard | `apps/internal-dashboard/` | Streamlit research/ops dashboard (ablations, benchmarks, observability, planner analysis) |
 | ChromaDB | docker service | Vector store |
 | PostgreSQL | external / via DATABASE_URL | Users, knowledge bases, artifacts, podcast interruptions |
 | Prometheus + Grafana | docker services | Metrics collection and dashboards |
@@ -166,7 +164,7 @@ The planner bakes in confidence-aware fallback: if a primary strategy under-perf
 
 ## Deployment
 
-The supported deployment is Docker Compose. Services: `chromadb`, `intelligence`, `api`, `internal-dashboard`, `gateway`, `prometheus`, `grafana`. See `docker-compose.yml` and `docs/DEPLOYMENT.md` for details.
+The supported deployment is Docker Compose. Services: `chromadb`, `intelligence`, `api`, `gateway`, `prometheus`, `grafana`. See `docker-compose.yml` and `docs/DEPLOYMENT.md` for details.
 
 ---
 

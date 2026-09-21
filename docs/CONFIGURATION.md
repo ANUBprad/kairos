@@ -42,7 +42,6 @@ Complete configuration reference for Kairos.
 | Intelligence (gRPC) | 28080 | `INTELLIGENCE_PORT` |
 | Intelligence metrics | 8001 | `KAIROS_METRICS_PORT` |
 | API (FastAPI) | 8000 | `API_PORT` |
-| Internal Dashboard | 8501 | `DASHBOARD_PORT` |
 | ChromaDB | 7777 | `CHROMA_STORE_PORT` |
 | Prometheus | 9090 | `PROMETHEUS_PORT` |
 | Grafana | 3000 | (conflicts with Portal dev — run one at a time) |
@@ -226,14 +225,13 @@ registry.register(
 
 **Location:** `docker-compose.yml`
 
-The compose stack serves seven services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`.
+The compose stack serves six services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`.
 
 | Service | Build / Image | Port | Notes |
 |---------|---------------|------|-------|
 | `chromadb` | `chromadb/chroma:1.0.15` | 7777 → 8000 | Vector store |
 | `intelligence` | `docker/intelligence.Dockerfile` | 28080, 8001 | gRPC engine + metrics |
 | `api` | `docker/api.Dockerfile` | ${API_PORT:-8000} | FastAPI management API |
-| `internal-dashboard` | `docker/dashboard.Dockerfile` | ${DASHBOARD_PORT:-8501} | Streamlit dashboard |
 | `gateway` | `docker/gateway.Dockerfile` | ${GATEWAY_PORT:-8080} | HTTP API gateway |
 | `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Metrics collection |
 | `grafana` | `grafana/grafana:10.4.2` | 3000 | Dashboards (provisioned from `docker/grafana/`) |
@@ -277,7 +275,6 @@ class Settings:
     intelligence_port: int = 28080
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    dashboard_port: int = 8501
 
     # Data
     chroma_store_host: str = "localhost"
