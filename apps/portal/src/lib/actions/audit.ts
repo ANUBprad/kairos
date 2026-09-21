@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
-import { getMembership } from "@/lib/rbac";
+import { getMembership, hasPermission, getRequiredRole } from "@/lib/rbac";
 import { logger } from "@/lib/logger";
 
 // ============================================================================
@@ -24,6 +24,16 @@ export interface AuditLogEntry {
     email: string;
     image: string | null;
   };
+}
+
+async function requireAuditPermission(userId: string, organizationId: string): Promise<void> {
+  const membership = await getMembership(userId, organizationId);
+  if (!membership) {
+    throw new Error("Organization not found");
+  }
+  if (!hasPermission(membership.role, "view_audit_logs")) {
+    throw new Error(`Access denied: view_audit_logs requires ${getRequiredRole("view_audit_logs")} role or higher`);
+  }
 }
 
 export async function listAuditLogs(
@@ -49,9 +59,7 @@ export async function listAuditLogs(
       throw new Error("Unauthorized");
     }
 
-    if (!(await getMembership(session.user.id, organizationId))) {
-      throw new Error("Organization not found");
-    }
+    await requireAuditPermission(session.user.id, organizationId);
 
     const { limit = 50, offset = 0, action, resource, userId, startDate, endDate } = options;
 
@@ -112,9 +120,7 @@ export async function getAuditLogStats(organizationId: string) {
       throw new Error("Unauthorized");
     }
 
-    if (!(await getMembership(session.user.id, organizationId))) {
-      throw new Error("Organization not found");
-    }
+    await requireAuditPermission(session.user.id, organizationId);
 
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -193,9 +199,7 @@ export async function exportAuditLogs(
       throw new Error("Unauthorized");
     }
 
-    if (!(await getMembership(session.user.id, organizationId))) {
-      throw new Error("Organization not found");
-    }
+    await requireAuditPermission(session.user.id, organizationId);
 
     const { startDate, endDate, format = "json" } = options;
 
