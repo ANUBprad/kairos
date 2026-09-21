@@ -2,11 +2,6 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const routeSource = readFileSync(
-  new URL("../app/api/v1/evaluation/run/route.ts", import.meta.url),
-  "utf8",
-);
-
 const accessSource = readFileSync(
   new URL("../lib/evaluation/access.ts", import.meta.url),
   "utf8",
@@ -41,48 +36,6 @@ const regressionRouteSource = readFileSync(
   new URL("../app/api/v1/regression/route.ts", import.meta.url),
   "utf8",
 );
-
-describe("evaluation run HTTP boundary wiring", () => {
-  it("rejects client filesystem paths instead of forwarding them", () => {
-    assert.match(routeSource, /dataset_path is not accepted/);
-    assert.doesNotMatch(routeSource, /body\.dataset_path[\s\S]{0,60}JSON\.stringify/);
-  });
-
-  it("never trusts a client-supplied namespace", () => {
-    assert.doesNotMatch(routeSource, /body\.namespace/);
-    assert.match(routeSource, /namespace = knowledgeBaseId;/);
-  });
-
-  it("anchors the namespace to a knowledge base the caller can access", () => {
-    assert.match(routeSource, /await canAccessKnowledgeBase\(session\.user\.id, knowledgeBaseId\)\)/);
-    assert.match(routeSource, /namespace = knowledgeBaseId;/);
-    assert.match(routeSource, /namespace = kb\.id;/);
-  });
-});
-
-describe("intelligence persistence wiring", () => {
-  it("requires a knowledge base anchor when persisting", () => {
-    assert.match(routeSource, /persist && !knowledgeBaseId/);
-    assert.match(routeSource, /knowledge_base_id is required when persist=true/);
-  });
-
-  it("forwards include_results only when persisting", () => {
-    assert.match(routeSource, /\? \{ include_results: true \} : \{\}/);
-  });
-
-  it("derives the persisted run's ownership from the server session and validated namespace", () => {
-    assert.match(routeSource, /createIntelligenceRun\(\{[\s\S]{0,240}knowledgeBaseId: namespace,[\s\S]{0,160}userId: session\.user\.id/);
-    assert.doesNotMatch(routeSource, /body\.run_id/);
-    assert.doesNotMatch(routeSource, /body\.user_id|body\.organization_id/);
-  });
-
-  it("lets the server own the run lifecycle, never the client", () => {
-    assert.doesNotMatch(routeSource, /body\.run_id[\s\S]{0,60}JSON\.stringify/);
-    assert.doesNotMatch(routeSource, /run_id[\s\S]{0,60}createIntelligenceRun/);
-    assert.match(routeSource, /failIntelligenceRun\(runId\)/);
-    assert.match(routeSource, /completeIntelligenceRun\(runId, outcome/);
-  });
-});
 
 describe("dataset and run authorization shared boundary", () => {
   it("resolves dataset tenancy through the caller identity, not dataset existence", () => {

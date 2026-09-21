@@ -164,7 +164,7 @@ The planner bakes in confidence-aware fallback: if a primary strategy under-perf
 
 ## Deployment
 
-The supported deployment is Docker Compose. Services: `chromadb`, `intelligence`, `api`, `gateway`, `prometheus`, `grafana`. See `docker-compose.yml` and `docs/DEPLOYMENT.md` for details.
+The supported deployment is Docker Compose. Services: `chromadb`, `intelligence`, `gateway`, `prometheus`, `grafana`. See `docker-compose.yml` and `docs/DEPLOYMENT.md` for details.
 
 ---
 

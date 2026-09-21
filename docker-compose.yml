@@ -50,37 +50,6 @@ services:
     networks:
       - kairos
 
-  api:
-    build:
-      context: .
-      dockerfile: docker/api.Dockerfile
-    ports:
-      - "${API_PORT:-8000}:8000"
-    env_file:
-      - .env
-    environment:
-      - KAIROS_ENVIRONMENT=${KAIROS_ENVIRONMENT:-development}
-      - CHROMA_STORE_HOST=chromadb
-      - CHROMA_STORE_PORT=8000
-      - KAIROS_INTELLIGENCE_HOST=intelligence
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: "2G"
-    healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    restart: unless-stopped
-    depends_on:
-      intelligence:
-        condition: service_healthy
-    networks:
-      - kairos
-
   gateway:
     build:
       context: .

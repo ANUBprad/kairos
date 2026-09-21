@@ -81,7 +81,6 @@ docker compose ps   # wait until all services report healthy
 | Portal (dev) | http://localhost:3000 | Web workspace — run via `npm run dev` in `apps/portal` |
 | Gateway | http://localhost:8080 | Go HTTP API gateway |
 | Intelligence | http://localhost:28080 | Python RAG engine (gRPC) |
-| API | http://localhost:8000 | FastAPI management API |
 | ChromaDB | http://localhost:7777 | Vector store |
 | Prometheus | http://localhost:9090 | Metrics collection |
 | Grafana | http://localhost:3000 | Metrics dashboards — conflicts with the Portal dev server; run them one at a time |
