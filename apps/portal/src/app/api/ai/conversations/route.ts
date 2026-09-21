@@ -5,6 +5,7 @@ import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import { isChatModelAllowed } from "@/lib/ai/providers";
 import { isValidEntityId } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
@@ -88,11 +89,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
     }
 
+    // A forged model value must never be persisted as the stored conversation
+    // model: it would bypass the chat route's allowlist and ride through to the
+    // provider later. Only a model known to the resolved provider is stored;
+    // anything else keeps the default.
+    const validProviders = ["openai", "gemini"] as const;
+    const checkProvider = provider && validProviders.includes(provider as (typeof validProviders)[number])
+      ? (provider as (typeof validProviders)[number])
+      : undefined;
+    const safeModel = isChatModelAllowed(checkProvider, model) ? model : undefined;
+
     const conversation = await createConversation(
       kbId,
       session.user.id,
       title,
-      model,
+      safeModel,
       provider,
     );
 

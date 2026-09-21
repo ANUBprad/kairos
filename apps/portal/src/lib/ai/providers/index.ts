@@ -48,6 +48,20 @@ export function getEmbeddingProvider(type?: ProviderType): AIProvider {
   return getAIProvider(type);
 }
 
+// Canonical chat-model gate: a model string may only be used when it is one of
+// the resolved provider's known models. Any other value (forged request field,
+// forged or stale stored conversation model) is rejected so it can never reach
+// the LLM API. Returns false when the provider is not configured rather than
+// surfacing configuration errors mid-request.
+export function isChatModelAllowed(providerType: ProviderType | undefined, model: string | undefined): boolean {
+  if (!model) return false;
+  try {
+    return getAIProvider(providerType).getAvailableModels().includes(model);
+  } catch {
+    return false;
+  }
+}
+
 // The provider SDK clients capture globalThis.fetch at construction, so cached
 // clients outlive any per-test fetch stub. Test code calls this to give each
 // test a fresh client bound to its own stub.

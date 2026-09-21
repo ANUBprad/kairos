@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { streamChatResponse } from "@/lib/ai/chat";
-import { getAIProvider } from "@/lib/ai/providers";
+import { isChatModelAllowed } from "@/lib/ai/providers";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { buildChatPrompt } from "@/lib/ai/prompts";
 import { executeRetrievalWithTrace } from "@/lib/retrieval/strategies";
@@ -97,20 +97,19 @@ export async function POST(request: NextRequest) {
     ? { requestId: randomUUID(), organizationId, userId: session.user.id }
     : undefined;
 
-  // The client-supplied model is free text; only accept it when it is one of
-  // the resolved provider's known models. Anything else falls back to the
-  // conversation default so a forged model can never reach the LLM API.
-  let resolvedModel = conversation!.model || undefined;
-  if (model) {
-    try {
-      const checkProvider: ProviderType | undefined =
-        typedProvider ?? (conversation!.provider as ProviderType) ?? undefined;
-      const available = getAIProvider(checkProvider).getAvailableModels();
-      if (available.includes(model)) resolvedModel = model;
-    } catch {
-      // Provider not configured; leave the conversation default in place and
-      // let the stream surface the real misconfiguration error.
-    }
+  // Both the client-supplied model and the stored conversation model are free
+  // text; only accept a value when it is one of the resolved provider's known
+  // models (canonical check). A forged/unsupported request model falls back to
+  // the stored conversation model only if that one is on the allowlist too;
+  // otherwise the provider default is used so a forged value can never reach
+  // the LLM API.
+  const checkProvider: ProviderType | undefined =
+    typedProvider ?? (conversation!.provider as ProviderType) ?? undefined;
+  let resolvedModel: string | undefined;
+  if (isChatModelAllowed(checkProvider, model)) {
+    resolvedModel = model;
+  } else if (isChatModelAllowed(checkProvider, conversation!.model)) {
+    resolvedModel = conversation!.model;
   }
 
   // Server-side source scope validation: keep only ids that point at documents
