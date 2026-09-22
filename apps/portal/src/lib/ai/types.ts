@@ -31,6 +31,7 @@ export interface StreamChunk {
 export interface EmbeddingRequest {
   input: string | string[];
   model?: string;
+  signal?: AbortSignal | null;
 }
 
 export interface EmbeddingResponse {

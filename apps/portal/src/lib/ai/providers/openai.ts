@@ -102,10 +102,13 @@ export class OpenAIProvider implements AIProvider {
       ? request.input
       : [request.input];
 
-    const response = await this.client.embeddings.create({
-      model,
-      input: inputs,
-    });
+    const response = await this.client.embeddings.create(
+      {
+        model,
+        input: inputs,
+      },
+      { signal: request.signal },
+    );
 
     return {
       embeddings: response.data.map((d) => d.embedding),

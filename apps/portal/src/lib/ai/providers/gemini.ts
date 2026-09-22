@@ -187,6 +187,7 @@ export class GeminiProvider implements AIProvider {
         body: JSON.stringify({
           content: { parts: [{ text: input }] },
         }),
+        signal: request.signal ?? undefined,
       });
 
       if (!res.ok) {
