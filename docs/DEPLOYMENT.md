@@ -40,6 +40,7 @@ docker compose ps   # wait for services to become healthy
 
 | Service | Port | Description |
 |---------|------|-------------|
+| PostgreSQL | 5432 | App database (pgvector) — matches the default `DATABASE_URL` |
 | Gateway | 8080 | Go HTTP gateway |
 | Intelligence | 28080 / 8001 | Python RAG engine (gRPC / metrics) |
 | ChromaDB | 7777 | Vector store |
@@ -51,12 +52,11 @@ The **Portal** is not part of the compose stack; run it locally:
 ```bash
 cd apps/portal
 npm install
-npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 npm run dev
 ```
 
-PostgreSQL is expected to be reachable through `DATABASE_URL`/`DIRECT_URL` (the compose stack does not launch a Postgres container).
+PostgreSQL is provided by the compose stack at `localhost:5432/kairos` (user `postgres`/`postgres`), matching the default `DATABASE_URL`. To point the Portal at a different database, set `DATABASE_URL`/`DIRECT_URL` in `.env` and run `npx prisma migrate deploy` against it instead.
 
 ### Environment Variables
 

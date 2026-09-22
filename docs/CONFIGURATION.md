@@ -224,17 +224,18 @@ registry.register(
 
 **Location:** `docker-compose.yml`
 
-The compose stack serves five services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`.
+The compose stack serves six services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`.
 
 | Service | Build / Image | Port | Notes |
 |---------|---------------|------|-------|
+| `postgres` | `pgvector/pgvector:pg16` | 5432 | App database — matches the default `DATABASE_URL` |
 | `chromadb` | `chromadb/chroma:1.0.15` | 7777 → 8000 | Vector store |
 | `intelligence` | `docker/intelligence.Dockerfile` | 28080, 8001 | gRPC engine + metrics |
 | `gateway` | `docker/gateway.Dockerfile` | ${GATEWAY_PORT:-8080} | HTTP API gateway |
 | `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Metrics collection |
 | `grafana` | `grafana/grafana:10.4.2` | 3000 | Dashboards (provisioned from `docker/grafana/`) |
 
-The stack reads its environment from `.env` (see `.env.example`). PostgreSQL is provided externally via `DATABASE_URL`/`DIRECT_URL` and is not part of the compose stack.
+The stack reads its environment from `.env` (see `.env.example`). The `postgres` service provides the local development database (`localhost:5432/kairos`, user `postgres`/`postgres`); point `DATABASE_URL`/`DIRECT_URL` at any other PostgreSQL to use it instead.
 
 ---
 

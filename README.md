@@ -68,16 +68,19 @@ git clone https://github.com/ANUBprad/kairos.git
 cd kairos
 
 cp .env.example .env
-# Edit .env: set at least DATABASE_URL, BETTER_AUTH_SECRET and an AI provider key
+# Edit .env: set at least BETTER_AUTH_SECRET and an AI provider key
 docker compose up -d
 
 docker compose ps   # wait until all services report healthy
 ```
 
+The compose stack provides the local database (PostgreSQL 16 with pgvector) at `localhost:5432/kairos`, matching the default `DATABASE_URL` in `.env.example`.
+
 **Default services**
 
 | Service | URL / Port | Purpose |
 |---------|------------|---------|
+| PostgreSQL | localhost:5432 | App database (pgvector) — matches the default `DATABASE_URL` |
 | Portal (dev) | http://localhost:3000 | Web workspace — run via `npm run dev` in `apps/portal` |
 | Gateway | http://localhost:8080 | Go HTTP API gateway |
 | Intelligence | http://localhost:28080 | Python RAG engine (gRPC) |
@@ -90,10 +93,23 @@ docker compose ps   # wait until all services report healthy
 ```bash
 cd apps/portal
 npm install
-npx prisma generate
-npx prisma db push        # applies the schema to your PostgreSQL database
+npx prisma migrate deploy   # applies all migrations to the compose-provided database
 npm run dev
 ```
+
+`npx prisma migrate deploy` is non-destructive: it only applies migrations that have not been recorded yet and never drops data. If you use the default compose Postgres, the schema is applied in one command.
+
+**Using an existing database (e.g. a Neon instance)**
+
+Point `DATABASE_URL` at your external PostgreSQL instead of the compose one and run `npx prisma migrate deploy` there. If the database was previously populated with `npx prisma db push` (no migration record), `migrate deploy` reports **P3005**. Baseline such a database once, non-destructively — the existing schema already reflects the repo's migration history, so you only seed the migration ledger (`migrate resolve` executes no SQL):
+
+```bash
+cd apps/portal
+for d in prisma/migrations/2*/; do npx prisma migrate resolve --applied "$(basename "$d")"; done
+npx prisma migrate deploy   # reports "No pending migrations to apply"
+```
+
+Future schema changes then ship via normal `npx prisma migrate deploy` runs.
 
 The full environment reference lives in [`.env.example`](.env.example); see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment notes.
 
