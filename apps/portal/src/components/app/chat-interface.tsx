@@ -40,6 +40,7 @@ import {
   GENERATION_FAILED_TEXT,
   GENERATION_STOPPED_TEXT,
 } from "@/lib/ai/chat/stream-markers";
+import { resolveStreamGate } from "@/lib/ai/chat/stream-gate";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
 
 interface Citation {
@@ -279,6 +280,22 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
         }),
         signal: controller.signal,
       });
+
+      // Fail fast on non-streaming responses: a 4xx/5xx body is not SSE and
+      // parsing it would produce a blank assistant message. Surface the
+      // server-provided error and stop; the finally block still resets the
+      // streaming state and reloads the conversation list.
+      const streamGate = await resolveStreamGate(res);
+      if (!streamGate.streaming) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsg.id
+              ? { ...m, content: `**Error:** ${streamGate.error}` }
+              : m,
+          ),
+        );
+        return;
+      }
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No response body");

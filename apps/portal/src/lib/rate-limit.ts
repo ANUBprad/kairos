@@ -87,6 +87,7 @@ export const RATE_LIMITS = {
   signup: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
   passwordReset: { windowMs: 60 * 60 * 1000, maxRequests: 3 },
   chat: { windowMs: 60 * 1000, maxRequests: 30 },
+  conversation: { windowMs: 60 * 1000, maxRequests: 60 },
   upload: { windowMs: 60 * 1000, maxRequests: 10 },
   evaluation: { windowMs: 60 * 1000, maxRequests: 15 },
   research: { windowMs: 60 * 1000, maxRequests: 20 },

@@ -18,6 +18,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    const rl = rateLimit(`conversation:read:${session.user.id}`, RATE_LIMITS.conversation);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: rateLimitHeaders(rl, RATE_LIMITS.conversation) },
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const kbId = searchParams.get("kbId");
 

@@ -80,4 +80,41 @@ describe("single canonical chat surface contract", () => {
     walk(SRC);
     assert.deepEqual(consumers, ["chat-interface.tsx"], "only the shared chat component may call /api/ai/chat");
   });
+
+  it("fails fast on non-streaming chat responses before allocating the SSE reader", () => {
+    const source = readFileSync(join(SRC, "components/app/chat-interface.tsx"), "utf8");
+    assert.match(source, /import \{ resolveStreamGate \} from "@\/lib\/ai\/chat\/stream-gate"/);
+    const gateCall = source.indexOf("resolveStreamGate(res)");
+    const readerCall = source.indexOf("res.body?.getReader()");
+    assert.ok(gateCall > -1, "chat-interface must invoke resolveStreamGate");
+    assert.ok(readerCall > -1, "chat-interface must still read the SSE stream");
+    assert.ok(
+      gateCall < readerCall,
+      "resolveStreamGate must run before the SSE reader is allocated",
+    );
+  });
+
+  it("rate-limits conversation list/read and write routes", () => {
+    const listSource = readFileSync(join(APP, "api/ai/conversations/route.ts"), "utf8");
+    assert.match(
+      listSource,
+      /rateLimit\(`conversation:read:\$\{session\.user\.id\}`, RATE_LIMITS\.conversation\)/,
+      "conversation list GET must be rate-limited",
+    );
+
+    const idSource = readFileSync(join(APP, "api/ai/conversations/[id]/route.ts"), "utf8");
+    assert.match(
+      idSource,
+      /rateLimit\(`conversation:read:\$\{session\.user\.id\}`, RATE_LIMITS\.conversation\)/,
+      "conversation [id] GET must be rate-limited",
+    );
+    const writeMatches = idSource.match(
+      /rateLimit\(`conversation:write:\$\{session\.user\.id\}`, RATE_LIMITS\.conversation\)/g,
+    );
+    assert.equal(
+      writeMatches?.length ?? 0,
+      2,
+      "conversation [id] DELETE and PATCH must each be rate-limited",
+    );
+  });
 });

@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { isValidEntityId } from "@/lib/validation";
+import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,14 @@ export async function GET(
     const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const readRl = rateLimit(`conversation:read:${session.user.id}`, RATE_LIMITS.conversation);
+    if (!readRl.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: rateLimitHeaders(readRl, RATE_LIMITS.conversation) },
+      );
     }
 
     const { id } = await params;
@@ -61,6 +70,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    const writeRl = rateLimit(`conversation:write:${session.user.id}`, RATE_LIMITS.conversation);
+    if (!writeRl.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: rateLimitHeaders(writeRl, RATE_LIMITS.conversation) },
+      );
+    }
+
     const { id } = await params;
 
     if (!isValidEntityId(id)) {
@@ -89,6 +106,14 @@ export async function PATCH(
     const session = await getServerSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const writeRl = rateLimit(`conversation:write:${session.user.id}`, RATE_LIMITS.conversation);
+    if (!writeRl.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: rateLimitHeaders(writeRl, RATE_LIMITS.conversation) },
+      );
     }
 
     const { id } = await params;
