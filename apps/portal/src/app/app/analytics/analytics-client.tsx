@@ -8,9 +8,10 @@ export function AnalyticsClient() {
     <div className="animate-fade-in">
       <PageHeader
         title="Analytics"
-        description="Monitor quality trends, cost patterns, and evaluation performance."
-        purpose="Track your evaluation platform metrics over time."
+        description="Real production metrics: requests, latency, errors, cost, and drift."
+        purpose="Review real metrics collected from traces and cost ledgering."
         relatedPages={[
+          { label: "Observability", href: "/app/observability" },
           { label: "Leaderboards", href: "/app/leaderboards" },
           { label: "Quality Gates", href: "/app/quality-gates" },
           { label: "Evaluations", href: "/app/evaluation" },

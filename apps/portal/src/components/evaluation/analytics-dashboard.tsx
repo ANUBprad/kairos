@@ -1,297 +1,39 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
   BarChart3,
   Activity,
   Clock,
   DollarSign,
-  CheckCircle2,
+  ShieldAlert,
   AlertTriangle,
   Layers,
   RefreshCw,
-  ArrowRight,
+  CheckCircle2,
+  Crosshair,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { traceStats } from "@/lib/actions/observability";
+import { costSummary } from "@/lib/actions/cost";
+import { driftStats, listDriftAlerts } from "@/lib/actions/drift";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+type TraceStatsResult = Awaited<ReturnType<typeof traceStats>>;
+type CostSummaryResult = Awaited<ReturnType<typeof costSummary>>;
+type DriftStatsResult = Awaited<ReturnType<typeof driftStats>>;
+type DriftAlertRow = Awaited<ReturnType<typeof listDriftAlerts>>[number];
 
-interface TrendPoint {
-  date: string;
-  faithfulness: number;
-  groundedness: number;
-  hallucination: number;
-  cost: number;
-  latency: number;
-}
-
-interface PromptImprovement {
-  id: string;
-  promptName: string;
-  version: string;
-  previousVersion: string;
-  beforeFaithfulness: number;
-  afterFaithfulness: number;
-  beforeGroundedness: number;
-  afterGroundedness: number;
-  date: string;
-}
-
-interface RegressionEntry {
-  id: string;
-  metric: string;
-  severity: "critical" | "warning" | "info";
-  description: string;
-  detectedAt: string;
-  status: "open" | "investigating" | "resolved";
-  deltaPercent: number;
-}
-
-interface TokenUsage {
-  model: string;
-  tokens: number;
-  color: string;
-}
-
-interface ProviderCalls {
-  provider: string;
-  calls: number;
-  color: string;
-}
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-function generateTrendData(): TrendPoint[] {
-  const data: TrendPoint[] = [];
-  const now = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const baseF = 0.82 + Math.sin(i / 5) * 0.04;
-    const baseG = 0.78 + Math.cos(i / 7) * 0.05;
-    data.push({
-      date: d.toISOString().slice(0, 10),
-      faithfulness: Math.round((baseF + (Math.random() - 0.5) * 0.03) * 1000) / 1000,
-      groundedness: Math.round((baseG + (Math.random() - 0.5) * 0.03) * 1000) / 1000,
-      hallucination: Math.round((0.12 + (Math.random() - 0.5) * 0.04) * 1000) / 1000,
-      cost: Math.round((2.4 + Math.sin(i / 4) * 0.8 + (Math.random() - 0.5) * 0.3) * 100) / 100,
-      latency: Math.round(180 + Math.sin(i / 6) * 30 + (Math.random() - 0.5) * 20),
-    });
-  }
-  return data;
-}
-
-const MOCK_PROMPT_IMPROVEMENTS: PromptImprovement[] = [
-  {
-    id: "pi-1",
-    promptName: "RAG Answer Generator",
-    version: "v3.2",
-    previousVersion: "v3.1",
-    beforeFaithfulness: 0.78,
-    afterFaithfulness: 0.87,
-    beforeGroundedness: 0.72,
-    afterGroundedness: 0.84,
-    date: "2026-07-28",
-  },
-  {
-    id: "pi-2",
-    promptName: "Summarization Chain",
-    version: "v2.0",
-    previousVersion: "v1.9",
-    beforeFaithfulness: 0.81,
-    afterFaithfulness: 0.85,
-    beforeGroundedness: 0.79,
-    afterGroundedness: 0.82,
-    date: "2026-07-25",
-  },
-  {
-    id: "pi-3",
-    promptName: "Citation Extractor",
-    version: "v1.4",
-    previousVersion: "v1.3",
-    beforeFaithfulness: 0.74,
-    afterFaithfulness: 0.81,
-    beforeGroundedness: 0.70,
-    afterGroundedness: 0.78,
-    date: "2026-07-22",
-  },
-  {
-    id: "pi-4",
-    promptName: "Code Review Assistant",
-    version: "v2.1",
-    previousVersion: "v2.0",
-    beforeFaithfulness: 0.85,
-    afterFaithfulness: 0.89,
-    beforeGroundedness: 0.80,
-    afterGroundedness: 0.86,
-    date: "2026-07-19",
-  },
-];
-
-const MOCK_REGRESSIONS: RegressionEntry[] = [
-  {
-    id: "reg-1",
-    metric: "Faithfulness",
-    severity: "critical",
-    description: "Faithfulness dropped 8.2% after deploying prompt v3.0 on production traffic.",
-    detectedAt: "2026-07-27T14:30:00Z",
-    status: "investigating",
-    deltaPercent: -8.2,
-  },
-  {
-    id: "reg-2",
-    metric: "Latency",
-    severity: "warning",
-    description: "P95 latency increased from 210ms to 285ms after embedding model change.",
-    detectedAt: "2026-07-25T09:15:00Z",
-    status: "open",
-    deltaPercent: 35.7,
-  },
-  {
-    id: "reg-3",
-    metric: "Hallucination Rate",
-    severity: "warning",
-    description: "Hallucination rate rose to 0.18 in the summarization chain.",
-    detectedAt: "2026-07-23T16:45:00Z",
-    status: "resolved",
-    deltaPercent: 22.4,
-  },
-  {
-    id: "reg-4",
-    metric: "Groundedness",
-    severity: "info",
-    description: "Minor groundedness dip in citation extractor on low-context queries.",
-    detectedAt: "2026-07-20T11:00:00Z",
-    status: "resolved",
-    deltaPercent: -3.1,
-  },
-  {
-    id: "reg-5",
-    metric: "Cost",
-    severity: "warning",
-    description: "Daily API cost exceeded budget threshold for 3 consecutive days.",
-    detectedAt: "2026-07-18T08:00:00Z",
-    status: "resolved",
-    deltaPercent: 41.0,
-  },
-];
-
-const MOCK_TOKEN_USAGE: TokenUsage[] = [
-  { model: "gpt-4o", tokens: 1240000, color: "#FF5A0A" },
-  { model: "gpt-4o-mini", tokens: 3800000, color: "#3B82F6" },
-  { model: "claude-3.5-sonnet", tokens: 620000, color: "#22C55E" },
-  { model: "text-embedding-3-small", tokens: 5100000, color: "#F59E0B" },
-  { model: "text-embedding-3-large", tokens: 980000, color: "#8B5CF6" },
-];
-
-const MOCK_PROVIDER_CALLS: ProviderCalls[] = [
-  { provider: "OpenAI", calls: 14230, color: "#FF5A0A" },
-  { provider: "Anthropic", calls: 3840, color: "#3B82F6" },
-  { provider: "Internal", calls: 8920, color: "#22C55E" },
-];
-
-// ---------------------------------------------------------------------------
-// SVG Chart Helpers
-// ---------------------------------------------------------------------------
-
-const CHART_COLORS = {
-  faithfulness: "#FF5A0A",
-  groundedness: "#3B82F6",
-  hallucination: "#EF4444",
-  cost: "#F59E0B",
+const STATUS_COLORS: Record<string, string> = {
+  OK: "#22C55E",
+  ERROR: "#EF4444",
+  TIMEOUT: "#F59E0B",
+  CANCELLED: "#8B8B8B",
 };
 
-function LineChart({
-  data,
-  lines,
-  height = 200,
-  showGrid = true,
-  yFormatter,
-  className,
-}: {
-  data: TrendPoint[];
-  lines: { key: keyof TrendPoint; color: string; label: string }[];
-  height?: number;
-  showGrid?: boolean;
-  yFormatter?: (v: number) => string;
-  className?: string;
-}) {
-  const padding = { top: 12, bottom: 28, left: 0, right: 0 };
-  const plotH = height - padding.top - padding.bottom;
-
-  const allValues = data.flatMap((d) => lines.map((l) => d[l.key] as number));
-  const globalMin = Math.min(...allValues);
-  const globalMax = Math.max(...allValues);
-  const range = globalMax - globalMin || 1;
-
-  const linePaths = lines.map((line) => {
-    const pts = data.map((d, i) => {
-      const x = (i / (data.length - 1)) * 100;
-      const y = padding.top + plotH - (((d[line.key] as number) - globalMin) / range) * plotH;
-      return `${x},${y}`;
-    });
-    return { ...line, path: pts.join(" ") };
-  });
-
-  const gridLines = [0, 0.25, 0.5, 0.75, 1].map((frac) => {
-    const y = padding.top + plotH * (1 - frac);
-    const val = globalMin + range * frac;
-    return { y, label: yFormatter ? yFormatter(val) : val.toFixed(2) };
-  });
-
-  const xLabels = data
-    .filter((_, i) => i % Math.max(1, Math.floor(data.length / 6)) === 0)
-    .map((d) => {
-      const idx = data.indexOf(d);
-      const x = (idx / (data.length - 1)) * 100;
-      return { x, label: d.date.slice(5) };
-    });
-
-  return (
-    <div className={cn("w-full overflow-hidden", className)}>
-      <svg viewBox={`0 0 100 ${height}`} className="w-full" preserveAspectRatio="none">
-        {showGrid &&
-          gridLines.map((g, i) => (
-            <g key={i}>
-              <line
-                x1="0" y1={g.y} x2="100" y2={g.y}
-                stroke="var(--color-border, #2A2A2A)" strokeWidth="0.2" strokeDasharray="1,1"
-              />
-              <text x="0.5" y={g.y - 0.5} fill="var(--color-text-tertiary, #8B8B8B)" fontSize="2.2" dominantBaseline="auto">
-                {g.label}
-              </text>
-            </g>
-          ))}
-        {linePaths.map((lp) => (
-          <polyline
-            key={lp.key as string}
-            points={lp.path}
-            fill="none"
-            stroke={lp.color}
-            strokeWidth="0.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ))}
-        {xLabels.map((xl, i) => (
-          <text key={i} x={xl.x} y={height - 2} fill="var(--color-text-tertiary, #8B8B8B)" fontSize="2" textAnchor="middle">
-            {xl.label}
-          </text>
-        ))}
-      </svg>
-    </div>
-  );
-}
+const CHART_COLORS = ["#FF5A0A", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#14B8A6"];
 
 function BarChartSimple({
   data,
@@ -311,22 +53,20 @@ function BarChartSimple({
   const max = Math.max(...data.map((d) => d.value), 1);
   const barW = 80 / data.length;
 
-  const gridLines = [0, 0.5, 1].map((frac) => {
-    const y = padding.top + plotH * (1 - frac);
-    return { y, label: yFormatter ? yFormatter(max * frac) : (max * frac).toFixed(1) };
-  });
-
   return (
     <div className={cn("w-full overflow-hidden", className)}>
       <svg viewBox={`0 0 100 ${height}`} className="w-full" preserveAspectRatio="none">
-        {gridLines.map((g, i) => (
-          <g key={i}>
-            <line x1="0" y1={g.y} x2="100" y2={g.y} stroke="var(--color-border, #2A2A2A)" strokeWidth="0.2" strokeDasharray="1,1" />
-            <text x="0.5" y={g.y - 0.5} fill="var(--color-text-tertiary, #8B8B8B)" fontSize="2.2">
-              {g.label}
-            </text>
-          </g>
-        ))}
+        {[0, 0.5, 1].map((frac, i) => {
+          const y = padding.top + plotH * (1 - frac);
+          return (
+            <g key={i}>
+              <line x1="0" y1={y} x2="100" y2={y} stroke="var(--color-border, #2A2A2A)" strokeWidth="0.2" strokeDasharray="1,1" />
+              <text x="0.5" y={y - 0.5} fill="var(--color-text-tertiary, #8B8B8B)" fontSize="2.2">
+                {yFormatter ? yFormatter(max * frac) : (max * frac).toFixed(1)}
+              </text>
+            </g>
+          );
+        })}
         {data.map((d, i) => {
           const x = 10 + i * barW;
           const barH = (d.value / max) * plotH;
@@ -397,33 +137,19 @@ function PieChartSimple({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Summary Card
-// ---------------------------------------------------------------------------
-
 function SummaryCard({
   label,
   value,
   unit,
-  trend,
-  trendValue,
   icon: Icon,
-  sparkline,
   className,
 }: {
   label: string;
   value: string;
   unit?: string;
-  trend?: "up" | "down" | "neutral";
-  trendValue?: string;
-  icon: typeof TrendingUp;
-  sparkline?: number[];
+  icon: typeof Activity;
   className?: string;
 }) {
-  const TrendIcon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : Minus;
-  const trendColor =
-    trend === "up" ? "text-success" : trend === "down" ? "text-error" : "text-text-tertiary";
-
   return (
     <Card className={cn("p-4 space-y-3", className)}>
       <div className="flex items-center justify-between">
@@ -433,12 +159,6 @@ function SummaryCard({
           </div>
           <span className="text-xs font-medium text-text-secondary">{label}</span>
         </div>
-        {trend && (
-          <div className={cn("flex items-center gap-0.5", trendColor)}>
-            <TrendIcon size={12} />
-            {trendValue && <span className="text-[10px] font-medium">{trendValue}</span>}
-          </div>
-        )}
       </div>
       <div className="flex items-end gap-2">
         <span className="text-2xl font-bold text-text-primary font-mono tabular-nums tracking-tight">
@@ -446,348 +166,386 @@ function SummaryCard({
         </span>
         {unit && <span className="text-sm text-text-tertiary mb-0.5">{unit}</span>}
       </div>
-      {sparkline && sparkline.length >= 2 && (
-        <svg viewBox="0 0 60 20" className="w-16 h-5 opacity-50">
-          <polyline
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={sparkline
-              .map((v, i) => {
-                const min = Math.min(...sparkline);
-                const max = Math.max(...sparkline);
-                const range = max - min || 1;
-                return `${(i / (sparkline.length - 1)) * 60},${20 - ((v - min) / range) * 20}`;
-              })
-              .join(" ")}
-          />
-        </svg>
-      )}
     </Card>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main Component
-// ---------------------------------------------------------------------------
+function NotCollected({
+  icon: Icon,
+  title,
+  hint,
+}: {
+  icon: typeof Activity;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-hover">
+        <Icon size={18} className="text-text-tertiary" />
+      </div>
+      <p className="text-sm font-medium text-text-secondary mt-3">{title}</p>
+      <p className="text-xs text-text-tertiary mt-1 max-w-[280px]">{hint}</p>
+    </div>
+  );
+}
+
+type Range = "7d" | "14d" | "30d";
+
+const RANGE_DAYS: Record<Range, number> = { "7d": 7, "14d": 14, "30d": 30 };
 
 export function AnalyticsDashboard() {
-  const [timeRange, setTimeRange] = useState<"7d" | "14d" | "30d">("30d");
-  const trendData = useMemo(() => generateTrendData(), []);
+  const [range, setRange] = useState<Range>("30d");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [trace, setTrace] = useState<TraceStatsResult | null>(null);
+  const [cost, setCost] = useState<CostSummaryResult | null>(null);
+  const [drift, setDrift] = useState<DriftStatsResult | null>(null);
+  const [alerts, setAlerts] = useState<DriftAlertRow[]>([]);
 
-  const visibleData = useMemo(() => {
-    const days = timeRange === "7d" ? 7 : timeRange === "14d" ? 14 : 30;
-    return trendData.slice(-days);
-  }, [trendData, timeRange]);
-
-  const summary = useMemo(() => {
-    const latest = trendData[trendData.length - 1];
-    const prev = trendData[trendData.length - 8] || trendData[0];
-    const avgF = trendData.reduce((s, d) => s + d.faithfulness, 0) / trendData.length;
-    const avgL = trendData.reduce((s, d) => s + d.latency, 0) / trendData.length;
-    const totalCost = trendData.reduce((s, d) => s + d.cost, 0);
-    const passRate = trendData.filter((d) => d.faithfulness >= 0.8).length / trendData.length;
-
-    const fDelta = latest.faithfulness - prev.faithfulness;
-    const lDelta = latest.latency - prev.latency;
-    const cDelta = latest.cost - prev.cost;
-
-    return {
-      totalEvaluations: 12847,
-      avgFaithfulness: avgF,
-      avgLatency: avgL,
-      totalCost,
-      passRate,
-      activeReviews: 23,
-      fTrend: fDelta > 0.005 ? "up" as const : fDelta < -0.005 ? "down" as const : "neutral" as const,
-      fTrendVal: `${fDelta > 0 ? "+" : ""}${(fDelta * 100).toFixed(1)}%`,
-      lTrend: lDelta < -5 ? "down" as const : lDelta > 5 ? "up" as const : "neutral" as const,
-      lTrendVal: `${lDelta > 0 ? "+" : ""}${lDelta.toFixed(0)}ms`,
-      cTrend: cDelta < -0.1 ? "down" as const : cDelta > 0.1 ? "up" as const : "neutral" as const,
-      cTrendVal: `${cDelta > 0 ? "+" : ""}$${cDelta.toFixed(2)}`,
-      pTrend: passRate >= 0.75 ? "up" as const : passRate >= 0.6 ? "neutral" as const : "down" as const,
-      pTrendVal: `${(passRate * 100).toFixed(0)}%`,
+  useEffect(() => {
+    let cancelled = false;
+    setLoadState("loading");
+    async function load() {
+      try {
+        const days = RANGE_DAYS[range];
+        const [t, c, d, a] = await Promise.all([
+          traceStats(days),
+          costSummary(days),
+          driftStats(days),
+          listDriftAlerts(),
+        ]);
+        if (cancelled) return;
+        setTrace(t);
+        setCost(c);
+        setDrift(d);
+        setAlerts(a);
+        setLoadState("ready");
+      } catch {
+        if (!cancelled) setLoadState("error");
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
     };
-  }, [trendData]);
+  }, [range, reloadKey]);
 
-  const totalTokens = MOCK_TOKEN_USAGE.reduce((s, t) => s + t.tokens, 0);
-  const totalCalls = MOCK_PROVIDER_CALLS.reduce((s, p) => s + p.calls, 0);
+  const statusSegments = useMemo(() => {
+    if (!trace?.statusBreakdown) return [];
+    return trace.statusBreakdown
+      .filter((s) => s._count > 0)
+      .map((s) => ({
+        label: String(s.status),
+        value: s._count,
+        color: STATUS_COLORS[String(s.status)] ?? "#8B8B8B",
+      }));
+  }, [trace]);
+
+  const providerRows = useMemo(() => {
+    if (!trace?.byProvider) return [];
+    return trace.byProvider
+      .filter((p) => p._count > 0)
+      .map((p) => ({
+        provider: p.provider ?? "unknown",
+        requests: p._count,
+        avgLatencyMs: p._avg.durationMs ?? 0,
+      }));
+  }, [trace]);
+
+  const dailyCosts = useMemo(() => {
+    if (!cost?.dailyCosts) return [];
+    return cost.dailyCosts
+      .filter((d) => (d._sum.cost ?? 0) > 0)
+      .map((d) => ({
+        label: new Date(d.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+        value: d._sum.cost ?? 0,
+      }));
+  }, [cost]);
+
+  const tokenSegments = useMemo(() => {
+    if (!cost?.byModel) return [];
+    return cost.byModel
+      .filter((m) => (m._sum.totalTokens ?? 0) > 0)
+      .map((m, i) => ({
+        label: String(m.model ?? "unknown"),
+        value: m._sum.totalTokens ?? 0,
+        color: CHART_COLORS[i % CHART_COLORS.length],
+      }));
+  }, [cost]);
+
+  if (loadState === "loading") {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
+      </div>
+    );
+  }
+
+  if (loadState === "error") {
+    return (
+      <Card className="p-10 text-center">
+        <AlertTriangle size={24} className="mx-auto text-warning mb-3" />
+        <p className="text-sm font-medium text-text-primary">Failed to load analytics data</p>
+        <p className="text-xs text-text-tertiary mt-1">
+          Trace and cost data could not be fetched. Refresh to try again.
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-4"
+          onClick={() => setReloadKey((k) => k + 1)}
+        >
+          <RefreshCw size={14} className="mr-1" />
+          Retry
+        </Button>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-text-primary">Analytics Dashboard</h2>
           <p className="text-sm text-text-secondary mt-1">
-            Evaluation quality, cost, and performance insights
+            Real production metrics from traces, usage, and drift detection
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(["7d", "14d", "30d"] as const).map((range) => (
+          {(["7d", "14d", "30d"] as const).map((r) => (
             <button
-              key={range}
-              onClick={() => setTimeRange(range)}
+              key={r}
+              onClick={() => setRange(r)}
               className={cn(
                 "px-3 py-1.5 text-xs font-medium rounded-lg transition-colors",
-                timeRange === range
-                  ? "bg-brand text-white"
-                  : "text-text-secondary hover:bg-surface-hover"
+                range === r ? "bg-brand text-white" : "text-text-secondary hover:bg-surface-hover"
               )}
             >
-              {range}
+              {r}
             </button>
           ))}
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" onClick={() => setReloadKey((k) => k + 1)}>
             <RefreshCw size={14} />
           </Button>
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <SummaryCard
-          label="Total Evaluations"
-          value={summary.totalEvaluations.toLocaleString()}
+          label="API Requests"
+          value={(trace?.totalTraces ?? 0).toLocaleString()}
           icon={BarChart3}
-          trend="up"
-          trendValue="+12.4%"
-          sparkline={trendData.slice(-10).map((d) => d.faithfulness)}
-        />
-        <SummaryCard
-          label="Avg Faithfulness"
-          value={summary.avgFaithfulness.toFixed(3)}
-          icon={Activity}
-          trend={summary.fTrend}
-          trendValue={summary.fTrendVal}
-          sparkline={trendData.slice(-10).map((d) => d.faithfulness)}
         />
         <SummaryCard
           label="Avg Latency"
-          value={summary.avgLatency.toFixed(0)}
+          value={Math.round(trace?.avgDurationMs ?? 0).toLocaleString()}
           unit="ms"
           icon={Clock}
-          trend={summary.lTrend}
-          trendValue={summary.lTrendVal}
-          sparkline={trendData.slice(-10).map((d) => d.latency)}
+        />
+        <SummaryCard
+          label="Error Rate"
+          value={(trace?.errorRate ?? 0).toFixed(1)}
+          unit="%"
+          icon={Activity}
         />
         <SummaryCard
           label="Total Cost"
-          value={`$${summary.totalCost.toFixed(2)}`}
+          value={`$${(cost?.totalCost ?? 0).toFixed(2)}`}
           icon={DollarSign}
-          trend={summary.cTrend}
-          trendValue={summary.cTrendVal}
-          sparkline={trendData.slice(-10).map((d) => d.cost)}
         />
         <SummaryCard
-          label="Pass Rate"
-          value={`${(summary.passRate * 100).toFixed(1)}`}
-          unit="%"
+          label="Open Drifts"
+          value={String(drift?.open ?? 0)}
+          icon={ShieldAlert}
+        />
+        <SummaryCard
+          label="Drift Alerts"
+          value={String(drift?.total ?? 0)}
           icon={CheckCircle2}
-          trend={summary.pTrend}
-          trendValue={summary.pTrendVal}
-          sparkline={trendData.slice(-10).map((d) => d.faithfulness)}
-        />
-        <SummaryCard
-          label="Active Reviews"
-          value={String(summary.activeReviews)}
-          icon={AlertTriangle}
-          trend="neutral"
         />
       </div>
 
-      {/* Quality Trends */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Activity size={16} className="text-text-secondary" />
-          <h3 className="text-sm font-semibold text-text-primary">Quality Trends</h3>
-        </div>
-        <LineChart
-          data={visibleData}
-          height={220}
-          lines={[
-            { key: "faithfulness", color: CHART_COLORS.faithfulness, label: "Faithfulness" },
-            { key: "groundedness", color: CHART_COLORS.groundedness, label: "Groundedness" },
-            { key: "hallucination", color: CHART_COLORS.hallucination, label: "Hallucination" },
-          ]}
-          yFormatter={(v) => v.toFixed(2)}
-        />
-        <div className="flex items-center justify-center gap-5 mt-3">
-          {[
-            { label: "Faithfulness", color: CHART_COLORS.faithfulness },
-            { label: "Groundedness", color: CHART_COLORS.groundedness },
-            { label: "Hallucination", color: CHART_COLORS.hallucination },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center gap-1.5 text-xs text-text-secondary">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-              {item.label}
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Cost Trends */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <DollarSign size={16} className="text-text-secondary" />
-          <h3 className="text-sm font-semibold text-text-primary">Daily Cost</h3>
-        </div>
-        <BarChartSimple
-          data={visibleData.map((d) => ({ label: d.date.slice(5), value: d.cost }))}
-          height={180}
-          color={CHART_COLORS.cost}
-          yFormatter={(v) => `$${v.toFixed(1)}`}
-        />
-      </Card>
-
-      {/* Prompt Improvements & Regression History */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Prompt Improvements */}
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-text-secondary" />
-            <h3 className="text-sm font-semibold text-text-primary">Prompt Improvements</h3>
+            <Activity size={16} className="text-text-secondary" />
+            <h3 className="text-sm font-semibold text-text-primary">Trace Status Breakdown</h3>
           </div>
-          <div className="space-y-3">
-            {MOCK_PROMPT_IMPROVEMENTS.map((imp) => (
-              <div key={imp.id} className="rounded-lg border border-border p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium text-text-primary">{imp.promptName}</span>
-                    <Badge variant="brand" className="ml-2">{imp.version}</Badge>
-                  </div>
-                  <span className="text-[11px] text-text-tertiary">{imp.date}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-text-tertiary">Faithfulness</span>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="font-mono text-text-secondary">{imp.beforeFaithfulness.toFixed(2)}</span>
-                      <ArrowRight size={10} className="text-text-tertiary" />
-                      <span className="font-mono text-success font-medium">{imp.afterFaithfulness.toFixed(2)}</span>
-                      <span className="text-success">(+{((imp.afterFaithfulness - imp.beforeFaithfulness) * 100).toFixed(1)}%)</span>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-text-tertiary">Groundedness</span>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="font-mono text-text-secondary">{imp.beforeGroundedness.toFixed(2)}</span>
-                      <ArrowRight size={10} className="text-text-tertiary" />
-                      <span className="font-mono text-success font-medium">{imp.afterGroundedness.toFixed(2)}</span>
-                      <span className="text-success">(+{((imp.afterGroundedness - imp.beforeGroundedness) * 100).toFixed(1)}%)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {statusSegments.length > 0 ? (
+            <PieChartSimple segments={statusSegments} />
+          ) : (
+            <NotCollected
+              icon={Activity}
+              title="No traces recorded yet"
+              hint="Traces are created when the assistant handles a turn in this workspace."
+            />
+          )}
         </Card>
 
-        {/* Regression History */}
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 size={16} className="text-text-secondary" />
+            <h3 className="text-sm font-semibold text-text-primary">API Requests by Provider</h3>
+          </div>
+          {providerRows.length > 0 ? (
+            <BarChartSimple
+              data={providerRows.map((p) => ({ label: p.provider, value: p.requests }))}
+              height={180}
+              color="#3B82F6"
+              yFormatter={(v) => v.toLocaleString()}
+            />
+          ) : (
+            <NotCollected
+              icon={BarChart3}
+              title="No provider usage yet"
+              hint="Request counts appear once the first traced turn is recorded."
+            />
+          )}
+          {providerRows.length > 0 && (
+            <div className="mt-3 text-xs text-text-tertiary text-center">
+              Total: {providerRows.reduce((s, p) => s + p.requests, 0).toLocaleString()} calls
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Crosshair size={16} className="text-text-secondary" />
+            <h3 className="text-sm font-semibold text-text-primary">Evaluation Quality</h3>
+          </div>
+          <NotCollected
+            icon={Crosshair}
+            title="Not yet collected"
+            hint="Faithfulness, groundedness, and hallucination scores are not recorded for this workspace yet. When an evaluation pipeline writes scores they will appear here."
+          />
+        </Card>
+
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle size={16} className="text-text-secondary" />
             <h3 className="text-sm font-semibold text-text-primary">Regression History</h3>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 pr-3 font-medium text-text-secondary">Metric</th>
-                  <th className="text-left py-2 px-3 font-medium text-text-secondary">Severity</th>
-                  <th className="text-left py-2 px-3 font-medium text-text-secondary">Status</th>
-                  <th className="text-right py-2 px-3 font-medium text-text-secondary">Delta</th>
-                  <th className="text-right py-2 pl-3 font-medium text-text-secondary">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_REGRESSIONS.map((reg) => (
-                  <tr key={reg.id} className="border-b border-border/50 group">
-                    <td className="py-2.5 pr-3">
-                      <div className="font-medium text-text-primary">{reg.metric}</div>
-                      <div className="text-text-tertiary mt-0.5 max-w-[200px] truncate group-hover:whitespace-normal group-hover:overflow-visible">
-                        {reg.description}
-                      </div>
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <Badge
-                        variant={
-                          reg.severity === "critical"
-                            ? "warning"
-                            : reg.severity === "warning"
-                            ? "info"
-                            : "default"
-                        }
-                      >
-                        {reg.severity}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <Badge
-                        variant={
-                          reg.status === "resolved"
-                            ? "success"
-                            : reg.status === "investigating"
-                            ? "info"
-                            : "default"
-                        }
-                      >
-                        {reg.status}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-mono">
-                      <span className={reg.deltaPercent > 0 ? "text-warning" : "text-success"}>
-                        {reg.deltaPercent > 0 ? "+" : ""}{reg.deltaPercent.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="py-2.5 pl-3 text-right text-text-tertiary">
-                      {new Date(reg.detectedAt).toLocaleDateString()}
-                    </td>
+          {alerts.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 pr-3 font-medium text-text-secondary">Metric</th>
+                    <th className="text-left py-2 px-3 font-medium text-text-secondary">Severity</th>
+                    <th className="text-left py-2 px-3 font-medium text-text-secondary">Status</th>
+                    <th className="text-right py-2 px-3 font-medium text-text-secondary">Delta</th>
+                    <th className="text-right py-2 pl-3 font-medium text-text-secondary">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {alerts.map((al) => {
+                    const sev = String(al.severity).toLowerCase();
+                    const st = String(al.status).toLowerCase();
+                    return (
+                      <tr key={al.id} className="border-b border-border/50 group">
+                        <td className="py-2.5 pr-3">
+                          <div className="font-medium text-text-primary">{al.metric}</div>
+                          <div className="text-text-tertiary mt-0.5 max-w-[200px] truncate group-hover:whitespace-normal group-hover:overflow-visible">
+                            {String(al.message)}
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <Badge
+                            variant={
+                              sev === "critical" || sev === "error"
+                                ? "warning"
+                                : sev === "warning"
+                                ? "info"
+                                : "default"
+                            }
+                          >
+                            {String(al.severity)}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <Badge
+                            variant={
+                              st === "resolved"
+                                ? "success"
+                                : st === "acknowledged"
+                                ? "info"
+                                : st === "ignored"
+                                ? "default"
+                                : "warning"
+                            }
+                          >
+                            {String(al.status)}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono">
+                          <span className={al.deviationPercent > 0 ? "text-warning" : "text-success"}>
+                            {al.deviationPercent > 0 ? "+" : ""}
+                            {Number(al.deviationPercent).toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="py-2.5 pl-3 text-right text-text-tertiary">
+                          {new Date(al.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <NotCollected
+              icon={CheckCircle2}
+              title="No drift alerts detected"
+              hint="Regressions detected by drift detection on latency, quality, and cost appear here."
+            />
+          )}
         </Card>
       </div>
 
-      {/* Resource Usage */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Token Usage by Model */}
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign size={16} className="text-text-secondary" />
+            <h3 className="text-sm font-semibold text-text-primary">Daily Cost</h3>
+          </div>
+          {dailyCosts.length > 0 ? (
+            <BarChartSimple
+              data={dailyCosts}
+              height={180}
+              color="#F59E0B"
+              yFormatter={(v) => `$${v.toFixed(1)}`}
+            />
+          ) : (
+            <NotCollected
+              icon={DollarSign}
+              title="Not yet collected"
+              hint="Cost ledgering has not recorded spending for this workspace yet. No cost is shown rather than a fabricated estimate."
+            />
+          )}
+        </Card>
+
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-4">
             <Layers size={16} className="text-text-secondary" />
             <h3 className="text-sm font-semibold text-text-primary">Token Usage by Model</h3>
           </div>
-          <PieChartSimple
-            segments={MOCK_TOKEN_USAGE.map((t) => ({
-              label: t.model,
-              value: t.tokens,
-              color: t.color,
-            }))}
-          />
-          <div className="mt-3 text-xs text-text-tertiary text-center">
-            Total: {totalTokens.toLocaleString()} tokens
-          </div>
-        </Card>
-
-        {/* API Calls by Provider */}
-        <Card className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 size={16} className="text-text-secondary" />
-            <h3 className="text-sm font-semibold text-text-primary">API Calls by Provider</h3>
-          </div>
-          <BarChartSimple
-            data={MOCK_PROVIDER_CALLS.map((p) => ({ label: p.provider, value: p.calls }))}
-            height={160}
-            color="#3B82F6"
-            yFormatter={(v) => v.toLocaleString()}
-          />
-          <div className="mt-3 text-xs text-text-tertiary text-center">
-            Total: {totalCalls.toLocaleString()} calls
-          </div>
+          {tokenSegments.length > 0 ? (
+            <>
+              <PieChartSimple segments={tokenSegments} />
+              <div className="mt-3 text-xs text-text-tertiary text-center">
+                Total: {(cost?.totalTokens ?? 0).toLocaleString()} tokens
+              </div>
+            </>
+          ) : (
+            <NotCollected
+              icon={Layers}
+              title="Not yet collected"
+              hint="Token usage per model is not recorded for this workspace yet."
+            />
+          )}
         </Card>
       </div>
     </div>

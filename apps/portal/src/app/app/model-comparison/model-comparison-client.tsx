@@ -8,9 +8,10 @@ export function ModelComparisonClient() {
     <div className="animate-fade-in">
       <PageHeader
         title="Model Comparison"
-        description="Compare multiple LLM providers side by side."
-        purpose="Evaluate latency, cost, quality, and other metrics across models."
+        description="Compare real collected performance across LLM models."
+        purpose="Review latency, requests, tokens, and cost from production traces."
         relatedPages={[
+          { label: "Observability", href: "/app/observability" },
           { label: "Leaderboards", href: "/app/leaderboards" },
           { label: "Prompt Playground", href: "/app/prompts" },
           { label: "Analytics", href: "/app/analytics" },
