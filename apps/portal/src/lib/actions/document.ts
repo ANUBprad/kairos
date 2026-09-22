@@ -1274,9 +1274,16 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
           docId,
           error: rollbackErr instanceof Error ? rollbackErr.message : "unknown",
         });
+        const forcedRow = await prisma.document
+          .findUnique({
+            where: { id: docId },
+            select: { knowledgeBaseId: true },
+          })
+          .catch(() => null);
         await prisma.document
           .update({ where: { id: docId }, data: { status: "ERROR" } })
           .catch(() => {});
+        revalidateSourcePage(forcedRow?.knowledgeBaseId);
       }
     });
 
