@@ -1249,22 +1249,35 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
     const stagedEvictIds = staged?.evictChunkIds;
     generateEmbeddings(docId, undefined, stagedEvictIds).catch(async (embedErr) => {
       const errMsg = embedErr instanceof Error ? embedErr.message : String(embedErr);
-      const errStack = embedErr instanceof Error ? embedErr.stack : undefined;
-      logger.error("[Embedding] Failed", { docId, error: errMsg, stack: errStack });
-
-      await rollbackOrError(
+      logger.error("[Embedding] Failed", {
         docId,
-        staged,
-        {
-          ...meta,
-          stage: "embed",
-          error: errMsg,
-          timestamp: new Date().toISOString(),
-          durationMs: Date.now() - pipelineStart,
-        },
-        errMsg,
-        "embed",
-      );
+        error: errMsg,
+        stack: embedErr instanceof Error ? embedErr.stack : undefined,
+      });
+
+      try {
+        await rollbackOrError(
+          docId,
+          staged,
+          {
+            ...meta,
+            stage: "embed",
+            error: errMsg,
+            timestamp: new Date().toISOString(),
+            durationMs: Date.now() - pipelineStart,
+          },
+          errMsg,
+          "embed",
+        );
+      } catch (rollbackErr) {
+        logger.error("[Embedding] Recovery failed — forcing ERROR state", {
+          docId,
+          error: rollbackErr instanceof Error ? rollbackErr.message : "unknown",
+        });
+        await prisma.document
+          .update({ where: { id: docId }, data: { status: "ERROR" } })
+          .catch(() => {});
+      }
     });
 
     meta.stage = "completed";

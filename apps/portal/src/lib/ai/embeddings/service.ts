@@ -6,11 +6,17 @@ import type { ProviderType } from "@/lib/ai/types";
 
 const BATCH_SIZE = 20;
 const MAX_RETRIES = 3;
+const EMBEDDING_TIMEOUT_MS = 60_000;
+export const STALE_EMBEDDING_MS = 30 * 60 * 1000;
 
 interface TokenAccount {
   model: string;
   inputTokens: number;
   totalTokens: number;
+}
+
+interface EmbeddingGuardError extends Error {
+  retryable?: boolean;
 }
 
 export function validateEmbeddingResponse(embeddings: number[][], expectedCount: number): number {
@@ -26,6 +32,47 @@ export function validateEmbeddingResponse(embeddings: number[][], expectedCount:
     );
   }
   return dimensions;
+}
+
+async function assertKbEmbeddingDimension(
+  knowledgeBaseId: string,
+  documentId: string,
+  dimensions: number,
+  model: string,
+): Promise<void> {
+  const rows = await prisma.$queryRaw<{ dims: number }[]>`
+    SELECT DISTINCT vector_dims(e."embedding")::int AS dims
+    FROM "DocumentEmbedding" e
+    JOIN "DocumentChunk" c ON c.id = e."chunkId"
+    JOIN "Document" d ON d.id = c."documentId"
+    WHERE d."knowledgeBaseId" = ${knowledgeBaseId}
+      AND d."id" <> ${documentId}
+  `;
+  const known = rows.map((r) => r.dims);
+  if (known.length > 0 && !known.includes(dimensions)) {
+    const err = new Error(
+      `Knowledge base already contains embeddings at dimension ${known.join("/")} — model "${model}" ` +
+        `produces ${dimensions}-dimensional vectors. Reprocess the whole knowledge base at the new ` +
+        `dimension before switching embedding models/providers.`,
+    ) as EmbeddingGuardError;
+    err.retryable = false;
+    throw err;
+  }
+}
+
+export async function recoverStaleEmbeddingDocuments(
+  knowledgeBaseId: string,
+  staleBefore: Date,
+): Promise<number> {
+  const result = await prisma.document.updateMany({
+    where: {
+      knowledgeBaseId,
+      status: { in: ["EMBEDDING", "EMBEDDING_PENDING"] },
+      updatedAt: { lt: staleBefore },
+    },
+    data: { status: "ERROR" },
+  });
+  return result.count;
 }
 
 export interface EmbeddingResult {
@@ -46,6 +93,11 @@ export async function generateEmbeddings(
   });
 
   if (!doc) throw new Error("Document not found");
+
+  await recoverStaleEmbeddingDocuments(
+    doc.knowledgeBaseId,
+    new Date(Date.now() - STALE_EMBEDDING_MS),
+  ).catch(() => {});
 
   await prisma.document.update({
     where: { id: documentId },
@@ -87,6 +139,7 @@ export async function generateEmbeddings(
   let totalTokens = 0;
   let processedCount = 0;
   let expectedDimensions: number | null = null;
+  const timeoutMs = Number(process.env.EMBEDDING_TIMEOUT_MS) || EMBEDDING_TIMEOUT_MS;
 
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
     const batch = chunks.slice(i, i + BATCH_SIZE);
@@ -95,11 +148,22 @@ export async function generateEmbeddings(
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const response = await provider.generateEmbedding({
-          input: texts,
-          model,
-        });
+        let response: Awaited<ReturnType<typeof provider.generateEmbedding>>;
+        try {
+          response = await provider.generateEmbedding({
+            input: texts,
+            model,
+            signal: controller.signal,
+          });
+        } catch (err) {
+          if (controller.signal.aborted) {
+            throw new Error(`Embedding request timed out after ${timeoutMs}ms`, { cause: err });
+          }
+          throw err;
+        }
 
         if (response.usage) {
           totalInputTokens += response.usage.promptTokens;
@@ -111,6 +175,9 @@ export async function generateEmbeddings(
           throw new Error(
             `Embedding dimension changed mid-document: ${expectedDimensions} → ${dimensions}`,
           );
+        }
+        if (expectedDimensions === null) {
+          await assertKbEmbeddingDimension(doc.knowledgeBaseId, doc.id, dimensions, model);
         }
         expectedDimensions = dimensions;
 
@@ -139,9 +206,12 @@ export async function generateEmbeddings(
         break;
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
+        if ((lastError as EmbeddingGuardError).retryable === false) break;
         if (attempt < MAX_RETRIES - 1) {
           await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
         }
+      } finally {
+        clearTimeout(timeout);
       }
     }
 
