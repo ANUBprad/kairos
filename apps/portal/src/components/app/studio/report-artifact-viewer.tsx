@@ -17,100 +17,75 @@ export function ReportArtifactViewer({ artifact, sources, onClose }: Props) {
   const content = parseReportContent(artifact.content);
 
   return (
-    <section className="rounded-xl border border-border bg-surface" aria-label="Report artifact">
-      <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-base font-semibold text-text-primary">
-              {artifact.name || "Untitled report"}
-            </h2>
-            <ArtifactStatusBadge status={artifact.status} />
-          </div>
-          <p className="mt-1 text-xs text-text-tertiary">
-            {new Date(artifact.createdAt).toLocaleString()}
-            {artifact.sourceIds.length > 0 &&
-              ` · ${artifact.sourceIds.length} source${artifact.sourceIds.length !== 1 ? "s" : ""}`}
-          </p>
+    <article className="mx-auto max-w-[72ch]" aria-label="Report artifact">
+      <header className="mb-6">
+        <div className="flex items-center justify-between gap-3">
+          <ArtifactStatusBadge status={artifact.status} />
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Close
+          </Button>
         </div>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          Close
-        </Button>
+        <h2 className="page-title mt-3">{content?.title || artifact.name || "Untitled report"}</h2>
+        <p className="page-description mt-1">
+          {new Date(artifact.createdAt).toLocaleDateString()}
+          {artifact.sourceIds.length > 0 &&
+            ` · ${artifact.sourceIds.length} source${artifact.sourceIds.length !== 1 ? "s" : ""}`}
+        </p>
       </header>
 
-      <div className="p-5">
-        {artifact.status === "PENDING" && (
-          <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <Loader2 size={16} className="animate-spin text-text-tertiary" />
-            Waiting to be processed.
+      {artifact.status === "PENDING" && (
+        <div className="flex items-center gap-2 text-sm text-text-secondary">
+          <Loader2 size={16} className="animate-spin text-text-tertiary" />
+          Waiting to be processed.
+        </div>
+      )}
+
+      {artifact.status === "PROCESSING" && (
+        <div className="flex items-center gap-2 text-sm text-text-secondary">
+          <Loader2 size={16} className="animate-spin text-text-tertiary" />
+          This report is still being generated.
+        </div>
+      )}
+
+      {artifact.status === "FAILED" && (
+        <div className="flex items-start gap-2 text-sm text-error">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <p>This report failed to generate. You can try again from a new source selection.</p>
+        </div>
+      )}
+
+      {artifact.status === "COMPLETED" &&
+        (!content ? (
+          <div className="flex items-start gap-2 text-sm text-text-secondary">
+            <AlertCircle size={16} className="mt-0.5 shrink-0 text-text-tertiary" />
+            <p>This report&apos;s content is unavailable to display.</p>
           </div>
-        )}
+        ) : (
+          <div className="prose-reading">
+            <p>{content.executiveSummary}</p>
 
-        {artifact.status === "PROCESSING" && (
-          <div className="flex items-center gap-2 text-sm text-text-secondary">
-            <Loader2 size={16} className="animate-spin text-text-tertiary" />
-            This report is still being generated.
-          </div>
-        )}
-
-        {artifact.status === "FAILED" && (
-          <div className="flex items-start gap-2 text-sm text-error">
-            <AlertCircle size={16} className="mt-0.5 shrink-0" />
-            <p>This report failed to generate. You can try again from a new source selection.</p>
-          </div>
-        )}
-
-        {artifact.status === "COMPLETED" &&
-          (!content ? (
-            <div className="flex items-start gap-2 text-sm text-text-secondary">
-              <AlertCircle size={16} className="mt-0.5 shrink-0 text-text-tertiary" />
-              <p>This report&apos;s content is unavailable to display.</p>
-            </div>
-          ) : (
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary">{content.title}</h3>
-
-              <h4 className="mt-5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                Executive summary
-              </h4>
-              <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-                {content.executiveSummary}
-              </p>
-
-              <h4 className="mt-5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                Sections
-              </h4>
-              <div className="mt-2 space-y-5">
-                {content.sections.map((section, index) => (
-                  <div key={index}>
-                    <h5 className="text-sm font-semibold text-text-primary">{section.heading}</h5>
-                    <p className="mt-1 text-sm leading-relaxed text-text-secondary">
-                      {section.content}
-                    </p>
-                  </div>
-                ))}
+            {content.sections.map((section, index) => (
+              <div key={index}>
+                <h3>{section.heading}</h3>
+                <p>{section.content}</p>
               </div>
+            ))}
 
-              <h4 className="mt-6 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                Key findings
-              </h4>
-              <ul className="mt-2 space-y-1.5">
-                {content.keyFindings.map((finding, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm text-text-secondary">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
-                    <span>{finding}</span>
-                  </li>
-                ))}
-              </ul>
+            {content.keyFindings.length > 0 && (
+              <>
+                <h3>Key findings</h3>
+                <ul>
+                  {content.keyFindings.map((finding, index) => (
+                    <li key={index}>{finding}</li>
+                  ))}
+                </ul>
+              </>
+            )}
 
-              <div className="mt-5 border-t border-border pt-4">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                  Sources
-                </h4>
-                <ArtifactSourceList artifact={artifact} sources={sources} />
-              </div>
-            </div>
-          ))}
-      </div>
-    </section>
+            <h4>Sources</h4>
+            <ArtifactSourceList artifact={artifact} sources={sources} />
+          </div>
+        ))}
+    </article>
   );
 }
