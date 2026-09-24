@@ -44,13 +44,23 @@ export class PgVectorStore implements VectorStore {
     entries: { chunkId: string; embedding: number[] }[],
     _dimensions: number,
   ): Promise<void> {
-    for (const entry of entries) {
+    if (entries.length === 0) return;
+
+    // One round trip per statement (capped so a caller cannot exceed the
+    // ~65k server parameter limit); the old per-chunk INSERT was N+1 trips
+    // for a 20-chunk embedding batch.
+    const UPSERT_BATCH = 500;
+    for (let i = 0; i < entries.length; i += UPSERT_BATCH) {
+      const batch = entries.slice(i, i + UPSERT_BATCH);
+      const placeholders = batch
+        .map((_, j) => `(gen_random_uuid(), $${j * 2 + 1}, $${j * 2 + 2}::vector)`)
+        .join(", ");
+      const params = batch.flatMap((e) => [e.chunkId, vecLiteral(e.embedding)]);
       await this.client.$executeRawUnsafe(
         `INSERT INTO "DocumentEmbedding" ("id", "chunkId", "embedding")
-         VALUES (gen_random_uuid(), $1, $2::vector)
+         VALUES ${placeholders}
          ON CONFLICT ("chunkId") DO UPDATE SET "embedding" = EXCLUDED."embedding"`,
-        entry.chunkId,
-        vecLiteral(entry.embedding),
+        ...params,
       );
     }
   }

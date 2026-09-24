@@ -48,7 +48,7 @@ function captureStoreClient() {
 }
 
 describe("PgVectorStore.bulkUpsertEmbeddings", () => {
-  it("inserts embeddings for chunks that have no existing row", async () => {
+  it("upserts a whole batch in one multi-row statement, not N+1 trips", async () => {
     const { client, captured } = captureStoreClient();
     const store = new PgVectorStore(client);
 
@@ -60,13 +60,33 @@ describe("PgVectorStore.bulkUpsertEmbeddings", () => {
       3,
     );
 
+    assert.equal(captured.length, 1);
+    assert.match(captured[0].sql, /^INSERT INTO "DocumentEmbedding"/);
+    assert.match(captured[0].sql, /VALUES \(gen_random_uuid\(\), \$\d+, \$\d+::vector\), \(gen_random_uuid\(\), \$\d+, \$\d+::vector\)/);
+    assert.match(captured[0].sql, /ON CONFLICT \("chunkId"\) DO UPDATE SET "embedding" = EXCLUDED."embedding"/);
+    assert.deepEqual(captured[0].params, [CHUNK_A, "[1,0,0]", CHUNK_B, "[0,1,0]"]);
+  });
+
+  it("splits oversized batches so a statement never exceeds the parameter ceiling", async () => {
+    const { client, captured } = captureStoreClient();
+    const store = new PgVectorStore(client);
+
+    await store.bulkUpsertEmbeddings(
+      Array.from({ length: 501 }, (_, i) => ({ chunkId: `${CHUNK_A}x${i}`, embedding: [1, 0, 0] })),
+      3,
+    );
+
     assert.equal(captured.length, 2);
-    for (const stmt of captured) {
-      assert.match(stmt.sql, /^INSERT INTO "DocumentEmbedding"/);
-      assert.match(stmt.sql, /ON CONFLICT \("chunkId"\)/);
-    }
-    assert.deepEqual(captured[0].params, [CHUNK_A, "[1,0,0]"]);
-    assert.deepEqual(captured[1].params, [CHUNK_B, "[0,1,0]"]);
+    assert.equal((captured[1].sql.match(/VALUES/gi) ?? []).length, 1);
+  });
+
+  it("is a no-op for an empty batch", async () => {
+    const { client, captured } = captureStoreClient();
+    const store = new PgVectorStore(client);
+
+    await store.bulkUpsertEmbeddings([], 3);
+
+    assert.equal(captured.length, 0);
   });
 
   it("re-writes the embedding on an existing row, not silently skipping it", async () => {
