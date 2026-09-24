@@ -4,27 +4,16 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  LayoutDashboard,
-  Microscope,
-  GitBranch,
-  Lightbulb,
-  FolderOpen,
-  Code2,
-  BarChart3,
-  Bot,
-  BookOpen,
-  GraduationCap,
-  SlidersHorizontal,
-  FileText,
-  FlaskConical,
-  NotebookPen,
   Upload,
   Plus,
   MessageSquare,
+  FlaskConical,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace-context";
+import { FLAT_APP_NAV } from "@/lib/app-nav";
 
 interface CommandItem {
   id: string;
@@ -38,25 +27,17 @@ interface CommandItem {
   shortcut?: string;
 }
 
-const NAVIGATION_COMMANDS: CommandItem[] = [
-  { id: "overview", label: "Overview", href: "/app", icon: LayoutDashboard, category: "Navigation", keywords: ["dashboard", "home", "overview"] },
-  { id: "research", label: "Research Dashboard", href: "/app/research", icon: Microscope, category: "Navigation", keywords: ["research", "dashboard", "metrics", "analysis"] },
-  { id: "notebook", label: "Research Notebook", href: "/app/notebook", icon: NotebookPen, category: "Navigation", keywords: ["notebook", "notes", "journal", "markdown"] },
-  { id: "lineage", label: "Experiment Lineage", href: "/app/lineage", icon: GitBranch, category: "Navigation", keywords: ["lineage", "history", "versions", "provenance"] },
-  { id: "planner", label: "Experiment Planner", href: "/app/planner", icon: Lightbulb, category: "Navigation", keywords: ["planner", "plan", "experiment", "suggest"] },
-  { id: "publication", label: "Publication Mode", href: "/app/publication", icon: FileText, category: "Navigation", keywords: ["publication", "export", "paper", "report", "pdf"] },
-  { id: "documents", label: "Document Repository", href: "/app/knowledge-bases", icon: FolderOpen, category: "Navigation", keywords: ["documents", "knowledge", "base", "upload"] },
-  { id: "chunking", label: "Chunking Studio", href: "/app/chunking-studio", icon: Code2, category: "Navigation", keywords: ["chunking", "split", "text", "chunks"] },
-  { id: "experiment-builder", label: "Experiment Builder", href: "/app/experiment-builder", icon: FlaskConical, category: "Navigation", keywords: ["experiment", "builder", "workflow", "pipeline"] },
-  { id: "retrieval-lab", label: "Retrieval Lab", href: "/app/retrieval-lab", icon: FlaskConical, category: "Navigation", keywords: ["retrieval", "lab", "test", "search"] },
-  { id: "advanced-retrieval", label: "Advanced Retrieval", href: "/app/advanced-retrieval", icon: GitBranch, category: "Navigation", keywords: ["advanced", "retrieval", "hybrid", "bm25"] },
-  { id: "evaluation", label: "Evaluation", href: "/app/evaluation", icon: BarChart3, category: "Navigation", keywords: ["evaluation", "metrics", "benchmark", "recall", "ndcg"] },
-  { id: "benchmark-explorer", label: "Benchmark Explorer", href: "/app/benchmark-explorer", icon: FlaskConical, category: "Navigation", keywords: ["benchmark", "explorer", "compare", "scatter"] },
-  { id: "chat", label: "Chat", href: "/app/knowledge-bases", icon: Bot, category: "Navigation", keywords: ["chat", "conversation", "ask"] },
-  { id: "architecture", label: "Architecture", href: "/app/architecture", icon: BookOpen, category: "Navigation", keywords: ["architecture", "design", "system"] },
-  { id: "guide", label: "Project Guide", href: "/app/project-guide", icon: GraduationCap, category: "Navigation", keywords: ["guide", "tutorial", "learn", "getting started"] },
-  { id: "settings", label: "Configuration", href: "/app/settings", icon: SlidersHorizontal, category: "Navigation", keywords: ["settings", "config", "preferences"] },
-];
+// Navigation commands come from the single app-nav source so the palette can
+// never drift from the sidebar.
+const NAVIGATION_COMMANDS: CommandItem[] = FLAT_APP_NAV.map((item) => ({
+  id: item.href,
+  label: item.label,
+  description: item.description,
+  href: item.href,
+  icon: item.icon as LucideIcon,
+  category: "Navigation",
+  keywords: item.keywords ?? [item.label.toLowerCase()],
+}));
 
 const ACTION_COMMANDS: CommandItem[] = [
   { id: "upload", label: "Upload Document", description: "Add files to a knowledge base", href: "/app/knowledge-bases", action: "upload", icon: Upload, category: "Actions", keywords: ["upload", "file", "document", "add"], shortcut: "U" },

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
+import { APP_NAV } from "@/lib/app-nav";
 
 export interface Project {
   id: string;
@@ -109,38 +110,6 @@ function useLocalStorageState<T>(
   return [state, setState];
 }
 
-const PAGE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
-  "/app": [{ label: "Overview" }],
-  "/app/research": [{ label: "Research" }, { label: "Dashboard" }],
-  "/app/lineage": [{ label: "Research" }, { label: "Experiment Lineage" }],
-  "/app/planner": [{ label: "Research" }, { label: "Experiment Planner" }],
-  "/app/knowledge-bases": [{ label: "Build" }, { label: "Documents" }],
-  "/app/chunking-studio": [{ label: "Build" }, { label: "Chunking Studio" }],
-  "/app/retrieval-lab": [{ label: "Evaluate" }, { label: "Retrieval Lab" }],
-  "/app/advanced-retrieval": [
-    { label: "Evaluate" },
-    { label: "Advanced Retrieval" },
-  ],
-  "/app/evaluation": [{ label: "Evaluate" }, { label: "Evaluation" }],
-  "/app/architecture": [{ label: "Learn" }, { label: "Architecture" }],
-  "/app/project-guide": [{ label: "Learn" }, { label: "Project Guide" }],
-  "/app/settings": [{ label: "System" }, { label: "Configuration" }],
-  "/app/notebook": [{ label: "Research" }, { label: "Notebook" }],
-  "/app/benchmark-explorer": [
-    { label: "Evaluate" },
-    { label: "Benchmark Explorer" },
-  ],
-  "/app/experiment-builder": [
-    { label: "Build" },
-    { label: "Experiment Builder" },
-  ],
-  "/app/publication": [
-    { label: "Research" },
-    { label: "Publication Mode" },
-  ],
-  "/app/experiments": [{ label: "Evaluate" }, { label: "Experiments" }],
-};
-
 const shortcutsRef = new Map<string, () => void>();
 
 const INITIAL_STATE = {
@@ -149,13 +118,34 @@ const INITIAL_STATE = {
   breadcrumbs: [],
 };
 
+// Breadcrumbs are derived from the single app-nav source: exact page match
+// renders its section + label, then the deepest prefix match covers workspace
+// subroutes (a KB workspace or an observability page) without a second list.
+const NAV_ITEMS_WITH_SECTION = APP_NAV.flatMap((section) =>
+  section.items.map((item) => ({ section: section.label, href: item.href, label: item.label })),
+);
+
+function deriveBreadcrumbs(pathname: string | null): BreadcrumbItem[] {
+  if (!pathname) return [];
+  const all = NAV_ITEMS_WITH_SECTION;
+  const exact = all.find((i) => i.href === pathname);
+  if (exact) {
+    return exact.href === "/app"
+      ? [{ label: exact.label }]
+      : [{ label: exact.section }, { label: exact.label }];
+  }
+  const nested = all
+    .filter((i) => i.href !== "/app" && pathname.startsWith(i.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  if (nested) return [{ label: nested.section }, { label: nested.label }];
+  return [{ label: pathname.split("/").pop() || "Page" }];
+}
+
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const pageBreadcrumbs = useMemo<BreadcrumbItem[]>(() => {
-    return PAGE_BREADCRUMBS[pathname] || [
-      { label: pathname?.split("/").pop() || "Page" },
-    ];
+    return deriveBreadcrumbs(pathname);
   }, [pathname]);
 
   const [project, setProject] = useState<Project | null>(INITIAL_STATE.project);

@@ -4,39 +4,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
-  FolderOpen,
-  Code2,
-  Bot,
-  BarChart3,
-  SlidersHorizontal,
-  GitBranch,
-  BookOpen,
-  Microscope,
-  GraduationCap,
-  Eye,
-  Search,
-  Lightbulb,
-  FlaskConical,
-  NotebookPen,
-  FileText,
   ChevronDown,
   Command,
   Menu,
   X,
-  Activity,
-  DollarSign,
-  AlertTriangle,
-  Radio,
-  Layers,
-  CircleDot,
-  HardDrive,
   Check,
-  type LucideIcon,
+  FlaskConical,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useTransition } from "react";
 import { switchWorkspaceOrganization } from "@/lib/actions/organization";
+import { APP_NAV, type AppNavSection } from "@/lib/app-nav";
 
 interface SidebarProps {
   organization: {
@@ -56,95 +35,7 @@ interface SidebarProps {
   }[];
 }
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  badge?: string;
-}
-
-interface NavSection {
-  label: string;
-  items: NavItem[];
-}
-
-const navSections: NavSection[] = [
-  {
-    label: "Research",
-    items: [
-      { label: "Overview", href: "/app", icon: LayoutDashboard },
-      { label: "Research Dashboard", href: "/app/research", icon: Microscope },
-      { label: "Notebook", href: "/app/notebook", icon: NotebookPen, badge: "New" },
-      { label: "Experiment Lineage", href: "/app/lineage", icon: GitBranch },
-      { label: "Experiment Planner", href: "/app/planner", icon: Lightbulb },
-      { label: "Publication", href: "/app/publication", icon: FileText, badge: "New" },
-    ],
-  },
-  {
-    label: "Build",
-    items: [
-      { label: "Document Repository", href: "/app/knowledge-bases", icon: FolderOpen },
-      { label: "Chunking Studio", href: "/app/chunking-studio", icon: Code2 },
-      { label: "Experiment Builder", href: "/app/experiment-builder", icon: FlaskConical, badge: "New" },
-    ],
-  },
-  {
-    label: "Evaluate",
-    items: [
-      { label: "Retrieval Lab", href: "/app/retrieval-lab", icon: Search },
-      { label: "Advanced Retrieval", href: "/app/advanced-retrieval", icon: GitBranch },
-      { label: "Evaluation", href: "/app/evaluation", icon: BarChart3 },
-      { label: "Benchmark Explorer", href: "/app/benchmark-explorer", icon: FlaskConical, badge: "New" },
-    ],
-  },
-  {
-    label: "PromptOps",
-    items: [
-      { label: "Prompt Library", href: "/app/prompts", icon: FileText, badge: "New" },
-      { label: "Model Comparison", href: "/app/model-comparison", icon: GitBranch, badge: "New" },
-      { label: "Regression Testing", href: "/app/regression", icon: FlaskConical, badge: "New" },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      { label: "Leaderboards", href: "/app/leaderboards", icon: BarChart3, badge: "New" },
-      { label: "Quality Gates", href: "/app/quality-gates", icon: Bot, badge: "New" },
-      { label: "Analytics", href: "/app/analytics", icon: Lightbulb, badge: "New" },
-      { label: "Golden Datasets", href: "/app/datasets", icon: FolderOpen, badge: "New" },
-      { label: "Review Queue", href: "/app/reviews", icon: Eye, badge: "New" },
-    ],
-  },
-  {
-    label: "Learn",
-    items: [
-      { label: "Architecture", href: "/app/architecture", icon: BookOpen },
-      { label: "Project Guide", href: "/app/project-guide", icon: GraduationCap },
-    ],
-  },
-  {
-    label: "Observability",
-    items: [
-      { label: "Dashboard", href: "/app/observability", icon: Activity, badge: "New" },
-      { label: "Trace Explorer", href: "/app/observability/traces", icon: Search, badge: "New" },
-      { label: "Live Metrics", href: "/app/observability/live", icon: Radio, badge: "New" },
-      { label: "Session Replay", href: "/app/observability/sessions", icon: Eye, badge: "New" },
-      { label: "Cost Intelligence", href: "/app/observability/costs", icon: DollarSign, badge: "New" },
-      { label: "Provider Health", href: "/app/observability/providers", icon: CircleDot, badge: "New" },
-      { label: "Alerting", href: "/app/observability/alerts", icon: AlertTriangle, badge: "New" },
-      { label: "Drift Detection", href: "/app/observability/drift", icon: Layers, badge: "New" },
-      { label: "Pipeline Inspector", href: "/app/observability/pipeline", icon: GitBranch, badge: "New" },
-      { label: "Incident Center", href: "/app/observability/incidents", icon: AlertTriangle, badge: "New" },
-      { label: "Storage", href: "/app/observability/storage", icon: HardDrive, badge: "New" },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Configuration", href: "/app/settings", icon: SlidersHorizontal },
-    ],
-  },
-];
+type NavSection = AppNavSection;
 
 export function AppSidebar({ organization, organizations }: SidebarProps) {
   const pathname = usePathname();
@@ -279,7 +170,7 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
 
       <div className="flex-1 overflow-y-auto p-3">
         <nav className="space-y-5" role="navigation" aria-label="Main navigation">
-          {navSections.map((section) => (
+          {APP_NAV.map((section) => (
             <div key={section.label}>
               <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary/60">
                 {section.label}
