@@ -114,13 +114,6 @@ export function EvaluationDashboard({ runs, datasets, benchmarkRuns }: Props) {
         ]}
       />
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Evaluation</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Benchmark your RAG system with standardized metrics
-        </p>
-      </div>
-
       <div className="flex flex-wrap gap-2 mb-6">
         <TabButton active={activeTab === "dashboard"} label="Dashboard" icon={BarChart3} onClick={() => setActiveTab("dashboard")} />
         <TabButton active={activeTab === "datasets"} label="Datasets" icon={Database} onClick={() => setActiveTab("datasets")} />

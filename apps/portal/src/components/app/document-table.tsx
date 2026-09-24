@@ -27,6 +27,9 @@ SearchX,
   StickyNote,
   Globe,
   Youtube,
+  CheckCircle2,
+  XCircle,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
@@ -96,6 +99,12 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
   const [showFilters, setShowFilters] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const pageSize = 10;
+
+  const PROCESSING = new Set(["QUEUED", "UPLOADING", "EXTRACTING", "CHUNKING", "EMBEDDING_PENDING", "EMBEDDING"]);
+  const indexedCount = items.filter((d) => d.status === "INDEXED" || d.status === "READY").length;
+  const processingCount = items.filter((d) => PROCESSING.has(d.status)).length;
+  const errorCount = items.filter((d) => d.status === "ERROR").length;
+  const totalChunks = items.reduce((sum, d) => sum + d._count.chunks, 0);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -285,9 +294,10 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">{kbName}</h1>
+          <p className="text-xs font-medium text-brand">{kbName}</p>
+          <h1 className="mt-0.5 text-2xl font-semibold text-text-primary">Sources</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            {items.length} source{items.length !== 1 ? "s" : ""}
+            {items.length} source{items.length !== 1 ? "s" : ""} in this knowledge base
           </p>
         </div>
         <Button variant="primary" onClick={() => setSourceAddOpen(true)}>
@@ -297,6 +307,45 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
       </div>
 
       <KbWorkspaceTabs kbId={kbId} active="sources" />
+
+      <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-success/10">
+            <CheckCircle2 size={16} className="text-success" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-lg font-semibold text-text-primary leading-tight">{indexedCount}</p>
+            <p className="text-[11px] text-text-tertiary">Indexed</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10">
+            <Loader2 size={16} className="animate-spin text-brand" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-lg font-semibold text-text-primary leading-tight">{processingCount}</p>
+            <p className="text-[11px] text-text-tertiary">Processing</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-error/10">
+            <XCircle size={16} className="text-error" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-lg font-semibold text-text-primary leading-tight">{errorCount}</p>
+            <p className="text-[11px] text-text-tertiary">Failed</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-hover">
+            <Layers size={16} className="text-text-secondary" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-lg font-semibold text-text-primary leading-tight">{totalChunks.toLocaleString()}</p>
+            <p className="text-[11px] text-text-tertiary">Chunks</p>
+          </div>
+        </div>
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-sm">

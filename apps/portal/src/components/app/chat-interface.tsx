@@ -473,10 +473,12 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
             <div className="flex flex-col items-center justify-center h-full text-center">
               <Bot size={40} className="text-text-tertiary mb-4" />
               <h3 className="text-lg font-semibold text-text-primary mb-2">
-                Chat with {kbName}
+                Research {kbName}
               </h3>
               <p className="text-sm text-text-secondary max-w-md">
-                Ask questions about your documents. The AI will search your knowledge base and provide answers with citations.
+                Ask questions and get grounded answers. Every response cites the
+                exact source chunks it draws from, so you can verify each claim
+                against your documents.
               </p>
               {!activeConversation && (
                 <Button variant="primary" className="mt-6" onClick={createConversation}>
