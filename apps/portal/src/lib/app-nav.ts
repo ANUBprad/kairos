@@ -32,7 +32,6 @@ export interface AppNavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  badge?: string;
   description?: string;
   keywords?: string[];
 }
@@ -64,7 +63,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Notebook",
         href: "/app/notebook",
         icon: NotebookPen,
-        badge: "New",
+        
         description: "Research notes and journal",
         keywords: ["notebook", "notes", "journal", "markdown"],
       },
@@ -86,7 +85,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Publication",
         href: "/app/publication",
         icon: FileText,
-        badge: "New",
+        
         description: "Export research into reports",
         keywords: ["publication", "export", "paper", "report", "pdf"],
       },
@@ -96,7 +95,7 @@ export const APP_NAV: AppNavSection[] = [
     label: "Build",
     items: [
       {
-        label: "Document Repository",
+        label: "Knowledge Bases",
         href: "/app/knowledge-bases",
         icon: FolderOpen,
         description: "Upload and organize source documents",
@@ -113,7 +112,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Experiment Builder",
         href: "/app/experiment-builder",
         icon: FlaskConical,
-        badge: "New",
+        
         description: "Build a retrieval pipeline",
         keywords: ["experiment", "builder", "workflow", "pipeline"],
       },
@@ -147,7 +146,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Benchmark Explorer",
         href: "/app/benchmark-explorer",
         icon: FlaskConical,
-        badge: "New",
+        
         description: "Compare benchmark runs",
         keywords: ["benchmark", "explorer", "compare", "scatter"],
       },
@@ -160,7 +159,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Prompt Library",
         href: "/app/prompts",
         icon: FileText,
-        badge: "New",
+        
         description: "Curated prompt templates",
         keywords: ["prompt", "library", "templates"],
       },
@@ -168,7 +167,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Model Comparison",
         href: "/app/model-comparison",
         icon: GitBranch,
-        badge: "New",
+        
         description: "Compare model outputs",
         keywords: ["model", "comparison", "providers"],
       },
@@ -176,7 +175,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Regression Testing",
         href: "/app/regression",
         icon: FlaskConical,
-        badge: "New",
+        
         description: "Guard retrieval quality over time",
         keywords: ["regression", "testing", "guards"],
       },
@@ -189,7 +188,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Leaderboards",
         href: "/app/leaderboards",
         icon: BarChart3,
-        badge: "New",
+        
         description: "Ranked benchmark results",
         keywords: ["leaderboards", "rankings"],
       },
@@ -197,7 +196,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Quality Gates",
         href: "/app/quality-gates",
         icon: Bot,
-        badge: "New",
+        
         description: "Hard quality checkpoints",
         keywords: ["quality", "gates", "guardrails"],
       },
@@ -205,7 +204,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Analytics",
         href: "/app/analytics",
         icon: Lightbulb,
-        badge: "New",
+        
         description: "Usage and performance trends",
         keywords: ["analytics", "usage", "trends"],
       },
@@ -213,7 +212,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Golden Datasets",
         href: "/app/datasets",
         icon: FolderOpen,
-        badge: "New",
+        
         description: "Curated evaluation datasets",
         keywords: ["datasets", "golden", "evaluation"],
       },
@@ -221,7 +220,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Review Queue",
         href: "/app/reviews",
         icon: Eye,
-        badge: "New",
+        
         description: "Human review of model answers",
         keywords: ["review", "queue", "human", "answers"],
       },
@@ -253,7 +252,7 @@ export const APP_NAV: AppNavSection[] = [
         label: "Dashboard",
         href: "/app/observability",
         icon: Activity,
-        badge: "New",
+        
         description: "Observability overview",
         keywords: ["observability", "dashboard", "ops"],
       },
@@ -261,70 +260,70 @@ export const APP_NAV: AppNavSection[] = [
         label: "Trace Explorer",
         href: "/app/observability/traces",
         icon: Search,
-        badge: "New",
+        
         keywords: ["traces", "trace", "spans"],
       },
       {
         label: "Live Metrics",
         href: "/app/observability/live",
         icon: Radio,
-        badge: "New",
+        
         keywords: ["live", "metrics", "realtime"],
       },
       {
         label: "Session Replay",
         href: "/app/observability/sessions",
         icon: Eye,
-        badge: "New",
+        
         keywords: ["sessions", "replay"],
       },
       {
         label: "Cost Intelligence",
         href: "/app/observability/costs",
         icon: DollarSign,
-        badge: "New",
+        
         keywords: ["cost", "spend", "billing"],
       },
       {
         label: "Provider Health",
         href: "/app/observability/providers",
         icon: CircleDot,
-        badge: "New",
+        
         keywords: ["providers", "health", "uptime"],
       },
       {
         label: "Alerting",
         href: "/app/observability/alerts",
         icon: AlertTriangle,
-        badge: "New",
+        
         keywords: ["alerts", "alerting", "notifications"],
       },
       {
         label: "Drift Detection",
         href: "/app/observability/drift",
         icon: Layers,
-        badge: "New",
+        
         keywords: ["drift", "detection", "shifts"],
       },
       {
         label: "Pipeline Inspector",
         href: "/app/observability/pipeline",
         icon: GitBranch,
-        badge: "New",
+        
         keywords: ["pipeline", "inspector", "jobs"],
       },
       {
         label: "Incident Center",
         href: "/app/observability/incidents",
         icon: AlertTriangle,
-        badge: "New",
+        
         keywords: ["incidents", "incident", "center"],
       },
       {
         label: "Storage",
         href: "/app/observability/storage",
         icon: HardDrive,
-        badge: "New",
+        
         keywords: ["storage", "objects", "files"],
       },
     ],

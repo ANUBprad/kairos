@@ -201,11 +201,6 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
                         )}
                       />
                       <span className="flex-1 truncate">{item.label}</span>
-                      {item.badge && (
-                        <span className="rounded-full bg-brand/20 px-1.5 py-0.5 text-[9px] font-semibold text-brand">
-                          {item.badge}
-                        </span>
-                      )}
                     </Link>
                   );
                 })}
