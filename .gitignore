@@ -16,14 +16,17 @@ htmlcov/
 
 # Environment files (keep .env.example)
 .env
-.env.local
-.env.development.local
-.env.production.local
-.env.test.local
+.env.*
 !.env.example
 
-# Logs
+# Logs / scratch
 *.log
+logs/
+tmp/
+temp/
+*.tmp
+*.bak
+*.old
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
@@ -51,6 +54,11 @@ htmlcov/
 
 # Generated benchmark results
 benchmarks/results/
+
+# Local audit / diagnostic artifacts (read-only audit reports and
+# regression-test output are local-only, never project documentation)
+/audit/
+regression-tracking-result.json
 
 # Models / Generated Files
 models/*
@@ -83,6 +91,10 @@ gateway/main.exe
 
 # Vercel
 .vercel
+
+# Root package-lock.json is a stray local artifact; the Node project lives in
+# apps/portal (whose package-lock.json is tracked and stays tracked)
+/package-lock.json
 
 # Docker
 docker-compose.override.yml
