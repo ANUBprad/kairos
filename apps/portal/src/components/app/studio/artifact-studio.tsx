@@ -30,6 +30,7 @@ import {
 import { ArtifactList } from "./artifact-list";
 import { ArtifactDialog } from "./artifact-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
 
 interface Props {
   kbId: string;
@@ -37,12 +38,6 @@ interface Props {
   sources: SourceListItem[];
   initialArtifacts: LearningArtifactWithStudy[];
 }
-
-const TABS = [
-  { label: "Sources", href: (kbId: string) => `/app/knowledge-bases/${kbId}` },
-  { label: "Chat", href: (kbId: string) => `/app/knowledge-bases/${kbId}/chat` },
-  { label: "Study", href: (kbId: string) => `/app/knowledge-bases/${kbId}/study` },
-];
 
 // Exactly the seven supported artifact types. Everything else is intentionally
 // absent: the UI cannot generate a type that has no studio action.
@@ -163,24 +158,7 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
         <p className="mt-1 text-sm text-text-secondary">
           Generate learning artifacts from the sources in {kbName}.
         </p>
-
-        <nav
-          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1"
-          aria-label="Knowledge base workspace"
-        >
-          {TABS.map((tab) => (
-            <Link
-              key={tab.label}
-              href={tab.href(kbId)}
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-            >
-              {tab.label}
-            </Link>
-          ))}
-          <span className="rounded-md bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand">
-            Studio
-          </span>
-        </nav>
+        <KbWorkspaceTabs kbId={kbId} active="studio" />
       </header>
 
       <section className="rounded-xl border border-border bg-surface p-5" aria-label="Artifact generator">

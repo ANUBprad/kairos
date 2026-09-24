@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
 import {
   Send,
   Square,
@@ -403,7 +404,9 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
   );
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] -m-6 overflow-hidden">
+    <div>
+      <KbWorkspaceTabs kbId={kbId} active="research" />
+      <div className="flex h-[calc(100vh-11rem)] -m-6 mt-3 overflow-hidden">
       {showSidebar && (
         <div className="w-64 shrink-0 border-r border-border bg-surface overflow-y-auto">
           <div className="p-3">
@@ -461,22 +464,8 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
             {showSidebar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
           <h2 className="text-sm font-medium text-text-primary truncate">
-            {kbName} — AI Chat
+            {kbName} · Research
           </h2>
-          <Link
-            href={`/app/knowledge-bases/${kbId}/studio`}
-            className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-          >
-            <Sparkles size={12} />
-            Studio
-          </Link>
-          <Link
-            href={`/app/knowledge-bases/${kbId}/study`}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-          >
-            <BookOpen size={12} />
-            Study
-          </Link>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-label="Chat messages" aria-live="polite">
@@ -716,6 +705,7 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
 import { flashcardsStudyLine } from "@/components/app/studio/artifact-list";
 import { parseFlashcardsContent } from "@/lib/artifacts/flashcards-view";
 import { studyArtifactHref } from "@/lib/study/hrefs";
+import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
 import type { StudyDashboardData } from "@/lib/study/dashboard";
 import type { LearningArtifactWithStudy } from "@/lib/artifacts/types";
 
@@ -20,12 +21,6 @@ interface Props {
   kbName: string;
   data: StudyDashboardData;
 }
-
-const TABS = [
-  { label: "Sources", href: (kbId: string) => `/app/knowledge-bases/${kbId}` },
-  { label: "Chat", href: (kbId: string) => `/app/knowledge-bases/${kbId}/chat` },
-  { label: "Studio", href: (kbId: string) => `/app/knowledge-bases/${kbId}/studio` },
-];
 
 // Attempts is a distinct-reviewed-cards count for decks (one review row per
 // card), so "reviewed" below never inflates with repeat verdict marks; the
@@ -120,24 +115,7 @@ export function StudyDashboard({ kbId, kbName, data }: Props) {
         <p className="mt-1 text-sm text-text-secondary">
           Your study state across the artifacts in {kbName}.
         </p>
-
-        <nav
-          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1"
-          aria-label="Knowledge base workspace"
-        >
-          {TABS.map((tab) => (
-            <Link
-              key={tab.label}
-              href={tab.href(kbId)}
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-            >
-              {tab.label}
-            </Link>
-          ))}
-          <span className="rounded-md bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand">
-            Study
-          </span>
-        </nav>
+        <KbWorkspaceTabs kbId={kbId} active="study" />
       </header>
 
       {artifacts.length === 0 ? (

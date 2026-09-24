@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
 import { ArtifactContent } from "./artifact-content";
 import { ARTIFACT_TYPE_META, isActiveStudioArtifactType } from "./artifact-type-meta";
+import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
 import type { LearningArtifactData } from "@/lib/artifacts/types";
 
 interface Props {
@@ -16,13 +17,6 @@ interface Props {
   sources: { id: string; name: string | null }[];
   returnConversationId: string | null;
 }
-
-const NAV_TABS = [
-  { label: "Sources", href: (kbId: string) => `/app/knowledge-bases/${kbId}` },
-  { label: "Chat", href: (kbId: string) => `/app/knowledge-bases/${kbId}/chat` },
-  { label: "Studio", href: (kbId: string) => `/app/knowledge-bases/${kbId}/studio` },
-  { label: "Study", href: (kbId: string) => `/app/knowledge-bases/${kbId}/study` },
-];
 
 // Full artifact detail page shell. Reuses the shared ArtifactContent viewer
 // router (same seven viewers as the Studio dialog) and adds a back-to-research
@@ -59,23 +53,7 @@ export function ArtifactDetailClient({
           <ArtifactStatusBadge status={artifact.status} />
         </div>
 
-        <nav
-          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1"
-          aria-label="Knowledge base workspace"
-        >
-          {NAV_TABS.map((tab) => (
-            <Link
-              key={tab.label}
-              href={tab.href(kbId)}
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-            >
-              {tab.label}
-            </Link>
-          ))}
-          <span className="rounded-md bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand">
-            Artifact
-          </span>
-        </nav>
+        <KbWorkspaceTabs kbId={kbId} customHighlight="Artifact" />
 
         <div className="mt-4 flex items-center gap-2">
           <Button variant="secondary" size="sm" asChild>

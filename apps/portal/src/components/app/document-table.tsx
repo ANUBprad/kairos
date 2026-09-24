@@ -24,14 +24,12 @@ SearchX,
   Trash,
   RotateCcw,
   Filter,
-  Bot,
-  Sparkles,
-  BookOpen,
   StickyNote,
   Globe,
   Youtube,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
 import { ProcessingBadge } from "@/components/app/processing-badge";
 import { SourceTypeBadge } from "@/components/app/source-type-badge";
 import { DocumentUploadDialog } from "@/components/app/document-upload-dialog";
@@ -292,31 +290,13 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
             {items.length} source{items.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/app/knowledge-bases/${kbId}/chat`}>
-            <Button variant="secondary">
-              <Bot size={16} />
-              Chat
-            </Button>
-          </Link>
-          <Link href={`/app/knowledge-bases/${kbId}/studio`}>
-            <Button variant="secondary">
-              <Sparkles size={16} />
-              Studio
-            </Button>
-          </Link>
-          <Link href={`/app/knowledge-bases/${kbId}/study`}>
-            <Button variant="secondary">
-              <BookOpen size={16} />
-              Study
-            </Button>
-          </Link>
-          <Button variant="primary" onClick={() => setSourceAddOpen(true)}>
-            <Plus size={16} />
-            Add source
-          </Button>
-        </div>
+        <Button variant="primary" onClick={() => setSourceAddOpen(true)}>
+          <Plus size={16} />
+          Add source
+        </Button>
       </div>
+
+      <KbWorkspaceTabs kbId={kbId} active="sources" />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
