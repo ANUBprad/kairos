@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MetricValue } from '@/components/observability/metric-value';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getPipelineRuns, pipelineStats } from '@/lib/actions/pipeline';
@@ -40,8 +41,8 @@ export default function PipelinePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Pipeline Inspector</h1>
-        <p className="text-muted-foreground">
+        <h1 className="page-title">Pipeline Inspector</h1>
+        <p className="page-description mt-1">
           Visualize and debug RAG pipeline execution
         </p>
       </div>
@@ -52,7 +53,7 @@ export default function PipelinePage() {
             <CardTitle className="text-sm font-medium">Total Runs (7d)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.total ?? 0}</div>
+            <MetricValue value={stats?.total} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -60,7 +61,7 @@ export default function PipelinePage() {
             <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats?.successRate ?? 0).toFixed(1)}%</div>
+            <MetricValue value={stats?.successRate} format={(v) => `${v.toFixed(1)}%`} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -68,7 +69,7 @@ export default function PipelinePage() {
             <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats?.avgDurationMs ?? 0).toFixed(0)}ms</div>
+            <MetricValue value={stats?.avgDurationMs} format={(v) => `${v.toFixed(0)}ms`} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -76,7 +77,7 @@ export default function PipelinePage() {
             <CardTitle className="text-sm font-medium">Failed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{stats?.failed ?? 0}</div>
+            <MetricValue value={stats?.failed} className="text-2xl font-bold text-red-500" />
           </CardContent>
         </Card>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { MetricValue } from '@/components/observability/metric-value';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,8 +83,8 @@ export default function StoragePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Storage Management</h1>
-        <p className="text-muted-foreground">Configure retention, compression, and cleanup policies</p>
+        <h1 className="page-title">Storage Management</h1>
+        <p className="page-description mt-1">Configure retention, compression, and cleanup policies</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -92,7 +93,7 @@ export default function StoragePage() {
             <CardTitle className="text-sm font-medium">Traces</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats?.traces ?? 0).toLocaleString()}</div>
+            <MetricValue value={stats?.traces} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -100,7 +101,7 @@ export default function StoragePage() {
             <CardTitle className="text-sm font-medium">Spans</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats?.spans ?? 0).toLocaleString()}</div>
+            <MetricValue value={stats?.spans} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -108,7 +109,7 @@ export default function StoragePage() {
             <CardTitle className="text-sm font-medium">Events</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats?.events ?? 0).toLocaleString()}</div>
+            <MetricValue value={stats?.events} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -116,7 +117,7 @@ export default function StoragePage() {
             <CardTitle className="text-sm font-medium">Total Records</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(stats?.totalRecords ?? 0).toLocaleString()}</div>
+            <MetricValue value={stats?.totalRecords} className="text-2xl font-bold" />
           </CardContent>
         </Card>
       </div>

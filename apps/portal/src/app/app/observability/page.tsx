@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Activity, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { traceStats } from '@/lib/actions/observability';
@@ -11,6 +10,12 @@ import { incidentStats } from '@/lib/actions/incidents';
 import { driftStats } from '@/lib/actions/drift';
 import { providerHealthSummary } from '@/lib/actions/provider-health';
 import Link from 'next/link';
+
+// A metric that was never collected must stay visibly "Not yet collected"
+// rather than be read as a measured zero.
+function metric(value: number | null | undefined): string {
+  return typeof value === 'number' ? value.toLocaleString() : 'Not yet collected';
+}
 
 export default function ObservabilityDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -49,142 +54,124 @@ export default function ObservabilityDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="flex items-center justify-center py-24">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-brand" />
       </div>
     );
   }
 
+  const cards = [
+    {
+      href: '/app/observability/traces',
+      label: 'Traces (7d)',
+      icon: Activity,
+      value: metric(stats?.totalTraces),
+      sub: stats
+        ? typeof stats.errorRate === 'number'
+          ? `${stats.errorRate.toFixed(1)}% error rate`
+          : 'Not yet collected'
+        : 'Not yet collected',
+    },
+    {
+      href: '/app/observability/costs',
+      label: 'Cost (7d)',
+      icon: DollarSign,
+      value: costs ? `$${(costs.totalCost ?? 0).toFixed(2)}` : 'Not yet collected',
+      sub: costs
+        ? `${(costs.totalTokens ?? 0).toLocaleString()} tokens`
+        : 'Not yet collected',
+    },
+    {
+      href: '/app/observability/alerts',
+      label: 'Active Alerts',
+      icon: AlertTriangle,
+      value: metric(alerts?.firingEvents),
+      sub: alerts
+        ? `${alerts.totalRules ?? 0} rules configured`
+        : 'Not yet collected',
+    },
+    {
+      href: '/app/observability/incidents',
+      label: 'Open Incidents',
+      icon: Clock,
+      value: metric(incidents?.open),
+      sub: incidents
+        ? `${incidents.total ?? 0} total this month`
+        : 'Not yet collected',
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Observability</h1>
-        <p className="text-muted-foreground">
-          Real-time monitoring, tracing, and incident management
-        </p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href="/app/observability/traces">
-          <Card className="hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Traces</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalTraces ?? 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.errorRate?.toFixed(1) ?? 0}% error rate
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/app/observability/costs">
-          <Card className="hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Cost (7d)</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${(costs?.totalCost ?? 0).toFixed(2)}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Link
+              key={card.href}
+              href={card.href}
+              className="group rounded-[var(--radius-lg)] border border-border bg-surface p-4 transition-colors hover:border-border-hover"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-text-tertiary">{card.label}</p>
+                <Icon size={15} className="text-text-tertiary" />
               </div>
-              <p className="text-xs text-muted-foreground">
-                {(costs?.totalTokens ?? 0).toLocaleString()} tokens
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">
+                {card.value}
               </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/app/observability/alerts">
-          <Card className="hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{alerts?.firingEvents ?? 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {alerts?.totalRules ?? 0} rules configured
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/app/observability/incidents">
-          <Card className="hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Open Incidents</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{incidents?.open ?? 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {incidents?.total ?? 0} total this month
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+              <p className="mt-1 text-xs text-text-tertiary">{card.sub}</p>
+            </Link>
+          );
+        })}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Provider Health</CardTitle>
-            <CardDescription>7-day provider performance</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {providers?.byProvider && Object.keys(providers.byProvider).length > 0 ? (
-              <div className="space-y-3">
-                {Object.entries(providers.byProvider).map(([name, data]: [string, any]) => (
-                  <div key={name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{name}</Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {data.totalRequests.toLocaleString()} requests
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">
-                        {data.uptime.toFixed(1)}% uptime
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {data.avgLatencyMs.toFixed(0)}ms avg
-                      </span>
-                    </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-4" aria-label="Provider health">
+          <h2 className="text-sm font-semibold text-text-primary">Provider Health</h2>
+          <p className="text-xs text-text-tertiary">7-day provider performance</p>
+          {providers?.byProvider && Object.keys(providers.byProvider).length > 0 ? (
+            <div className="mt-3 space-y-2.5">
+              {Object.entries(providers.byProvider).map(([name, data]: [string, any]) => (
+                <div key={name} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{name}</Badge>
+                    <span className="text-sm text-text-secondary">
+                      {data.totalRequests.toLocaleString()} requests
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No provider data yet</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Drift Alerts</CardTitle>
-            <CardDescription>Quality and performance drift detection</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {drift?.open ?? 0 > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="destructive">{drift?.open} open</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {drift?.total ?? 0} total detected
-                  </span>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-text-primary">{data.uptime.toFixed(1)}% uptime</span>
+                    <span className="text-text-tertiary">{data.avgLatencyMs.toFixed(0)}ms avg</span>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">No active drift alerts</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-text-tertiary">Not yet collected</p>
+          )}
+        </section>
+
+        <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-4" aria-label="Drift alerts">
+          <h2 className="text-sm font-semibold text-text-primary">Drift Alerts</h2>
+          <p className="text-xs text-text-tertiary">Quality and performance drift detection</p>
+          {drift && (drift.open ?? 0) > 0 ? (
+            <div className="mt-3 flex items-center gap-2">
+              <Badge variant="destructive">{drift.open} open</Badge>
+              <span className="text-sm text-text-secondary">{drift.total ?? 0} total detected</span>
+            </div>
+          ) : (
+            <div className="mt-3 flex items-center gap-2 text-sm text-text-tertiary">
+              {drift ? (
+                <>
+                  <CheckCircle size={14} className="text-success" />
+                  No active drift alerts
+                </>
+              ) : (
+                'Not yet collected'
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

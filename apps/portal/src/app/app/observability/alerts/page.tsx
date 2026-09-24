@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MetricValue } from '@/components/observability/metric-value';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -65,8 +66,8 @@ export default function AlertsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Alerting</h1>
-          <p className="text-muted-foreground">Configure and manage alert rules</p>
+          <h1 className="page-title">Alerting</h1>
+          <p className="page-description mt-1">Configure and manage alert rules</p>
         </div>
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4 mr-2" /> New Rule
@@ -79,7 +80,7 @@ export default function AlertsPage() {
             <CardTitle className="text-sm font-medium">Total Rules</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalRules ?? 0}</div>
+            <MetricValue value={stats?.totalRules} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -87,7 +88,7 @@ export default function AlertsPage() {
             <CardTitle className="text-sm font-medium">Active Rules</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.activeRules ?? 0}</div>
+            <MetricValue value={stats?.activeRules} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -95,7 +96,7 @@ export default function AlertsPage() {
             <CardTitle className="text-sm font-medium">Events (7d)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalEvents ?? 0}</div>
+            <MetricValue value={stats?.totalEvents} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -103,7 +104,7 @@ export default function AlertsPage() {
             <CardTitle className="text-sm font-medium">Currently Firing</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{stats?.firingEvents ?? 0}</div>
+            <MetricValue value={stats?.firingEvents} className="text-2xl font-bold text-orange-500" />
           </CardContent>
         </Card>
       </div>

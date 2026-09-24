@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { MetricValue } from '@/components/observability/metric-value';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { costSummary, costForecast, costAnomalies } from '@/lib/actions/cost';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,8 +45,8 @@ export default function CostsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Cost Intelligence</h1>
-        <p className="text-muted-foreground">Track, forecast, and optimize AI spending</p>
+        <h1 className="page-title">Cost Intelligence</h1>
+        <p className="page-description mt-1">Track, forecast, and optimize AI spending</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -54,7 +55,7 @@ export default function CostsPage() {
             <CardTitle className="text-sm font-medium">Total Cost (30d)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(summary?.totalCost ?? 0).toFixed(2)}</div>
+            <MetricValue value={summary?.totalCost} format={(v) => `$${v.toFixed(2)}`} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -62,17 +63,19 @@ export default function CostsPage() {
             <CardTitle className="text-sm font-medium">Daily Average</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(forecast?.dailyAvg7 ?? 0).toFixed(2)}</div>
-            <div className="flex items-center gap-1 text-xs">
-              {(forecast?.trend ?? 0) > 0 ? (
-                <TrendingUp className="h-3 w-3 text-red-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-green-500" />
-              )}
-              <span className={forecast?.trend > 0 ? 'text-red-500' : 'text-green-500'}>
-                {Math.abs((forecast?.trend ?? 0) * 100).toFixed(1)}% trend
-              </span>
-            </div>
+            <MetricValue value={forecast?.dailyAvg7} format={(v) => `$${v.toFixed(2)}`} className="text-2xl font-bold" />
+            {forecast && forecast.trend != null && (
+              <div className="flex items-center gap-1 text-xs">
+                {forecast.trend > 0 ? (
+                  <TrendingUp className="h-3 w-3 text-red-500" />
+                ) : (
+                  <TrendingDown className="h-3 w-3 text-green-500" />
+                )}
+                <span className={forecast.trend > 0 ? 'text-red-500' : 'text-green-500'}>
+                  {Math.abs(forecast.trend * 100).toFixed(1)}% trend
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -80,7 +83,7 @@ export default function CostsPage() {
             <CardTitle className="text-sm font-medium">30-Day Forecast</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(forecast?.forecast30Days ?? 0).toFixed(2)}</div>
+            <MetricValue value={forecast?.forecast30Days} format={(v) => `$${v.toFixed(2)}`} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -88,7 +91,7 @@ export default function CostsPage() {
             <CardTitle className="text-sm font-medium">Total Tokens (30d)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(summary?.totalTokens ?? 0).toLocaleString()}</div>
+            <MetricValue value={summary?.totalTokens} className="text-2xl font-bold" />
           </CardContent>
         </Card>
       </div>

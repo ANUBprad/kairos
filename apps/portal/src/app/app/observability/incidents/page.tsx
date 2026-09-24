@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MetricValue } from '@/components/observability/metric-value';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -47,8 +48,8 @@ export default function IncidentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Incident Center</h1>
-          <p className="text-muted-foreground">Track and manage production incidents</p>
+          <h1 className="page-title">Incident Center</h1>
+          <p className="page-description mt-1">Track and manage production incidents</p>
         </div>
         <Button onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4 mr-2" /> New Incident
@@ -61,7 +62,7 @@ export default function IncidentsPage() {
             <CardTitle className="text-sm font-medium">Total (30d)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.total ?? 0}</div>
+            <MetricValue value={stats?.total} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -69,7 +70,7 @@ export default function IncidentsPage() {
             <CardTitle className="text-sm font-medium">Open</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{stats?.open ?? 0}</div>
+            <MetricValue value={stats?.open} className="text-2xl font-bold text-orange-500" />
           </CardContent>
         </Card>
         <Card>
@@ -77,9 +78,7 @@ export default function IncidentsPage() {
             <CardTitle className="text-sm font-medium">Avg Resolution</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {(stats?.avgResolutionHours ?? 0).toFixed(1)}h
-            </div>
+            <MetricValue value={stats?.avgResolutionHours} format={(v) => `${v.toFixed(1)}h`} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -87,9 +86,7 @@ export default function IncidentsPage() {
             <CardTitle className="text-sm font-medium">Critical</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {stats?.bySeverity?.find((s: any) => s.severity === 'CRITICAL')?._count ?? 0}
-            </div>
+            <MetricValue value={stats?.bySeverity?.find((s: any) => s.severity === 'CRITICAL')?._count} className="text-2xl font-bold text-red-500" />
           </CardContent>
         </Card>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MetricValue } from '@/components/observability/metric-value';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -69,7 +70,7 @@ export default function DriftPage() {
             <CardTitle className="text-sm font-medium">Total Alerts (30d)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.total ?? 0}</div>
+            <MetricValue value={stats?.total} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -77,7 +78,7 @@ export default function DriftPage() {
             <CardTitle className="text-sm font-medium">Open Alerts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{stats?.open ?? 0}</div>
+            <MetricValue value={stats?.open} className="text-2xl font-bold text-orange-500" />
           </CardContent>
         </Card>
         <Card>
@@ -85,7 +86,7 @@ export default function DriftPage() {
             <CardTitle className="text-sm font-medium">Alert Types</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.byType?.length ?? 0}</div>
+            <MetricValue value={stats?.byType?.length} className="text-2xl font-bold" />
           </CardContent>
         </Card>
       </div>

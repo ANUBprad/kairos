@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MetricValue } from '@/components/observability/metric-value';
 import { traceStats } from '@/lib/actions/observability';
 import { costSummary } from '@/lib/actions/cost';
 import { alertStats } from '@/lib/actions/alerts';
@@ -53,8 +54,8 @@ export default function LiveMetricsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Live Metrics</h1>
-        <p className="text-muted-foreground">Real-time system health (auto-refreshes every 30s)</p>
+        <h1 className="page-title">Live Metrics</h1>
+        <p className="page-description mt-1">Real-time system health (auto-refreshes every 30s)</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
@@ -63,7 +64,7 @@ export default function LiveMetricsPage() {
             <CardTitle className="text-sm font-medium">Requests (24h)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{traces?.totalTraces ?? 0}</div>
+            <MetricValue value={traces?.totalTraces} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -71,9 +72,7 @@ export default function LiveMetricsPage() {
             <CardTitle className="text-sm font-medium">Error Rate</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {(traces?.errorRate ?? 0).toFixed(1)}%
-            </div>
+            <MetricValue value={traces?.errorRate} format={(v) => `${v.toFixed(1)}%`} className="text-2xl font-bold text-red-500" />
           </CardContent>
         </Card>
         <Card>
@@ -81,9 +80,7 @@ export default function LiveMetricsPage() {
             <CardTitle className="text-sm font-medium">Avg Latency</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {(traces?.avgDurationMs ?? 0).toFixed(0)}ms
-            </div>
+            <MetricValue value={traces?.avgDurationMs} format={(v) => `${v.toFixed(0)}ms`} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -91,9 +88,7 @@ export default function LiveMetricsPage() {
             <CardTitle className="text-sm font-medium">Cost (24h)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ${(costs?.totalCost ?? 0).toFixed(2)}
-            </div>
+            <MetricValue value={costs?.totalCost} format={(v) => `$${v.toFixed(2)}`} className="text-2xl font-bold" />
           </CardContent>
         </Card>
         <Card>
@@ -101,9 +96,7 @@ export default function LiveMetricsPage() {
             <CardTitle className="text-sm font-medium">Firing Alerts</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">
-              {alerts?.firingEvents ?? 0}
-            </div>
+            <MetricValue value={alerts?.firingEvents} className="text-2xl font-bold text-orange-500" />
           </CardContent>
         </Card>
         <Card>
@@ -111,9 +104,7 @@ export default function LiveMetricsPage() {
             <CardTitle className="text-sm font-medium">Open Incidents</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">
-              {incidents?.open ?? 0}
-            </div>
+            <MetricValue value={incidents?.open} className="text-2xl font-bold text-red-500" />
           </CardContent>
         </Card>
       </div>
@@ -151,23 +142,23 @@ export default function LiveMetricsPage() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Input Tokens</span>
-                <span className="font-medium">{(costs?.inputTokens ?? 0).toLocaleString()}</span>
+                <span className="font-medium"><MetricValue value={costs?.inputTokens} /></span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Output Tokens</span>
-                <span className="font-medium">{(costs?.outputTokens ?? 0).toLocaleString()}</span>
+                <span className="font-medium"><MetricValue value={costs?.outputTokens} /></span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Tokens</span>
-                <span className="font-medium">{(costs?.totalTokens ?? 0).toLocaleString()}</span>
+                <span className="font-medium"><MetricValue value={costs?.totalTokens} /></span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Requests</span>
-                <span className="font-medium">{(costs?.totalRequests ?? 0).toLocaleString()}</span>
+                <span className="font-medium"><MetricValue value={costs?.totalRequests} /></span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Avg Cost/Request</span>
-                <span className="font-medium">${(costs?.avgCostPerRequest ?? 0).toFixed(4)}</span>
+                <span className="font-medium"><MetricValue value={costs?.avgCostPerRequest} format={(v) => `$${v.toFixed(4)}`} /></span>
               </div>
             </div>
           </CardContent>
