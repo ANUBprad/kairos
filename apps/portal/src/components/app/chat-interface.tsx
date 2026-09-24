@@ -9,7 +9,6 @@ import {
   Trash2,
   Plus,
   MessageSquare,
-  Bot,
   FileText,
   BookOpen,
   Check,
@@ -405,8 +404,16 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
 
   return (
     <div>
-      <KbWorkspaceTabs kbId={kbId} active="research" />
-      <div className="flex h-[calc(100vh-11rem)] -m-6 mt-3 overflow-hidden">
+      <header className="mb-2">
+        <p className="text-xs font-medium text-brand">{kbName}</p>
+        <h1 className="page-title mt-0.5">Research</h1>
+        <p className="page-description mt-1">
+          Ask questions and get grounded answers. Every response cites the source
+          chunks it draws from.
+        </p>
+        <KbWorkspaceTabs kbId={kbId} active="research" />
+      </header>
+      <div className="flex h-[calc(100vh-16rem)] -m-6 mt-3 overflow-hidden">
       {showSidebar && (
         <div className="w-64 shrink-0 border-r border-border bg-surface overflow-y-auto">
           <div className="p-3">
@@ -464,21 +471,18 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
             {showSidebar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
           <h2 className="text-sm font-medium text-text-primary truncate">
-            {kbName} · Research
+            {conversations.find((c) => c.id === activeConversation)?.title ?? "Research"}
           </h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4" role="log" aria-label="Chat messages" aria-live="polite">
+        <div className="flex-1 overflow-y-auto" role="log" aria-label="Chat messages" aria-live="polite">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-full text-center">
-              <Bot size={40} className="text-text-tertiary mb-4" />
-              <h3 className="text-lg font-semibold text-text-primary mb-2">
-                Research {kbName}
-              </h3>
-              <p className="text-sm text-text-secondary max-w-md">
-                Ask questions and get grounded answers. Every response cites the
-                exact source chunks it draws from, so you can verify each claim
-                against your documents.
+            <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+              <BookOpen size={26} className="text-text-tertiary mb-4" />
+              <h3 className="section-title">Ask your first question</h3>
+              <p className="page-description mt-2 max-w-md">
+                Every answer is grounded in your sources and cites the exact chunks
+                it draws from, so you can verify each claim against your documents.
               </p>
               {!activeConversation && (
                 <Button variant="primary" className="mt-6" onClick={createConversation}>
@@ -489,142 +493,144 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
             </div>
           )}
 
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  msg.role === "user"
-                    ? "bg-brand text-white"
-                    : "bg-surface border border-border"
-                }`}
-              >
-                <div className="prose prose-sm prose-invert max-w-none">
-                  <MarkdownRenderer content={msg.content || (msg.role === "assistant" && isStreaming ? "..." : "")} />
-                </div>
-                {msg.citations && msg.citations.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border/50">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">
-                      Sources
-                    </p>
-                    <div className="space-y-1.5">
-                      {msg.citations.map((c) => (
-                        <Link
-                          key={c.chunkId}
-                          href={`/app/knowledge-bases/${kbId}/${c.documentId}?chunk=${c.chunkIndex}`}
-                          className="flex items-start gap-2 rounded-lg bg-bg/50 p-2 text-xs transition-colors hover:bg-surface-hover"
-                        >
-                          <FileText size={12} className="shrink-0 mt-0.5 text-text-tertiary" />
-                          <div className="min-w-0">
-                            <p className="font-medium text-text-primary truncate">
-                              {c.documentName}
-                            </p>
-                            <p className="text-text-tertiary">
-                              Chunk #{c.chunkIndex}
-                              {c.pageNumber && ` · Page ${c.pageNumber}`}
-                              {c.similarity && ` · ${Math.round(c.similarity * 100)}% match`}
-                            </p>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
+          <div className="mx-auto max-w-[72ch] space-y-8 px-3 py-3">
+            {messages.map((msg) =>
+              msg.role === "user" ? (
+                <div key={msg.id} className="flex justify-end">
+                  <div className="max-w-[58ch] rounded-lg border border-border bg-surface px-4 py-2.5 text-sm leading-relaxed text-text-secondary">
+                    {msg.content}
                   </div>
-                )}
-                {msg.role === "assistant" && !isStreaming && turnSourceIds(msg).length > 0 && (
-                  <div className="mt-3 border-t border-border/50 pt-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          setArtifactError(null);
-                          setArtifactMenuFor(artifactMenuFor === msg.id ? null : msg.id);
-                        }}
-                        disabled={generatingArtifactFor?.msgId === msg.id}
-                        aria-expanded={artifactMenuFor === msg.id}
-                        aria-label={`Create an artifact from this answer (${turnSourceIds(msg).length} cited sources)`}
-                      >
-                        {generatingArtifactFor?.msgId === msg.id ? (
-                          <Loader2 size={12} className="animate-spin" />
-                        ) : (
-                          <Sparkles size={12} />
-                        )}
-                        Create artifact
-                      </Button>
-                      {createdArtifact && createdArtifact.msgId === msg.id && (
-                        <span className="inline-flex items-center gap-1 text-xs text-text-primary">
-                          <Check size={12} className="text-brand" />
-                          {ARTIFACT_TYPE_META[createdArtifact.type].label} created
-                        </span>
-                      )}
-                      {createdArtifact && createdArtifact.msgId === msg.id && (
-                        <Link
-                          href={`/app/knowledge-bases/${kbId}/artifacts/${createdArtifact.id}${
-                            activeConversation ? `?conversation=${activeConversation}` : ""
-                          }`}
-                          className="text-xs font-medium text-brand transition-colors hover:underline"
-                        >
-                          View artifact
-                        </Link>
-                      )}
+                </div>
+              ) : (
+                <div key={msg.id} className="flex justify-start">
+                  <div className="w-full">
+                    <div className="prose-reading">
+                      <MarkdownRenderer content={msg.content || (isStreaming ? "…" : "")} />
                     </div>
-
-                    {artifactMenuFor === msg.id && (
-                      <div className="mt-2 rounded-lg border border-border bg-bg p-1">
-                        {ACTIVE_STUDIO_ARTIFACT_TYPES.map((type) => {
-                          const meta = ARTIFACT_TYPE_META[type];
-                          const busy =
-                            generatingArtifactFor?.msgId === msg.id &&
-                            generatingArtifactFor.type === type;
-                          const count = turnSourceIds(msg).length;
-                          return (
-                            <button
-                              key={type}
-                              disabled={!!generatingArtifactFor}
-                              onClick={() =>
-                                generateArtifactFromTurn(msg.id, type, turnSourceIds(msg))
-                              }
-                              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:opacity-50"
+                    {msg.citations && msg.citations.length > 0 && (
+                      <div className="mt-3 border-t border-border/60 pt-2.5">
+                        <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
+                          Sources
+                        </p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                          {msg.citations.map((c) => (
+                            <Link
+                              key={c.chunkId}
+                              href={`/app/knowledge-bases/${kbId}/${c.documentId}?chunk=${c.chunkIndex}`}
+                              className="group inline-flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-brand"
+                              title={`${c.excerpt}${c.similarity ? ` (${Math.round(c.similarity * 100)}% match)` : ""}`}
                             >
-                              {busy ? (
-                                <Loader2 size={12} className="shrink-0 animate-spin" />
-                              ) : (
-                                <meta.Icon size={12} className="shrink-0" />
-                              )}
-                              <span className="flex-1 text-left">{meta.label}</span>
-                              <span className="text-[10px] font-normal text-text-tertiary">
-                                {count} source{count !== 1 ? "s" : ""}
+                              <FileText size={11} className="shrink-0" />
+                              <span className="max-w-[28ch] truncate group-hover:underline">
+                                {c.documentName}
                               </span>
-                            </button>
-                          );
-                        })}
-                        {artifactError && (
-                          <p role="alert" className="px-3 py-2 text-xs text-error">
-                            {artifactError}
-                          </p>
+                              <span className="shrink-0 text-text-tertiary/70">
+                                #{c.chunkIndex}
+                                {c.pageNumber ? ` · p.${c.pageNumber}` : ""}
+                                {c.similarity ? ` · ${Math.round(c.similarity * 100)}%` : ""}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {!isStreaming && turnSourceIds(msg).length > 0 && (
+                      <div className="mt-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-text-tertiary hover:text-brand"
+                            onClick={() => {
+                              setArtifactError(null);
+                              setArtifactMenuFor(artifactMenuFor === msg.id ? null : msg.id);
+                            }}
+                            disabled={generatingArtifactFor?.msgId === msg.id}
+                            aria-expanded={artifactMenuFor === msg.id}
+                            aria-label={`Create an artifact from this answer (${turnSourceIds(msg).length} cited sources)`}
+                          >
+                            {generatingArtifactFor?.msgId === msg.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Sparkles size={12} />
+                            )}
+                            Create artifact
+                          </Button>
+                          {createdArtifact && createdArtifact.msgId === msg.id && (
+                            <span className="inline-flex items-center gap-1 text-xs text-text-primary">
+                              <Check size={12} className="text-brand" />
+                              {ARTIFACT_TYPE_META[createdArtifact.type].label} created
+                            </span>
+                          )}
+                          {createdArtifact && createdArtifact.msgId === msg.id && (
+                            <Link
+                              href={`/app/knowledge-bases/${kbId}/artifacts/${createdArtifact.id}${
+                                activeConversation ? `?conversation=${activeConversation}` : ""
+                              }`}
+                              className="text-xs font-medium text-brand transition-colors hover:underline"
+                            >
+                              View artifact
+                            </Link>
+                          )}
+                        </div>
+
+                        {artifactMenuFor === msg.id && (
+                          <div className="mt-2 rounded-lg border border-border bg-bg p-1">
+                            {ACTIVE_STUDIO_ARTIFACT_TYPES.map((type) => {
+                              const meta = ARTIFACT_TYPE_META[type];
+                              const busy =
+                                generatingArtifactFor?.msgId === msg.id &&
+                                generatingArtifactFor.type === type;
+                              const count = turnSourceIds(msg).length;
+                              return (
+                                <button
+                                  key={type}
+                                  disabled={!!generatingArtifactFor}
+                                  onClick={() =>
+                                    generateArtifactFromTurn(msg.id, type, turnSourceIds(msg))
+                                  }
+                                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:opacity-50"
+                                >
+                                  {busy ? (
+                                    <Loader2 size={12} className="shrink-0 animate-spin" />
+                                  ) : (
+                                    <meta.Icon size={12} className="shrink-0" />
+                                  )}
+                                  <span className="flex-1 text-left">{meta.label}</span>
+                                  <span className="text-[10px] font-normal text-text-tertiary">
+                                    {count} source{count !== 1 ? "s" : ""}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                            {artifactError && (
+                              <p role="alert" className="px-3 py-2 text-xs text-error">
+                                {artifactError}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
+                    {isFailedMessage(msg) && !isStreaming && (
+                      <div className="mt-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-text-tertiary hover:text-brand"
+                          onClick={() => retryMessage(msg.id)}
+                        >
+                          <RotateCcw size={12} />
+                          Try again
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
-                {msg.role === "assistant" && isFailedMessage(msg) && !isStreaming && (
-                  <div className="mt-3 border-t border-border/50 pt-3">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => retryMessage(msg.id)}
-                    >
-                      <RotateCcw size={12} />
-                      Try again
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
+                </div>
+              ),
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
         <div className="border-t border-border p-4">
@@ -635,7 +641,7 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
                 disabled={!activeConversation}
                 aria-label="Source scope"
                 aria-expanded={scopeOpen}
-                className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors disabled:opacity-40"
               >
                 <BookOpen size={14} />
                 <span>{formatSourceScopeLabel(selectedSourceIds.length)}</span>
@@ -684,7 +690,7 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
               disabled={!activeConversation || isStreaming}
               rows={1}
               aria-label="Chat message input"
-              className="flex-1 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:border-brand disabled:opacity-40"
+              className="flex-1 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:border-brand disabled:opacity-40"
             />
             {isStreaming ? (
               <Button
