@@ -558,6 +558,7 @@ export async function validateDataset(
   await assertDatasetAccess(datasetId, organizationId);
   const entries = await prisma.goldenDatasetEntry.findMany({
     where: { datasetId },
+    select: { id: true, question: true, expectedAnswer: true },
   });
 
   const errors: Array<{ entryId: string; issues: string[] }> = [];
@@ -588,31 +589,32 @@ export async function getDatasetStats(
   organizationId?: string
 ): Promise<DatasetStats> {
   await assertDatasetAccess(datasetId, organizationId);
-  const entries = await prisma.goldenDatasetEntry.findMany({
-    where: { datasetId },
-    select: {
-      category: true,
-    },
-  });
-
   const dataset = await prisma.goldenDataset.findUnique({
     where: { id: datasetId },
     select: { difficulty: true },
   });
 
+  // Count in one grouped query instead of scanning every entry row to tally.
+  const byCategoryRaw = await prisma.goldenDatasetEntry.groupBy({
+    by: ["category"],
+    where: { datasetId },
+    _count: true,
+  });
+
   const byCategory: Record<string, number> = {};
-  for (const entry of entries) {
-    const cat = entry.category ?? "uncategorized";
-    byCategory[cat] = (byCategory[cat] ?? 0) + 1;
+  let totalEntries = 0;
+  for (const group of byCategoryRaw) {
+    byCategory[group.category ?? "uncategorized"] = group._count;
+    totalEntries += group._count;
   }
 
   const byDifficulty: Record<string, number> = {};
   if (dataset) {
-    byDifficulty[dataset.difficulty] = entries.length;
+    byDifficulty[dataset.difficulty] = totalEntries;
   }
 
   return {
-    totalEntries: entries.length,
+    totalEntries,
     byDifficulty,
     byCategory,
   };

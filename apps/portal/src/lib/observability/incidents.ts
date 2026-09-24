@@ -140,7 +140,7 @@ export async function getIncidentStats(orgId: string, days: number = 30) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
-  const [total, open, bySeverity, byStatus] = await Promise.all([
+  const [total, open, bySeverity, byStatus, avgResolutionMs] = await Promise.all([
     prisma.incident.count({
       where: { organizationId: orgId, createdAt: { gte: startDate } },
     }),
@@ -157,39 +157,22 @@ export async function getIncidentStats(orgId: string, days: number = 30) {
       where: { organizationId: orgId, createdAt: { gte: startDate } },
       _count: true,
     }),
-    prisma.incident.aggregate({
-      where: {
-        organizationId: orgId,
-        resolvedAt: { not: null },
-        createdAt: { gte: startDate },
-      },
-      _avg: {
-        // Calculate avg resolution time in application
-      },
-    }),
+    // Resolution time computed in SQL instead of materializing every resolved
+    // incident row and averaging in JS. EXTRACT(EPOCH) is seconds; *1000 → ms.
+    prisma.$queryRaw<{ avgMs: number | null }[]>`
+      SELECT AVG(EXTRACT(EPOCH FROM ("resolvedAt" - "startedAt")) * 1000) AS "avgMs"
+      FROM "Incident"
+      WHERE "organizationId" = ${orgId}
+        AND "resolvedAt" IS NOT NULL
+        AND "createdAt" >= ${startDate}`,
   ]);
-
-  const resolvedIncidents = await prisma.incident.findMany({
-    where: {
-      organizationId: orgId,
-      resolvedAt: { not: null },
-      createdAt: { gte: startDate },
-    },
-    select: { startedAt: true, resolvedAt: true },
-  });
-
-  const avgResolutionMs = resolvedIncidents.length > 0
-    ? resolvedIncidents.reduce((sum: number, i: any) => {
-        return sum + (i.resolvedAt!.getTime() - i.startedAt.getTime());
-      }, 0) / resolvedIncidents.length
-    : 0;
 
   return {
     total,
     open,
     bySeverity,
     byStatus,
-    avgResolutionHours: avgResolutionMs / (1000 * 60 * 60),
+    avgResolutionHours: (avgResolutionMs[0]?.avgMs ?? 0) / (1000 * 60 * 60),
     days,
   };
 }

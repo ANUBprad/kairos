@@ -168,16 +168,26 @@ export async function uploadDocument(kbId: string, formData: FormData) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const hash = fileHash(buffer);
 
-    const existing = await prisma.document.findFirst({
-      where: { knowledgeBaseId: kbId, fileHash: hash },
-      select: { id: true, name: true },
-    });
-
-    if (existing) {
-      throw new Error(`"${file.name}" is a duplicate of "${existing.name}" (same content)`);
-    }
-
     fileEntries.push({ file, buffer, fileType, hash });
+  }
+
+  // Dedup across the whole request in one query instead of one per file; the
+  // first entry (in request order) whose content already exists aborts the
+  // upload exactly like the per-file check did.
+  const existingByHash = new Map(
+    (
+      await prisma.document.findMany({
+        where: { knowledgeBaseId: kbId, fileHash: { in: fileEntries.map((e) => e.hash) } },
+        select: { fileHash: true, name: true },
+      })
+    ).map((d) => [d.fileHash, d] as const),
+  );
+
+  for (const file of fileEntries) {
+    const existing = existingByHash.get(file.hash);
+    if (existing) {
+      throw new Error(`"${file.file.name}" is a duplicate of "${existing.name}" (same content)`);
+    }
   }
 
   // Phase 2 — Upload and create records
@@ -1597,9 +1607,15 @@ export async function getDocumentPreviewContent(docId: string) {
 
   if (chunkCount > 0) {
     const MAX_PREVIEW_CHARS = 200_000;
+    // Pages never need more than the leading chunks to reach the preview
+    // ceiling; bounding the read keeps a 100k-chunk document from being
+    // materialized in memory just to preview 200k characters.
+    // ponytail: 2000 rows side-steps pathological tiny-chunk documents; real
+    // chunkers (~1-8k chars/chunk) cap out around 25-200 rows.
     const allContent = await prisma.documentChunk.findMany({
       where: { documentId: docId },
       orderBy: { index: "asc" },
+      take: 2000,
       select: { content: true },
     });
     let charCount = 0;
