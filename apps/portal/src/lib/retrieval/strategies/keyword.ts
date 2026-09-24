@@ -2,16 +2,30 @@ import { prisma } from "@/lib/prisma";
 import { BM25 } from "./bm25";
 import type { RetrievalStrategy, RetrievalContext, RetrievalResult, StrategyDocument } from "./types";
 
+// The BM25 index cache is shared module-wide instead of per instance so one
+// invalidation clears every copy — the standalone KeywordStrategy, the
+// HybridStrategy's internal instance, and any ad-hoc ones. Keys are
+// `${kbId}:${scopeKey}`.
+const indexCache = new Map<string, { bm25: BM25; chunks: StrategyDocument[] }>();
+
+export function clearKeywordIndexCache(kbId?: string): void {
+  if (kbId) {
+    for (const key of indexCache.keys()) {
+      if (key === kbId || key.startsWith(`${kbId}:`)) indexCache.delete(key);
+    }
+    return;
+  }
+  indexCache.clear();
+}
+
 export class KeywordStrategy implements RetrievalStrategy {
   readonly name = "keyword";
   readonly description = "BM25 keyword-based retrieval";
 
-  private indexCache = new Map<string, { bm25: BM25; chunks: StrategyDocument[] }>();
-
   async retrieve(ctx: RetrievalContext): Promise<RetrievalResult> {
     const scopeKey = ctx.documentIds?.length ? [...ctx.documentIds].sort().join(",") : "all";
     const cacheKey = `${ctx.kbId}:${scopeKey}`;
-    let indexEntry = this.indexCache.get(cacheKey);
+    let indexEntry = indexCache.get(cacheKey);
 
     if (!indexEntry) {
       const chunks = await prisma.documentChunk.findMany({
@@ -48,7 +62,7 @@ export class KeywordStrategy implements RetrievalStrategy {
       bm25.build(strategyDocs.map((d) => d.content));
 
       indexEntry = { bm25, chunks: strategyDocs };
-      this.indexCache.set(cacheKey, indexEntry);
+      indexCache.set(cacheKey, indexEntry);
     }
 
     const { bm25, chunks } = indexEntry;
@@ -75,11 +89,7 @@ export class KeywordStrategy implements RetrievalStrategy {
   }
 
   clearCache(kbId?: string): void {
-    if (kbId) {
-      this.indexCache.delete(kbId);
-    } else {
-      this.indexCache.clear();
-    }
+    clearKeywordIndexCache(kbId);
   }
 }
 
