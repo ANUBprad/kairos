@@ -9,7 +9,7 @@ import { createTrace, finishTrace, addSpan, finishSpan, addTraceEvent } from "@/
 import { buildChatTraceMetadata } from "@/lib/ai/chat/observability";
 import { EMPTY_RETRIEVAL_TEXT, GENERATION_FAILED_TEXT, GENERATION_STOPPED_TEXT } from "@/lib/ai/chat/stream-markers";
 import { logger } from "@/lib/logger";
-import type { ProviderType, CitationSource, StreamChunk, RetrievedChunk } from "@/lib/ai/types";
+import type { ProviderType, CitationSource, StreamChunk, RetrievedChunk, AIMessage } from "@/lib/ai/types";
 
 export interface ChatTraceContext {
   requestId: string;
@@ -26,6 +26,8 @@ export interface ChatRequest {
   model?: string;
   signal?: AbortSignal;
   trace?: ChatTraceContext;
+  /** History already loaded by the caller (explainable-trace preview); skips one re-read. */
+  preloadedConversationMessages?: AIMessage[];
 }
 
 // A "usable" chunk is one with non-whitespace content. Zero usable chunks is a
@@ -240,9 +242,11 @@ export async function* streamChatResponse(
       return;
     }
 
-    const conversationMessages = await getConversationMessages(
+    const conversationMessages =
+      request.preloadedConversationMessages ??
+      (await getConversationMessages(
       request.conversationId,
-    );
+    ));
 
     const prompt = buildChatPrompt({
       systemPrompt: "",

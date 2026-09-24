@@ -3,6 +3,10 @@ import type { AIMessage, CitationSource } from "@/lib/ai/types";
 
 const MAX_CONTEXT_TOKENS = 8000;
 const TOKEN_ESTIMATE_RATIO = 4;
+// Bounds the history read so a long-lived conversation never loads its whole
+// transcript. Each turn is a few hundred tokens and trimMessages keeps the
+// recent ~8000-token tail, so 100 messages is ample headroom before the trim.
+const MESSAGE_READ_CAP = 100;
 
 export interface ConversationData {
   id: string;
@@ -194,14 +198,17 @@ export async function getConversationMessages(
 ): Promise<AIMessage[]> {
   const messages = await prisma.message.findMany({
     where: { conversationId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: "desc" },
+    take: MESSAGE_READ_CAP,
     select: { role: true, content: true, tokens: true },
   });
 
-  const aiMessages: AIMessage[] = messages.map((m) => ({
-    role: m.role as "user" | "assistant" | "system",
-    content: m.content,
-  }));
+  const aiMessages: AIMessage[] = messages
+    .reverse()
+    .map((m) => ({
+      role: m.role as "user" | "assistant" | "system",
+      content: m.content,
+    }));
 
   return trimMessages(aiMessages, maxTokens);
 }

@@ -74,10 +74,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
   }
 
-  const conversation = await prisma.conversation.findUnique({
-    where: { id: conversationId },
-    select: { userId: true, knowledgeBaseId: true, model: true, provider: true },
-  });
+  // Independent reads run in one round trip instead of a serial chain: the
+  // conversation row, the caller's KB access grant, the KB's owner org, and
+  // (when present) the source-scope documents. Checks still return 404 in the
+  // same precedence order as before (conversation first, then KB access).
+  const needsScopeCheck = !!sourceIds && sourceIds.length > 0;
+  const [conversation, canAccess, organizationId, ownedDocs] = await Promise.all([
+    prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { userId: true, knowledgeBaseId: true, model: true, provider: true },
+    }),
+    canAccessKnowledgeBase(session.user.id, kbId),
+    getKbOrganizationId(kbId),
+    needsScopeCheck
+      ? prisma.document.findMany({
+          where: { id: { in: sourceIds }, knowledgeBaseId: kbId },
+          select: { id: true },
+        })
+      : Promise.resolve([] as { id: string }[]),
+  ]);
 
   // Conversation must belong to the requesting user AND the asked-for KB.
   // Cross-workspace usage is indistinguishable from not-found (no leak).
@@ -85,14 +100,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
   }
 
-  if (!(await canAccessKnowledgeBase(session.user.id, kbId))) {
+  if (!canAccess) {
     return NextResponse.json({ error: "Knowledge base not found" }, { status: 404 });
   }
 
   // Every chat turn must produce an org-scoped observability Trace. The user's
   // KB residency determines the org; the user id rides on the Trace.userId
   // column and the KB/conversation scope rides in its metadata JSON.
-  const organizationId = await getKbOrganizationId(kbId);
   const traceContext: ChatTraceContext | undefined = organizationId
     ? { requestId: randomUUID(), organizationId, userId: session.user.id }
     : undefined;
@@ -116,16 +130,14 @@ export async function POST(request: NextRequest) {
   // inside THIS knowledge base. Invalid/cross-workspace ids are ignored so we
   // never leak whether an inaccessible source exists.
   let scopedSourceIds: string[] | undefined;
-  if (sourceIds && sourceIds.length > 0) {
-    const ownedDocs = await prisma.document.findMany({
-      where: { id: { in: sourceIds }, knowledgeBaseId: kbId },
-      select: { id: true },
-    });
+  if (needsScopeCheck) {
     scopedSourceIds = filterScopedSourceIds(sourceIds, ownedDocs.map((d) => d.id));
   }
 
   const encoder = new TextEncoder();
   const abortController = new AbortController();
+
+  let conversationMessages: Awaited<ReturnType<typeof getConversationMessages>> | null = null;
 
   // Server-side timeout: close stream after 120 seconds max
   const streamTimeout = setTimeout(() => {
@@ -186,7 +198,7 @@ export async function POST(request: NextRequest) {
 
           const retrievalEnd = performance.now();
 
-          const conversationMessages = await getConversationMessages(conversationId);
+          conversationMessages = await getConversationMessages(conversationId);
 
           const contextStr = trace.result
             .map((c, i) => `[Source ${i + 1}]${c.content}`)
@@ -294,6 +306,7 @@ ${contextStr || "No relevant documents found."}`;
           model: resolvedModel,
           signal: abortController.signal,
           trace: traceContext,
+          preloadedConversationMessages: conversationMessages ?? undefined,
         });
 
         for await (const chunk of gen) {
