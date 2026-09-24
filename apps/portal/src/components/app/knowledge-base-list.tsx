@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, Plus, MoreHorizontal, Pencil, Trash2, FileText } from "lucide-react";
+import { BookOpen, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { CreateKnowledgeBaseDialog } from "@/components/app/create-knowledge-base-dialog";
 import { RenameKnowledgeBaseDialog } from "@/components/app/rename-knowledge-base-dialog";
 import { DeleteKnowledgeBaseDialog } from "@/components/app/delete-knowledge-base-dialog";
@@ -70,8 +69,8 @@ export function KnowledgeBaseList({ items }: Props) {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Knowledge Bases</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h1 className="page-title">Knowledge Bases</h1>
+          <p className="page-description mt-1">
             {items.length} {items.length === 1 ? "knowledge base" : "knowledge bases"}
           </p>
         </div>
@@ -86,35 +85,26 @@ export function KnowledgeBaseList({ items }: Props) {
           <Card key={kb.id} className="group relative overflow-hidden">
             <Link
               href={`/app/knowledge-bases/${kb.id}`}
-              className="block"
+              className="block p-4 pr-10"
               prefetch={false}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10">
-                    <BookOpen size={20} className="text-brand" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-text-primary">{kb.name}</h3>
-                    {kb.description && (
-                      <p className="mt-0.5 text-xs text-text-secondary line-clamp-1">
-                        {kb.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-3">
-                <Badge variant="default">
-                  <FileText size={12} className="mr-1" />
+              <h3 className="truncate font-medium text-text-primary transition-colors group-hover:text-brand">
+                {kb.name}
+              </h3>
+              {kb.description && (
+                <p className="mt-1 text-xs leading-relaxed text-text-secondary line-clamp-2">
+                  {kb.description}
+                </p>
+              )}
+              <div className="mt-3 flex items-center gap-2 text-xs text-text-tertiary">
+                <span>
                   {kb._count.documents} {kb._count.documents === 1 ? "document" : "documents"}
-                </Badge>
-                <span className="text-[11px] text-text-tertiary">
-                  Created {new Date(kb.createdAt).toLocaleDateString()}
                 </span>
+                <span aria-hidden="true">·</span>
+                <span>Created {new Date(kb.createdAt).toLocaleDateString()}</span>
               </div>
             </Link>
-            <div className="absolute right-4 top-4 z-10">
+            <div className="absolute right-3 top-3 z-10">
               <button
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === kb.id ? null : kb.id); }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary opacity-0 transition-opacity hover:bg-surface-hover hover:text-text-secondary group-hover:opacity-100"

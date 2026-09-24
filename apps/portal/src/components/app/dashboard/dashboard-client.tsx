@@ -90,7 +90,6 @@ export function DashboardClient({ data }: DashboardClientProps) {
 
   const hasKb = knowledgeBases.length > 0;
   const hasDocs = docCount > 0;
-  const hasBenchmark = latestBenchmark !== null;
 
   const benchmarkMetrics = latestBenchmark?.aggregatedMetrics;
   const avgRecall =
@@ -101,20 +100,12 @@ export function DashboardClient({ data }: DashboardClientProps) {
   if (!hasKb) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-border bg-gradient-to-br from-surface via-surface to-brand/5 p-8">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" aria-hidden="true" />
-          <div className="relative">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-brand/10">
-                <FolderOpen size={20} className="text-brand" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-text-primary tracking-tight">Research workspace</h1>
-                <p className="text-sm text-text-secondary">Start by building a knowledge base from your documents.</p>
-              </div>
-            </div>
+        <header className="flex items-end justify-between gap-4">
+          <div>
+            <h1 className="page-title">Research workspace</h1>
+            <p className="page-description mt-1">Start by building a knowledge base from your documents.</p>
           </div>
-        </div>
+        </header>
 
         <DashboardCard variant="default">
           <CardSectionHeader>
@@ -145,31 +136,30 @@ export function DashboardClient({ data }: DashboardClientProps) {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="relative overflow-hidden rounded-[var(--radius-xl)] border border-border bg-gradient-to-br from-surface via-surface to-brand/5 p-8">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" aria-hidden="true" />
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] bg-brand/10">
-              <FolderOpen size={20} className="text-brand" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-text-primary tracking-tight">Research workspace</h1>
-              <p className="text-sm text-text-secondary">
-                {knowledgeBases.length} knowledge base{knowledgeBases.length !== 1 ? "s" : ""},{" "}
-                {docCount} document{docCount !== 1 ? "s" : ""}, {chunkCount.toLocaleString()} chunks.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-            <StatCard label="Knowledge Bases" value={knowledgeBases.length} icon={FolderOpen} status="brand" />
-            <StatCard label="Documents" value={docCount} icon={FileText} status={hasDocs ? "success" : "default"} />
-            <StatCard label="Chunks" value={chunkCount.toLocaleString()} icon={Layers} status={chunkCount > 0 ? "success" : "default"} />
-            <StatCard label="Experiments" value={experimentCount} icon={FlaskConical} status={experimentCount > 0 ? "success" : "default"} trend={avgRecall !== null ? "up" : undefined} trendValue={avgRecall !== null ? `${(avgRecall * 100).toFixed(0)}% recall` : undefined} />
-            <StatCard label="Quizzes Taken" value={quizzesTaken} icon={ListChecks} status={quizzesTaken > 0 ? "success" : "default"} />
-            <StatCard label="Cards Known" value={cardsKnown} icon={Layers} status={cardsKnown > 0 ? "success" : "default"} />
-          </div>
+      <header className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="page-title">Research workspace</h1>
+          <p className="page-description mt-1">
+            {knowledgeBases.length} knowledge base{knowledgeBases.length !== 1 ? "s" : ""},{" "}
+            {docCount} document{docCount !== 1 ? "s" : ""}, {chunkCount.toLocaleString()} chunks.
+          </p>
         </div>
+        <Link
+          href="/app/knowledge-bases"
+          className="hidden shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary sm:flex"
+        >
+          <FolderOpen size={14} />
+          Knowledge Bases
+        </Link>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <StatCard label="Knowledge Bases" value={knowledgeBases.length} icon={FolderOpen} status="brand" />
+        <StatCard label="Documents" value={docCount} icon={FileText} status={hasDocs ? "success" : "default"} />
+        <StatCard label="Chunks" value={chunkCount.toLocaleString()} icon={Layers} status={chunkCount > 0 ? "success" : "default"} />
+        <StatCard label="Experiments" value={experimentCount} icon={FlaskConical} status={experimentCount > 0 ? "success" : "default"} trend={avgRecall !== null ? "up" : undefined} trendValue={avgRecall !== null ? `${(avgRecall * 100).toFixed(0)}% recall` : undefined} />
+        <StatCard label="Quizzes Taken" value={quizzesTaken} icon={ListChecks} status={quizzesTaken > 0 ? "success" : "default"} />
+        <StatCard label="Cards Known" value={cardsKnown} icon={Layers} status={cardsKnown > 0 ? "success" : "default"} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

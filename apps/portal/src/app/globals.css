@@ -37,8 +37,8 @@
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 30px rgba(255, 90, 10, 0.15);
-  --shadow-glow-strong: 0 0 60px rgba(255, 90, 10, 0.25);
+  --shadow-glow: 0 0 24px rgba(255, 90, 10, 0.10);
+  --shadow-glow-strong: 0 0 48px rgba(255, 90, 10, 0.16);
 
   --spacing-dialog: 24px;
   --spacing-card: 24px;
@@ -100,6 +100,155 @@
 
 @utility text-balance {
   text-wrap: balance;
+}
+
+/* Design primitives — the typography and measure scale shared by every
+   workspace surface. Page = 30px, section = 19px, reading = 16/1.78 over a
+   70ch measure. Kept as utilities (not a component) so pages compose them
+   onto their own headers instead of importing a header shell. */
+@utility page-title {
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+@utility page-description {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+@utility section-title {
+  font-size: 19px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+@utility reading-measure {
+  max-width: 70ch;
+}
+
+@utility reading-text {
+  font-size: 16px;
+  line-height: 1.78;
+}
+
+/* Editorial markdown body for the research reading column (chat answers,
+   report/summary/takeaways artifacts). A single writing style defined once
+   instead of per-viewer typography-plugin config. */
+.prose-reading {
+  max-width: 70ch;
+  color: var(--color-text-primary);
+}
+.prose-reading > :first-child {
+  margin-top: 0;
+}
+.prose-reading > :last-child {
+  margin-bottom: 0;
+}
+.prose-reading p {
+  margin: 0 0 1em;
+  font-size: 16px;
+  line-height: 1.78;
+}
+.prose-reading h1,
+.prose-reading h2,
+.prose-reading h3,
+.prose-reading h4 {
+  margin: 1.5em 0 0.5em;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+.prose-reading h1 {
+  font-size: 22px;
+}
+.prose-reading h2 {
+  font-size: 19px;
+}
+.prose-reading h3 {
+  font-size: 17px;
+}
+.prose-reading h4 {
+  font-size: 16px;
+}
+.prose-reading a {
+  color: var(--color-brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-reading a:hover {
+  color: var(--color-brand-hover);
+}
+.prose-reading ul,
+.prose-reading ol {
+  margin: 0 0 1em;
+  padding-left: 1.4em;
+}
+.prose-reading li {
+  margin: 0.25em 0;
+}
+.prose-reading li::marker {
+  color: var(--color-text-tertiary);
+}
+.prose-reading blockquote {
+  margin: 0 0 1em;
+  padding-left: 1em;
+  border-left: 2px solid var(--color-border);
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+.prose-reading code {
+  padding: 0.15em 0.3em;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+.prose-reading pre {
+  margin: 0 0 1em;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow-x: auto;
+}
+.prose-reading pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 13px;
+}
+.prose-reading hr {
+  margin: 1.5em 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+.prose-reading strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.prose-reading table {
+  width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.prose-reading th,
+.prose-reading td {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+.prose-reading th {
+  background: var(--color-surface-hover);
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 @utility glass {

@@ -33,8 +33,8 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
-        <p className="text-sm text-text-tertiary mt-1">
+        <h1 className="page-title">Settings</h1>
+        <p className="page-description mt-1">
           Manage your organization, members, and security settings.
         </p>
       </div>

@@ -155,8 +155,8 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
     <div>
       <header className="mb-6">
         <p className="text-xs font-medium text-brand">{kbName}</p>
-        <h1 className="mt-0.5 text-2xl font-semibold text-text-primary">Studio</h1>
-        <p className="mt-1 text-sm text-text-secondary">
+        <h1 className="page-title mt-0.5">Studio</h1>
+        <p className="page-description mt-1">
           Generate learning artifacts from the indexed sources in this knowledge base.
         </p>
         <KbWorkspaceTabs kbId={kbId} active="studio" />

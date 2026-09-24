@@ -205,8 +205,8 @@ export function PlannerPage({ runs }: PlannerPageProps) {
             <Sparkles size={20} className="text-brand" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-text-primary">Experiment Planner</h1>
-            <p className="text-sm text-text-secondary">
+            <h1 className="page-title">Experiment Planner</h1>
+            <p className="page-description mt-1">
               AI-powered experiment recommendations based on your configuration space, coverage gaps, and expected information gain.
             </p>
           </div>

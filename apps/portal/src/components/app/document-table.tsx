@@ -256,8 +256,8 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
     return (
       <div>
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-text-primary">{kbName}</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h1 className="page-title">{kbName}</h1>
+          <p className="page-description mt-1">
             No sources yet. Add your first source to get started.
           </p>
         </div>
@@ -295,8 +295,8 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-xs font-medium text-brand">{kbName}</p>
-          <h1 className="mt-0.5 text-2xl font-semibold text-text-primary">Sources</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h1 className="page-title mt-0.5">Sources</h1>
+          <p className="page-description mt-1">
             {items.length} source{items.length !== 1 ? "s" : ""} in this knowledge base
           </p>
         </div>
@@ -617,7 +617,11 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                   </span>
                 </td>
                 <td className="px-3 py-3.5">
-                  <ProcessingBadge status={doc.status} />
+                  {doc.status === "INDEXED" ? (
+                    <span className="text-xs text-text-tertiary">Indexed</span>
+                  ) : (
+                    <ProcessingBadge status={doc.status} />
+                  )}
                 </td>
                 <td className="px-3 py-3.5 text-right">
                   <div className="relative inline-flex">

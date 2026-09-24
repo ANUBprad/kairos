@@ -39,7 +39,7 @@ export function ArtifactDetailClient({
       <header className="mb-6">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2 truncate text-2xl font-semibold text-text-primary">
+            <h1 className="flex items-center gap-2 truncate page-title">
               {meta && <meta.Icon size={20} className="shrink-0 text-text-tertiary" />}
               <span className="truncate">
                 {artifact.name || `Untitled ${meta?.label.toLowerCase() ?? "artifact"}`}

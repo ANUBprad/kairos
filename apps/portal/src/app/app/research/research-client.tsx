@@ -156,9 +156,9 @@ export function ResearchDashboard({
               <div className="p-2 rounded-[var(--radius-lg)] bg-brand/10">
                 <Sparkles size={20} className="text-brand" />
               </div>
-              <h1 className="text-2xl font-bold text-text-primary">Research Dashboard</h1>
+              <h1 className="page-title">Research Dashboard</h1>
             </div>
-            <p className="text-sm text-text-secondary">
+            <p className="page-description">
               Adaptive Retrieval-Augmented Generation Research Platform
             </p>
           </div>

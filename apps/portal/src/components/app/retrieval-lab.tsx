@@ -537,8 +537,8 @@ export function RetrievalLab({ kbs }: RetrievalLabProps) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Retrieval Lab</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h1 className="page-title">Retrieval Lab</h1>
+          <p className="page-description mt-1">
             Configure, test, and compare retrieval strategies
           </p>
         </div>

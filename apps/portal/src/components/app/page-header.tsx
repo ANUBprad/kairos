@@ -27,10 +27,10 @@ export function PageHeader({
     <header className={cn("mb-6", className)} role="banner">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold tracking-tight text-text-primary">
+          <h1 className="page-title">
             {title}
           </h1>
-          {description && <p className="text-sm text-text-secondary max-w-2xl">{description}</p>}
+          {description && <p className="page-description max-w-2xl">{description}</p>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {docLink && (
@@ -48,34 +48,27 @@ export function PageHeader({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-4 rounded-lg border border-border bg-surface/50 px-3 sm:px-4 py-3" role="navigation" aria-label="Page actions">
-        <div className="flex items-start gap-2">
-          <HelpCircle size={14} className="mt-0.5 shrink-0 text-brand" aria-hidden="true" />
-          <p className="text-xs text-text-secondary">
-            <span className="font-medium text-text-primary">Purpose:</span>{" "}
-            {purpose}
-          </p>
-        </div>
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-3" role="navigation" aria-label="Page actions">
+        <span className="flex items-center gap-1.5 text-xs text-text-tertiary">
+          <HelpCircle size={13} className="shrink-0 text-brand" aria-hidden="true" />
+          {purpose}
+        </span>
         {nextAction && (
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-xs text-text-tertiary">Next:</span>
-            <Link
-              href={nextAction.href}
-              className="flex items-center gap-1 rounded-md bg-brand/10 px-2.5 py-1 text-xs font-medium text-brand hover:bg-brand/20 transition-colors"
-            >
-              {nextAction.label}
-              <ArrowRight size={12} />
-            </Link>
-          </div>
+          <Link
+            href={nextAction.href}
+            className="ml-auto flex items-center gap-1 text-xs font-medium text-text-secondary hover:text-brand transition-colors"
+          >
+            {nextAction.label}
+            <ArrowRight size={12} />
+          </Link>
         )}
         {relatedPages && relatedPages.length > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-xs text-text-tertiary">Related:</span>
+          <div className="flex items-center gap-1.5">
             {relatedPages.map((page) => (
               <Link
                 key={page.href}
                 href={page.href}
-                className="rounded-md border border-border px-2 py-1 text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
+                className="rounded border border-border px-1.5 py-0.5 text-xs text-text-tertiary hover:bg-surface-hover hover:text-text-secondary transition-colors"
               >
                 {page.label}
               </Link>

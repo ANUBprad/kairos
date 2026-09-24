@@ -41,9 +41,16 @@ export interface AppNavSection {
   items: AppNavItem[];
 }
 
+// Five calm groups instead of eight: Library (where you start), Research
+// (the work), Evaluate (measure it), Observe (operate it), System (configure
+// it). Every route below it lived before — only the grouping and ordering
+// changed, so the sidebar reads as a hierarchy instead of an admin panel.
+// Advanced craft (Experiment Planner/Lineage/Benchmarks, the Observability
+// sub-pages) stays flat and findable; the command palette still indexes all
+// of it via FLAT_APP_NAV.
 export const APP_NAV: AppNavSection[] = [
   {
-    label: "Research",
+    label: "Library",
     items: [
       {
         label: "Overview",
@@ -53,20 +60,31 @@ export const APP_NAV: AppNavSection[] = [
         keywords: ["dashboard", "home", "overview"],
       },
       {
+        label: "Knowledge Bases",
+        href: "/app/knowledge-bases",
+        icon: FolderOpen,
+        description: "Upload and organize source documents",
+        keywords: ["documents", "knowledge", "base", "upload"],
+      },
+      {
+        label: "Notebook",
+        href: "/app/notebook",
+        icon: NotebookPen,
+        description: "Research notes and journal",
+        keywords: ["notebook", "notes", "journal", "markdown"],
+      },
+      {
         label: "Research Dashboard",
         href: "/app/research",
         icon: Microscope,
         description: "Aggregated research metrics and analysis",
         keywords: ["research", "dashboard", "metrics", "analysis"],
       },
-      {
-        label: "Notebook",
-        href: "/app/notebook",
-        icon: NotebookPen,
-        
-        description: "Research notes and journal",
-        keywords: ["notebook", "notes", "journal", "markdown"],
-      },
+    ],
+  },
+  {
+    label: "Research",
+    items: [
       {
         label: "Experiment Lineage",
         href: "/app/lineage",
@@ -85,21 +103,8 @@ export const APP_NAV: AppNavSection[] = [
         label: "Publication",
         href: "/app/publication",
         icon: FileText,
-        
         description: "Export research into reports",
         keywords: ["publication", "export", "paper", "report", "pdf"],
-      },
-    ],
-  },
-  {
-    label: "Build",
-    items: [
-      {
-        label: "Knowledge Bases",
-        href: "/app/knowledge-bases",
-        icon: FolderOpen,
-        description: "Upload and organize source documents",
-        keywords: ["documents", "knowledge", "base", "upload"],
       },
       {
         label: "Chunking Studio",
@@ -112,7 +117,6 @@ export const APP_NAV: AppNavSection[] = [
         label: "Experiment Builder",
         href: "/app/experiment-builder",
         icon: FlaskConical,
-        
         description: "Build a retrieval pipeline",
         keywords: ["experiment", "builder", "workflow", "pipeline"],
       },
@@ -146,20 +150,13 @@ export const APP_NAV: AppNavSection[] = [
         label: "Benchmark Explorer",
         href: "/app/benchmark-explorer",
         icon: FlaskConical,
-        
         description: "Compare benchmark runs",
         keywords: ["benchmark", "explorer", "compare", "scatter"],
       },
-    ],
-  },
-  {
-    label: "PromptOps",
-    items: [
       {
         label: "Prompt Library",
         href: "/app/prompts",
         icon: FileText,
-        
         description: "Curated prompt templates",
         keywords: ["prompt", "library", "templates"],
       },
@@ -167,7 +164,6 @@ export const APP_NAV: AppNavSection[] = [
         label: "Model Comparison",
         href: "/app/model-comparison",
         icon: GitBranch,
-        
         description: "Compare model outputs",
         keywords: ["model", "comparison", "providers"],
       },
@@ -175,20 +171,13 @@ export const APP_NAV: AppNavSection[] = [
         label: "Regression Testing",
         href: "/app/regression",
         icon: FlaskConical,
-        
         description: "Guard retrieval quality over time",
         keywords: ["regression", "testing", "guards"],
       },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
       {
         label: "Leaderboards",
         href: "/app/leaderboards",
         icon: BarChart3,
-        
         description: "Ranked benchmark results",
         keywords: ["leaderboards", "rankings"],
       },
@@ -196,23 +185,13 @@ export const APP_NAV: AppNavSection[] = [
         label: "Quality Gates",
         href: "/app/quality-gates",
         icon: Bot,
-        
         description: "Hard quality checkpoints",
         keywords: ["quality", "gates", "guardrails"],
-      },
-      {
-        label: "Analytics",
-        href: "/app/analytics",
-        icon: Lightbulb,
-        
-        description: "Usage and performance trends",
-        keywords: ["analytics", "usage", "trends"],
       },
       {
         label: "Golden Datasets",
         href: "/app/datasets",
         icon: FolderOpen,
-        
         description: "Curated evaluation datasets",
         keywords: ["datasets", "golden", "evaluation"],
       },
@@ -220,39 +199,25 @@ export const APP_NAV: AppNavSection[] = [
         label: "Review Queue",
         href: "/app/reviews",
         icon: Eye,
-        
         description: "Human review of model answers",
         keywords: ["review", "queue", "human", "answers"],
       },
-    ],
-  },
-  {
-    label: "Learn",
-    items: [
       {
-        label: "Architecture",
-        href: "/app/architecture",
-        icon: BookOpen,
-        description: "System architecture reference",
-        keywords: ["architecture", "design", "system"],
-      },
-      {
-        label: "Project Guide",
-        href: "/app/project-guide",
-        icon: GraduationCap,
-        description: "Guides and tutorials",
-        keywords: ["guide", "tutorial", "learn", "getting started"],
+        label: "Analytics",
+        href: "/app/analytics",
+        icon: Lightbulb,
+        description: "Usage and performance trends",
+        keywords: ["analytics", "usage", "trends"],
       },
     ],
   },
   {
-    label: "Observability",
+    label: "Observe",
     items: [
       {
-        label: "Dashboard",
+        label: "Observability",
         href: "/app/observability",
         icon: Activity,
-        
         description: "Observability overview",
         keywords: ["observability", "dashboard", "ops"],
       },
@@ -260,70 +225,60 @@ export const APP_NAV: AppNavSection[] = [
         label: "Trace Explorer",
         href: "/app/observability/traces",
         icon: Search,
-        
         keywords: ["traces", "trace", "spans"],
       },
       {
         label: "Live Metrics",
         href: "/app/observability/live",
         icon: Radio,
-        
         keywords: ["live", "metrics", "realtime"],
       },
       {
         label: "Session Replay",
         href: "/app/observability/sessions",
         icon: Eye,
-        
         keywords: ["sessions", "replay"],
       },
       {
         label: "Cost Intelligence",
         href: "/app/observability/costs",
         icon: DollarSign,
-        
         keywords: ["cost", "spend", "billing"],
       },
       {
         label: "Provider Health",
         href: "/app/observability/providers",
         icon: CircleDot,
-        
         keywords: ["providers", "health", "uptime"],
       },
       {
         label: "Alerting",
         href: "/app/observability/alerts",
         icon: AlertTriangle,
-        
         keywords: ["alerts", "alerting", "notifications"],
       },
       {
         label: "Drift Detection",
         href: "/app/observability/drift",
         icon: Layers,
-        
         keywords: ["drift", "detection", "shifts"],
       },
       {
         label: "Pipeline Inspector",
         href: "/app/observability/pipeline",
         icon: GitBranch,
-        
         keywords: ["pipeline", "inspector", "jobs"],
       },
       {
         label: "Incident Center",
         href: "/app/observability/incidents",
         icon: AlertTriangle,
-        
         keywords: ["incidents", "incident", "center"],
       },
       {
         label: "Storage",
         href: "/app/observability/storage",
         icon: HardDrive,
-        
         keywords: ["storage", "objects", "files"],
       },
     ],
@@ -337,6 +292,20 @@ export const APP_NAV: AppNavSection[] = [
         icon: SlidersHorizontal,
         description: "Workspace configuration",
         keywords: ["settings", "config", "preferences"],
+      },
+      {
+        label: "Architecture",
+        href: "/app/architecture",
+        icon: BookOpen,
+        description: "System architecture reference",
+        keywords: ["architecture", "design", "system"],
+      },
+      {
+        label: "Project Guide",
+        href: "/app/project-guide",
+        icon: GraduationCap,
+        description: "Guides and tutorials",
+        keywords: ["guide", "tutorial", "learn", "getting started"],
       },
     ],
   },
