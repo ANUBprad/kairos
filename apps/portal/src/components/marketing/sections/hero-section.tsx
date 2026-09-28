@@ -214,7 +214,7 @@ export function Hero() {
           >
             <Button variant="primary" size="lg" className="gap-2" asChild>
               <Link href="/app">
-                Start Building
+                Start researching
                 <ArrowRight size={16} />
               </Link>
             </Button>
