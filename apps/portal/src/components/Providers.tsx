@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { WorkspaceProvider } from "@/lib/workspace-context";
 import { PostHogProvider } from "@/lib/telemetry/analytics";
+import { CookieConsent } from "@/components/CookieConsent";
 
 const CommandPalette = dynamic(
   () => import("@/components/ui/command-palette").then((m) => m.CommandPalette),
@@ -19,6 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
           {children}
         </PostHogProvider>
       </Suspense>
+      <CookieConsent />
       <CommandPalette />
     </WorkspaceProvider>
   );
