@@ -13,31 +13,31 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Kairos — Adaptive Retrieval Intelligence Platform",
+    default: "Kairos — AI Research & Study Workspace",
     template: "%s | Kairos",
   },
   description:
-    "Kairos is an open-source RAG research platform for document intelligence, embeddings, semantic search, and explainable AI. Build production-grade retrieval systems.",
+    "Kairos is an AI-powered research and study workspace. Upload sources, conduct research, build knowledge bases, and study with AI assistance.",
   openGraph: {
-    title: "Kairos — Adaptive Retrieval Intelligence Platform",
+    title: "Kairos — AI Research & Study Workspace",
     description:
-      "Open-source RAG research platform for document intelligence, embeddings, semantic search, and explainable AI.",
+      "Upload sources, conduct research, build knowledge bases, and study with AI assistance.",
     type: "website",
     siteName: "Kairos",
     locale: "en_US",
     images: [{
-      url: "/kai.png",
-      width: 500,
-      height: 500,
-      alt: "Kairos — Adaptive Retrieval Intelligence Platform",
+      url: "/og-image.svg",
+      width: 1200,
+      height: 630,
+      alt: "Kairos — AI Research & Study Workspace",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kairos — Adaptive Retrieval Intelligence Platform",
+    title: "Kairos — AI Research & Study Workspace",
     description:
-      "Open-source RAG research platform for document intelligence, embeddings, and semantic search.",
-    images: ["/kai.png"],
+      "Upload sources, conduct research, build knowledge bases, and study with AI assistance.",
+    images: ["/og-image.svg"],
   },
   robots: {
     index: true,
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: { url: "/kai.png", type: "image/png" },
+    icon: { url: "/favicon.ico" },
     apple: { url: "/kai.png", sizes: "500x500" },
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "https://kairos.dev"),
