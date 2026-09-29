@@ -163,6 +163,17 @@ describe("vector store against real pgvector", () => {
       assert.equal(fromB.length, 1);
       assert.equal(fromB[0].chunkId, chunkB.id);
       assert.equal(fromB[0].similarity, 0);
+
+      // E — a wrong-width query fails with our message, not a raw pgvector
+      // "different vector dimensions" operator error leaking to the caller.
+      await assert.rejects(
+        store.similaritySearch(Array.from({ length: 768 }, () => 0.1), {
+          knowledgeBaseIds: [kbA.id],
+          topK: 5,
+          minSimilarity: 0,
+        }),
+        /Query embedding has 768 dimensions but the selected documents hold 1536-dimensional vectors/,
+      );
     } finally {
       await client.$disconnect();
     }

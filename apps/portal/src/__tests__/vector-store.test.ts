@@ -32,7 +32,7 @@ describe("validateEmbeddingResponse", () => {
   });
 });
 
-function captureStoreClient() {
+function captureStoreClient(storedDims?: number) {
   const captured: { sql: string; params: unknown[] }[] = [];
   const fake = {
     $executeRawUnsafe: (sql: string, ...params: unknown[]) => {
@@ -41,6 +41,9 @@ function captureStoreClient() {
     },
     $queryRawUnsafe: (sql: string, ...params: unknown[]) => {
       captured.push({ sql, params });
+      // The dimension probe is the only read that expects rows back.
+      if (storedDims === undefined) return Promise.resolve([]);
+      if (sql.includes("vector_dims")) return Promise.resolve([{ dims: storedDims }]);
       return Promise.resolve([]);
     },
   } as unknown as PrismaClient;
@@ -101,25 +104,76 @@ describe("PgVectorStore.bulkUpsertEmbeddings", () => {
   });
 });
 
+function store_(
+  client: PrismaClient,
+  embedding: number[],
+  knowledgeBaseIds?: string[],
+  documentIds?: string[],
+) {
+  return new PgVectorStore(client).similaritySearch(embedding, {
+    knowledgeBaseIds: knowledgeBaseIds ?? ["kb_cuid_a"],
+    documentIds,
+    topK: 5,
+    minSimilarity: 0.7,
+  });
+}
+
 describe("PgVectorStore.similaritySearch contract", () => {
   it("queries DocumentEmbedding joined to chunks and documents, filtered to INDEXED", async () => {
     const { client, captured } = captureStoreClient();
-    const store = new PgVectorStore(client);
 
-    const results = await store.similaritySearch([1, 0, 0], {
-      knowledgeBaseIds: ["kb_cuid_a"],
-      documentIds: ["doc_cuid_a"],
-      topK: 5,
-      minSimilarity: 0.7,
-    });
+    const results = await store_(client, [1, 0, 0]);
 
     assert.deepEqual(results, []);
+    // First call is the dimension probe, second is the search itself.
+    assert.equal(captured.length, 2);
+    const search = captured[1];
+    assert.match(search.sql, /FROM "DocumentEmbedding" e/);
+    assert.match(search.sql, /JOIN "DocumentChunk" c ON c.id = e."chunkId"/);
+    assert.match(search.sql, /e.embedding IS NOT NULL/);
+    assert.match(search.sql, /d.status = 'INDEXED'/);
+    assert.match(search.sql, /knowledgeBaseId" IN/);
+  });
+
+  it("probes the stored dimension over the same tenant scope as the search", async () => {
+    const { client, captured } = captureStoreClient();
+
+    await store_(client, [1, 0, 0], ["kb_cuid_a"], ["doc_cuid_a"]);
+
+    const probe = captured[0];
+    assert.match(probe.sql, /SELECT vector_dims\(e\."embedding"\)/);
+    assert.match(probe.sql, /knowledgeBaseId" IN \(\$1\)/);
+    assert.match(probe.sql, /d\."id" IN \(\$2\)/);
+    // The search reuses the same ids at $3/$4, after minSimilarity and topK.
+    assert.match(captured[1].sql, /knowledgeBaseId" IN \(\$3\)/);
+    assert.match(captured[1].sql, /d\."id" IN \(\$4\)/);
+  });
+
+  it("reports a dimension mismatch with both widths instead of a pgvector operator error", async () => {
+    const { client, captured } = captureStoreClient(768);
+
+    await assert.rejects(
+      store_(client, Array.from({ length: 1536 }, () => 0.1)),
+      /Query embedding has 1536 dimensions but the selected documents hold 768-dimensional vectors/,
+    );
+    // The search must not run once the probe has rejected.
     assert.equal(captured.length, 1);
-    assert.match(captured[0].sql, /FROM "DocumentEmbedding" e/);
-    assert.match(captured[0].sql, /JOIN "DocumentChunk" c ON c.id = e."chunkId"/);
-    assert.match(captured[0].sql, /e.embedding IS NOT NULL/);
-    assert.match(captured[0].sql, /d.status = 'INDEXED'/);
-    assert.match(captured[0].sql, /knowledgeBaseId" IN/);
+  });
+
+  it("allows the query through when the stored dimension matches", async () => {
+    const { client, captured } = captureStoreClient(1536);
+
+    await store_(client, Array.from({ length: 1536 }, () => 0.1));
+
+    assert.equal(captured.length, 2);
+  });
+
+  it("allows the query through when nothing is indexed yet", async () => {
+    const { client, captured } = captureStoreClient();
+
+    await store_(client, [1, 0, 0]);
+
+    assert.equal(captured.length, 2);
   });
 });
 

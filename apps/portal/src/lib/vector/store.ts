@@ -34,6 +34,29 @@ function vecLiteral(values: number[]): string {
   return `[${values.join(",")}]`;
 }
 
+// Tenant/document scoping shared by the dimension probe and the search itself,
+// so the probe can never disagree with the rows the search actually touches.
+function scopeClause(
+  kbIds: string[] | undefined,
+  docIds: string[] | undefined,
+  startIndex: number,
+): { clause: string; params: unknown[] } {
+  let nextIndex = startIndex;
+  const parts: string[] = [];
+  const params: unknown[] = [];
+
+  if (kbIds?.length) {
+    parts.push(`AND d."knowledgeBaseId" IN (${kbIds.map(() => `$${nextIndex++}`).join(",")})`);
+    params.push(...kbIds);
+  }
+  if (docIds?.length) {
+    parts.push(`AND d."id" IN (${docIds.map(() => `$${nextIndex++}`).join(",")})`);
+    params.push(...docIds);
+  }
+
+  return { clause: parts.join("\n        "), params };
+}
+
 export class PgVectorStore implements VectorStore {
   private readonly client: PrismaClient;
   constructor(client: PrismaClient = prisma) {
@@ -65,6 +88,40 @@ export class PgVectorStore implements VectorStore {
     }
   }
 
+  /**
+   * A query vector whose width differs from the stored vectors is not a
+   * "no results" case, it is a misconfigured index, and pgvector reports it as an
+   * opaque operator error. Fail with the actual numbers instead.
+   */
+  private async assertQueryDimension(
+    queryEmbedding: number[],
+    scope: { clause: string; params: unknown[] },
+  ): Promise<void> {
+    // ponytail: one single-row probe per search, O(1) off the chunkId index. It
+    // assumes one dimension per knowledge base, which ingestion enforces. Upgrade
+    // path: store the authoritative dimension on KnowledgeBase and read that
+    // instead of probing.
+    const rows = await this.client.$queryRawUnsafe<{ dims: number }[]>(
+      `SELECT vector_dims(e."embedding")::int AS dims
+       FROM "DocumentEmbedding" e
+       JOIN "DocumentChunk" c ON c.id = e."chunkId"
+       JOIN "Document" d ON d.id = c."documentId"
+       WHERE e.embedding IS NOT NULL
+         ${scope.clause}
+       LIMIT 1`,
+      ...scope.params,
+    );
+
+    const stored = rows[0]?.dims;
+    if (stored !== undefined && stored !== queryEmbedding.length) {
+      throw new Error(
+        `Query embedding has ${queryEmbedding.length} dimensions but the selected documents hold ` +
+          `${stored}-dimensional vectors. Reindex those documents with the model configured on the ` +
+          `knowledge base before searching them.`,
+      );
+    }
+  }
+
   async similaritySearch(
     queryEmbedding: number[],
     options: {
@@ -82,14 +139,10 @@ export class PgVectorStore implements VectorStore {
     const docIds = options.documentIds?.filter(isValidEntityId);
     if (docIds?.length === 0) return [];
 
-    let paramIndex = 3;
-    const kbPlaceholders = kbIds?.length
-      ? `AND d."knowledgeBaseId" IN (${kbIds.map(() => `$${paramIndex++}`).join(",")})`
-      : "";
-    const docPlaceholders = docIds?.length
-      ? `AND d."id" IN (${docIds.map(() => `$${paramIndex++}`).join(",")})`
-      : "";
+    const scope = scopeClause(kbIds, docIds, 1);
+    await this.assertQueryDimension(queryEmbedding, scope);
 
+    const searchScope = scopeClause(kbIds, docIds, 3);
     const sql = `
       SELECT
         c.id AS "chunkId",
@@ -104,20 +157,13 @@ export class PgVectorStore implements VectorStore {
       JOIN "Document" d ON d.id = c."documentId"
       WHERE e.embedding IS NOT NULL
         AND d.status = 'INDEXED'
-        ${kbPlaceholders}
-        ${docPlaceholders}
+        ${searchScope.clause}
         AND 1 - (e.embedding <=> '${queryVec}'::vector) >= $1
       ORDER BY e.embedding <=> '${queryVec}'::vector
       LIMIT $2
     `;
 
-    const params: unknown[] = [minSim, topK];
-    if (kbIds?.length) {
-      params.push(...kbIds);
-    }
-    if (docIds?.length) {
-      params.push(...docIds);
-    }
+    const params: unknown[] = [minSim, topK, ...searchScope.params];
 
     const rows = await this.client.$queryRawUnsafe<
       {
