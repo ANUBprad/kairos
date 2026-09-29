@@ -48,9 +48,9 @@ export interface CreateApiKeyResult {
 // Constants
 // ============================================================================
 
-const API_KEY_PREFIX = "kai_";
-const API_KEY_LENGTH = 32;
-const MAX_API_KEYS_PER_USER = 50;
+export const API_KEY_PREFIX = "kai_";
+export const API_KEY_LENGTH = 32;
+export const MAX_API_KEYS_PER_USER = 50;
 
 // ============================================================================
 // Key Generation
