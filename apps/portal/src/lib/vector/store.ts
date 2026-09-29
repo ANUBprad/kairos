@@ -142,7 +142,10 @@ export class PgVectorStore implements VectorStore {
     const scope = scopeClause(kbIds, docIds, 1);
     await this.assertQueryDimension(queryEmbedding, scope);
 
-    const searchScope = scopeClause(kbIds, docIds, 3);
+    // $1 minSimilarity, $2 topK, $3 query vector, $4+ tenant scope. The vector is
+    // bound as a parameter rather than spliced into the statement so the plan is
+    // reusable and the literal is parsed once by Postgres.
+    const searchScope = scopeClause(kbIds, docIds, 4);
     const sql = `
       SELECT
         c.id AS "chunkId",
@@ -151,19 +154,19 @@ export class PgVectorStore implements VectorStore {
         c.index,
         c."tokenCount",
         c.metadata,
-        1 - (e.embedding <=> '${queryVec}'::vector) AS similarity
+        1 - (e.embedding <=> $3::vector) AS similarity
       FROM "DocumentEmbedding" e
       JOIN "DocumentChunk" c ON c.id = e."chunkId"
       JOIN "Document" d ON d.id = c."documentId"
       WHERE e.embedding IS NOT NULL
         AND d.status = 'INDEXED'
         ${searchScope.clause}
-        AND 1 - (e.embedding <=> '${queryVec}'::vector) >= $1
-      ORDER BY e.embedding <=> '${queryVec}'::vector
+        AND 1 - (e.embedding <=> $3::vector) >= $1
+      ORDER BY e.embedding <=> $3::vector
       LIMIT $2
     `;
 
-    const params: unknown[] = [minSim, topK, ...searchScope.params];
+    const params: unknown[] = [minSim, topK, queryVec, ...searchScope.params];
 
     const rows = await this.client.$queryRawUnsafe<
       {

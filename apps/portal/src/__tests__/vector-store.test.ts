@@ -144,9 +144,20 @@ describe("PgVectorStore.similaritySearch contract", () => {
     assert.match(probe.sql, /SELECT vector_dims\(e\."embedding"\)/);
     assert.match(probe.sql, /knowledgeBaseId" IN \(\$1\)/);
     assert.match(probe.sql, /d\."id" IN \(\$2\)/);
-    // The search reuses the same ids at $3/$4, after minSimilarity and topK.
-    assert.match(captured[1].sql, /knowledgeBaseId" IN \(\$3\)/);
-    assert.match(captured[1].sql, /d\."id" IN \(\$4\)/);
+    // The search reuses the same ids at $4/$5, after minSimilarity, topK and vector.
+    assert.match(captured[1].sql, /knowledgeBaseId" IN \(\$4\)/);
+    assert.match(captured[1].sql, /d\."id" IN \(\$5\)/);
+  });
+
+  it("binds the query vector as a parameter instead of splicing it into the SQL", async () => {
+    const { client, captured } = captureStoreClient();
+
+    await store_(client, [1, 0, 0], ["kb_cuid_a"], ["doc_cuid_a"]);
+
+    const search = captured[1];
+    assert.doesNotMatch(search.sql, /\[1,0,0\]/);
+    assert.match(search.sql, /e\.embedding <=> \$3::vector/);
+    assert.deepEqual(search.params, [0.7, 5, "[1,0,0]", "kb_cuid_a", "doc_cuid_a"]);
   });
 
   it("reports a dimension mismatch with both widths instead of a pgvector operator error", async () => {
