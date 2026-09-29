@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     siteName: "Kairos",
     locale: "en_US",
     images: [{
-      url: "/og-image.svg",
+      url: "/og-image.png",
       width: 1200,
       height: 630,
       alt: "Kairos — AI Research & Study Workspace",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     title: "Kairos — AI Research & Study Workspace",
     description:
       "Upload sources, conduct research, build knowledge bases, and study with AI assistance.",
-    images: ["/og-image.svg"],
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,

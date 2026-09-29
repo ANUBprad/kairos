@@ -67,7 +67,7 @@ export function CookieConsent() {
     }
   }, []);
 
-  if (!visible || !consent) return null;
+  if (!visible) return null;
 
   return (
     <div

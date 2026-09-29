@@ -9,17 +9,17 @@ const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST;
 let initialized = false;
 let analyticsEnabled = true;
 
-function getConsent(): boolean {
+export function getConsent(): boolean {
   try {
     const stored = localStorage.getItem("kairos_cookie_consent");
     if (stored) {
       const parsed = JSON.parse(stored);
-      return parsed.analytics ?? true;
+      return parsed.analytics ?? false;
     }
   } catch {
     // Ignore parsing errors
   }
-  return true;
+  return false;
 }
 
 async function initPostHog() {
@@ -42,13 +42,18 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const initializedRef = useRef(false);
 
   useEffect(() => {
-    const consent = getConsent();
-    if (!consent) {
-      analyticsEnabled = false;
-      return;
-    }
-    analyticsEnabled = true;
-    initPostHog();
+    const applyConsent = () => {
+      const consent = getConsent();
+      if (!consent) {
+        analyticsEnabled = false;
+        return;
+      }
+      analyticsEnabled = true;
+      initPostHog();
+    };
+    applyConsent();
+    window.addEventListener("cookie-consent", applyConsent);
+    return () => window.removeEventListener("cookie-consent", applyConsent);
   }, []);
 
   useEffect(() => {

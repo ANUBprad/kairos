@@ -6,24 +6,6 @@ function generateRequestId(): string {
   return crypto.randomUUID();
 }
 
-function getProtocol(request: NextRequest): string {
-  const xForwardedProto = request.headers.get("x-forwarded-proto");
-  if (xForwardedProto && ["https", "http"].includes(xForwardedProto)) {
-    return xForwardedProto;
-  }
-  return request.nextUrl.protocol.replace(":", "");
-}
-
-function enforceHttps(request: NextRequest): NextResponse | null {
-  const protocol = getProtocol(request);
-  if (protocol !== "https" && process.env.NODE_ENV === "production") {
-    const url = request.nextUrl.clone();
-    url.protocol = "https:";
-    return NextResponse.redirect(url, { status: 308 });
-  }
-  return null;
-}
-
 function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
   const host = request.headers.get("host");
@@ -46,9 +28,6 @@ function validateOrigin(request: NextRequest): boolean {
 }
 
 export function middleware(request: NextRequest) {
-  const httpsRedirect = enforceHttps(request);
-  if (httpsRedirect) return httpsRedirect;
-
   const response = NextResponse.next();
   const requestId = generateRequestId();
 

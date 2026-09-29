@@ -3,13 +3,20 @@ import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
 
+// PostHog endpoint the browser client reports to (see src/lib/telemetry/analytics.ts).
+// Baked into connect-src so consented analytics is not blocked by our own CSP.
+const posthogHost =
+  process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com";
+
 const CSP_DIRECTIVES = [
   "default-src 'self'",
-  "script-src 'self'",
+  // Next.js App Router hydrates via inline flight payloads with no nonce
+  // mechanism; 'unsafe-inline' is what its runtime genuinely requires.
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' https://vitals.vercel-insights.com",
+  `connect-src 'self' https://vitals.vercel-insights.com ${posthogHost}`,
   "frame-ancestors 'none'",
   "form-action 'self'",
   "base-uri 'self'",
