@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getEmbeddingProvider } from "@/lib/ai/providers";
-import { vectorStore } from "@/lib/vector";
+import { PgVectorStore } from "@/lib/vector";
 import { revalidateSourcePage } from "@/lib/revalidation";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { resolveEmbeddingModel } from "@/lib/retrieval/embedding-models";
@@ -191,20 +191,22 @@ export async function generateEmbeddings(
           embedding: response.embeddings[idx],
         }));
 
-        await vectorStore.bulkUpsertEmbeddings(entries, dimensions);
+        // The vector and the model/dimension that describe it commit together.
+        // Written separately, a crash in between leaves a vector carrying the
+        // schema defaults (text-embedding-3-small / 1536) whatever it really is.
+        await prisma.$transaction(async (tx) => {
+          await new PgVectorStore(tx).bulkUpsertEmbeddings(entries, dimensions);
 
-        await prisma.$transaction(
-          batch.map((chunk) =>
-            prisma.documentEmbedding.update({
-              where: { chunkId: chunk.id },
-              data: {
-                model,
-                dimensions,
-                status: "completed",
-              },
-            }),
-          ),
-        );
+          const updated = await tx.documentEmbedding.updateMany({
+            where: { chunkId: { in: batch.map((c) => c.id) } },
+            data: { model, dimensions, status: "completed" },
+          });
+          if (updated.count !== batch.length) {
+            throw new Error(
+              `Embedding metadata update covered ${updated.count} of ${batch.length} chunks`,
+            );
+          }
+        });
 
         processedCount += batch.length;
         lastError = null;

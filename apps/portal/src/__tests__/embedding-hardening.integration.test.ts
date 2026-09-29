@@ -1,17 +1,19 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { ingestText, reprocessDocument } from "@/lib/actions/document";
 import {
   generateEmbeddings,
   recoverStaleEmbeddingDocuments,
   STALE_EMBEDDING_MS,
 } from "@/lib/ai/embeddings/service";
+import { resolveEmbeddingModel } from "@/lib/retrieval/embedding-models";
 import { ensureDemoUser } from "@/lib/server/demo-user";
 import { PgVectorStore } from "@/lib/vector/store";
 
 const DIM = 1536;
+const EXPECTED_MODEL = resolveEmbeddingModel("openai", undefined).model;
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
@@ -210,6 +212,20 @@ describe("embedding production hardening against a real database", () => {
       minSimilarity: 0,
     });
     assert.ok(results.some((r) => r.documentId === doc.id), "INDEXED doc must be retrievable");
+
+    // The recorded model/dimension must describe the vector that was actually
+    // stored. Before the write and its metadata shared a transaction, a row
+    // written by a non-1536 model briefly reported the schema default of 1536.
+    const rows = await (client as PrismaClient).$queryRaw<
+      { dims: number; recorded: number; model: string; status: string }[]
+    >`SELECT vector_dims("embedding")::int AS dims, "dimensions" AS recorded, "model" AS model, "status" AS status
+        FROM "DocumentEmbedding" WHERE "chunkId" IN (${Prisma.join(chunkIds)})`;
+    assert.ok(rows.length > 0);
+    for (const row of rows) {
+      assert.equal(row.recorded, row.dims, "recorded dimensions must match the stored vector");
+      assert.equal(row.model, EXPECTED_MODEL);
+      assert.equal(row.status, "completed");
+    }
   });
 
   it("documents at matching dimensions coexist in a KB and stay retrievable", async (t) => {

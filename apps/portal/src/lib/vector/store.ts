@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isValidEntityId } from "@/lib/validation";
 
@@ -58,8 +58,11 @@ function scopeClause(
 }
 
 export class PgVectorStore implements VectorStore {
-  private readonly client: PrismaClient;
-  constructor(client: PrismaClient = prisma) {
+  private readonly client: Prisma.TransactionClient;
+  // Accepts a transaction client so a caller can commit the vector and the
+  // metadata that describes it together; without that, a crash between the two
+  // leaves a vector claiming the schema's default model and dimension.
+  constructor(client: Prisma.TransactionClient = prisma) {
     this.client = client;
   }
 
