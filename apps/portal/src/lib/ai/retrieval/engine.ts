@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { vectorStore } from "@/lib/vector";
 import { getEmbeddingProvider } from "@/lib/ai/providers";
+import { resolveEmbeddingModel } from "@/lib/retrieval/embedding-models";
 import type { RetrievedChunk, ProviderType } from "@/lib/ai/types";
 
 export interface RetrievalOptions {
@@ -9,6 +10,9 @@ export interface RetrievalOptions {
   topK?: number;
   minSimilarity?: number;
   providerType?: ProviderType;
+  /** Knowledge base embedding model. Omitting it falls back to env, which can
+   * disagree with the model the documents were indexed with. */
+  embeddingModel?: string;
 }
 
 export interface RetrievalResult {
@@ -21,10 +25,15 @@ export async function searchSimilar(
   query: string,
   options: RetrievalOptions,
 ): Promise<RetrievalResult> {
-  const provider = getEmbeddingProvider(options.providerType);
+  const { provider: providerType, model } = resolveEmbeddingModel(
+    options.providerType,
+    options.embeddingModel,
+  );
+  const provider = getEmbeddingProvider(providerType);
 
   const response = await provider.generateEmbedding({
     input: query,
+    model,
   });
 
   const queryEmbedding = response.embeddings[0];

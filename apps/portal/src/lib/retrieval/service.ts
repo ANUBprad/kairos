@@ -1,27 +1,38 @@
 import { prisma } from "@/lib/prisma";
 import { getEmbeddingProvider } from "@/lib/ai/providers";
 import { vectorStore } from "@/lib/vector";
+import type { ProviderType } from "@/lib/ai/types";
 import type { RetrievalConfig, RetrievalResultDisplay, RetrievedChunkDisplay, PerformanceMetrics, RetrievalDebugInfo } from "./types";
 import { DEFAULT_RETRIEVAL_CONFIG } from "./types";
+import { defaultEmbeddingProvider, resolveEmbeddingModel } from "./embedding-models";
 import {
   executeRetrievalWithTrace,
   strategyRegistry,
 } from "./strategies";
 
 export async function getRetrievalConfig(kbId: string): Promise<RetrievalConfig> {
+  // A KB with no stored provider must follow the deployment's AI_PROVIDER. The
+  // hardcoded "openai" default previously routed these KBs to a provider that has
+  // no API key configured, so retrieval failed before it ever reached pgvector.
+  const base: RetrievalConfig = {
+    ...DEFAULT_RETRIEVAL_CONFIG,
+    embeddingProvider: defaultEmbeddingProvider(),
+  };
+
   const kb = await prisma.knowledgeBase.findUnique({
     where: { id: kbId },
     select: { retrievalConfig: true },
   });
 
-  if (!kb) return { ...DEFAULT_RETRIEVAL_CONFIG };
+  if (!kb) return base;
 
   const saved = kb.retrievalConfig as Record<string, unknown> | null;
-  if (!saved || Object.keys(saved).length === 0) return { ...DEFAULT_RETRIEVAL_CONFIG };
+  if (!saved || Object.keys(saved).length === 0) return base;
 
   return {
-    ...DEFAULT_RETRIEVAL_CONFIG,
+    ...base,
     ...saved,
+    embeddingProvider: (saved.embeddingProvider as ProviderType) || base.embeddingProvider,
   } as RetrievalConfig;
 }
 
@@ -119,11 +130,15 @@ export async function runRetrieval(
     return result;
   }
 
-  const provider = getEmbeddingProvider(config.embeddingProvider);
+  const { provider: providerType, model } = resolveEmbeddingModel(
+    config.embeddingProvider,
+    config.embeddingModel,
+  );
+  const provider = getEmbeddingProvider(providerType);
 
   const embedResponse = await provider.generateEmbedding({
     input: query,
-    model: config.embeddingModel || undefined,
+    model,
   });
   const embeddingEnd = performance.now();
   metrics.embeddingMs = Math.round((embeddingEnd - embeddingStart) * 100) / 100;

@@ -56,6 +56,10 @@ async function getRetrievalOptions(kbId: string, sourceIds?: string[]) {
     documentIds: sourceIds?.length ? sourceIds : undefined,
     topK: config.topK,
     minSimilarity: config.similarityThreshold,
+    // The knowledge base's embedding model, never request.providerType — that is
+    // the chat model the caller picked, not the model the documents were indexed with.
+    providerType: config.embeddingProvider,
+    embeddingModel: config.embeddingModel,
   };
 }
 

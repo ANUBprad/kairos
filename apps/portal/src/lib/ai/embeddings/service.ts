@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { getEmbeddingProvider } from "@/lib/ai/providers";
 import { vectorStore } from "@/lib/vector";
 import { revalidateSourcePage } from "@/lib/revalidation";
+import { getRetrievalConfig } from "@/lib/retrieval/service";
+import { resolveEmbeddingModel } from "@/lib/retrieval/embedding-models";
 import type { ProviderType } from "@/lib/ai/types";
 
 const BATCH_SIZE = 20;
@@ -129,11 +131,14 @@ export async function generateEmbeddings(
     };
   }
 
-  const provider = getEmbeddingProvider(providerType);
-  const model =
-    provider.type === "gemini"
-      ? process.env.GEMINI_EMBEDDING_MODEL || "text-embedding-004"
-      : process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
+  // Index with the knowledge base's own provider/model so the vectors written
+  // here are the ones a later query will be embedded with.
+  const kbConfig = await getRetrievalConfig(doc.knowledgeBaseId);
+  const { provider: resolvedProvider, model } = resolveEmbeddingModel(
+    providerType || kbConfig.embeddingProvider,
+    kbConfig.embeddingModel,
+  );
+  const provider = getEmbeddingProvider(resolvedProvider);
 
   let totalInputTokens = 0;
   let totalTokens = 0;

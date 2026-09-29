@@ -1,3 +1,5 @@
+import type { ProviderType } from "@/lib/ai/types";
+
 export interface EmbeddingModelInfo {
   id: string;
   provider: string;
@@ -65,4 +67,31 @@ export function getModelInfo(modelId: string): EmbeddingModelInfo | undefined {
   return EMBEDDING_MODELS.find((m) => m.id === modelId);
 }
 
+export const DEFAULT_EMBEDDING_MODEL: Record<ProviderType, string> = {
+  openai: "text-embedding-3-small",
+  gemini: "text-embedding-004",
+};
 
+export function defaultEmbeddingProvider(): ProviderType {
+  return process.env.AI_PROVIDER === "gemini" ? "gemini" : "openai";
+}
+
+/**
+ * The single place the embedding provider/model is decided. Precedence is
+ * explicit override (request or CLI) > knowledge base retrievalConfig > env.
+ * Ingestion, Research Chat and the Retrieval Lab must all resolve through here:
+ * if any one of them embeds a query with a different model than the documents it
+ * searches, pgvector silently returns nothing or raises a raw dimension error.
+ */
+export function resolveEmbeddingModel(
+  provider?: ProviderType,
+  model?: string,
+): { provider: ProviderType; model: string } {
+  const resolvedProvider = provider || defaultEmbeddingProvider();
+  const resolvedModel =
+    model ||
+    (resolvedProvider === "gemini"
+      ? process.env.GEMINI_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL.gemini
+      : process.env.OPENAI_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL.openai);
+  return { provider: resolvedProvider, model: resolvedModel };
+}
