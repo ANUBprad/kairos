@@ -20,14 +20,12 @@ import { PgVectorStore } from "@/lib/vector/store";
 import { POST as chatPOST } from "@/app/api/ai/chat/route";
 import { POST as createConversationPOST } from "@/app/api/ai/conversations/route";
 
-const DIMS = 1536;
+// The pgvector column is pinned to 768, so embeddings use a 768-dim model.
+// Chat stays on OpenAI because this suite's whole point is asserting which
+// OpenAI model reaches the provider; that is independent of the embedding
+// provider, which the KB pins to gemini/text-embedding-004.
+const DIMS = 768;
 const FIXED_VEC = Array.from({ length: DIMS }, (_, i) => (i === 0 ? 1 : 0));
-
-function unitVectorBase64(): string {
-  const arr = new Float32Array(DIMS);
-  arr[0] = 1;
-  return Buffer.from(arr.buffer).toString("base64");
-}
 
 function makeStreamBody(content: string): Uint8Array {
   const encoder = new TextEncoder();
@@ -58,13 +56,9 @@ function installFetch(calls: CapturedCall[]): () => void {
       }
     }
     calls.push({ url: u, body });
-    if (u.includes("/embeddings")) {
+    if (u.includes(":embedContent")) {
       return new Response(
-        JSON.stringify({
-          data: [{ object: "embedding", index: 0, embedding: unitVectorBase64() }],
-          model: "text-embedding-3-small",
-          usage: { prompt_tokens: 5, total_tokens: 5 },
-        }),
+        JSON.stringify({ embedding: { values: FIXED_VEC } }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
     }
@@ -83,6 +77,9 @@ if (process.env.NODE_ENV !== "production") {
   process.env.KAIROS_DEMO_MODE = "true";
   process.env.AI_PROVIDER = "openai";
   process.env.OPENAI_API_KEY = "test-dummy-key-do-not-call";
+  // Chat runs on OpenAI; embeddings are 768-wide, so the Gemini provider must
+  // be constructible too.
+  process.env.GEMINI_API_KEY = "test-dummy-key-do-not-call";
 }
 
 describe("stored conversation model allowlist against a real database", () => {
@@ -148,7 +145,14 @@ describe("stored conversation model allowlist against a real database", () => {
       data: { id: projAId, name: "P13 Project A", slug: `p13a-p-${randomUUID()}`, organizationId: orgAId },
     });
     await client.knowledgeBase.create({
-      data: { id: kbAId, name: "P13 KB A", projectId: projAId },
+      data: {
+        id: kbAId,
+        name: "P13 KB A",
+        projectId: projAId,
+        // Pins the 768 embedding model explicitly so it never falls back to the
+        // 1536-wide OpenAI default while chat stays on OpenAI.
+        retrievalConfig: { embeddingProvider: "gemini", embeddingModel: "text-embedding-004" },
+      },
     });
     await client.document.create({
       data: { id: docAId, name: "alpha.pdf", fileType: "pdf", knowledgeBaseId: kbAId, status: "INDEXED" },

@@ -3,7 +3,7 @@ import { getEmbeddingProvider } from "@/lib/ai/providers";
 import { PgVectorStore } from "@/lib/vector";
 import { revalidateSourcePage } from "@/lib/revalidation";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
-import { resolveEmbeddingModel } from "@/lib/retrieval/embedding-models";
+import { resolveEmbeddingModel, assertIndexableEmbeddingModel } from "@/lib/retrieval/embedding-models";
 import type { ProviderType } from "@/lib/ai/types";
 
 const BATCH_SIZE = 20;
@@ -139,6 +139,14 @@ export async function generateEmbeddings(
     kbConfig.embeddingModel,
   );
   const provider = getEmbeddingProvider(resolvedProvider);
+
+  try {
+    assertIndexableEmbeddingModel(model);
+  } catch (err) {
+    const guarded = err as EmbeddingGuardError;
+    guarded.retryable = false;
+    throw guarded;
+  }
 
   let totalInputTokens = 0;
   let totalTokens = 0;

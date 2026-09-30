@@ -8,7 +8,10 @@ import { listLearningArtifacts } from "@/lib/artifacts/persistence";
 import { getAIProvider } from "@/lib/ai/providers";
 import { generateEmbeddings } from "@/lib/ai/embeddings";
 
-const DIM = 1536;
+// The pgvector column is pinned to 768, so embeddings must come from a 768-dim
+// model. Artifact generation chat still runs on OpenAI (asserted below via
+// providerType/model); only the embedding provider is pinned per-KB.
+const DIM = 768;
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
@@ -18,27 +21,8 @@ function unitVector(hotIndex: number): number[] {
   return Array.from({ length: DIM }, (_, i) => (i === hotIndex ? 1 : 0));
 }
 
-function unitVectorBase64(hotIndex: number): string {
-  const arr = new Float32Array(DIM);
-  arr[hotIndex] = 1;
-  return Buffer.from(arr.buffer).toString("base64");
-}
-
 function metadataOf(artifact: { metadata: unknown }): Record<string, unknown> {
   return (artifact.metadata as Record<string, unknown> | null) ?? {};
-}
-
-function openaiEmbeddingResponse(count: number): Record<string, unknown> {
-  return {
-    object: "list",
-    data: Array.from({ length: count }, (_, i) => ({
-      object: "embedding",
-      index: i,
-      embedding: unitVectorBase64(i),
-    })),
-    model: "text-embedding-3-small",
-    usage: { prompt_tokens: count * 4, total_tokens: count * 4 },
-  };
 }
 
 function openaiChatCompletionResponse(): Record<string, unknown> {
@@ -61,14 +45,12 @@ function openaiChatCompletionResponse(): Record<string, unknown> {
 // The OpenAI SDK pins globalThis.fetch when its client is constructed, and the
 // provider instance is cached (providerCache). The stub must be installed in
 // before(), before any test constructs the provider, and must route by URL so a
-// single stub serves both embeddings and chat.
-function routedOpenAIStub(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+// single stub serves both Gemini embeddings and OpenAI chat.
+function routedOpenAIStub(input: RequestInfo | URL): Promise<Response> {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  if (url.includes("/embeddings")) {
-    const body = JSON.parse(String(init?.body ?? "{}"));
-    const count = Array.isArray(body?.input) ? body.input.length : 1;
+  if (url.includes(":embedContent")) {
     return Promise.resolve(
-      new Response(JSON.stringify(openaiEmbeddingResponse(count)), {
+      new Response(JSON.stringify({ embedding: { values: unitVector(0) } }), {
         status: 200,
         headers: { "content-type": "application/json" },
       }),
@@ -109,6 +91,9 @@ describe("artifact generation: happy path and crash-window recovery", () => {
 
     process.env.AI_PROVIDER = "openai";
     process.env.OPENAI_API_KEY = "test-dummy-key-do-not-call";
+    // Chat stays on OpenAI, but embeddings are 768-wide, so the Gemini
+    // provider must be constructible too.
+    process.env.GEMINI_API_KEY = "test-dummy-key-do-not-call";
 
     originalFetch = globalThis.fetch;
     globalThis.fetch = routedOpenAIStub as typeof globalThis.fetch;
@@ -129,7 +114,15 @@ describe("artifact generation: happy path and crash-window recovery", () => {
     });
 
     await client.knowledgeBase.create({
-      data: { id: kbAId, name: "Gen KB", projectId: projAId },
+      data: {
+        id: kbAId,
+        name: "Gen KB",
+        projectId: projAId,
+        // Pins the 768 embedding model explicitly: the KB inherits AI_PROVIDER
+        // for chat (OpenAI) but must not fall back to the 1536-wide OpenAI
+        // embedding default.
+        retrievalConfig: { embeddingProvider: "gemini", embeddingModel: "text-embedding-004" },
+      },
     });
 
     await client.member.create({
@@ -329,7 +322,7 @@ describe("artifact generation: happy path and crash-window recovery", () => {
 
     const embed = await generateEmbeddings(docEmbedId);
 
-      assert.equal(embed.model, "text-embedding-3-small");
+      assert.equal(embed.model, "text-embedding-004");
       assert.equal(embed.chunkCount, 1);
 
       const indexed = await client.document.findUniqueOrThrow({
@@ -343,7 +336,7 @@ describe("artifact generation: happy path and crash-window recovery", () => {
         select: { model: true, dimensions: true, status: true },
       });
       assert.equal(stored.status, "completed");
-      assert.equal(stored.model, "text-embedding-3-small");
+      assert.equal(stored.model, "text-embedding-004");
       assert.equal(stored.dimensions, DIM);
 
       const dims = await client.$queryRaw<{ dims: number }[]>`

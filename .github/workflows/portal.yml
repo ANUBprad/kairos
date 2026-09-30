@@ -71,7 +71,11 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kairos_test
       KAIROS_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kairos_test
-      AI_PROVIDER: openai
+      # Embeddings are pinned to 768, so the suites use the Gemini provider.
+      # Suites that assert OpenAI chat behavior set AI_PROVIDER=openai
+      # themselves and pin the KB's embedding model to Gemini per-KB.
+      AI_PROVIDER: gemini
+      GEMINI_API_KEY: test-dummy-key-do-not-call
       OPENAI_API_KEY: test-dummy-key-do-not-call
       KAIROS_DEMO_MODE: "true"
       BETTER_AUTH_SECRET: "ci-test-secret-for-portal-tests"

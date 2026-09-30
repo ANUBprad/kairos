@@ -11,7 +11,9 @@ import { ensureDemoUser } from "@/lib/server/demo-user";
 import { PgVectorStore } from "@/lib/vector/store";
 import { textDocumentFileHash, MAX_TEXT_CHARS } from "@/lib/ingestion/text";
 
-const DIM = 1536;
+// The pgvector column is pinned to 768, so the stubbed provider must be a
+// 768-dim one; ingestion refuses anything wider before it calls a provider.
+const DIM = 768;
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
@@ -19,12 +21,6 @@ function makeTestClient(url: string): PrismaClient {
 
 function unitVector(hotIndex: number): number[] {
   return Array.from({ length: DIM }, (_, i) => (i === hotIndex ? 1 : 0));
-}
-
-function unitVectorBase64(hotIndex: number): string {
-  const arr = new Float32Array(DIM);
-  arr[hotIndex] = 1;
-  return Buffer.from(arr.buffer).toString("base64");
 }
 
 async function waitForStatus(
@@ -63,8 +59,8 @@ describe("text source editing against a real database", () => {
 
   before(async () => {
     if (!testDbUrl) return;
-    process.env.AI_PROVIDER = "openai";
-    process.env.OPENAI_API_KEY = "test-dummy-key-do-not-call";
+    process.env.AI_PROVIDER = "gemini";
+    process.env.GEMINI_API_KEY = "test-dummy-key-do-not-call";
     client = makeTestClient(testDbUrl);
     await client.$connect();
     await ensureDemoUser();
@@ -74,12 +70,7 @@ describe("text source editing against a real database", () => {
         return new Response("embedding provider unavailable", { status: 500 });
       }
       return new Response(
-        JSON.stringify({
-          object: "list",
-          data: [{ object: "embedding", index: 0, embedding: unitVectorBase64(0) }],
-          model: "text-embedding-3-small",
-          usage: { prompt_tokens: 4, total_tokens: 4 },
-        }),
+        JSON.stringify({ embedding: { values: unitVector(0) } }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
     };

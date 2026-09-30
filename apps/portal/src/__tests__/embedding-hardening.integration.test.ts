@@ -12,8 +12,8 @@ import { resolveEmbeddingModel } from "@/lib/retrieval/embedding-models";
 import { ensureDemoUser } from "@/lib/server/demo-user";
 import { PgVectorStore } from "@/lib/vector/store";
 
-const DIM = 1536;
-const EXPECTED_MODEL = resolveEmbeddingModel("openai", undefined).model;
+const DIM = 768;
+const EXPECTED_MODEL = resolveEmbeddingModel("gemini", undefined).model;
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
@@ -71,7 +71,7 @@ describe("embedding production hardening against a real database", () => {
 
   before(async () => {
     if (!testDbUrl) return;
-    process.env.AI_PROVIDER = "openai";
+    process.env.AI_PROVIDER = "gemini";
     process.env.OPENAI_API_KEY = "test-dummy-key-do-not-call";
     process.env.GEMINI_API_KEY = "test-dummy-key-do-not-call";
     client = makeTestClient(testDbUrl);
@@ -294,7 +294,7 @@ describe("embedding production hardening against a real database", () => {
     assert.ok(!results.some((r) => r.documentId === docB.id), "rejected doc must not be retrievable");
   });
 
-  it("a provider switch to different dimensions is refused without writing any rows", async (t) => {
+  it("a knowledge base pinned to a non-indexable model is refused without writing any rows", async (t) => {
     if (!testDbUrl) {
       t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
       return;
@@ -313,13 +313,17 @@ describe("embedding production hardening against a real database", () => {
     });
     assert.equal(docARows, 1);
 
+    // The database stores one width, so a knowledge base configured with a model
+    // of another width must be refused before the provider is ever called.
+    await clientRef.knowledgeBase.update({
+      where: { id: kbId },
+      data: {
+        retrievalConfig: { embeddingProvider: "openai", embeddingModel: "text-embedding-3-large" },
+      },
+    });
+
     const second = await seedDoc(clientRef, kbId);
-    stub.dim = 768;
-    await assert.rejects(
-      () => generateEmbeddings(second.docId, "gemini"),
-      /dimension/i,
-    );
-    stub.dim = DIM;
+    await assert.rejects(() => generateEmbeddings(second.docId), /768-dimensional embeddings/);
 
     const candidateRows = await clientRef.documentEmbedding.count({
       where: { chunkId: second.chunkId },

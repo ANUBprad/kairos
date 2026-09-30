@@ -477,8 +477,8 @@ model DocumentChunk {
 
 model DocumentEmbedding {
   id         String @id @default(cuid())
-  model      String @default("text-embedding-3-small")
-  dimensions Int    @default(1536)
+  model      String @default("text-embedding-004")
+  dimensions Int    @default(768)
   status     String @default("pending")
 
   chunkId String        @unique

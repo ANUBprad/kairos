@@ -72,6 +72,40 @@ export const DEFAULT_EMBEDDING_MODEL: Record<ProviderType, string> = {
   gemini: "text-embedding-004",
 };
 
+/**
+ * The one width this database stores. pgvector cannot index a typmod-less vector
+ * column, so the schema pins the dimension and this constant must agree with
+ * migration 20261122000000_pin_embedding_dimension_768. vector-store.integration
+ * asserts a non-matching width is rejected, so the two cannot drift apart.
+ */
+export const PINNED_EMBEDDING_DIMENSION = 768;
+
+/** Model ids that can be indexed, i.e. catalogued at the pinned width. */
+export function indexableEmbeddingModels(): EmbeddingModelInfo[] {
+  return EMBEDDING_MODELS.filter((m) => m.dimensions === PINNED_EMBEDDING_DIMENSION);
+}
+
+/**
+ * Reject an embedding model the database cannot store, before a provider call
+ * and before a raw "expected 768 dimensions" error from PostgreSQL.
+ */
+export function assertIndexableEmbeddingModel(model: string): void {
+  const info = getModelInfo(model);
+  if (info?.dimensions === PINNED_EMBEDDING_DIMENSION) return;
+
+  const reason = info
+    ? `produces ${info.dimensions}-dimensional vectors`
+    : "is not a known embedding model";
+  const supported = indexableEmbeddingModels()
+    .map((m) => m.id)
+    .join(", ");
+  throw new Error(
+    `Embedding model "${model}" ${reason}, but this database stores ` +
+      `${PINNED_EMBEDDING_DIMENSION}-dimensional embeddings. Use one of: ${supported}, ` +
+      `then reprocess the knowledge base.`,
+  );
+}
+
 export function defaultEmbeddingProvider(): ProviderType {
   return process.env.AI_PROVIDER === "gemini" ? "gemini" : "openai";
 }

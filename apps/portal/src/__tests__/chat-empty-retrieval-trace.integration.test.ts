@@ -18,16 +18,12 @@ import { getTraceById } from "@/lib/observability/trace-explorer";
 import { PgVectorStore } from "@/lib/vector/store";
 import { EMPTY_RETRIEVAL_TEXT, GENERATION_FAILED_TEXT } from "@/lib/ai/chat/stream-markers";
 
-const DIMS = 1536;
+// The pgvector column is pinned to 768, so embeddings use a 768-dim model.
+// Chat stays on OpenAI: these tests pin providerType "openai" to assert the
+// OpenAI SSE shape, which is independent of the embedding provider. The KBs
+// below pin gemini/text-embedding-004 so ingestion resolves a 768 model.
+const DIMS = 768;
 const FIXED_VEC = Array.from({ length: DIMS }, (_, i) => (i === 0 ? 1 : 0));
-// The OpenAI SDK decodes embeddings as base64 float32 when the provider stub
-// answers /embeddings, matching the established stub pattern in the
-// text-source and artifact-generation suites.
-function unitVectorBase64(): string {
-  const arr = new Float32Array(DIMS);
-  arr[0] = 1;
-  return Buffer.from(arr.buffer).toString("base64");
-}
 
 function nopRetainedChunk(content: string) {
   return {
@@ -64,10 +60,11 @@ function makeStreamBody(content: string): Uint8Array {
   return encoder.encode(parts);
 }
 
-// Replaces global fetch: embeddings return FIXED_VEC (identical to the stored
-// vector so the KB chunk always matches with similarity 1); chat/completions
-// stream a canned answer or throw in failChat mode. Every call URL is recorded
-// so tests can prove whether the generation endpoint was reached.
+// Replaces global fetch: Gemini embedContent returns FIXED_VEC (identical to
+// the stored vector so the KB chunk always matches with similarity 1);
+// OpenAI chat/completions stream a canned answer or throw in failChat mode.
+// Every call URL is recorded so tests can prove whether the generation
+// endpoint was reached.
 function installFetch(
   behavior: { failChat?: boolean } = {},
   calls: string[] = [],
@@ -76,13 +73,9 @@ function installFetch(
   globalThis.fetch = (async (url: string | URL | Request) => {
     const u = String(url);
     calls.push(u);
-    if (u.includes("/embeddings")) {
+    if (u.includes(":embedContent")) {
       return new Response(
-        JSON.stringify({
-          data: [{ object: "embedding", index: 0, embedding: unitVectorBase64() }],
-          model: "text-embedding-3-small",
-          usage: { prompt_tokens: 5, total_tokens: 5 },
-        }),
+        JSON.stringify({ embedding: { values: FIXED_VEC } }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
     }
@@ -132,6 +125,9 @@ describe("chat empty-retrieval gate and per-turn traces against a real database"
   before(async () => {
     process.env.AI_PROVIDER = "openai";
     process.env.OPENAI_API_KEY = "test-dummy-key-do-not-call";
+    // Chat runs on OpenAI (see the pinned providerType below) but embeddings
+    // are 768-wide, so the Gemini provider must be constructible too.
+    process.env.GEMINI_API_KEY = "test-dummy-key-do-not-call";
 
     if (!testDbUrl) return;
     client = new PrismaClient({ datasources: { db: { url: testDbUrl } } });
@@ -160,11 +156,17 @@ describe("chat empty-retrieval gate and per-turn traces against a real database"
       ],
     });
 
+    // Every KB pins the 768 Gemini model explicitly, so the embedding provider
+    // never falls back to the OpenAI default (which is 1536-wide).
+    const geminiRetrievalConfig = {
+      embeddingProvider: "gemini",
+      embeddingModel: "text-embedding-004",
+    };
     await client.knowledgeBase.createMany({
       data: [
-        { id: kbAId, name: "Trace KB A (has context)", projectId: projAId },
-        { id: kbEmptyAId, name: "Trace KB A (empty)", projectId: projAId },
-        { id: kbBId, name: "Trace KB B", projectId: projBId },
+        { id: kbAId, name: "Trace KB A (has context)", projectId: projAId, retrievalConfig: geminiRetrievalConfig },
+        { id: kbEmptyAId, name: "Trace KB A (empty)", projectId: projAId, retrievalConfig: geminiRetrievalConfig },
+        { id: kbBId, name: "Trace KB B", projectId: projBId, retrievalConfig: geminiRetrievalConfig },
       ],
     });
 
@@ -286,7 +288,10 @@ describe("chat empty-retrieval gate and per-turn traces against a real database"
       }
 
       assert.deepEqual(out, [EMPTY_RETRIEVAL_TEXT]);
-      assert.ok(calls.some((u) => u.includes("/embeddings")), "retrieval must still run");
+      assert.ok(
+        calls.some((u) => u.includes(":embedContent")),
+        "retrieval must still run",
+      );
       assert.ok(
         !calls.some((u) => u.includes("/chat/completions")),
         "the LLM must never be invoked on empty retrieval",
