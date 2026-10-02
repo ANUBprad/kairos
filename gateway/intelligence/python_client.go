@@ -5,10 +5,12 @@ import (
 	"Kairos/gateway/middleware"
 	pb "Kairos/generated/go/proto"
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
@@ -35,6 +37,24 @@ func serviceAuth(secret string) grpc.DialOption {
 	})
 }
 
+// transportCredentials selects the gRPC transport for the Intelligence link.
+// An empty KAIROS_GRPC_TLS_CA means plaintext, which Intelligence's transport
+// policy only permits on loopback or outside production; setting it turns on
+// certificate verification, optionally against a specific server name when the
+// certificate does not match the dial target.
+func transportCredentials(envVar *config.Config) (grpc.DialOption, error) {
+	caFile := envVar.Intelligence.TLSCA
+	if caFile == "" {
+		return grpc.WithTransportCredentials(insecure.NewCredentials()), nil
+	}
+
+	creds, err := credentials.NewClientTLSFromFile(caFile, envVar.Intelligence.TLSServerName)
+	if err != nil {
+		return nil, fmt.Errorf("loading Intelligence gRPC TLS CA %q: %w", caFile, err)
+	}
+	return grpc.WithTransportCredentials(creds), nil
+}
+
 func ConnectToPython(envVar *config.Config) (pb.IntelligenceServiceClient, *grpc.ClientConn, error) {
 
 	host := envVar.Intelligence.Host
@@ -42,8 +62,14 @@ func ConnectToPython(envVar *config.Config) (pb.IntelligenceServiceClient, *grpc
 
 	target := host + ":" + port
 
+	transport, err := transportCredentials(envVar)
+	if err != nil {
+		slog.Error("Couldn't configure intelligence transport", "ERROR", err)
+		return nil, nil, err
+	}
+
 	conn, err := grpc.NewClient(target,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		transport,
 		serviceAuth(envVar.Auth),
 	)
 

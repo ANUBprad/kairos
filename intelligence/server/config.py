@@ -63,6 +63,12 @@ class ServerConfig:
 
     grpc_secret: Optional[str] = None
 
+    environment: str = "development"
+    grpc_bind_host: str = "127.0.0.1"
+    grpc_tls_cert: Optional[str] = None
+    grpc_tls_key: Optional[str] = None
+    grpc_tls_ca: Optional[str] = None
+
     provider_timeout_seconds: float = 30.0
     circuit_breaker_failure_threshold: int = 5
     circuit_breaker_recovery_timeout: float = 30.0
@@ -105,6 +111,11 @@ class ServerConfig:
             cache_ttl_seconds=settings.cache_ttl_seconds,
             health_check_enabled=settings.health_check_enabled,
             grpc_secret=settings.secret,
+            environment=settings.environment,
+            grpc_bind_host=settings.grpc_bind_host,
+            grpc_tls_cert=settings.grpc_tls_cert,
+            grpc_tls_key=settings.grpc_tls_key,
+            grpc_tls_ca=settings.grpc_tls_ca,
             provider_timeout_seconds=settings.provider_timeout_seconds,
             circuit_breaker_failure_threshold=settings.circuit_breaker_failure_threshold,
             circuit_breaker_recovery_timeout=settings.circuit_breaker_recovery_timeout,
@@ -193,4 +204,56 @@ def validate_env(cfg: ServerConfig) -> list[str]:
         "or set KAIROS_DEPLOYMENT=True with Groq model variables; "
         "or set KAIROS_LARGE_GROQ_MODEL and KAIROS_SMALL_GROQ_MODEL."
     )
+    return errors
+
+
+# ======================================================================
+# gRPC transport policy
+# ======================================================================
+
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def is_loopback_host(host: str) -> bool:
+    """True when the bind host keeps the gRPC port off every network interface."""
+    normalised = (host or "").strip().lower()
+    return normalised in _LOOPBACK_HOSTS or normalised.startswith("127.")
+
+
+def validate_grpc_transport(cfg: ServerConfig) -> list[str]:
+    """Return configuration errors that would leave the gRPC boundary exposed.
+
+    The boundary is protected by two independent controls: the service
+    credential (:mod:`intelligence.server.auth`) and the transport. This
+    function enforces the transport one:
+
+    * TLS material is all-or-nothing — a certificate without its key (or the
+      reverse) is a misconfiguration, not a downgrade.
+    * Plaintext is acceptable on loopback, or in a non-production environment
+      where the port lives on a private network.
+    * Plaintext on a non-loopback host is refused in production, because the
+      credential would then cross the wire in the clear.
+    """
+    errors: list[str] = []
+
+    has_cert = bool(cfg.grpc_tls_cert)
+    has_key = bool(cfg.grpc_tls_key)
+    if has_cert != has_key:
+        errors.append(
+            "KAIROS_GRPC_TLS_CERT and KAIROS_GRPC_TLS_KEY must be set together "
+            "to enable gRPC TLS"
+        )
+
+    tls_enabled = has_cert and has_key
+    if (
+        not tls_enabled
+        and cfg.environment == "production"
+        and not is_loopback_host(cfg.grpc_bind_host)
+    ):
+        errors.append(
+            f"refusing plaintext gRPC on non-loopback host '{cfg.grpc_bind_host}' "
+            "in production: set KAIROS_GRPC_TLS_CERT and KAIROS_GRPC_TLS_KEY, "
+            "or bind KAIROS_GRPC_BIND_HOST to loopback"
+        )
+
     return errors

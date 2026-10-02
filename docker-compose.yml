@@ -50,13 +50,18 @@ services:
       context: .
       dockerfile: docker/intelligence.Dockerfile
     ports:
-      - "${INTELLIGENCE_PORT:-28080}:28080"
-      - "8001:8001"
+      - "127.0.0.1:${INTELLIGENCE_PORT:-28080}:28080"
+      - "127.0.0.1:8001:8001"
     env_file:
       - .env
     environment:
       - CHROMA_STORE_HOST=chromadb
       - CHROMA_STORE_PORT=8000
+      # The gateway reaches this port over the private compose network, so the
+      # bind host is widened from the loopback default. The published port stays
+      # on the host loopback so the plaintext channel is not reachable from the
+      # LAN; production runs with TLS or a loopback bind instead.
+      - KAIROS_GRPC_BIND_HOST=0.0.0.0
     deploy:
       resources:
         limits:

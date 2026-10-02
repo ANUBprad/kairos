@@ -27,7 +27,11 @@ from intelligence.retrieval.multihop_retriever import MultiHopRetriever
 from intelligence.retrieval.simple_retriever import SimpleRetriever
 from intelligence.vectorstore.chroma_store import ChromaStore
 from intelligence.classifier.query_classifier import ClassifyQuery
-from intelligence.server.config import ServerConfig, validate_env
+from intelligence.server.config import (
+    ServerConfig,
+    validate_env,
+    validate_grpc_transport,
+)
 from intelligence.server.auth import AuthInterceptor
 from intelligence.server.engine import RetrievalEngine
 from intelligence.circuit_breaker.circuit_breaker import (
@@ -275,6 +279,52 @@ def _build_engine(
     )
 
 
+def _configure_transport(server, cfg: ServerConfig) -> int:
+    """Bind the gRPC port under the configured transport and return its port.
+
+    TLS is used when both ``KAIROS_GRPC_TLS_CERT`` and ``KAIROS_GRPC_TLS_KEY``
+    are set; adding ``KAIROS_GRPC_TLS_CA`` additionally requires every client to
+    present a certificate signed by that CA (mTLS). Otherwise the port is bound
+    plaintext — acceptable on loopback or outside production, and already
+    rejected at startup by :func:`validate_grpc_transport` when it is not.
+    """
+    address = f"{cfg.grpc_bind_host}:{cfg.intelligence_port}"
+
+    if cfg.grpc_tls_cert and cfg.grpc_tls_key:
+        with open(cfg.grpc_tls_cert, "rb") as cert_file:
+            server_cert = cert_file.read()
+        with open(cfg.grpc_tls_key, "rb") as key_file:
+            server_key = key_file.read()
+
+        root_certificates = None
+        require_client_auth = False
+        if cfg.grpc_tls_ca:
+            with open(cfg.grpc_tls_ca, "rb") as ca_file:
+                root_certificates = ca_file.read()
+            require_client_auth = True
+
+        credentials = grpc.ssl_server_credentials(
+            [(server_key, server_cert)],
+            root_certificates=root_certificates,
+            require_client_auth=require_client_auth,
+        )
+        port = server.add_secure_port(address, credentials)
+        logger.info(
+            "gRPC listening on %s with TLS (client certs required: %s)",
+            address,
+            require_client_auth,
+        )
+        return port
+
+    port = server.add_insecure_port(address)
+    logger.warning(
+        "gRPC listening on %s in plaintext — the service credential crosses the "
+        "wire in the clear, which is only safe on loopback",
+        address,
+    )
+    return port
+
+
 def _register_server(
     server, engine, cfg, health: HealthServicer | None = None, telemetry_collector=None
 ):
@@ -283,8 +333,7 @@ def _register_server(
     if health is not None:
         add_health_servicer_to_server(health, server)
         health_status.labels(service="").set(1)
-    server.add_insecure_port(f"0.0.0.0:{cfg.intelligence_port}")
-    logger.info(f"Starting the server at port 0.0.0.0:{cfg.intelligence_port}")
+    _configure_transport(server, cfg)
     server.start()
     try:
         server.wait_for_termination()
@@ -302,6 +351,13 @@ def serve():
         raise ValueError(
             "Server startup failed -- missing or invalid configuration:\n"
             + "\n".join(f"  - {m}" for m in missing)
+        )
+
+    transport_errors = validate_grpc_transport(cfg)
+    if transport_errors:
+        raise ValueError(
+            "Server startup failed -- invalid gRPC transport configuration:\n"
+            + "\n".join(f"  - {m}" for m in transport_errors)
         )
 
     store = ChromaStore(host=cfg.chroma_store_host, port=cfg.chroma_store_port)

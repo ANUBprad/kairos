@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -18,6 +19,11 @@ type Config struct {
 	Intelligence struct {
 		Host string
 		Port string
+		// TLSCA is the PEM bundle used to verify the Intelligence server
+		// certificate. Empty means plaintext, which the transport policy only
+		// permits on loopback or outside production.
+		TLSCA         string
+		TLSServerName string
 	}
 
 	Chroma struct {
@@ -26,7 +32,14 @@ type Config struct {
 	}
 
 	Auth string
-	APIs struct {
+	// Environment selects the fail-closed posture: "production" refuses to
+	// start on an empty secret or an empty namespace allowlist.
+	Environment string
+	// AllowedNamespaces bounds which client-asserted namespaces the shared
+	// service credential may select. Empty means unrestricted, which only the
+	// non-production environments accept.
+	AllowedNamespaces []string
+	APIs              struct {
 		OPENAI string
 		GEMINI string
 	}
@@ -57,13 +70,27 @@ func LoadEnv() (*Config, error) {
 
 	config.Intelligence.Host = os.Getenv("INTELLIGENCE_HOST")
 	config.Intelligence.Port = os.Getenv("INTELLIGENCE_PORT")
+	config.Intelligence.TLSCA = os.Getenv("KAIROS_GRPC_TLS_CA")
+	config.Intelligence.TLSServerName = os.Getenv("KAIROS_GRPC_TLS_SERVER_NAME")
 
 	config.Chroma.Host = os.Getenv("CHROMA_STORE_HOST")
 	config.Chroma.Port = os.Getenv("CHROMA_STORE_PORT")
 
 	config.Auth = os.Getenv("KAIROS_SECRET")
+	config.Environment = strings.ToLower(strings.TrimSpace(os.Getenv("KAIROS_ENVIRONMENT")))
+	if config.Environment == "" {
+		config.Environment = "development"
+	}
 	config.APIs.GEMINI = os.Getenv("GEMINI_API_KEY")
 	config.APIs.OPENAI = os.Getenv("OPENAI_API_KEY")
+
+	if allowed := os.Getenv("KAIROS_ALLOWED_NAMESPACES"); allowed != "" {
+		for _, namespace := range strings.Split(allowed, ",") {
+			if trimmed := strings.TrimSpace(namespace); trimmed != "" {
+				config.AllowedNamespaces = append(config.AllowedNamespaces, trimmed)
+			}
+		}
+	}
 
 	// Parse integers with error logging and sensible defaults
 	var parseErr error
@@ -134,9 +161,22 @@ func LoadEnv() (*Config, error) {
 		config.CORSOrigins = strings.Split(corsOrigins, ",")
 	}
 
-	// Validate required configuration
+	// Fail closed in production: an empty shared secret would leave the HTTP
+	// edge accepting an empty credential, and an empty allowlist would leave
+	// the shared credential able to select any namespace.
 	if config.Auth == "" {
-		slog.Warn("KAIROS_SECRET is not set — all API requests will be rejected in production")
+		if config.Environment == "production" {
+			return nil, fmt.Errorf(
+				"KAIROS_SECRET must be set when KAIROS_ENVIRONMENT=production",
+			)
+		}
+		slog.Warn("KAIROS_SECRET is not set — all authenticated API requests will be rejected")
+	}
+
+	if config.Environment == "production" && len(config.AllowedNamespaces) == 0 {
+		return nil, fmt.Errorf(
+			"KAIROS_ALLOWED_NAMESPACES must list at least one namespace when KAIROS_ENVIRONMENT=production",
+		)
 	}
 
 	return &config, nil

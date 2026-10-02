@@ -45,6 +45,7 @@ func NewRouter(envVar *config.Config, intelClient pb.IntelligenceServiceClient, 
 
 	v1Router.Use(middleware.Auth(envVar))
 	v1Router.Use(middleware.Namespace)
+	v1Router.Use(middleware.NamespaceAllowlist(envVar))
 	v1Router.Use(middleware.RateLimit(envVar))
 
 	mainRouter.Get("/health", queryHandler.CheckHealth)

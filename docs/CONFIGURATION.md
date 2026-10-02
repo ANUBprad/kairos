@@ -64,6 +64,20 @@ Legacy v1 stack (intelligence engine, `intelligence/`) — not read by the Porta
 | `KAIROS_EMBEDDING_MODEL` | `local` | Embedding backend: `local` / `openai` / `gemini` |
 | `INTELLIGENCE_HOST` / `INTELLIGENCE_PORT` | `localhost` / `28080` | Intelligence engine address |
 | `CHROMA_STORE_HOST` / `CHROMA_STORE_PORT` | `localhost` / `7777` | ChromaDB address (v1 vector store) |
+| `KAIROS_GRPC_BIND_HOST` | `127.0.0.1` | gRPC bind host. Loopback by default; `0.0.0.0` only on a private network or with TLS |
+| `KAIROS_GRPC_TLS_CERT` / `KAIROS_GRPC_TLS_KEY` | - | PEM server certificate + key; setting both serves gRPC over TLS |
+| `KAIROS_GRPC_TLS_CA` | - | PEM CA that signs client certificates; setting it also requires mTLS |
+| `KAIROS_GRPC_TLS_CA` (gateway) | - | CA bundle the gateway uses to verify the Intelligence gRPC certificate |
+| `KAIROS_GRPC_TLS_SERVER_NAME` | - | Server name the gateway expects in that certificate, when it differs from the dial target |
+
+The gateway ↔ intelligence boundary is protected twice: by the shared
+`KAIROS_SECRET` credential on every protected RPC, and by the transport. The
+transport policy is that plaintext gRPC is allowed on loopback or outside
+production, and **production refuses to start** on a non-loopback plaintext bind
+— supply `KAIROS_GRPC_TLS_CERT`/`KAIROS_GRPC_TLS_KEY`, or keep the bind on
+loopback. `X-Namespace` is caller-asserted, so `KAIROS_ALLOWED_NAMESPACES` is
+what bounds which namespaces the shared credential may select; production
+requires it to be set.
 
 ### Service Ports
 

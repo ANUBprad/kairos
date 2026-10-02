@@ -38,7 +38,8 @@ Kairos implements the following security measures:
 ### Authentication & Authorization
 - Shared secret authentication via `X-Secret` header
 - Constant-time comparison to prevent timing attacks
-- Namespace-based access isolation
+- Namespace-scoped access: `X-Namespace` is caller-asserted, so it is bounded by `KAIROS_ALLOWED_NAMESPACES` (required in production)
+- Gateway → Intelligence gRPC authenticated with the same shared secret on every protected RPC, fail-closed when no secret is configured
 
 ### Input Validation
 - Magic-byte MIME detection (not trusting client Content-Type headers)
@@ -52,6 +53,7 @@ Kairos implements the following security measures:
 - CORS configuration (environment-driven, not wildcard by default)
 - HTTP security headers (CSP, HSTS, Permissions-Policy)
 - Error message sanitization (no information leakage)
+- gRPC channel bound to loopback by default; production refuses to start on a non-loopback plaintext bind, and supports TLS with optional mTLS
 
 ### Data Security
 - All secrets via environment variables (never hardcoded)

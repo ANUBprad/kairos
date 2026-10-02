@@ -1,3 +1,12 @@
+"""REST API key authentication for the Intelligence boundary.
+
+Stance: a valid key is required in every non-development environment. With no
+``KAIROS_API_SECRET`` configured, this validator fails closed outside
+development; the any-key fallback exists only so a local ``docker compose``
+developer stack works before secrets are generated, and it is keyed off
+``KAIROS_ENVIRONMENT`` rather than the absence of configuration.
+"""
+
 from __future__ import annotations
 
 import logging

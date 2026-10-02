@@ -63,6 +63,25 @@ class Settings(BaseSettings):
         description="GATEWAY_/SERVICE shared secret (KAIROS_SECRET) for gRPC authentication",
     )
 
+    # --- gRPC transport security -------------------------------------
+    grpc_bind_host: str = Field(
+        default="127.0.0.1",
+        description="gRPC bind host. Loopback by default; set 0.0.0.0 only on a "
+        "private network or with TLS.",
+    )
+    grpc_tls_cert: Optional[str] = Field(
+        default=None,
+        description="PEM server certificate path; with grpc_tls_key enables gRPC TLS",
+    )
+    grpc_tls_key: Optional[str] = Field(
+        default=None,
+        description="PEM private key path for grpc_tls_cert",
+    )
+    grpc_tls_ca: Optional[str] = Field(
+        default=None,
+        description="PEM CA bundle used to verify client certificates (mTLS)",
+    )
+
     # --- ChromaDB ----------------------------------------------------
     chroma_store_host: str = Field(
         default="localhost",
@@ -210,6 +229,10 @@ class Settings(BaseSettings):
         "groq_base_url",
         "large_groq_model",
         "small_groq_model",
+        "grpc_tls_cert",
+        "grpc_tls_key",
+        "grpc_tls_ca",
+        "grpc_bind_host",
         mode="before",
     )
     @classmethod

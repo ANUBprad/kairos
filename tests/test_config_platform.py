@@ -370,6 +370,7 @@ class TestSecrets:
 # ======================================================================
 
 from intelligence.api.app import create_app, get_app  # noqa: E402
+from intelligence.api.auth import api_key  # noqa: E402
 from intelligence.api.auth.api_key import APIKeyValidator  # noqa: E402
 from intelligence.api.rate_limit.token_bucket import TokenBucket, TokenBucketStore  # noqa: E402
 from intelligence.api.versioning.versions import (  # noqa: E402
@@ -505,6 +506,36 @@ class TestAuth:
         validator.add_key("key1")
         assert validator.is_valid("key1")
         assert not validator.is_valid("key2")
+
+    @pytest.mark.parametrize("environment", ["staging", "production"])
+    def test_validator_requires_a_key_outside_development(
+        self, monkeypatch: pytest.MonkeyPatch, environment: str
+    ) -> None:
+        """The any-key fallback is a development convenience, never a default."""
+        monkeypatch.setattr(api_key, "_ENVIRONMENT", environment)
+        monkeypatch.delenv("KAIROS_API_SECRET", raising=False)
+
+        validator = api_key.APIKeyValidator()
+        assert not validator.is_valid("any-key")
+        assert not validator.is_valid("")
+
+    def test_validator_rejects_wrong_key_in_production(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(api_key, "_ENVIRONMENT", "production")
+        monkeypatch.setenv("KAIROS_API_SECRET", "prod-api-key")
+
+        validator = api_key.APIKeyValidator()
+        assert validator.is_valid("prod-api-key")
+        assert not validator.is_valid("dev-api-key")
+
+    def test_validator_falls_back_to_development_without_a_secret(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(api_key, "_ENVIRONMENT", "development")
+        monkeypatch.delenv("KAIROS_API_SECRET", raising=False)
+
+        assert api_key.APIKeyValidator().is_valid("any-key")
 
     def test_auth_middleware_excludes_health(self) -> None:
         app = create_app()

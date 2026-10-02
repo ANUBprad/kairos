@@ -246,7 +246,8 @@ sudo certbot --nginx -d your-domain.com
 - [ ] Set up automated database backups and test restoration
 - [ ] Configure Prometheus scraping and Grafana dashboards
 - [ ] Set up log aggregation / alerting rules
-- [ ] Do not expose the gateway ↔ intelligence gRPC channel publicly (no mTLS yet — private network only)
+- [ ] Keep the gateway ↔ intelligence gRPC channel off the public internet: serve it with `KAIROS_GRPC_TLS_CERT`/`KAIROS_GRPC_TLS_KEY` (plus `KAIROS_GRPC_TLS_CA` for mTLS) or keep `KAIROS_GRPC_BIND_HOST` on loopback — the service refuses to start otherwise in production
+- [ ] Set `KAIROS_ALLOWED_NAMESPACES` so the shared gateway credential cannot select every namespace
 
 ---
 
