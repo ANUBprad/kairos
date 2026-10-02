@@ -566,7 +566,7 @@ model Experiment {
   datasetId String?
   dataset   BenchmarkDataset? @relation(fields: [datasetId], references: [id], onDelete: SetNull)
 
-  embeddingModel      String  @default("text-embedding-3-small")
+  embeddingModel      String  @default("text-embedding-004")
   retriever           String  @default("vector")
   reranker            String  @default("none")
   llm                 String  @default("gpt-4o-mini")
