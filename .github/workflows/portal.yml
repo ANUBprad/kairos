@@ -62,6 +62,18 @@ jobs:
           POSTGRES_DB: kairos_test
         ports:
           - 5432:5432
+        # node --test runs one file per core, and each file's Prisma client
+        # sizes its own pool at (cores * 2 + 1). On a 12-core runner that is
+        # roughly 300 connections demanded against Postgres's default 100, so
+        # short interactive transactions queue for a pooled connection and
+        # abort on Prisma's 5s transaction timeout. Observed as an intermittent
+        # "Transaction already closed" failure in embedding-hardening. Raising
+        # the test database's connection ceiling fixes the oversubscription
+        # instead of lengthening any timeout or serialising the suite.
+        command: >
+          postgres
+          -c max_connections=400
+          -c shared_buffers=256MB
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 10s
