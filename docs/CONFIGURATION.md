@@ -29,6 +29,9 @@ Portal (`apps/portal`):
 | `GEMINI_CHAT_MODEL` | `gemini-2.0-flash` | Chat/generation model. Does not affect embedding width |
 | `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-small` | **Inert / non-indexable.** 1536 dims, which this database cannot store. Kept so the resolver can name the mismatch in its error; ingestion rejects it |
 | `GEMINI_EMBEDDING_MODEL` | `text-embedding-004` | Retrieval embedding model. 768 dims — the width the pgvector column stores |
+| `AI_MAX_OUTPUT_TOKENS` | `16384` | Server-side ceiling on generated tokens per provider call. A call may ask for less; none may ask for more |
+| `EVALUATION_MAX_QUESTIONS` | `100` | Questions one benchmark, strategy, campaign, or experiment run may process. A larger dataset is refused (413) rather than partly run |
+| `EVALUATION_MAX_CAMPAIGN_EXPERIMENTS` | `24` | Strategy x model x chunk-strategy x topK combinations one campaign may evaluate |
 | `CLOUDINARY_CLOUD_NAME` | - | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | - | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | - | Cloudinary API secret |
