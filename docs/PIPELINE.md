@@ -2,6 +2,17 @@
 
 Detailed documentation of the Kairos RAG pipeline architecture and components.
 
+> **Scope.** Sections below describe the legacy v1 pipeline, where ingestion,
+> embedding and retrieval run in the Python intelligence engine
+> (`intelligence/ingestion/`, `intelligence/embeddings/`,
+> `intelligence/vectorstore/`) behind the Go gateway. ChromaDB is that stack's
+> vector store.
+>
+> The **production** pipeline is the Portal's, and its vector contract is
+> different: Gemini `text-embedding-004` at 768 dimensions, stored in
+> PostgreSQL + pgvector with an HNSW index. See [ARCHITECTURE.md](ARCHITECTURE.md)
+> and [DATA-FLOW.md](DATA-FLOW.md) for the production path.
+
 ---
 
 ## Overview
@@ -103,9 +114,16 @@ Each chunk includes:
 
 Embeddings convert text chunks into dense vector representations for similarity search.
 
-**Location:** `intelligence/embeddings/`
+**Location (legacy v1):** `intelligence/embeddings/`
 
-### Supported Models
+**Location (production Portal):** `apps/portal/src/lib/ai/embeddings/`, catalogued
+in `apps/portal/src/lib/retrieval/embedding-models.ts`. The production catalog
+lists the host providers' full model set, but the database stores a single
+width — 768 dimensions — so only `text-embedding-004` and `embedding-001` are
+indexable. `assertIndexableEmbeddingModel` rejects the rest before a provider
+call, because the pinned `vector(768)` column cannot hold them.
+
+### Supported Models (legacy v1)
 
 | Provider | Model | Dimensions | Speed |
 |----------|-------|------------|-------|

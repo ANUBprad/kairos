@@ -16,14 +16,19 @@ Complete configuration reference for Kairos.
 
 ### Optional Variables
 
+Portal (`apps/portal`):
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DIRECT_URL` | - | Direct PostgreSQL connection (session mode; required for Supabase) |
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | `http://localhost:3000` | Public app URL |
-| `KAIROS_LLM_PROVIDER` | - | Generated-model provider: `openai` / `gemini` / `ollama` |
-| `KAIROS_EMBEDDING_MODEL` | `local` | Embedding backend: `local` / `openai` / `gemini` |
-| `OPENAI_API_KEY` | - | OpenAI API key |
-| `GEMINI_API_KEY` | - | Google Gemini API key |
+| `AI_PROVIDER` | `openai` | Default provider for both chat and embeddings |
+| `OPENAI_API_KEY` | - | OpenAI API key (chat + embeddings) |
+| `GEMINI_API_KEY` | - | Google Gemini API key (chat + embeddings) |
+| `OPENAI_CHAT_MODEL` | `gpt-4o-mini` | Chat/generation model. Does not affect embedding width |
+| `GEMINI_CHAT_MODEL` | `gemini-2.0-flash` | Chat/generation model. Does not affect embedding width |
+| `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-small` | **Inert / non-indexable.** 1536 dims, which this database cannot store. Kept so the resolver can name the mismatch in its error; ingestion rejects it |
+| `GEMINI_EMBEDDING_MODEL` | `text-embedding-004` | Retrieval embedding model. 768 dims — the width the pgvector column stores |
 | `CLOUDINARY_CLOUD_NAME` | - | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | - | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | - | Cloudinary API secret |
@@ -33,15 +38,42 @@ Complete configuration reference for Kairos.
 | `PROMETHEUS_PORT` | `9090` | Prometheus metrics port |
 | `GRAFANA_PASSWORD` | `admin` | Grafana admin password |
 
+#### Chat model vs. embedding model
+
+These are separate settings and changing one does not change the other:
+
+- `*_CHAT_MODEL` selects the generation model. It has no effect on vector width.
+- `*_EMBEDDING_MODEL` selects the retrieval model, and must be 768-dimensional.
+  The width is pinned in the database by migration
+  `20261122000000_pin_embedding_dimension_768`, so only the models listed in
+  `indexableEmbeddingModels()` (`text-embedding-004`, `embedding-001`) can be
+  written. Ingestion rejects anything else before calling a provider.
+- `AI_PROVIDER` decides which pair is the fallback when a knowledge base has no
+  explicit `retrievalConfig`. Precedence is: explicit override (request or CLI)
+  → knowledge base `retrievalConfig` → env. One resolver,
+  `resolveEmbeddingModel` in `apps/portal/src/lib/retrieval/embedding-models.ts`,
+  is the single source of truth; ingestion, Research Chat and the Retrieval Lab
+  all go through it, because a query embedded with a different model than the
+  documents it searches returns nothing or raises a raw dimension error.
+
+Legacy v1 stack (intelligence engine, `intelligence/`) — not read by the Portal:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `KAIROS_LLM_PROVIDER` | - | Generated-model provider: `openai` / `gemini` / `ollama` |
+| `KAIROS_EMBEDDING_MODEL` | `local` | Embedding backend: `local` / `openai` / `gemini` |
+| `INTELLIGENCE_HOST` / `INTELLIGENCE_PORT` | `localhost` / `28080` | Intelligence engine address |
+| `CHROMA_STORE_HOST` / `CHROMA_STORE_PORT` | `localhost` / `7777` | ChromaDB address (v1 vector store) |
+
 ### Service Ports
 
 | Service | Default Port | Variable |
 |---------|--------------|----------|
 | Portal (dev) | 3000 | `PORT` |
-| Gateway | 8080 | `GATEWAY_PORT` |
-| Intelligence (gRPC) | 28080 | `INTELLIGENCE_PORT` |
-| Intelligence metrics | 8001 | `KAIROS_METRICS_PORT` |
-| ChromaDB | 7777 | `CHROMA_STORE_PORT` |
+| Gateway (legacy v1) | 8080 | `GATEWAY_PORT` |
+| Intelligence gRPC (legacy v1) | 28080 | `INTELLIGENCE_PORT` |
+| Intelligence metrics (legacy v1) | 8001 | `KAIROS_METRICS_PORT` |
+| ChromaDB (legacy v1) | 7777 | `CHROMA_STORE_PORT` |
 | Prometheus | 9090 | `PROMETHEUS_PORT` |
 | Grafana | 3000 | (conflicts with Portal dev — run one at a time) |
 
@@ -89,15 +121,48 @@ model Document {
   chunks        Chunk[]
 }
 
-model Chunk {
+model DocumentChunk {
   id            String    @id @default(cuid())
   content       String
   tokenCount    Int
   metadata      Json?
   documentId    String
   document      Document  @relation(fields: [documentId], references: [id])
-  embedding     Unsupported("vector(1536)")?
+  embedding     DocumentEmbedding?
 }
+
+model DocumentEmbedding {
+  id         String @id @default(cuid())
+  model      String @default("text-embedding-004")
+  dimensions Int    @default(768)
+  status     String @default("pending")
+
+  chunkId String        @unique
+  chunk   DocumentChunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  embedding Unsupported("vector")?
+
+  createdAt DateTime @default(now())
+}
+```
+
+`Unsupported("vector")?` is as far as Prisma's datamodel goes. It does **not**
+carry the `vector(768)` typmod and it cannot express a pgvector index, so the
+authoritative definition of the column and its HNSW index lives in the SQL
+migration and in the live database:
+
+- migration `20260710000000_add_evaluation_observability_embedding_tables` —
+  creates the `DocumentEmbedding` table (without the vector column)
+- migration `20260913000000_add_embedding_vectors` — `CREATE EXTENSION "vector"`
+  and adds `DocumentEmbedding.embedding vector` (typmod-less)
+- migration `20261122000000_pin_embedding_dimension_768` — pins the column to
+  `vector(768)`, corrects the `model`/`dimensions` defaults, and creates
+  `DocumentEmbedding_embedding_hnsw_idx` on `("embedding" vector_cosine_ops)`
+  with `m = 16, ef_construction = 64`
+
+`prisma migrate diff` against a live database will therefore always show drift
+on this column. That is expected; do not "fix" it by editing the migration or
+by adding the index to `schema.prisma`.
 
 model Experiment {
   id            String    @id @default(cuid())
@@ -187,7 +252,12 @@ class ChunkingConfig:
 
 ## Model Registry
 
-**Location:** `intelligence/retraining/model_registry.py`
+**Location:** `intelligence/retraining/model_registry.py` (legacy v1 stack)
+
+This registry belongs to the v1 Python engine and has no effect on the Portal.
+The production retrieval contract is a single 768-dimensional model,
+`gemini/text-embedding-004`; see the Portal table above and
+`apps/portal/src/lib/retrieval/embedding-models.ts`.
 
 ### Registered Models
 
@@ -224,14 +294,14 @@ registry.register(
 
 **Location:** `docker-compose.yml`
 
-The compose stack serves six services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`.
+The compose stack serves six services. The Portal is **not** part of it — run it locally with `npm run dev` in `apps/portal`. Apart from `postgres`, the services belong to the legacy v1 stack; the Portal reads and writes only PostgreSQL.
 
 | Service | Build / Image | Port | Notes |
 |---------|---------------|------|-------|
-| `postgres` | `pgvector/pgvector:pg16` | 5432 | App database — matches the default `DATABASE_URL` |
-| `chromadb` | `chromadb/chroma:1.0.15` | 7777 → 8000 | Vector store |
-| `intelligence` | `docker/intelligence.Dockerfile` | 28080, 8001 | gRPC engine + metrics |
-| `gateway` | `docker/gateway.Dockerfile` | ${GATEWAY_PORT:-8080} | HTTP API gateway |
+| `postgres` | `pgvector/pgvector:pg16` | 5432 | App database and production vector store — matches the default `DATABASE_URL` |
+| `chromadb` | `chromadb/chroma:1.0.15` | 7777 → 8000 | v1 vector store (legacy) |
+| `intelligence` | `docker/intelligence.Dockerfile` | 28080, 8001 | gRPC engine + metrics (legacy) |
+| `gateway` | `docker/gateway.Dockerfile` | ${GATEWAY_PORT:-8080} | HTTP API gateway (legacy) |
 | `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Metrics collection |
 | `grafana` | `grafana/grafana:10.4.2` | 3000 | Dashboards (provisioned from `docker/grafana/`) |
 
@@ -239,7 +309,7 @@ The stack reads its environment from `.env` (see `.env.example`). The `postgres`
 
 ---
 
-## Gateway Configuration
+## Gateway Configuration (legacy v1)
 
 **Location:** `gateway/config/`
 
@@ -260,7 +330,7 @@ type Config struct {
 
 ---
 
-## Intelligence Engine Configuration
+## Intelligence Engine Configuration (legacy v1)
 
 **Location:** `intelligence/config/settings.py`
 
@@ -278,7 +348,6 @@ class Settings:
     # Data
     chroma_store_host: str = "localhost"
     chroma_store_port: int = 7777
-
     # AI
     embedding_model: str = "local"
     llm_provider: Optional[str] = None  # "openai" | "gemini" | "ollama"

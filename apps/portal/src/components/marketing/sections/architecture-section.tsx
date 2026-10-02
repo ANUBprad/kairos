@@ -10,13 +10,12 @@ import { SectionHeader } from "./section-header";
 import { useParallax } from "./use-parallax";
 
 const layers = [
-  { label: "Next.js", sublabel: "Frontend & SSR", color: "from-blue-500/20 to-blue-600/20", border: "border-blue-500/30", dotColor: "bg-blue-500" },
-  { label: "Go Gateway", sublabel: "API & Auth", color: "from-cyan-500/20 to-cyan-600/20", border: "border-cyan-500/30", dotColor: "bg-cyan-500" },
-  { label: "Python Intelligence", sublabel: "AI & Embeddings", color: "from-emerald-500/20 to-emerald-600/20", border: "border-emerald-500/30", dotColor: "bg-emerald-500" },
-  { label: "Rust Acceleration", sublabel: "Future-ready", color: "from-amber-500/20 to-amber-600/20", border: "border-amber-500/30", dotColor: "bg-amber-500", badge: "Future" },
-  { label: "PostgreSQL", sublabel: "Primary Database", color: "from-violet-500/20 to-violet-600/20", border: "border-violet-500/30", dotColor: "bg-violet-500" },
-  { label: "Vector Store", sublabel: "pgvector + HNSW", color: "from-rose-500/20 to-rose-600/20", border: "border-rose-500/30", dotColor: "bg-rose-500" },
+  { label: "Next.js Portal", sublabel: "Frontend, API routes & server actions", color: "from-blue-500/20 to-blue-600/20", border: "border-blue-500/30", dotColor: "bg-blue-500" },
+  { label: "PostgreSQL", sublabel: "Primary database — users, documents, chunks", color: "from-violet-500/20 to-violet-600/20", border: "border-violet-500/30", dotColor: "bg-violet-500" },
+  { label: "Vector Store", sublabel: "pgvector: vector(768) + HNSW index", color: "from-rose-500/20 to-rose-600/20", border: "border-rose-500/30", dotColor: "bg-rose-500" },
+  { label: "Embedding Providers", sublabel: "Gemini text-embedding-004 (768-dim)", color: "from-emerald-500/20 to-emerald-600/20", border: "border-emerald-500/30", dotColor: "bg-emerald-500" },
   { label: "LLMs", sublabel: "GPT-4o, Gemini", color: "from-brand/20 to-brand-hover/20", border: "border-brand/30", dotColor: "bg-brand" },
+  { label: "Rust Acceleration", sublabel: "Future-ready", color: "from-amber-500/20 to-amber-600/20", border: "border-amber-500/30", dotColor: "bg-amber-500", badge: "Future" },
 ];
 
 export function ArchitectureSection() {
@@ -126,6 +125,13 @@ export function ArchitectureSection() {
                 aria-hidden="true"
               />
             )}
+
+            <p className="mt-6 text-[11px] leading-relaxed text-text-tertiary">
+              The Go gateway, Python intelligence engine and ChromaDB still ship as a
+              legacy v1 stack and still run under Docker Compose, but they are not on
+              this path. The Portal owns ingestion, embedding, retrieval and generation
+              end to end.
+            </p>
           </div>
         </motion.div>
       </div>

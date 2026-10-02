@@ -6,9 +6,25 @@ Guide for developers contributing to Kairos.
 
 ## Architecture Overview
 
-Kairos is a microservices platform with three main components:
+Kairos ships two stacks, and the **Portal is the production application**.
 
 ```
+Production (Portal)
+
+Browser
+   │  HTTP
+   ▼
+Next.js 15 Portal (apps/portal)
+   │  server actions / route handlers / Prisma
+   │  embedding provider calls (768 dims) + chat provider calls
+   ▼
+PostgreSQL 16 + pgvector
+   ├─ users, knowledge bases, documents, chunks   (metadata)
+   └─ DocumentEmbedding.embedding vector(768)     (vectors)
+      + HNSW index (m = 16, ef_construction = 64)
+
+Legacy v1 (still in the repo, still runs under Docker Compose)
+
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │                 │     │                 │     │                 │
 │   Next.js 15   │────▶│   Go Gateway    │────▶│   Python        │
@@ -25,12 +41,31 @@ Kairos is a microservices platform with three main components:
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
+The Portal does not call the Go gateway, the Python intelligence engine or
+ChromaDB. It owns ingestion, text extraction, chunking, embedding, storage,
+retrieval and generation end to end, and its retrieval embeddings are Gemini
+`text-embedding-004` at 768 dimensions — the width migration
+`20261122000000_pin_embedding_dimension_768` pins in the database.
+
 ### Communication Flow
 
-1. **Portal → Gateway**: REST API calls
-2. **Gateway → Intelligence**: gRPC with Protocol Buffers
-3. **Intelligence → Vector Store**: ChromaDB client
-4. **Portal → Database**: Prisma ORM over PostgreSQL
+Production (Portal):
+
+1. **Browser → Portal**: HTTP, server actions and route handlers
+2. **Portal → Database**: Prisma over PostgreSQL, including the
+   `DocumentEmbedding` vector column
+3. **Portal → providers**: embedding generation (768 dims) and chat completion
+
+Legacy v1:
+
+4. **Portal → Gateway**: REST API calls
+5. **Gateway → Intelligence**: gRPC with Protocol Buffers
+6. **Intelligence → Vector Store**: ChromaDB client
+
+The rest of this guide documents the legacy v1 stack, which is what
+`gateway/`, `intelligence/`, `sdk/` and `proto/` implement. For the production
+Portal, see [ARCHITECTURE.md](ARCHITECTURE.md) and
+[DATA-FLOW.md](DATA-FLOW.md).
 
 ---
 

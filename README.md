@@ -49,8 +49,8 @@ Kairos is a *workspace*, not just an API:
 
 Current production-shaped capabilities:
 
-- Full-stack retrieval pipeline mounted behind a web portal: ingestion → chunking → embeddings → retrieval planning → strategy selection (BM25 / dense / hybrid) → reranking → grounded answer generation.
-- Embedding and LLM providers are pluggable: local models via SentenceTransformers, or OpenAI and Gemini APIs; LLM generation via OpenAI, Gemini, or Ollama.
+- Full-stack retrieval pipeline mounted behind a web portal: ingestion → text extraction → chunking → embeddings → retrieval planning → strategy selection (BM25 / dense / hybrid) → reranking → grounded answer generation.
+- Retrieval embeddings and LLM providers are pluggable, but not freely interchangeable: the Portal embeds with Gemini `text-embedding-004` (or `embedding-001`) because the database pins one width (768 dims), and generates through OpenAI, Gemini, or Ollama. Retrieval embeddings are a fixed contract; the chat model stays free.
 - Typical document formats handled end to end: PDF, DOCX, TXT, Markdown, CSV.
 - Artifact generation from knowledge bases, including multi-part audio podcasts with mid-play, grounded interruption Q&A.
 - Chat with citations, pipeline traces, and per-message grounding.
@@ -80,11 +80,11 @@ The compose stack provides the local database (PostgreSQL 16 with pgvector) at `
 
 | Service | URL / Port | Purpose |
 |---------|------------|---------|
-| PostgreSQL | localhost:5432 | App database (pgvector) — matches the default `DATABASE_URL` |
+| PostgreSQL | localhost:5432 | App database and production vector store (pgvector) — matches the default `DATABASE_URL` |
 | Portal (dev) | http://localhost:3000 | Web workspace — run via `npm run dev` in `apps/portal` |
-| Gateway | http://localhost:8080 | Go HTTP API gateway |
-| Intelligence | http://localhost:28080 | Python RAG engine (gRPC) |
-| ChromaDB | http://localhost:7777 | Vector store |
+| Gateway | http://localhost:8080 | Go HTTP API gateway (legacy v1 stack) |
+| Intelligence | http://localhost:28080 | Python RAG engine, gRPC (legacy v1 stack) |
+| ChromaDB | http://localhost:7777 | Vector store for the v1 stack (legacy) |
 | Prometheus | http://localhost:9090 | Metrics collection |
 | Grafana | http://localhost:3000 | Metrics dashboards — conflicts with the Portal dev server; run them one at a time |
 
@@ -117,31 +117,43 @@ The full environment reference lives in [`.env.example`](.env.example); see [doc
 
 ## Architecture
 
-Kairos is a microservice platform with three layers:
+Kairos is a self-hostable platform built around one idea: **different questions
+need different retrieval strategies.** The Portal is the production
+application — it owns ingestion, embedding, storage, retrieval and generation
+end to end, and stores its vectors in PostgreSQL alongside everything else.
 
 ```text
-Browser (Next.js Portal)
-        │  REST / server actions
-        ▼
-Go API Gateway ───gRPC───► Python Intelligence Engine
-                                ├─ Query Classification
-                                ├─ Retrieval Planning
-                                ├─ Retrievers (BM25 / Dense / Hybrid / Multi-hop)
-                                ├─ Reranking
-                                ├─ Response Assembly
-                                └─ Evaluation & Telemetry
-   │                            │
-   ▼                            ▼
-PostgreSQL                 ChromaDB
-   (users, artifacts,        (vectors)
-    knowledge bases)
+Browser
+   │  HTTP
+   ▼
+Next.js Portal (apps/portal)
+   │  server actions / route handlers / Prisma
+   │  embedding + chat provider calls
+   ▼
+PostgreSQL 16 + pgvector
+   ├─ users, knowledge bases, documents, chunks   (metadata)
+   └─ DocumentEmbedding.embedding vector(768)     (vectors)
+      + HNSW index (m = 16, ef_construction = 64)
 ```
 
-- **Portal** (`apps/portal/`) — Next.js 15 workspace: knowledge bases, document ingestion, RAG chat, artifact studio, podcast Q&A.
-- **Gateway** (`gateway/`) — Go HTTP gateway: routing, auth, rate limiting, caching, Prometheus metrics.
-- **Intelligence** (`intelligence/`) — Python engine: ingestion, classification, adaptive retrieval planning, multiple retriever backends, reranking, evaluation.
-- **Data** — PostgreSQL via Prisma; ChromaDB for vector search; Cloudinary for artifact media.
+- **Portal** (`apps/portal/`) — Next.js 15 workspace: knowledge bases, document ingestion, embedding, RAG chat, artifact studio, podcast Q&A, evaluation and experiment tracking.
+- **Vector storage** — PostgreSQL with the pgvector extension. The column is pinned to `vector(768)` and indexed with HNSW; the index is created by SQL migration `20261122000000_pin_embedding_dimension_768`, because Prisma's datamodel cannot express a pgvector index.
+- **Retrieval embedding** — `gemini/text-embedding-004`, 768 dimensions. The width is fixed by the database, so ingestion rejects any wider model before calling a provider. Chat and embedding models are configured separately: changing the chat model does not change the embedding width.
+- **Data** — PostgreSQL via Prisma for everything, including vectors. Cloudinary for artifact media.
 - **Observability** — Prometheus + Grafana, structured logging.
+
+Query plans are not a fixed property of the setup: pgvector uses the HNSW index
+only when the filter is selective enough, so a selective single-knowledge-base
+query can fall back to a sequential scan. Any latency figure quoted from this
+repository is a benchmark under stated conditions, not a guarantee.
+
+### Legacy v1 stack
+
+The Go gateway (`gateway/`) and Python intelligence engine (`intelligence/`)
+are still in the repository and still run under Docker Compose, with ChromaDB as
+their vector store. They are not on the Portal production path, and they have
+not been deleted. The Portal is self-contained: it has no code path to the
+gateway, the intelligence engine or ChromaDB.
 
 A dedicated [ARCHITECTURE.md](docs/ARCHITECTURE.md) covers component responsibilities, the retrieval pipeline, and the evaluation framework.
 
@@ -159,7 +171,7 @@ A dedicated [ARCHITECTURE.md](docs/ARCHITECTURE.md) covers component responsibil
 
 **Statistical evaluation.** A metrics-heavy evaluation framework (recall@K, MRR, nDCG, latency, cost, faithfulness, failure rate…) with confidence intervals and effect sizes, plus a leaderboard.
 
-**Production fundamentals.** Health checks, rate limiting, semantic caching, provider failover, structured logging, and monitoring out of the box.
+**Production fundamentals.** Health checks, per-user and per-knowledge-base rate limits, provider failover, structured logging, request correlation, and monitoring out of the box. (Semantic/LRU request caching lives in the v1 gateway.)
 
 ---
 
@@ -167,7 +179,7 @@ A dedicated [ARCHITECTURE.md](docs/ARCHITECTURE.md) covers component responsibil
 
 Honest gaps and planned work:
 
-- mTLS on the gateway ↔ intelligence channel (currently private-network only — do not expose publicly).
+- mTLS on the gateway ↔ intelligence channel (currently private-network only — do not expose publicly). Both services are v1-only; the Portal does not use them.
 - Multi-tenant organization support beyond per-user knowledge bases.
 - The public cloud CLI and REST API documented in `cli/SPECIFICATION.md` — designed, not shipped.
 - The extension-framework roadmap in `docs/EXTENSIBILITY.md` (plugins, event bus, webhooks, marketplace) — a design report for future phases.
@@ -178,9 +190,9 @@ Honest gaps and planned work:
 
 ```text
 kairos/
-├── apps/portal/          # Next.js workspace (auth, knowledge bases, chat, artifact studio)
-├── gateway/              # Go API gateway (Chi, gRPC, caching, rate limiting)
-├── intelligence/         # Python RAG engine (ingestion, retrieval, evaluation, telemetry)
+├── apps/portal/          # Next.js workspace (auth, knowledge bases, chat, artifact studio) — the production app
+├── gateway/              # Go API gateway (Chi, gRPC, caching, rate limiting) — legacy v1
+├── intelligence/         # Python RAG engine (ingestion, retrieval, evaluation, telemetry) — legacy v1
 ├── proto/                # gRPC contract definitions
 ├── sdk/                  # Python client SDK (kairos-client)
 ├── benchmarks/           # Evaluation datasets, leaderboard
@@ -218,7 +230,7 @@ go test ./...
 
 Measured on this branch with the commands above — not badges, plain numbers:
 
-- **Portal:** 377 tests across 79 suites, all passing (unit, integration, and structural coverage of the portal, including the artifact studio and podcast interaction flows).
+- **Portal:** 950 tests across 192 suites, all passing (unit, integration, and structural coverage of the portal, including the artifact studio and podcast interaction flows).
 - **Python:** ~2,275 tests in `tests/`. 2,237 pass in a default local environment; 38 depend on configured credentials/API keys and are validated in CI (running with a clean environment).
 - **Go gateway:** covered by `go test ./...`.
 

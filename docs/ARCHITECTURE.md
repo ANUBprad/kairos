@@ -12,20 +12,68 @@ Instead of applying a fixed retrieval pipeline to every query, Kairos classifies
 
 ## High-Level Architecture
 
+Kairos ships two stacks. The **Portal is the production application**: it owns
+ingestion, embedding, storage, retrieval and generation end to end.
+
 ```text
-Browser (Next.js Portal)
-        │  REST / server actions
-        ▼
+Browser
+   │  HTTP
+   ▼
+Next.js Portal (apps/portal)
+   │  server actions / route handlers / Prisma
+   │  embedding provider calls
+   ▼
+PostgreSQL 16 + pgvector
+   ├─ users, knowledge bases, documents, chunks   (metadata)
+   └─ DocumentEmbedding.embedding vector(768)     (vectors)
+      + HNSW index (m = 16, ef_construction = 64)   ← created in SQL, see below
+```
+
+There is no Gateway hop and no separate retrieval service on this path.
+
+### Vector storage contract
+
+| Concern | Value | Authoritative source |
+|---------|-------|----------------------|
+| Vector store | PostgreSQL + pgvector | migration `20260913000000_add_embedding_vectors` (`CREATE EXTENSION "vector"`) |
+| Column | `DocumentEmbedding.embedding vector(768)` | migration `20261122000000_pin_embedding_dimension_768` |
+| ANN index | HNSW, `vector_cosine_ops`, `m = 16`, `ef_construction = 64` | migration `20261122000000_pin_embedding_dimension_768` |
+| Retrieval embedding | `gemini/text-embedding-004`, 768 dimensions | `apps/portal/src/lib/retrieval/embedding-models.ts` |
+
+pgvector cannot index a typmod-less `vector` column, which is why the width is
+pinned in the database. Ingestion rejects any model that is not 768-wide before
+it calls a provider (`assertIndexableEmbeddingModel`).
+
+Prisma's datamodel cannot express the pgvector HNSW index: `schema.prisma`
+declares the column as `Unsupported("vector")?` and nothing else. **The SQL
+migration and the live database index are authoritative**, not
+`schema.prisma` and not `prisma migrate diff`.
+
+Query plans are not a fixed property of the system. Postgres only uses the
+HNSW index when the filter is selective enough; a selective
+single-knowledge-base filter can fall back to a sequential scan. Report
+benchmark results with their conditions rather than as a latency guarantee.
+
+### Legacy v1 stack
+
+The Go gateway, the Python intelligence engine and ChromaDB still exist in this
+repository and still run under Docker Compose. They are not on the Portal
+production path, and they have not been deleted.
+
+```text
+SDK / clients
+   │  HTTP
+   ▼
 Go API Gateway
-        │  gRPC (Protocol Buffers)
-        ▼
+   │  gRPC (Protocol Buffers)
+   ▼
 Python Intelligence Engine
-        ├── Query Classification
-        ├── Retrieval Planning
-        ├── Retrieval Execution (BM25 / Dense / Hybrid / Multi-hop)
-        ├── Reranking
-        ├── Response Assembly
-        └── Evaluation & Telemetry
+   ├── Query Classification
+   ├── Retrieval Planning
+   ├── Retrieval Execution (BM25 / Dense / Hybrid / Multi-hop)
+   ├── Reranking
+   ├── Response Assembly
+   └── Evaluation & Telemetry
    │                            │
    ▼                            ▼
 PostgreSQL                 ChromaDB
@@ -41,8 +89,8 @@ PostgreSQL                 ChromaDB
 ```text
 kairos/
 ├── apps/portal/            # Next.js workspace (auth, knowledge bases, chat, artifact studio)
-├── gateway/                # Go API gateway
-├── intelligence/           # Python intelligence engine
+├── gateway/                # Go API gateway (legacy v1)
+├── intelligence/           # Python intelligence engine (legacy v1)
 │   ├── api/                # FastAPI management API
 │   ├── config/             # Pydantic settings + environment profiles
 │   ├── ingestion/          # Document parsing, chunking, embedding
@@ -72,14 +120,17 @@ Next.js 15 application (React 19, TypeScript, Tailwind). Responsibilities:
 
 - Authentication (email + GitHub via better-auth) and user workspaces
 - Knowledge base management and document upload (`PDF`, `DOCX`, `TXT`, `Markdown`, `CSV`)
+- Text extraction, chunking and embedding generation
+- Vector storage and retrieval over PostgreSQL + pgvector (HNSW)
 - RAG chat with citations and retrieval traces
 - Artifact Studio: generation of grounded learning artifacts (text pieces, illustrations, audio podcast renditions) from knowledge base material
 - Podcast player with mid-play, grounded interruption Q&A (`src/lib/artifacts/interrupt-service.ts`, playback state machine in `src/lib/audio/playback.ts`)
+- Evaluation, benchmark and experiment persistence (Prisma reads and writes)
 - Marketing pages and changelog
 
-### Gateway — `gateway/`
+### Gateway — `gateway/` (legacy v1)
 
-Go HTTP API gateway. Responsibilities:
+Go HTTP API gateway. Not called by the Portal. Responsibilities:
 
 - API routing and request validation
 - Authentication and rate limiting
@@ -87,9 +138,9 @@ Go HTTP API gateway. Responsibilities:
 - gRPC communication with the intelligence engine
 - Prometheus metrics and health endpoints
 
-### Intelligence Engine — `intelligence/`
+### Intelligence Engine — `intelligence/` (legacy v1)
 
-Python service. Responsibilities:
+Python service. Not called by the Portal. Responsibilities:
 
 - Document ingestion, chunking, and embedding
 - Query classification and retrieval planning
@@ -102,14 +153,16 @@ Python service. Responsibilities:
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| FastAPI management API | `intelligence/api/` | Configuration/artifact/evaluation endpoints (`/api/v1/*`) |
-| ChromaDB | docker service | Vector store |
-| PostgreSQL | external / via DATABASE_URL | Users, knowledge bases, artifacts, podcast interruptions |
+| pgvector | pgvector extension on PostgreSQL | Production vector store, HNSW-indexed |
+| FastAPI management API | `intelligence/api/` (legacy v1) | Configuration/artifact/evaluation endpoints (`/api/v1/*`) |
+| ChromaDB | docker service (legacy v1) | Vector store for the v1 stack only |
+| PostgreSQL | external / via DATABASE_URL | Users, knowledge bases, chunks, embeddings, artifacts, podcast interruptions |
 | Prometheus + Grafana | docker services | Metrics collection and dashboards |
 
 ### proto/
 
-gRPC service definitions shared between the gateway and the intelligence engine.
+gRPC service definitions shared between the gateway and the intelligence engine
+(legacy v1).
 
 ### sdk/
 
@@ -122,6 +175,31 @@ Evaluation datasets, the leaderboard, and performance harnesses used by the rese
 ---
 
 ## Retrieval Pipeline
+
+Production (Portal):
+
+```text
+Source
+  ↓
+Portal ingestion
+  ↓
+text extraction
+  ↓
+chunking
+  ↓
+embedding generation   (gemini/text-embedding-004, 768 dims)
+  ↓
+PostgreSQL + pgvector   (vector(768) + HNSW)
+  ↓
+Research retrieval      (vector / BM25 / hybrid RRF)
+  ↓
+LLM generation
+  ↓
+citations
+```
+
+The legacy v1 stack runs the same shape through the gateway and the
+intelligence engine's planner:
 
 ```text
 Query
@@ -141,6 +219,10 @@ Response (with citations and trace)
 
 The planner bakes in confidence-aware fallback: if a primary strategy under-performs or the vector store is unreachable, the pipeline degrades gracefully (e.g. to BM25-only) rather than failing the request.
 
+Do not read a latency number as a property of the pipeline. Retrieval cost is
+set by the query plan Postgres chooses, which depends on filter selectivity and
+corpus shape; report benchmarks with their conditions.
+
 ---
 
 ## Evaluation Framework
@@ -156,15 +238,22 @@ The planner bakes in confidence-aware fallback: if a primary strategy under-perf
 ## Observability
 
 - Portal: structured JSON logging, request correlation (`x-request-id`), health endpoints, in-memory metrics, PostHog analytics — see `docs/OBSERVABILITY.md`
-- Gateway: Prometheus metrics (`/metrics`), structured logging, `/health`
-- Intelligence: Prometheus metrics, gRPC health checks (port 8001), structured logging
+- Gateway (legacy v1): Prometheus metrics (`/metrics`), structured logging, `/health`
+- Intelligence (legacy v1): Prometheus metrics, gRPC health checks (port 8001), structured logging
 - Grafana dashboards provisioned from `docker/grafana/`
 
 ---
 
 ## Deployment
 
-The supported deployment is Docker Compose. Services: `chromadb`, `intelligence`, `gateway`, `prometheus`, `grafana`. See `docker-compose.yml` and `docs/DEPLOYMENT.md` for details.
+- **Production:** the Portal is deployed as a Next.js application and needs
+  PostgreSQL with the pgvector extension. Apply migrations with
+  `npx prisma migrate deploy`; the pgvector extension and the HNSW index are
+  created by migration, not by Prisma's datamodel.
+- **Docker Compose (local / legacy v1 stack):** `postgres`, `chromadb`,
+  `intelligence`, `gateway`, `prometheus`, `grafana`. The Portal is not part of
+  the compose file — run it locally with `npm run dev` in `apps/portal`. See
+  `docker-compose.yml` and `docs/DEPLOYMENT.md`.
 
 ---
 

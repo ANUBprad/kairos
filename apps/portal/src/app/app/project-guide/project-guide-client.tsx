@@ -189,7 +189,7 @@ export function ProjectGuide() {
               <p>Extracted text is divided into chunks using configurable strategies (recursive, sentence, fixed-size, Markdown-aware, semantic). Chunk size and overlap are user-configurable.</p>
 
               <h3 className="text-lg font-medium text-foreground mt-6 mb-2">3. Embedding</h3>
-              <p>Each chunk is converted to a vector embedding using a configurable embedding model (OpenAI text-embedding-3-small/large, Gemini text-embedding-004). Embeddings are stored in PostgreSQL with pgvector for efficient similarity search.</p>
+              <p>Each chunk is converted to a vector embedding using a configurable embedding model. The database pins the width to 768 dimensions, so the indexable models are the Gemini ones (<code>text-embedding-004</code>, <code>embedding-001</code>); the OpenAI 1536/3072-dim models are rejected at ingestion before a provider call. Embeddings are stored in PostgreSQL with pgvector, indexed with HNSW, for similarity search.</p>
 
               <h3 className="text-lg font-medium text-foreground mt-6 mb-2">4. Retrieval</h3>
               <p>User queries are processed through one of five retrieval strategies: vector search, BM25 keyword search, hybrid search (RRF), query expansion, or reranking. Each strategy is configurable for top-K, similarity threshold, and other parameters.</p>
@@ -228,9 +228,9 @@ export function ProjectGuide() {
 
               <h3 className="text-lg font-medium text-foreground mt-6 mb-2">AI/ML</h3>
               <ul className="list-disc pl-5 space-y-1">
-                <li>OpenAI API for embeddings and LLM completions</li>
-                <li>Google Gemini API as alternative provider</li>
-                <li>LlamaIndex/Chromadb integration for advanced retrieval</li>
+                <li>Gemini API for embeddings (text-embedding-004, 768 dims)</li>
+                <li>OpenAI and Google Gemini APIs for LLM completions</li>
+                <li>pgvector HNSW index for approximate nearest-neighbour retrieval</li>
                 <li>Custom evaluation framework with 10+ metrics</li>
               </ul>
 
@@ -266,8 +266,8 @@ export function ProjectGuide() {
                   <h4 className="font-medium text-foreground mb-2">AI Services</h4>
                   <ul className="space-y-1 text-sm">
                     <li>OpenAI (GPT-4o, GPT-4o-mini)</li>
-                    <li>OpenAI Embeddings (text-embedding-3-small/large)</li>
-                    <li>Google Gemini (2.0 Flash, embedding-004)</li>
+                    <li>Google Gemini (2.0 Flash)</li>
+                    <li>Gemini Embeddings (text-embedding-004, 768 dims — the width the pgvector column stores)</li>
                     <li>Anthropic Claude (Sonnet)</li>
                   </ul>
                 </div>
@@ -297,8 +297,8 @@ export function ProjectGuide() {
                 <li><strong>Vector Search:</strong> Good semantic matching, struggles with exact term queries and proper nouns. Average Recall@K: 0.75-0.85.</li>
                 <li><strong>BM25 Keyword Search:</strong> Excellent exact matching, poor semantic understanding. Average Recall@K: 0.65-0.78.</li>
                 <li><strong>Hybrid Search (RRF):</strong> Best overall performance combining strengths of both. Average Recall@K: 0.80-0.92.</li>
-                <li><strong>Query Expansion:</strong> Improves recall by 5-10% but increases latency by 20-30%.</li>
-                <li><strong>Reranking:</strong> Improves Precision@K by 10-15% with marginal latency increase (50-100ms).</li>
+                <li><strong>Query Expansion:</strong> Widens the candidate pool, at the cost of extra searches.</li>
+                <li><strong>Reranking:</strong> Narrows the candidate set with a deeper relevance model.</li>
               </ul>
 
               <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Chunking Strategy Impact</h3>
@@ -309,13 +309,11 @@ export function ProjectGuide() {
                 <li>Optimal chunk size: 500-1000 tokens with 10-20% overlap.</li>
               </ul>
 
-              <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Latency Benchmarks</h3>
+              <h3 className="text-lg font-medium text-foreground mt-6 mb-2">Latency</h3>
               <ul className="list-disc pl-5 space-y-1">
-                <li>Vector search: 50-150ms (excluding embedding time)</li>
-                <li>BM25 search: 20-50ms</li>
-                <li>Hybrid search: 80-200ms</li>
-                <li>Query expansion: adds 100-300ms</li>
-                <li>Reranking: adds 50-200ms (with LLM-as-judge)</li>
+                <li>Retrieval uses pgvector HNSW indexing. Query plans depend on filter selectivity and corpus shape, so a selective single-knowledge-base filter can fall back to a sequential scan instead of the index.</li>
+                <li>No fixed retrieval latency is a product guarantee. Benchmark results are reported under specific test conditions — corpus size, filter selectivity, hardware and provider latency all move the number.</li>
+                <li>BM25, query expansion and reranking costs depend on candidate count and on whether the reranker is a local cross-encoder or an LLM call.</li>
               </ul>
             </Section>
           )}
@@ -402,11 +400,11 @@ export function ProjectGuide() {
                 />
                 <VivaQuestion
                   question="What is the role of pgvector in the architecture?"
-                  answer="pgvector is a PostgreSQL extension that enables efficient vector similarity search directly in the database. It stores embedding vectors alongside metadata, eliminating the need for a separate vector database. It supports IVFFlat and HNSW indexes for approximate nearest neighbor search, and uses cosine similarity by default for comparing embeddings."
+                  answer="pgvector is a PostgreSQL extension that enables vector similarity search directly in the database. It stores embedding vectors alongside metadata, eliminating the need for a separate vector database. It supports both IVFFlat and HNSW indexes for approximate nearest neighbor search; Kairos uses HNSW (m = 16, ef_construction = 64) over a cosine-distance operator, and uses cosine similarity for ranking."
                 />
                 <VivaQuestion
                   question="How does query expansion improve retrieval?"
-                  answer="Query expansion uses an LLM to generate alternative phrasings of the user's query. For example, 'Who founded Kairos?' might be expanded to include 'Kairos founder', 'Who created Kairos', 'Kairos origin'. Each variation is searched independently, and results are merged with deduplication. This improves recall by 5-10% by covering different terminologies."
+                  answer="Query expansion uses an LLM to generate alternative phrasings of the user's query. For example, 'Who founded Kairos?' might be expanded to include 'Kairos founder', 'Who created Kairos', 'Kairos origin'. Each variation is searched independently, and results are merged with deduplication, which widens the candidate pool at the cost of one extra search per variation."
                 />
                 <VivaQuestion
                   question="What are the limitations of the current evaluation approach?"

@@ -40,10 +40,10 @@ docker compose ps   # wait for services to become healthy
 
 | Service | Port | Description |
 |---------|------|-------------|
-| PostgreSQL | 5432 | App database (pgvector) — matches the default `DATABASE_URL` |
-| Gateway | 8080 | Go HTTP gateway |
-| Intelligence | 28080 / 8001 | Python RAG engine (gRPC / metrics) |
-| ChromaDB | 7777 | Vector store |
+| PostgreSQL | 5432 | App database and production vector store (pgvector) — matches the default `DATABASE_URL` |
+| Gateway | 8080 | Go HTTP gateway (legacy v1) |
+| Intelligence | 28080 / 8001 | Python RAG engine, gRPC / metrics (legacy v1) |
+| ChromaDB | 7777 | Vector store for the v1 stack only (legacy) |
 | Prometheus | 9090 | Metrics collection |
 | Grafana | 3000 | Metrics dashboards (conflicts with a locally-run Portal on 3000) |
 
@@ -55,6 +55,14 @@ npm install
 npx prisma migrate deploy
 npm run dev
 ```
+
+The Portal is self-contained: it calls neither the gateway nor the intelligence
+engine, and it stores its vectors in PostgreSQL via pgvector. `npx prisma
+migrate deploy` is what creates the pgvector extension, the pinned
+`vector(768)` column and the HNSW index — Prisma's datamodel cannot express
+them. Its retrieval embeddings must be 768-dimensional (Gemini
+`text-embedding-004` or `embedding-001`); ingestion rejects a wider model before
+calling a provider.
 
 PostgreSQL is provided by the compose stack at `localhost:5432/kairos` (user `postgres`/`postgres`), matching the default `DATABASE_URL`. To point the Portal at a different database, set `DATABASE_URL`/`DIRECT_URL` in `.env` and run `npx prisma migrate deploy` against it instead.
 
@@ -139,7 +147,17 @@ docker compose up -d --build   # rebuild after changes
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 
-> The RAG engine and gateway are Python/Go services — a Vercel deployment serves the Portal; run the engine services alongside (`docker compose up -d intelligence gateway`) with `DATABASE_URL`/`DIRECT_URL` pointing at Supabase.
+> A Vercel deployment serves the Portal only. The Portal calls neither the Go
+> gateway nor the Python intelligence engine, so `docker compose up -d
+> intelligence gateway` is **not** required for it. Those services, and
+> ChromaDB, are the legacy v1 stack and run only if you intend to use that
+> stack's clients.
+>
+> On Supabase, enable the `vector` extension before `npx prisma migrate deploy`
+> (`create extension if not exists vector;`), or let the
+> `20260913000000_add_embedding_vectors` migration create it if your project
+> allows it. The database must be able to hold `vector(768)`, so set
+> `GEMINI_EMBEDDING_MODEL` to `text-embedding-004` or `embedding-001`.
 
 ---
 

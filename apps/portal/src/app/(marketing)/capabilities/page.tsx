@@ -36,8 +36,8 @@ const sections = [
   {
     title: "Embeddings",
     items: [
-      { name: "OpenAI Embeddings", description: "High-quality hosted embedding models" },
-      { name: "Local sentence-transformers", description: "Self-hosted models with zero API dependency" },
+      { name: "Gemini text-embedding-004", description: "768-dim hosted embeddings — the width the pgvector column stores" },
+      { name: "OpenAI chat models", description: "gpt-4o / gpt-4o-mini for generation; their 1536/3072-dim embeddings are not indexable here" },
     ],
   },
   {
@@ -70,11 +70,11 @@ const sections = [
     title: "Architecture",
     items: [
       { name: "Next.js", description: "Frontend and API routes in TypeScript" },
-      { name: "Go Gateway", description: "High-performance request routing and middleware" },
-      { name: "Python Intelligence", description: "Embedding, retrieval, and evaluation services" },
-      { name: "gRPC", description: "Low-latency inter-service communication" },
       { name: "PostgreSQL", description: "Durable metadata, users, and experiment storage" },
-      { name: "ChromaDB", description: "Vector store for embeddings and similarity search" },
+      { name: "pgvector + HNSW", description: "Vector store for embeddings and similarity search" },
+      { name: "Prisma", description: "Typed data access over PostgreSQL" },
+      { name: "Go Gateway", description: "Legacy v1 request router — not in the Portal path" },
+      { name: "Python Intelligence", description: "Legacy v1 gRPC engine and ChromaDB store — not in the Portal path" },
     ],
   },
 ];
