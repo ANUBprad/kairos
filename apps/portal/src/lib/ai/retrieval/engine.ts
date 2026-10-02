@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { vectorStore } from "@/lib/vector";
 import { getEmbeddingProvider } from "@/lib/ai/providers";
-import { resolveEmbeddingModel } from "@/lib/retrieval/embedding-models";
+import { resolveIndexableEmbeddingModel } from "@/lib/retrieval/embedding-models";
 import type { RetrievedChunk, ProviderType } from "@/lib/ai/types";
 
 export interface RetrievalOptions {
@@ -25,7 +25,7 @@ export async function searchSimilar(
   query: string,
   options: RetrievalOptions,
 ): Promise<RetrievalResult> {
-  const { provider: providerType, model } = resolveEmbeddingModel(
+  const { provider: providerType, model } = resolveIndexableEmbeddingModel(
     options.providerType,
     options.embeddingModel,
   );

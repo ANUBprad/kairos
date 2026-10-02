@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import type { ProviderType } from "@/lib/ai/types";
 import { CHUNK_STRATEGIES, type ChunkStrategy } from "@/lib/chunking/types";
 import { RETRIEVAL_STRATEGIES, type RetrievalConfig, type RetrievalResultDisplay, type RetrievedChunkDisplay, type PerformanceMetrics } from "@/lib/retrieval/types";
-import { EMBEDDING_MODELS, EMBEDDING_PROVIDERS, getModelInfo } from "@/lib/retrieval/embedding-models";
+import { getModelInfo, indexableEmbeddingModels } from "@/lib/retrieval/embedding-models";
 import {
   getKbRetrievalConfig,
   updateKbRetrievalConfig,
@@ -41,15 +41,19 @@ interface RetrievalLabProps {
 
 type ViewMode = "single" | "compare";
 
+const INDEXABLE_MODELS = indexableEmbeddingModels();
+const INDEXABLE_PROVIDERS = Array.from(new Set(INDEXABLE_MODELS.map((m) => m.provider)));
+const PROVIDER_LABELS: Record<string, string> = { openai: "OpenAI", gemini: "Gemini" };
+
 const DEFAULT_CONFIG: RetrievalConfig = {
   chunkStrategy: "recursive",
   chunkSize: 1000,
   chunkOverlap: 200,
   topK: 10,
   similarityThreshold: 0.7,
-  embeddingModel: "text-embedding-3-small",
+  embeddingModel: "text-embedding-004",
   retrievalMode: "vector",
-  embeddingProvider: "openai",
+  embeddingProvider: "gemini",
   retrievalStrategy: "hybrid",
   enableQueryExpansion: false,
   enableMultiQuery: false,
@@ -290,13 +294,15 @@ export function RetrievalLab({ kbs }: RetrievalLabProps) {
             value={cfg.embeddingProvider}
             onChange={(e) => {
               const provider = e.target.value as ProviderType;
-              const defaultModel = provider === "gemini" ? "text-embedding-004" : "text-embedding-3-small";
-              update({ embeddingProvider: provider, embeddingModel: defaultModel });
+              const defaultModel = INDEXABLE_MODELS.find((m) => m.provider === provider)?.id;
+              update(defaultModel
+                ? { embeddingProvider: provider, embeddingModel: defaultModel }
+                : { embeddingProvider: provider });
             }}
             className="w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
           >
-            {EMBEDDING_PROVIDERS.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
+            {INDEXABLE_PROVIDERS.map((p) => (
+              <option key={p} value={p}>{PROVIDER_LABELS[p] ?? p}</option>
             ))}
           </select>
         </div>
@@ -307,7 +313,7 @@ export function RetrievalLab({ kbs }: RetrievalLabProps) {
             onChange={(e) => update({ embeddingModel: e.target.value })}
             className="w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary focus:border-brand focus:outline-none"
           >
-            {EMBEDDING_MODELS.filter((m) => m.provider === cfg.embeddingProvider).map((m) => (
+            {INDEXABLE_MODELS.filter((m) => m.provider === cfg.embeddingProvider).map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label} ({m.dimensions}d)
               </option>

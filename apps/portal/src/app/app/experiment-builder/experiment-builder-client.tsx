@@ -62,11 +62,10 @@ export function ExperimentBuilderClient() {
       icon: Layers,
       color: "text-success",
       options: [
-        { id: "large", label: "text-embedding-3-large", description: "3072 dimensions" },
-        { id: "small", label: "text-embedding-3-small", description: "1536 dimensions" },
-        { id: "local", label: "Local Embedder", description: "all-MiniLM-L6-v2" },
+        { id: "text-embedding-004", label: "text-embedding-004", description: "768 dimensions (Gemini)" },
+        { id: "embedding-001", label: "embedding-001", description: "768 dimensions (Gemini)" },
       ],
-      selected: "large",
+      selected: "text-embedding-004",
     },
     {
       id: "retriever",

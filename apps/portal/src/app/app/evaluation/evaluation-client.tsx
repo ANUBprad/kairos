@@ -466,9 +466,9 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
         chunkStrategy: "fixed",
         chunkSize: 1000,
         chunkOverlap: 200,
-        embeddingModel: "text-embedding-3-small",
+        embeddingModel: "text-embedding-004",
         retrievalMode: "vector" as const,
-        embeddingProvider: "openai",
+        embeddingProvider: "gemini",
       };
       await startBenchmark(benchmarkDatasetId, benchmarkKbId.trim(), config, benchmarkLabel.trim() || undefined);
       toast.success("Benchmark started! Check the Runs tab.");
@@ -1337,7 +1337,7 @@ function CampaignTab({ datasets }: { datasets: DatasetSummary[] }) {
           { name: "BM25", config: { retrievalStrategy: "keyword", retrievalMode: "keyword" } },
           { name: "Hybrid", config: { retrievalStrategy: "hybrid", retrievalMode: "hybrid", vectorWeight: 1.0, keywordWeight: 1.0 } },
         ],
-        ["default"],
+        ["text-embedding-004"],
         ["fixed"],
         [5, 10],
         campaignName || `Campaign ${new Date().toLocaleDateString()}`,

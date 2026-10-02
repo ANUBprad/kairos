@@ -1,7 +1,7 @@
 import { getEmbeddingProvider } from "@/lib/ai/providers";
 import { vectorStore } from "@/lib/vector";
 import { prisma } from "@/lib/prisma";
-import { resolveEmbeddingModel } from "@/lib/retrieval/embedding-models";
+import { resolveIndexableEmbeddingModel } from "@/lib/retrieval/embedding-models";
 import type { RetrievalStrategy, RetrievalContext, RetrievalResult, StrategyDocument } from "./types";
 
 export class VectorStrategy implements RetrievalStrategy {
@@ -9,7 +9,7 @@ export class VectorStrategy implements RetrievalStrategy {
   readonly description = "Standard vector similarity search using embeddings";
 
   async retrieve(ctx: RetrievalContext): Promise<RetrievalResult> {
-    const { provider: providerType, model } = resolveEmbeddingModel(
+    const { provider: providerType, model } = resolveIndexableEmbeddingModel(
       ctx.embeddingProvider,
       ctx.embeddingModel,
     );

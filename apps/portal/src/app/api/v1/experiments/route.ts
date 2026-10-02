@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
+import { assertIndexableEmbeddingModel, DEFAULT_EMBEDDING_MODEL } from "@/lib/retrieval/embedding-models";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_LIMIT = 200;
@@ -95,8 +96,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "knowledgeBaseId not found" }, { status: 404 });
     }
 
+    const requestedModel =
+      typeof body.embeddingModel === "string" && body.embeddingModel
+        ? body.embeddingModel
+        : DEFAULT_EMBEDDING_MODEL.gemini;
+    try {
+      assertIndexableEmbeddingModel(requestedModel);
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Invalid embeddingModel" },
+        { status: 400 },
+      );
+    }
+
     const config = {
-      embeddingModel: typeof body.embeddingModel === "string" ? body.embeddingModel : "text-embedding-3-small",
+      embeddingModel: requestedModel,
       retriever: typeof body.retriever === "string" ? body.retriever : "vector",
       reranker: typeof body.reranker === "string" ? body.reranker : "none",
       llm: typeof body.llm === "string" ? body.llm : "gpt-4o-mini",

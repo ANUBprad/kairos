@@ -1,4 +1,5 @@
 import type { RetrievalConfig } from "@/lib/retrieval/types";
+import { DEFAULT_EMBEDDING_MODEL, defaultEmbeddingProvider } from "@/lib/retrieval/embedding-models";
 import { runRetrieval } from "@/lib/retrieval/service";
 import { resolveRunDataset } from "./benchmark";
 import { calculateRetrievalMetrics } from "./metrics/retrieval";
@@ -93,9 +94,9 @@ export async function runBenchmarkCampaign(
       chunkOverlap: 200,
       topK: 10,
       similarityThreshold: 0.5,
-      embeddingModel: "text-embedding-3-small",
+      embeddingModel: DEFAULT_EMBEDDING_MODEL.gemini,
       retrievalMode: "hybrid",
-      embeddingProvider: "openai",
+      embeddingProvider: defaultEmbeddingProvider(),
       ...exp.retrievalConfig,
     };
 

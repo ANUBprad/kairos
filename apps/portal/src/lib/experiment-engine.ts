@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { runRetrieval, saveExperimentRun } from "@/lib/retrieval/service";
 import { getAIProvider } from "@/lib/ai/providers";
+import { defaultEmbeddingProvider, getModelInfo } from "@/lib/retrieval/embedding-models";
 import { buildChatPrompt, formatForProvider } from "@/lib/ai/prompts";
 import { logger } from "@/lib/logger";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
@@ -53,7 +54,9 @@ function configToRetrievalConfig(exp: ExperimentConfig, _kbId: string): Retrieva
     similarityThreshold: exp.similarityThreshold,
     embeddingModel: exp.embeddingModel,
     retrievalMode: exp.retrievalMode as RetrievalConfig["retrievalMode"],
-    embeddingProvider: "openai",
+    embeddingProvider:
+      (getModelInfo(exp.embeddingModel)?.provider as RetrievalConfig["embeddingProvider"]) ||
+      defaultEmbeddingProvider(),
     retrievalStrategy: exp.retriever as RetrievalConfig["retrievalStrategy"],
     enableReranking: exp.reranker !== "none",
     enableCompression: false,

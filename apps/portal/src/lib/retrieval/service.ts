@@ -4,7 +4,7 @@ import { vectorStore } from "@/lib/vector";
 import type { ProviderType } from "@/lib/ai/types";
 import type { RetrievalConfig, RetrievalResultDisplay, RetrievedChunkDisplay, PerformanceMetrics, RetrievalDebugInfo } from "./types";
 import { DEFAULT_RETRIEVAL_CONFIG } from "./types";
-import { defaultEmbeddingProvider, resolveEmbeddingModel } from "./embedding-models";
+import { assertIndexableEmbeddingModel, defaultEmbeddingProvider, resolveIndexableEmbeddingModel } from "./embedding-models";
 import {
   executeRetrievalWithTrace,
   strategyRegistry,
@@ -42,6 +42,12 @@ export async function saveRetrievalConfig(
 ): Promise<RetrievalConfig> {
   const existing = await getRetrievalConfig(kbId);
   const merged: RetrievalConfig = { ...existing, ...config };
+
+  // Reject an incompatible model at the config boundary so a bypassed UI cannot
+  // persist a width the pgvector column cannot store.
+  if (config.embeddingModel && config.embeddingModel !== "default") {
+    assertIndexableEmbeddingModel(config.embeddingModel);
+  }
 
   await prisma.knowledgeBase.update({
     where: { id: kbId },
@@ -130,7 +136,7 @@ export async function runRetrieval(
     return result;
   }
 
-  const { provider: providerType, model } = resolveEmbeddingModel(
+  const { provider: providerType, model } = resolveIndexableEmbeddingModel(
     config.embeddingProvider,
     config.embeddingModel,
   );

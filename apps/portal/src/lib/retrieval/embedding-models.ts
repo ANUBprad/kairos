@@ -129,3 +129,18 @@ export function resolveEmbeddingModel(
       : process.env.OPENAI_EMBEDDING_MODEL || DEFAULT_EMBEDDING_MODEL.openai);
   return { provider: resolvedProvider, model: resolvedModel };
 }
+
+/**
+ * Resolve the query embedding model and refuse one the pinned column cannot
+ * store. Retrieval and Research Chat must resolve through here, not the bare
+ * `resolveEmbeddingModel`, so an incompatible model fails as a controlled
+ * validation error before any provider call or pgvector query.
+ */
+export function resolveIndexableEmbeddingModel(
+  provider?: ProviderType,
+  model?: string,
+): { provider: ProviderType; model: string } {
+  const resolved = resolveEmbeddingModel(provider, model);
+  assertIndexableEmbeddingModel(resolved.model);
+  return resolved;
+}

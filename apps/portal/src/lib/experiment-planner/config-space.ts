@@ -1,4 +1,8 @@
 import type { ConfigurationDimension, ConfigurationSpace } from "./types";
+import { indexableEmbeddingModels } from "@/lib/retrieval/embedding-models";
+
+const INDEXABLE_EMBEDDING_MODELS = indexableEmbeddingModels();
+const INDEXABLE_EMBEDDING_IDS = new Set(INDEXABLE_EMBEDDING_MODELS.map((m) => m.id));
 
 const DEFAULT_DIMENSIONS: ConfigurationDimension[] = [
   {
@@ -32,8 +36,8 @@ const DEFAULT_DIMENSIONS: ConfigurationDimension[] = [
   {
     name: "embeddingModel",
     type: "categorical",
-    values: ["text-embedding-ada-002", "text-embedding-3-small", "text-embedding-3-large"],
-    defaultValue: "text-embedding-ada-002",
+    values: INDEXABLE_EMBEDDING_MODELS.map((m) => m.id),
+    defaultValue: INDEXABLE_EMBEDDING_MODELS[0]?.id ?? "text-embedding-004",
     description: "Embedding model for document vectors",
   },
   {
@@ -69,7 +73,12 @@ function getDimensionValues(
     const val = run.config[dimension.name];
     if (val !== undefined && val !== null) {
       if (dimension.type === "categorical") {
-        observed.add(String(val));
+        const value = String(val);
+        // Historical runs may carry an embedding model the pinned column cannot
+        // store; never let it re-enter the production search space.
+        if (dimension.name !== "embeddingModel" || INDEXABLE_EMBEDDING_IDS.has(value)) {
+          observed.add(value);
+        }
       } else if (dimension.type === "numeric" && typeof val === "number") {
         observed.add(val);
       } else if (dimension.type === "boolean" && typeof val === "boolean") {

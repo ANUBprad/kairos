@@ -2,6 +2,7 @@ import type {
   ExperimentManifest,
   ExperimentResults,
 } from "./types";
+import { DEFAULT_EMBEDDING_MODEL, PINNED_EMBEDDING_DIMENSION } from "@/lib/retrieval/embedding-models";
 
 interface ManifestInput {
   experimentName: string;
@@ -59,13 +60,13 @@ function extractPipelineStages(
       description: `Chunking strategy: ${config.chunkStrategy || config.chunkingStrategy || "fixed-size"}`,
     },
     embedding: {
-      name: String(config.embeddingModel || "text-embedding-ada-002"),
+      name: String(config.embeddingModel || DEFAULT_EMBEDDING_MODEL.gemini),
       version: "1.0.0",
       parameters: {
-        model: config.embeddingModel || "text-embedding-ada-002",
-        dimensions: config.embeddingDimensions || 1536,
+        model: config.embeddingModel || DEFAULT_EMBEDDING_MODEL.gemini,
+        dimensions: config.embeddingDimensions || PINNED_EMBEDDING_DIMENSION,
       },
-      description: `Embedding model: ${config.embeddingModel || "text-embedding-ada-002"}`,
+      description: `Embedding model: ${config.embeddingModel || DEFAULT_EMBEDDING_MODEL.gemini}`,
     },
     retrieval: {
       name: String(config.retrievalMode || config.retrievalStrategy || "vector"),
