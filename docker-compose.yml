@@ -5,6 +5,14 @@ services:
       POSTGRES_DB: kairos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    # The Portal test suite runs one file per core and each file's Prisma client
+    # sizes its own pool at (cores * 2 + 1). At the default 100 connections a
+    # full local run oversubscribes the database and short interactive
+    # transactions expire on Prisma's 5s timeout, which looks like a random
+    # product failure. Raise the ceiling instead of lengthening any timeout.
+    # Kept below the 1G container limit: Postgres allocates per-connection
+    # structures up front, so this plus shared_buffers has to fit.
+    command: postgres -c max_connections=300
     ports:
       - "5432:5432"
     volumes:
