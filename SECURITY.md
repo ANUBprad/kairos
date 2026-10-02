@@ -66,6 +66,36 @@ Kairos implements the following security measures:
 - Resource limits on all services
 - Health checks on all services
 
+### Portal (`apps/portal`)
+
+The Portal is the current product surface. The measures above describe the
+legacy Gateway/Intelligence stack, which the Portal does not use for
+retrieval. The Portal's actual controls:
+
+- Sessions via `better-auth` backed by PostgreSQL; email and password sign-in
+- Session cookies are `httpOnly`, `sameSite=lax`, prefixed `kairos`, and
+  `secure` whenever `NODE_ENV=production`
+- Sessions expire after 7 days; identity is derived server-side from the
+  session, never from a client-supplied user id
+- Demo mode is a hard `return false` when `NODE_ENV=production`, so the
+  shared demo session cannot be enabled in a production build
+- Authorization is organization membership, resolved by
+  `canAccessKnowledgeBase`: a user may reach a knowledge base only through an
+  organization they belong to. Missing membership and a missing knowledge base
+  both resolve to "not found", so a caller cannot probe for existence
+- Tenant isolation is verified end to end in
+  `src/__tests__/release-journey.integration.test.ts`, which asserts a foreign
+  organization receives `404` for artifacts, traces, and study progress
+
+Known deployment-scale limitations, stated rather than papered over:
+
+- Rate limiting (`src/lib/rate-limit.ts`) is in-process. It bounds a single
+  instance; running more than one Portal replica behind a load balancer needs
+  a shared limiter. This is a known P2.
+- Retrieval requires an embedding model whose width matches the pinned
+  `vector(768)` column. Ingestion refuses a non-indexable model before it can
+  persist a vector, so a configuration error cannot corrupt the index.
+
 ## Best Practices
 
 When deploying Kairos, please ensure:
