@@ -9,6 +9,7 @@ import { createTrace, finishTrace } from "@/lib/observability/trace-explorer";
 import { AppError, logError, sanitizeError } from "@/lib/errors";
 import { getStorageProvider } from "@/lib/storage";
 import { generatePodcastAudio } from "@/lib/audio/pipeline";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import {
   normalizeArtifactSourceIds,
   assertNonEmptySourceScope,
@@ -67,6 +68,19 @@ export async function generateLearningArtifactForUser(
 
   const provider = getAIProvider(request.providerType);
   const definition = resolveArtifactDefinition(artifactType);
+
+  // One generation = one full LLM call (plus a TTS call per podcast turn), so
+  // this is the per-user ceiling on artifact spend. It sits here rather than in
+  // the seven server actions because every action and the regenerate path enter
+  // through this function; a future job/queue path is bounded by the same line.
+  const rl = rateLimit(`artifact:${userId}`, RATE_LIMITS.research);
+  if (!rl.allowed) {
+    throw new AppError(
+      "ARTIFACT_RATE_LIMITED",
+      "Too many artifact generations, please retry shortly",
+      429,
+    );
+  }
 
   if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId))) {
     throw new AppError("NOT_FOUND", "Knowledge base not found", 404);

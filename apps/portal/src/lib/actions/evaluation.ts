@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { logError } from "@/lib/errors";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { assertDatasetAccess, assertRunAccess } from "@/lib/evaluation/access";
 import {
   createBenchmarkDataset,
@@ -31,6 +32,16 @@ import type { RetrievalConfig } from "@/lib/retrieval/types";
 async function assertKbAccess(kbId: string, userId: string) {
   if (!(await canAccessKnowledgeBase(userId, kbId))) {
     throw new Error("Knowledge base not found");
+  }
+}
+
+// A benchmark run costs one LLM call per dataset question, and a campaign costs
+// one per question per configuration combination. The key is shared with
+// /api/experiments/stream so a user's total evaluation spend has one ceiling
+// rather than a fresh budget per entrypoint.
+function assertEvaluationRateLimit(userId: string): void {
+  if (!rateLimit(`evaluation:${userId}`, RATE_LIMITS.evaluation).allowed) {
+    throw new Error("Rate limit exceeded");
   }
 }
 
@@ -183,6 +194,7 @@ export async function startBenchmark(
   if (!session) throw new Error("Not authenticated");
 
   try {
+    assertEvaluationRateLimit(session.user.id);
     await assertKbAccess(knowledgeBaseId, session.user.id);
     await assertDatasetAccess(datasetId, session.user.id);
 
@@ -292,6 +304,7 @@ export async function compareRetrievalStrategies(
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
+  assertEvaluationRateLimit(session.user.id);
   await assertKbAccess(knowledgeBaseId, session.user.id);
   await assertDatasetAccess(datasetId, session.user.id);
 
@@ -340,6 +353,7 @@ export async function runCampaign(
   if (!session) throw new Error("Not authenticated");
 
   try {
+    assertEvaluationRateLimit(session.user.id);
     await assertKbAccess(knowledgeBaseId, session.user.id);
     await assertDatasetAccess(datasetId, session.user.id);
 
