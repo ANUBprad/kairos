@@ -96,5 +96,12 @@ jobs:
       - name: Apply migrations
         run: npx prisma migrate deploy
 
+      # The integration suites t.skip() when their preconditions are missing,
+      # which keeps a developer without Postgres productive but makes a green
+      # CI run meaningless if the test database silently went away. This guard
+      # turns that false-green into a red build.
+      - name: Verify the integration test database is usable
+        run: node --import tsx scripts/verify-test-database.ts
+
       - name: Run the Portal test suite
         run: node --import tsx --test src/__tests__/*.test.ts
