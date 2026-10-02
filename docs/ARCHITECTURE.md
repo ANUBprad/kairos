@@ -128,6 +128,51 @@ Next.js 15 application (React 19, TypeScript, Tailwind). Responsibilities:
 - Evaluation, benchmark and experiment persistence (Prisma reads and writes)
 - Marketing pages and changelog
 
+### Podcast audio path
+
+A podcast artifact is a text artifact plus a synthesized rendition. The two are
+separate, so a synthesis failure never invalidates the generated script.
+
+```text
+grounded artifact + source material
+        │
+        ▼
+podcast script          src/lib/artifacts/podcast.ts
+  schema-validated      exactly two speakers, alternating turns,
+                        2–30 turns, each turn ≤ 1200 characters
+        │
+        ▼
+per-turn synthesis      src/lib/audio/pipeline.ts
+  one TTS request per   each request is bounded by the per-turn cap, so a
+  turn                  long episode cannot exceed a provider request limit
+        │
+        ▼
+segment assembly        segments concatenated in turn order
+        │
+        ▼
+media storage          src/lib/storage/index.ts
+  Cloudinary-only       throws when unconfigured rather than silently
+                        falling back to local disk
+        │
+        ▼
+media route             app/api/artifacts/[artifactId]/audio/route.ts
+  session required,    authorization re-checked per request via
+  org membership       canAccessKnowledgeBase, never trusted from the URL
+```
+
+Synthesis is per turn rather than per episode so a single long episode cannot
+produce one over-long provider request, and the pipeline records a `FAILED`
+artifact atomically instead of persisting a partial rendition.
+
+Two caveats for anyone evaluating this path:
+
+- Podcast synthesis requires live TTS provider credentials and Cloudinary
+  credentials. Without them the storage provider throws on first use. Nothing
+  fakes media, so this path is covered in tests only up to the provider
+  boundary; end-to-end podcast audio is manual QA.
+- The `vector(768)` contract applies to ingestion and retrieval only. Podcast
+  media lives in Cloudinary, not PostgreSQL.
+
 ### Gateway — `gateway/` (legacy v1)
 
 Go HTTP API gateway. Not called by the Portal. Responsibilities:

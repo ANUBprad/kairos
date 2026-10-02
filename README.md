@@ -230,7 +230,7 @@ go test ./...
 
 Measured on this branch with the commands above — not badges, plain numbers:
 
-- **Portal:** 950 tests across 192 suites, all passing (unit, integration, and structural coverage of the portal, including the artifact studio and podcast interaction flows).
+- **Portal:** 1010 tests across 206 suites, all passing (unit, integration, and structural coverage of the portal, including the artifact studio and podcast interaction flows). This figure requires the integration test database to be configured; without it the database-backed suites skip themselves rather than fail, so a local run that skips tests is not a 1010 run.
 - **Python:** ~2,275 tests in `tests/`. 2,237 pass in a default local environment; 38 depend on configured credentials/API keys and are validated in CI (running with a clean environment).
 - **Go gateway:** covered by `go test ./...`.
 
