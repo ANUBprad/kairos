@@ -167,9 +167,8 @@ python -m pytest tests/ -v
 # Python — targeted subset (fast)
 python -m pytest tests/test_phase_b_integration.py tests/test_phase_b_stress.py -v
 
-# TypeScript tests
-cd apps/portal
-npx tsx --test "src/__tests__/*.test.ts"
+# TypeScript tests (from apps/portal)
+node --import tsx --test src/__tests__/*.test.ts
 
 # TypeScript type checking
 npx tsc --noEmit
@@ -178,6 +177,47 @@ npx tsc --noEmit
 cd gateway
 go test ./...
 ```
+
+The glob must be unquoted so the shell expands it, and `node --import tsx`
+is required rather than `npx tsx`: the suite resolves the `@/` path alias to
+`apps/portal/src`, which only the loader hook does.
+
+#### The Portal suite needs a real PostgreSQL with pgvector
+
+Most Portal suites run against a real database and skip themselves when
+`KAIROS_TEST_DATABASE_URL` is unset, so a silent skip looks like a green run.
+Point **both** `DATABASE_URL` and `KAIROS_TEST_DATABASE_URL` at the same test
+database: server actions like `ingestText` resolve their session user through
+`DATABASE_URL`, so a split configuration fails on a foreign key against the
+demo user rather than on a missing fixture.
+
+```bash
+docker run -d --name kairos-portal-test -p 5432:5432 \
+  -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=kairos_test pgvector/pgvector:pg16
+
+cd apps/portal
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kairos_test
+export KAIROS_TEST_DATABASE_URL=$DATABASE_URL
+export KAIROS_DEMO_MODE=true
+export BETTER_AUTH_SECRET=local-dev-secret
+export AI_PROVIDER=gemini
+export GEMINI_API_KEY=test-dummy-key-do-not-call
+export OPENAI_API_KEY=test-dummy-key-do-not-call
+
+npx prisma migrate deploy
+node --import tsx --test src/__tests__/*.test.ts
+```
+
+No paid provider is contacted: the suites replace `globalThis.fetch` with a
+stub that answers embedding and chat endpoints deterministically. The dummy
+keys only need to exist so providers can be constructed. Retrieval is *not*
+stubbed — vectors are written to the pgvector column and read back through the
+same `<=>` search production uses, so a wrong embedding dimension or a broken
+index fails the suite.
+
+`.github/workflows/portal.yml` runs exactly this against a
+`pgvector/pgvector:pg16` service with migrations applied.
 
 ### Test Organization
 
@@ -188,6 +228,36 @@ tests/
 ├── e2e/                    # End-to-end tests
 └── conftest.py             # Shared fixtures
 ```
+
+### Release-Confidence Coverage
+
+`src/__tests__/release-journey.integration.test.ts` is the canonical Portal
+journey. The other suites prove one leg each; this proves the chain, for one
+tenant in one pass:
+
+| Step | Proves |
+|------|--------|
+| Ingest a text source | chunking, embedding rows, and a real 768-wide vector in the pgvector column |
+| Retrieve it | the ingested chunk comes back through the production cosine search |
+| Ask a question | a grounded answer, persisted citations, and an `OK` trace with retrieval + generation spans |
+| Generate artifacts | summary and quiz are schema-valid, persisted, org-scoped, and traced |
+| Study | the quiz is taken, graded server-side, and reported in study progress |
+| Evaluate | a benchmark run over the same KB persists results and metrics |
+| Observe | every step is readable back from the org's trace stream |
+| Isolate | a foreign tenant reaches none of it, and gets `404`, not `403` |
+
+The same file covers the request- and generation-side guardrails: an oversized
+query is rejected at the chat route before any read or provider call, an
+oversized evaluation dataset is refused with `413` before a run row exists, and
+a spent per-user generation budget returns `429` without reaching the provider.
+
+What this does **not** cover: podcast synthesis. The storage provider throws
+unless Cloudinary credentials are configured, so TTS plus upload cannot run in
+CI; episode media and its tenancy are covered separately in
+`podcast-audio-media.integration.test.ts`. There is also no browser-level test —
+the suite drives the route handlers and library functions directly, so it
+verifies server behavior and persistence, not rendered UI or client-side
+interactions.
 
 ### Writing Tests
 
