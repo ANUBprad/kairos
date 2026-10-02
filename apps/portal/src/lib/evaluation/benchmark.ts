@@ -10,6 +10,7 @@ import { calculateGenerationMetrics } from "./metrics/generation";
 import { calculateAverageMetrics } from "./metrics/retrieval";
 import { calculateAverageGenerationMetrics } from "./metrics/generation";
 import { assertDatasetAccess } from "./access";
+import { assertRunQuestionCount } from "./limits";
 import type { EvaluationReport, ComparisonResult } from "./types";
 
 export interface BenchmarkProgress {
@@ -452,6 +453,7 @@ export async function runBenchmark(
 ): Promise<string> {
   const target = await resolveRunDataset(datasetId, { createIfMissing: true });
   if (target.questions.length === 0) throw new Error("Dataset has no questions");
+  assertRunQuestionCount(target.questions.length);
 
   const run = await prisma.benchmarkRun.create({
     data: {
@@ -875,6 +877,7 @@ export async function runStrategyBenchmark(
 ): Promise<StrategyBenchmarkResult[]> {
   const target = await resolveRunDataset(datasetId, { createIfMissing: false });
   if (target.questions.length === 0) throw new Error("Dataset has no questions");
+  assertRunQuestionCount(target.questions.length);
 
   const results: StrategyBenchmarkResult[] = [];
 

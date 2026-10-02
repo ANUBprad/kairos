@@ -3,6 +3,7 @@ import { runRetrieval, saveExperimentRun } from "@/lib/retrieval/service";
 import { getAIProvider } from "@/lib/ai/providers";
 import { defaultEmbeddingProvider, getModelInfo } from "@/lib/retrieval/embedding-models";
 import { buildChatPrompt, formatForProvider } from "@/lib/ai/prompts";
+import { assertRunQuestionCount } from "@/lib/evaluation/limits";
 import { logger } from "@/lib/logger";
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 
@@ -233,6 +234,7 @@ export async function runExperimentDataset(
   if (questions.length === 0) {
     throw new Error("Dataset has no questions");
   }
+  assertRunQuestionCount(questions.length);
 
   onProgress?.({
     type: "started",

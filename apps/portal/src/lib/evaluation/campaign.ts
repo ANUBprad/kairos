@@ -2,6 +2,7 @@ import type { RetrievalConfig } from "@/lib/retrieval/types";
 import { DEFAULT_EMBEDDING_MODEL, defaultEmbeddingProvider } from "@/lib/retrieval/embedding-models";
 import { runRetrieval } from "@/lib/retrieval/service";
 import { resolveRunDataset } from "./benchmark";
+import { assertCampaignExperimentCount, assertRunQuestionCount } from "./limits";
 import { calculateRetrievalMetrics } from "./metrics/retrieval";
 import { calculateDescriptiveStats, type DescriptiveStats } from "./statistics";
 
@@ -57,6 +58,7 @@ export async function runBenchmarkCampaign(
   if (target.questions.length === 0) {
     throw new Error("Dataset not found or empty");
   }
+  assertRunQuestionCount(target.questions.length);
 
   const experiments: Array<{
     strategyLabel: string;
@@ -82,6 +84,7 @@ export async function runBenchmarkCampaign(
   }
 
   const totalExperiments = experiments.length;
+  assertCampaignExperimentCount(totalExperiments);
   onProgress?.({ phase: "running", current: 0, total: totalExperiments, message: `Running ${totalExperiments} experiments...` });
 
   const strategyResults: CampaignResult["strategyResults"] = [];
