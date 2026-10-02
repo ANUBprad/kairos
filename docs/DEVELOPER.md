@@ -259,6 +259,52 @@ the suite drives the route handlers and library functions directly, so it
 verifies server behavior and persistence, not rendered UI or client-side
 interactions.
 
+### Manual Browser QA
+
+The suite drives route handlers and library functions directly, so it proves
+server behavior and persistence but never renders a page. These steps are the
+release gate for anything visual or client-side, and they have **not** been run
+automatically. Treat an unrun checklist as `NOT VERIFIED`, not as passing.
+
+Start the stack:
+
+```bash
+docker compose up -d postgres
+cd apps/portal
+npx prisma migrate deploy
+KAIROS_DEMO_MODE=true npm run dev
+```
+
+`KAIROS_DEMO_MODE=true` signs every request in as a demo admin
+(`demo@kairos.dev`, created on first use) and is hard-disabled when
+`NODE_ENV=production`. Use `/signup` instead to exercise the real auth flow.
+
+Walk the same journey the integration suite covers, in a browser:
+
+| # | Route | Do | Expect |
+|---|---|---|---|
+| 1 | `/app/knowledge-bases` | create a knowledge base | list updates, no console errors |
+| 2 | KB page | upload a `PDF` / `TXT` / `MD` / `CSV` / `DOCX` | status reaches `INDEXED`, chunk count > 0 |
+| 3 | `/app/knowledge-bases/[kbId]/chat` | ask something only the upload answers | answer is grounded, carries citations, no invented source |
+| 4 | `/app/knowledge-bases/[kbId]/chat` | ask a 10,000+ character question | rejected in the UI, provider never called |
+| 5 | `/app/observability/traces` | open the trace from step 3 | spans match what the chat actually did |
+| 6 | `/app/knowledge-bases/[kbId]/studio` | generate a text-piece artifact | artifact persists, cites real sources |
+| 7 | artifact page | generate a podcast | see the credentials note below |
+| 8 | `/app/knowledge-bases/[kbId]/study` | start, answer, submit the quiz | graded, progress persists across reload |
+| 9 | second user | open the same KB URL | `404`, never the other tenant's data |
+
+Steps 1–6, 8 and 9 need no paid provider if you only check navigation,
+persistence, and error handling. Step 3 and 6 additionally need a **real**
+provider key to produce a grounded answer or a generated artifact; with dummy
+credentials the server will surface a provider error, which is correct
+behavior, not a product defect.
+
+Step 7 cannot pass without live TTS credentials **and**
+`CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET`. The
+storage provider throws rather than falling back to local disk, so there is no
+degraded mode to observe. Record this step as `PARTIALLY VERIFIED` unless it was
+actually run with real credentials.
+
 ### Writing Tests
 
 ```python
