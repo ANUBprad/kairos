@@ -22,9 +22,10 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { ingestText } from "@/lib/actions/document";
-import { ensureDemoUser } from "@/lib/server/demo-user";
+import { ensureDemoUser, isDemoModeEnabled } from "@/lib/server/demo-user";
 import { searchSimilar } from "@/lib/ai/retrieval";
 import { streamChatResponse } from "@/lib/ai/chat";
 import { createConversation, getConversation } from "@/lib/ai/memory";
@@ -43,6 +44,7 @@ import { getTraceById, searchTraces } from "@/lib/observability/trace-explorer";
 import { RATE_LIMITS, rateLimit } from "@/lib/rate-limit";
 import { DEFAULT_RETRIEVAL_CONFIG } from "@/lib/retrieval/types";
 import { AppError } from "@/lib/errors";
+import { POST as chatPOST } from "@/app/api/ai/chat/route";
 
 // The pgvector column is pinned to 768, so ingestion and retrieval must both
 // resolve a 768-dim model. Chat and artifacts run on OpenAI so the stub also
@@ -645,5 +647,59 @@ describe("generation guardrails on the artifact path", () => {
 
     const rows = await client.learningArtifact.count({ where: { knowledgeBaseId: kbId } });
     assert.equal(rows, 0, "a refused generation must not persist an artifact row");
+  });
+});
+
+// The provider-side half of the same budget: an oversized AI request is
+// rejected at the route boundary before any database read, retrieval, or
+// provider call, so a client cannot turn one request into an unbounded spend.
+describe("chat request guardrails at the route boundary", () => {
+  before(() => {
+    process.env.AI_PROVIDER = "openai";
+    process.env.OPENAI_API_KEY = "test-dummy-key-do-not-call";
+    process.env.GEMINI_API_KEY = "test-dummy-key-do-not-call";
+  });
+
+  function chatRequest(query: string): NextRequest {
+    return new NextRequest("http://localhost/api/ai/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        conversationId: randomUUID(),
+        kbId: randomUUID(),
+        query,
+        provider: "openai",
+      }),
+    });
+  }
+
+  it("rejects an oversized query with 400 and never reaches the provider", async (t) => {
+    if (!isDemoModeEnabled()) { t.skip("KAIROS_DEMO_MODE is not enabled"); return; }
+
+    const reached: string[] = [];
+    const restore = installFetch(() => {
+      reached.push("provider");
+      throw new Error("the provider must never be reached for an oversized query");
+    });
+    try {
+      const res = await chatPOST(chatRequest("x".repeat(10_001)));
+      assert.equal(res.status, 400);
+      assert.deepEqual(await res.json(), { error: "Query is too long" });
+
+      assert.deepEqual(reached, [], "no embedding or generation call may happen");
+    } finally {
+      restore();
+    }
+  });
+
+  it("accepts a query at the boundary, so the guard is a bound and not a blanket rejection", async (t) => {
+    if (!isDemoModeEnabled()) { t.skip("KAIROS_DEMO_MODE is not enabled"); return; }
+
+    // A valid-length query for a KB that does not exist must pass the length
+    // guard and fail later, on tenancy. A 404 (not 400) proves the request was
+    // accepted by the size guard and carried on to the access check.
+    const res = await chatPOST(chatRequest("x".repeat(10_000)));
+    assert.notEqual(res.status, 400);
+    assert.equal(res.status, 404);
   });
 });
