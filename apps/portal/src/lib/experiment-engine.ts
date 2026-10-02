@@ -31,8 +31,12 @@ export interface ExperimentMetrics {
   contextRecall: number;
   retrievalSuccess: boolean;
   latencyMs: number;
-  tokensUsed: number;
-  costUsd: number;
+  /**
+   * Total tokens exactly as the provider reported them, or null when the
+   * provider reported no usage. Never estimated: a derived number presented as
+   * usage is indistinguishable from a real one once persisted.
+   */
+  tokensUsed: number | null;
 }
 
 export interface ExperimentProgress {
@@ -105,23 +109,6 @@ function computeNDCG(retrievedIds: string[], relevantIds: string[], k: number): 
   return idcg > 0 ? dcg / idcg : 0;
 }
 
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
-
-function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
-  const prices: Record<string, { input: number; output: number }> = {
-    "gpt-4o": { input: 2.5 / 1e6, output: 10 / 1e6 },
-    "gpt-4o-mini": { input: 0.15 / 1e6, output: 0.6 / 1e6 },
-    "gpt-4.1-nano": { input: 0.1 / 1e6, output: 0.4 / 1e6 },
-    "gemini-2.0-flash": { input: 0.1 / 1e6, output: 0.4 / 1e6 },
-    "gemini-2.5-flash": { input: 0.15 / 1e6, output: 0.6 / 1e6 },
-    "gemini-2.5-pro": { input: 1.25 / 1e6, output: 10 / 1e6 },
-  };
-  const p = prices[model] ?? prices["gpt-4o-mini"];
-  return inputTokens * p.input + outputTokens * p.output;
-}
-
 export async function runSingleQuestion(
   kbId: string,
   query: string,
@@ -152,7 +139,7 @@ export async function runSingleQuestion(
   });
 
   let answer = "";
-  let tokensUsed = 0;
+  let tokensUsed: number | null = null;
 
   if (expectedAnswer) {
     const provider = getAIProvider("openai");
@@ -170,7 +157,7 @@ export async function runSingleQuestion(
       messages: formatted,
     });
     answer = response.content;
-    tokensUsed = response.usage?.totalTokens ?? estimateTokens(answer);
+    tokensUsed = response.usage?.totalTokens ?? null;
   }
 
   onProgress?.({
@@ -196,7 +183,6 @@ export async function runSingleQuestion(
     retrievalSuccess: retrievalResult.chunks.length > 0,
     latencyMs: performance.now() - startTime,
     tokensUsed,
-    costUsd: estimateCost(config.llm, tokensUsed, estimateTokens(answer || "")),
   };
 
   const runId = await saveExperimentRun(
@@ -218,6 +204,18 @@ export async function runSingleQuestion(
   });
 
   return { runId, metrics, chunks: retrievalResult.chunks };
+}
+
+/**
+ * Totals provider-reported usage across a run. A partial sum would understate a
+ * run whose usage is partly unknown, so any unknown makes the total unknown.
+ */
+export function aggregateTokensUsed(metrics: Pick<ExperimentMetrics, "tokensUsed">[]): number | null {
+  // An empty aggregate means no question completed, so nothing was measured;
+  // reporting 0 would claim the run cost nothing.
+  if (metrics.length === 0) return null;
+  if (metrics.some((m) => m.tokensUsed === null)) return null;
+  return metrics.reduce((sum, m) => sum + (m.tokensUsed as number), 0);
 }
 
 export async function runExperimentDataset(
@@ -300,8 +298,7 @@ export async function runExperimentDataset(
     contextRecall: allMetrics.reduce((s, m) => s + m.contextRecall, 0) / allMetrics.length,
     retrievalSuccess: allMetrics.some((m) => m.retrievalSuccess),
     latencyMs: allMetrics.reduce((s, m) => s + m.latencyMs, 0) / allMetrics.length,
-    tokensUsed: allMetrics.reduce((s, m) => s + m.tokensUsed, 0),
-    costUsd: allMetrics.reduce((s, m) => s + m.costUsd, 0),
+    tokensUsed: aggregateTokensUsed(allMetrics),
   };
 
   onProgress?.({
