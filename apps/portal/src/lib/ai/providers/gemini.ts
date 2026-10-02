@@ -1,4 +1,5 @@
 import type { AIProvider } from "./types";
+import { resolveMaxOutputTokens } from "./types";
 import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
@@ -54,7 +55,7 @@ export class GeminiProvider implements AIProvider {
       contents,
       generationConfig: {
         temperature: request.temperature ?? 0.7,
-        maxOutputTokens: request.maxTokens,
+        maxOutputTokens: resolveMaxOutputTokens(request.maxTokens),
       },
     };
 
@@ -109,7 +110,7 @@ export class GeminiProvider implements AIProvider {
       contents,
       generationConfig: {
         temperature: request.temperature ?? 0.7,
-        maxOutputTokens: request.maxTokens,
+        maxOutputTokens: resolveMaxOutputTokens(request.maxTokens),
       },
     };
 

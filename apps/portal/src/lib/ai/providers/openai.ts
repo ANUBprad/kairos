@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { AIProvider } from "./types";
+import { resolveMaxOutputTokens, type AIProvider } from "./types";
 import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
@@ -50,7 +50,7 @@ export class OpenAIProvider implements AIProvider {
           content: m.content,
         })),
         temperature: request.temperature ?? 0.7,
-        max_tokens: request.maxTokens,
+        max_tokens: resolveMaxOutputTokens(request.maxTokens),
       },
       { signal: request.signal },
     );
@@ -80,7 +80,7 @@ export class OpenAIProvider implements AIProvider {
           content: m.content,
         })),
         temperature: request.temperature ?? 0.7,
-        max_tokens: request.maxTokens,
+        max_tokens: resolveMaxOutputTokens(request.maxTokens),
         stream: true,
       },
       { signal: request.signal },
