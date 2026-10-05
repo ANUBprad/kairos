@@ -31,11 +31,11 @@ async function checkDatabase(): Promise<ServiceCheck> {
       status: latencyMs > 1000 ? "degraded" : "up",
       latencyMs,
     };
-  } catch (err) {
+  } catch {
     return {
       status: "down",
       latencyMs: Math.round(performance.now() - start),
-      message: err instanceof Error ? err.message : "Database connection failed",
+      message: "Database connection failed",
     };
   }
 }
