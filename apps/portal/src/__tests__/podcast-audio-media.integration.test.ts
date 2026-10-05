@@ -256,7 +256,10 @@ describe("podcast audio media routes against a real database with a mocked upstr
     assert.equal((await res.text()).length, 100);
 
     assert.equal(calls.length, 1);
-    assert.ok(calls[0].url.startsWith("https://res.cloudinary.com/kairos-test/raw/authenticated/artifacts/podcast-media/episode.wav?"));
+    const signed = new URL(calls[0].url);
+    assert.equal(signed.pathname, "/v1_1/kairos-test/raw/download");
+    assert.equal(signed.searchParams.get("public_id"), "artifacts/podcast-media/episode.wav");
+    assert.equal(signed.searchParams.get("type"), "upload");
     assert.equal((calls[0].init?.headers as Record<string, string> | undefined)?.Range, "bytes=0-99");
   });
 
@@ -323,7 +326,7 @@ describe("podcast audio media routes against a real database with a mocked upstr
     assert.equal(res.headers.get("content-length"), "1200");
     assert.equal(res.headers.get("content-type"), "audio/wav");
     assert.equal((await res.text()).length, 1200);
-    assert.ok(calls[0].url.includes("artifacts/podcast-media/interruption.wav"));
+    assert.equal(new URL(calls[0].url).searchParams.get("public_id"), "artifacts/podcast-media/interruption.wav");
     assert.equal((calls[0].init?.headers as Record<string, string> | undefined)?.Range, "bytes=0-1199");
   });
 

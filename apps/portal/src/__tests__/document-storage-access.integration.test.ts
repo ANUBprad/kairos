@@ -238,7 +238,10 @@ describe("document storage media access against a real database with a mocked up
     assert.equal((await res.text()).length, DOC_BYTES.length);
 
     assert.equal(calls.length, 1, "exactly one upstream fetch");
-    assert.match(calls[0].url, /^https:\/\/res\.cloudinary\.com\/kairos-test\/raw\/authenticated\/kbs\/kb-a\/main\.pdf\?/);
+    const signed = new URL(calls[0].url);
+    assert.equal(signed.pathname, "/v1_1/kairos-test/raw/download");
+    assert.equal(signed.searchParams.get("public_id"), "kbs/kb-a/main.pdf");
+    assert.equal(signed.searchParams.get("type"), "upload");
     assert.doesNotMatch(calls[0].url, /raw\/upload\/kbs\/kb-a\/main\.pdf/, "raw public URL must never be used");
   });
 

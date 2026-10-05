@@ -3,6 +3,14 @@ import type { StorageFile, StorageProvider } from "./types";
 
 const UPLOAD_TIMEOUT_MS = 120_000;
 const SIGNED_URL_TTL_SECONDS = 86_400;
+const AUTHENTICATED_KEY_PREFIX = "authenticated:";
+
+// Older keys identify upload-type assets. Keep their delivery type intact.
+function cloudinaryObject(key: string) {
+  return key.startsWith(AUTHENTICATED_KEY_PREFIX)
+    ? { publicId: key.slice(AUTHENTICATED_KEY_PREFIX.length), type: "authenticated" as const }
+    : { publicId: key, type: "upload" as const };
+}
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -30,7 +38,7 @@ export class CloudinaryStorageProvider implements StorageProvider {
         {
           public_id: publicId,
           resource_type: "raw",
-          access_mode: accessMode,
+          type: accessMode === "authenticated" ? "authenticated" : "upload",
         },
         (err, result) => {
           clearTimeout(timer);
@@ -39,7 +47,7 @@ export class CloudinaryStorageProvider implements StorageProvider {
             return;
           }
           resolve({
-            key: result.public_id,
+            key: accessMode === "authenticated" ? `${AUTHENTICATED_KEY_PREFIX}${result.public_id}` : result.public_id,
             url: result.secure_url,
             provider: "cloudinary",
           });
@@ -56,15 +64,18 @@ export class CloudinaryStorageProvider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
-    await cloudinary.uploader.destroy(key, { resource_type: "raw" });
+    const { publicId, type } = cloudinaryObject(key);
+    await cloudinary.uploader.destroy(publicId, { resource_type: "raw", type });
   }
 
   getUrl(key: string): string {
+    const { publicId, type } = cloudinaryObject(key);
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "demo";
-    return `https://res.cloudinary.com/${cloudName}/raw/upload/${key}`;
+    return cloudinary.url(publicId, { cloud_name: cloudName, resource_type: "raw", type, secure: true });
   }
 
   async getSignedUrl(key: string): Promise<string> {
+    const { publicId, type } = cloudinaryObject(key);
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "demo";
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
     if (!apiSecret) {
@@ -72,12 +83,15 @@ export class CloudinaryStorageProvider implements StorageProvider {
     }
     const timestamp = Math.floor(Date.now() / 1000);
     const expiresAt = timestamp + SIGNED_URL_TTL_SECONDS;
-    const params = {
-      timestamp: String(timestamp),
-      expires_at: String(expiresAt),
+    const options = {
+      cloud_name: cloudName,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: apiSecret,
+      resource_type: "raw" as const,
+      type,
+      expires_at: expiresAt,
+      secure: true,
     };
-    const signature = cloudinary.utils.api_sign_request(params, apiSecret);
-    const query = new URLSearchParams({ ...params, signature });
-    return `https://res.cloudinary.com/${cloudName}/raw/authenticated/${key}?${query.toString()}`;
+    return cloudinary.utils.private_download_url(publicId, "", options);
   }
 }
