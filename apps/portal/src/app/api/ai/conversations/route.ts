@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { isChatModelAllowed } from "@/lib/ai/providers";
-import { isValidEntityId } from "@/lib/validation";
+import { isValidEntityId, jsonObjectSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     let body: Record<string, unknown>;
     try {
-      body = await request.json();
+      body = jsonObjectSchema.parse(await request.json());
     } catch {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }

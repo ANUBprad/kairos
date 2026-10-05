@@ -8,7 +8,7 @@ import { sanitizeError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
-import { isValidEntityId } from "@/lib/validation";
+import { isValidEntityId, jsonObjectSchema } from "@/lib/validation";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -124,7 +124,7 @@ export async function PATCH(
 
     let body: Record<string, unknown>;
     try {
-      body = await request.json();
+      body = jsonObjectSchema.parse(await request.json());
     } catch {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }

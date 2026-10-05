@@ -11,7 +11,7 @@ import { getConversationMessages } from "@/lib/ai/memory";
 import { parseSourceIds, filterScopedSourceIds } from "@/lib/ai/chat/source-scope";
 import { canAccessKnowledgeBase, canUseConversationInKb } from "@/lib/ai/chat/access";
 import { getKbOrganizationId } from "@/lib/artifacts/engine";
-import { isValidEntityId } from "@/lib/validation";
+import { isValidEntityId, jsonObjectSchema } from "@/lib/validation";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    body = jsonObjectSchema.parse(await request.json());
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

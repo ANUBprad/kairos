@@ -4,7 +4,7 @@ import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
-import { isValidEntityId } from "@/lib/validation";
+import { isValidEntityId, jsonObjectSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    body = jsonObjectSchema.parse(await request.json());
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

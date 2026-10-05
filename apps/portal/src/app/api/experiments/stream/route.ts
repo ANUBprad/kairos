@@ -6,7 +6,7 @@ import { sanitizeError } from "@/lib/errors";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import type { ExperimentConfig, ExperimentProgress } from "@/lib/experiment-engine";
 
-import { isValidEntityId } from "@/lib/validation";
+import { isValidEntityId, jsonObjectSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const session = await getServerSession();
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    body = jsonObjectSchema.parse(await request.json());
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

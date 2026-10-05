@@ -8,7 +8,7 @@ import {
   listBenchmarkDatasetVersions,
 } from "@/lib/evaluation/benchmark";
 
-import { isValidEntityId } from "@/lib/validation";
+import { isValidEntityId, jsonObjectSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await validateApiKey(request);
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    body = jsonObjectSchema.parse(await request.json());
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

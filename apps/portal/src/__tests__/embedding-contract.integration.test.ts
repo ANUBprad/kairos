@@ -52,7 +52,7 @@ describe("embedding production contract against a real database", () => {
     return true;
   }
 
-  function postExperiment(body: Record<string, unknown>) {
+  function postExperiment(body: unknown) {
     const req = new NextRequest("http://localhost/api/v1/experiments", {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": apiKey },
@@ -99,6 +99,13 @@ describe("embedding production contract against a real database", () => {
       await client.organization.deleteMany({ where: { id: orgId } });
     } finally {
       await client.$disconnect();
+    }
+  });
+
+  it("rejects non-object JSON with a controlled 400", async (t) => {
+    if (!requireEnvironment(t)) return;
+    for (const body of [null, [], 1, true, "text"]) {
+      assert.equal((await postExperiment(body)).status, 400);
     }
   });
 
