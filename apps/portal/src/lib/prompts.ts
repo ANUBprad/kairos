@@ -112,6 +112,7 @@ export async function createFolder(
   input: CreateFolderInput
 ): Promise<PromptFolderInfo> {
   try {
+    if (input.parentId) await assertFolderAccess(input.parentId, organizationId);
     const folder = await prisma.promptFolder.create({
       data: {
         name: input.name,
@@ -199,6 +200,7 @@ export async function createPrompt(
   input: CreatePromptInput
 ): Promise<PromptInfo> {
   try {
+    if (input.folderId) await assertFolderAccess(input.folderId, organizationId);
     const prompt = await prisma.prompt.create({
       data: {
         title: input.title,
@@ -410,10 +412,11 @@ export async function updatePrompt(
     await assertPromptAccess(promptId, organizationId);
     const prompt = await prisma.prompt.findUnique({
       where: { id: promptId },
-      select: { id: true },
+      select: { id: true, organizationId: true },
     });
 
     if (!prompt) return null;
+    if (input.folderId) await assertFolderAccess(input.folderId, prompt.organizationId);
 
     const updated = await prisma.prompt.update({
       where: { id: promptId },
@@ -502,6 +505,7 @@ export async function clonePrompt(
     if (!source) {
       throw new Error("Prompt not found");
     }
+    if (source.folderId) await assertFolderAccess(source.folderId, source.organizationId);
 
     const cloned = await prisma.prompt.create({
       data: {
