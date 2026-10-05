@@ -162,39 +162,36 @@ async function fetchYoutubeText(url: string, opts: Required<FetchYoutubeOptions>
           "accept-language": "en",
         },
       });
+      if (isRedirectStatus(response.status)) {
+        if (hop >= opts.maxRedirects) {
+          throw new YouTubeTranscriptError("too_many_redirects", `More than ${opts.maxRedirects} redirects`);
+        }
+        const location = response.headers.get("location");
+        if (!location) {
+          throw new YouTubeTranscriptError("transcript_fetch", "Redirect response had no Location header");
+        }
+        try {
+          current = loadTarget(new URL(location, current).href);
+        } catch (err) {
+          throw mapUrlError(err);
+        }
+        continue;
+      }
+
+      if (response.status !== 200) {
+        throw new YouTubeTranscriptError("transcript_fetch", `HTTP ${response.status}`);
+      }
+
+      return await readBoundedText(response.body, opts.maxResponseBytes);
     } catch (err) {
+      if (err instanceof YouTubeTranscriptError) throw err;
+      if (err instanceof UrlSourceError) throw mapUrlError(err);
       if (err instanceof Error && err.name === "AbortError") {
         throw new YouTubeTranscriptError("transcript_timeout", `Request timed out after ${opts.timeoutMs}ms`, { cause: err });
       }
       throw new YouTubeTranscriptError("transcript_fetch", `Network error while fetching ${current.href}`, { cause: err });
     } finally {
       clearTimeout(timer);
-    }
-
-    if (isRedirectStatus(response.status)) {
-      if (hop >= opts.maxRedirects) {
-        throw new YouTubeTranscriptError("too_many_redirects", `More than ${opts.maxRedirects} redirects`);
-      }
-      const location = response.headers.get("location");
-      if (!location) {
-        throw new YouTubeTranscriptError("transcript_fetch", "Redirect response had no Location header");
-      }
-      try {
-        current = loadTarget(new URL(location, current).href);
-      } catch (err) {
-        throw mapUrlError(err);
-      }
-      continue;
-    }
-
-    if (response.status !== 200) {
-      throw new YouTubeTranscriptError("transcript_fetch", `HTTP ${response.status}`);
-    }
-
-    try {
-      return await readBoundedText(response.body, opts.maxResponseBytes);
-    } catch (err) {
-      throw mapUrlError(err);
     }
   }
 }

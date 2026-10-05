@@ -212,7 +212,32 @@ export async function fetchPage(
           "accept-language": "en",
         },
       });
+      if (isRedirectStatus(response.status)) {
+        if (hop >= maxRedirects) {
+          throw new UrlSourceError("too_many_redirects", `More than ${maxRedirects} redirects`);
+        }
+        const location = response.headers.get("location");
+        if (!location) {
+          throw new UrlSourceError("fetch", "Redirect response had no Location header");
+        }
+        current = loadTarget(new URL(location, current).href);
+        await assertPublicHost(current.hostname, resolveHost);
+        continue;
+      }
+
+      if (response.status !== 200) {
+        throw new UrlSourceError("fetch", `HTTP ${response.status}`);
+      }
+
+      const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      if (!ARTICLE_CONTENT_TYPES.includes(contentType)) {
+        throw new UrlSourceError("unsupported_content", `Unsupported content type: ${contentType}`);
+      }
+
+      const body = await readBoundedText(response.body, maxResponseBytes);
+      return { finalUrl: current.href, contentType, body };
     } catch (err) {
+      if (err instanceof UrlSourceError) throw err;
       if (err instanceof Error && err.name === "AbortError") {
         throw new UrlSourceError("timeout", `Request timed out after ${timeoutMs}ms`);
       }
@@ -220,31 +245,6 @@ export async function fetchPage(
     } finally {
       clearTimeout(timer);
     }
-
-    if (isRedirectStatus(response.status)) {
-      if (hop >= maxRedirects) {
-        throw new UrlSourceError("too_many_redirects", `More than ${maxRedirects} redirects`);
-      }
-      const location = response.headers.get("location");
-      if (!location) {
-        throw new UrlSourceError("fetch", "Redirect response had no Location header");
-      }
-      current = loadTarget(new URL(location, current).href);
-      await assertPublicHost(current.hostname, resolveHost);
-      continue;
-    }
-
-    if (response.status !== 200) {
-      throw new UrlSourceError("fetch", `HTTP ${response.status}`);
-    }
-
-    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
-    if (!ARTICLE_CONTENT_TYPES.includes(contentType)) {
-      throw new UrlSourceError("unsupported_content", `Unsupported content type: ${contentType}`);
-    }
-
-    const body = await readBoundedText(response.body, maxResponseBytes);
-    return { finalUrl: current.href, contentType, body };
   }
 }
 
