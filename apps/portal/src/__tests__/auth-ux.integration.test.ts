@@ -127,6 +127,18 @@ describe("real authentication flow through the Better Auth endpoint", () => {
     assert.equal(body?.user?.email, email);
   });
 
+  it("replaying all browser cookies cannot revive a revoked database session", async (t) => {
+    if (!POST || !client) { t.skip("requires DATABASE_URL (live Postgres)"); return; }
+    const login = await POST(nextRequest("sign-in/email", "POST", { email, password }));
+    assert.ok(login.ok);
+    const cookie = login.headers.getSetCookie().map((value) => value.split(";")[0]).join("; ");
+    const session = await (await GET!(nextRequest("get-session", "GET", undefined, cookie))).json();
+    assert.ok(session?.session?.id);
+    await client.session.delete({ where: { id: session.session.id } });
+    const replay = await (await GET!(nextRequest("get-session", "GET", undefined, cookie))).json();
+    assert.equal(replay, null, "revocation must take effect even with a signed session-data cookie");
+  });
+
   it("signing out invalidates the session on the server", async (t) => {
     if (!POST) { t.skip("requires DATABASE_URL (live Postgres)"); return; }
     assert.ok(primaryCookie, "needs the session from sign-up");
