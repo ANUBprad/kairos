@@ -29,8 +29,9 @@ export async function validateApiKey(
     return null;
   }
 
+  if (process.env.NODE_ENV === "production") return null;
+
   if (!API_SECRET) {
-    if (process.env.NODE_ENV === "production") return null;
     return { userId: "api-user", organizationId: "api-org" };
   }
 
