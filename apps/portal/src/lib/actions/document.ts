@@ -12,6 +12,7 @@ import { logger } from "@/lib/logger";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
 import { revalidateSourcePage } from "@/lib/revalidation";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { hasPermission, type Permission } from "@/lib/rbac";
 import { sanitizeFilename } from "@/lib/validation";
 import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError, type FetchUrlOptions } from "@/lib/ingestion/url";
 import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError, type FetchYoutubeOptions } from "@/lib/ingestion/youtube";
@@ -48,7 +49,7 @@ function fileHash(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-async function getOrgFromKb(kbId: string, userId: string) {
+async function getOrgFromKb(kbId: string, userId: string, permission: Permission = "edit") {
   const kb = await prisma.knowledgeBase.findUnique({
     where: { id: kbId },
     select: {
@@ -71,10 +72,13 @@ async function getOrgFromKb(kbId: string, userId: string) {
     throw new Error("Knowledge base not found");
   }
 
+  if (!hasPermission(kb.project.organization.members[0].role, permission)) {
+    throw new Error("Access denied");
+  }
   return kb;
 }
 
-async function assertDocAccess(docId: string, userId: string) {
+async function assertDocAccess(docId: string, userId: string, permission: Permission = "view") {
   const doc = await prisma.document.findUnique({
     where: { id: docId },
     select: {
@@ -99,24 +103,7 @@ async function assertDocAccess(docId: string, userId: string) {
 
   if (!doc) throw new Error("Document not found");
 
-  const kb = await prisma.knowledgeBase.findUnique({
-    where: { id: doc.knowledgeBaseId },
-    select: {
-      project: {
-        select: {
-          organization: {
-            select: {
-              members: { where: { userId }, select: { id: true } },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!kb || kb.project.organization.members.length === 0) {
-    throw new Error("Document not found");
-  }
+  await getOrgFromKb(doc.knowledgeBaseId, userId, permission);
 
   return doc;
 }
@@ -1331,7 +1318,7 @@ export async function listDocuments(kbId: string, filters?: SourceListFilters): 
   const session = await getServerSession();
   if (!session) return [];
 
-  await getOrgFromKb(kbId, session.user.id);
+  await getOrgFromKb(kbId, session.user.id, "view");
 
   return prisma.document.findMany({
     where: resolveSourceWhere(kbId, filters),
@@ -1400,7 +1387,7 @@ export async function deleteDocument(formData: FormData) {
     select: { id: true, name: true, knowledgeBaseId: true, storageKey: true },
   });
   if (!doc) throw new Error("Document not found");
-  await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
+  await getOrgFromKb(doc.knowledgeBaseId, session.user.id, "delete");
 
   await logActivity(id, session.user.id, "DELETED", { fileName: doc.name });
 
@@ -1500,7 +1487,7 @@ export async function bulkDeleteDocuments(formData: FormData) {
   if (docs.length === 0) throw new Error("No documents found");
 
   const bulkKbId = assertSameKnowledgeBase(docs);
-  await getOrgFromKb(bulkKbId, session.user.id);
+  await getOrgFromKb(bulkKbId, session.user.id, "delete");
 
   const storage = getStorageProvider();
   for (const doc of docs) {
@@ -1711,7 +1698,7 @@ export async function updateDocumentMetadata(docId: string, metadata: Record<str
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
-  await assertDocAccess(docId, session.user.id);
+  await assertDocAccess(docId, session.user.id, "edit");
 
   const updated = await prisma.document.update({
     where: { id: docId },
