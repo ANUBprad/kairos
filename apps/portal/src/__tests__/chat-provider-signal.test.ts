@@ -97,7 +97,8 @@ describe("Gemini provider passes signal to fetch", () => {
     }
 
     assert.ok(capturedSignal, "fetch must have been called");
-    assert.equal(capturedSignal, controller.signal, "signal must be passed through to fetch");
+    controller.abort();
+    assert.equal(capturedSignal.aborted, true, "caller cancellation must reach fetch alongside its deadline");
     assert.deepEqual(chunks, ["Hello"]);
   });
 });

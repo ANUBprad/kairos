@@ -22,6 +22,7 @@ export class ElevenLabsTTSProvider implements TTSProvider {
       `${ELEVENLABS_API_URL}/${encodeURIComponent(request.voiceId)}`,
       {
         method: "POST",
+        signal: AbortSignal.timeout(120_000),
         headers: {
           "xi-api-key": this.config.apiKey,
           "Content-Type": "application/json",

@@ -7,7 +7,7 @@ import type {
   EmbeddingResponse,
   StreamChunk,
 } from "../types";
-import { createAbortError } from "../abort";
+import { createAbortError, providerDeadline } from "../abort";
 
 const CHAT_MODELS = [
   "gemini-2.0-flash",
@@ -69,7 +69,7 @@ export class GeminiProvider implements AIProvider {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: request.signal ?? undefined,
+      signal: providerDeadline(request.signal),
     });
 
     if (!res.ok) {
@@ -126,7 +126,7 @@ export class GeminiProvider implements AIProvider {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-        signal: request.signal ?? undefined,
+        signal: providerDeadline(request.signal),
       },
     );
 
@@ -180,6 +180,7 @@ export class GeminiProvider implements AIProvider {
       : [request.input];
 
     const embeddings: number[][] = [];
+    const signal = providerDeadline(request.signal);
 
     for (const input of inputs) {
       const res = await fetch(this.apiUrl(`models/${model}:embedContent`), {
@@ -188,7 +189,7 @@ export class GeminiProvider implements AIProvider {
         body: JSON.stringify({
           content: { parts: [{ text: input }] },
         }),
-        signal: request.signal ?? undefined,
+        signal,
       });
 
       if (!res.ok) {
