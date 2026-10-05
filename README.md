@@ -36,7 +36,7 @@ You bring documents. Kairos ingests them into a knowledge base, then every AI in
 
 Kairos is a *workspace*, not just an API:
 
-- **Knowledge bases** — upload PDFs, DOCX, TXT, Markdown, and CSV; chunk, embed, and search over them.
+- **Knowledge bases** — upload PDFs, DOCX, TXT, Markdown, and CSV, or ingest web URLs and available YouTube transcripts; chunk, embed, and search over them.
 - **RAG chat with citations** — answers reference the chunks they came from, and the retrieval trace for each message is inspectable.
 - **Artifact Studio** — turn knowledge base material into reusable learning artifacts (text pieces, illustrations, and audio podcast renditions), each with source grounding.
 - **Explainable podcast Q&A** — a podcast artifact can be interrupted mid-play to ask questions about what you just heard; the answers are grounded in the source material and surfaced inline.
@@ -51,11 +51,11 @@ Current production-shaped capabilities:
 
 - Full-stack retrieval pipeline mounted behind a web portal: ingestion → text extraction → chunking → embeddings → retrieval planning → strategy selection (BM25 / dense / hybrid) → reranking → grounded answer generation.
 - Retrieval embeddings and LLM providers are pluggable, but not freely interchangeable: the Portal embeds with Gemini `text-embedding-004` (or `embedding-001`) because the database pins one width (768 dims), and generates through OpenAI, Gemini, or Ollama. Retrieval embeddings are a fixed contract; the chat model stays free.
-- Typical document formats handled end to end: PDF, DOCX, TXT, Markdown, CSV.
+- Sources handled end to end: PDF, DOCX, TXT, Markdown, CSV, web URLs (readable page content), and YouTube videos with available transcripts.
 - Artifact generation from knowledge bases, including multi-part audio podcasts with mid-play, grounded interruption Q&A.
 - Chat with citations, pipeline traces, and per-message grounding.
 - Statistical retrieval evaluation (recall, precision, MRR, nDCG, latency, cost, faithfulness and failure-rate metrics) with an internal leaderboard.
-- Dockerized full stack with health checks, rate limiting, semantic caching, and Prometheus/Grafana dashboards.
+- Docker Compose runs PostgreSQL and the legacy v1 services, including their semantic cache and Prometheus/Grafana dashboards; the Portal runs separately as described below.
 
 ---
 
@@ -137,14 +137,15 @@ PostgreSQL 16 + pgvector
 ```
 
 - **Portal** (`apps/portal/`) — Next.js 15 workspace: knowledge bases, document ingestion, embedding, RAG chat, artifact studio, podcast Q&A, evaluation and experiment tracking.
-- **Vector storage** — PostgreSQL with the pgvector extension. The column is pinned to `vector(768)` and indexed with HNSW; the index is created by SQL migration `20261122000000_pin_embedding_dimension_768`, because Prisma's datamodel cannot express a pgvector index.
+- **Vector storage** — PostgreSQL with the pgvector extension. The column is pinned to `vector(768)` and indexed with HNSW using `vector_cosine_ops` (`m = 16`, `ef_construction = 64`); the index is created by [SQL migration `20261122000000_pin_embedding_dimension_768`](apps/portal/prisma/migrations/20261122000000_pin_embedding_dimension_768/migration.sql), because Prisma's datamodel cannot express a pgvector index.
+- **Scoped retrieval** — Portal access checks authorize knowledge-base access; `PgVectorStore` applies the supplied knowledge-base and document IDs in the SQL similarity query, using cosine distance (`<=>`). This is application-authorized, knowledge-base-scoped semantic retrieval, not database row-level security.
 - **Retrieval embedding** — `gemini/text-embedding-004`, 768 dimensions. The width is fixed by the database, so ingestion rejects any wider model before calling a provider. Chat and embedding models are configured separately: changing the chat model does not change the embedding width.
 - **Data** — PostgreSQL via Prisma for everything, including vectors. Cloudinary for artifact media.
-- **Observability** — Prometheus + Grafana, structured logging.
+- **Observability** — Portal structured logging; Prometheus + Grafana dashboards for the legacy v1 services.
 
-Query plans are not a fixed property of the setup: pgvector uses the HNSW index
-only when the filter is selective enough, so a selective single-knowledge-base
-query can fall back to a sequential scan. Any latency figure quoted from this
+Query plans are not a fixed property of the setup: PostgreSQL chooses whether
+to use the HNSW index, and a filtered knowledge-base query can use a sequential
+scan. Any latency figure quoted from this
 repository is a benchmark under stated conditions, not a guarantee.
 
 ### Legacy v1 stack
@@ -180,7 +181,6 @@ A dedicated [ARCHITECTURE.md](docs/ARCHITECTURE.md) covers component responsibil
 Honest gaps and planned work:
 
 - mTLS on the gateway ↔ intelligence channel (currently private-network only — do not expose publicly). Both services are v1-only; the Portal does not use them.
-- Multi-tenant organization support beyond per-user knowledge bases.
 - The public cloud CLI and REST API documented in `cli/SPECIFICATION.md` — designed, not shipped.
 - The extension-framework roadmap in `docs/EXTENSIBILITY.md` (plugins, event bus, webhooks, marketplace) — a design report for future phases.
 
@@ -216,11 +216,15 @@ python -m pytest tests/
 
 # Portal (TypeScript) suite
 cd apps/portal
-npx tsx --test "src/__tests__/*.test.ts"
+# Use a dedicated, migrated pgvector test database. Export DATABASE_URL and
+# KAIROS_TEST_DATABASE_URL with the same URL, and KAIROS_DEMO_MODE=true.
+# See .github/workflows/portal.yml for the complete test environment.
+node --import tsx scripts/verify-test-database.ts
+node --import tsx --test "src/__tests__/*.test.ts"
 npx tsc --noEmit
 
 # Gateway (Go)
-cd gateway
+cd ../../gateway
 go test ./...
 ```
 
@@ -228,10 +232,10 @@ go test ./...
 
 ## Current Test Coverage Summary
 
-Measured on this branch with the commands above — not badges, plain numbers:
+Recorded test results — not coverage percentages or live CI status:
 
-- **Portal:** 1010 tests across 206 suites, all passing (unit, integration, and structural coverage of the portal, including the artifact studio and podcast interaction flows). This figure requires the integration test database to be configured; without it the database-backed suites skip themselves rather than fail, so a local run that skips tests is not a 1010 run.
-- **Python:** ~2,275 tests in `tests/`. 2,237 pass in a default local environment; 38 depend on configured credentials/API keys and are validated in CI (running with a clean environment).
+- **Portal:** 1,010 tests across 206 suites, all passing, with 0 failed and 0 skipped (unit, integration, and structural checks, including artifact studio and podcast interaction flows). This verified result is recorded in [commit `9e172d9a`](https://github.com/ANUBprad/kairos/commit/9e172d9ad0857d550c19868e5d46a0a51c2e8c3d). It requires the integration test database and demo session configuration. The database preflight above, also run by [Portal CI](.github/workflows/portal.yml), fails when those prerequisites are missing or unusable, preventing silent false-green database-test runs. Running the suite directly without the preflight can skip database-backed tests; that is not the full 1,010-test result.
+- **Python:** the suite in `tests/` runs in [Python CI](.github/workflows/test.yml) on Python 3.11/3.12 with coverage reporting. The workflow does not provision external provider credentials; credential-dependent results require a separately configured environment.
 - **Go gateway:** covered by `go test ./...`.
 
 CI (`test.yml`, `portal.yml`, `lint.yml`) additionally runs the full Python suite on Python 3.11/3.12, a Docker end-to-end pipeline test, ESLint, Prisma validation, and a production `next build`.
