@@ -8,6 +8,7 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
+import type { MemberRole } from "@/lib/rbac";
 
 // ============================================================================
 // Types
@@ -143,7 +144,7 @@ export async function createApiKey(
  */
 export async function validateAndRetrieveApiKey(
   key: string
-): Promise<{ userId: string; organizationId: string; scopes: string[] } | null> {
+): Promise<{ userId: string; organizationId: string; scopes: string[]; role: MemberRole } | null> {
   try {
     // Find by prefix (first 8 chars)
     const prefix = key.substring(0, 8);
@@ -171,7 +172,7 @@ export async function validateAndRetrieveApiKey(
 
         const member = await prisma.member.findUnique({
           where: { organizationId_userId: { organizationId: apiKey.organizationId, userId: apiKey.userId } },
-          select: { id: true },
+          select: { id: true, role: true },
         });
         if (!member) return null;
 
@@ -187,6 +188,7 @@ export async function validateAndRetrieveApiKey(
           userId: apiKey.userId,
           organizationId: apiKey.organizationId,
           scopes: apiKey.scopes,
+          role: member.role as MemberRole,
         };
       }
     }

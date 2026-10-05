@@ -26,7 +26,7 @@ describe("API key membership revocation", () => {
       assert.equal(result?.organizationId ?? null, member ? "org" : null);
       assert.deepEqual(membership.mock.calls[0]?.arguments[0], {
         where: { organizationId_userId: { organizationId: "org", userId: "user" } },
-        select: { id: true },
+        select: { id: true, role: true },
       });
       assert.equal(usage.mock.callCount(), member ? 1 : 0);
     });

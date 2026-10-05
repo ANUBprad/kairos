@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest } from "next/server";
 import { validateAndRetrieveApiKey } from "@/lib/api-keys";
+import { hasPermission } from "@/lib/rbac";
 
 const API_SECRET = process.env.KAIROS_API_SECRET ?? "";
 
@@ -24,6 +25,13 @@ export async function validateApiKey(
   if (trimmed.startsWith("kai_")) {
     const resolved = await validateAndRetrieveApiKey(trimmed);
     if (resolved) {
+      const resource = request.nextUrl.pathname.split("/")[3];
+      const readOnly = ["GET", "HEAD"].includes(request.method) || (resource === "compare" && request.method === "POST");
+      const permission = readOnly ? "view" : request.method === "DELETE" ? "delete" : "edit";
+      const resourceScope = resource === "artifacts" ? "artifacts"
+        : ["experiments", "datasets", "compare", "regression"].includes(resource) ? "experiment" : "";
+      if (!hasPermission(resolved.role, permission)) return null;
+      if (!resolved.scopes.some((scope) => scope === "admin" || scope === (readOnly ? "read" : "write") || (resourceScope !== "" && scope === resourceScope))) return null;
       return { userId: resolved.userId, organizationId: resolved.organizationId };
     }
     return null;
