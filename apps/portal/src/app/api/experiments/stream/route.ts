@@ -6,7 +6,7 @@ import { sanitizeError } from "@/lib/errors";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import type { ExperimentConfig, ExperimentProgress } from "@/lib/experiment-engine";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidEntityId } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const session = await getServerSession();
@@ -33,11 +33,11 @@ export async function POST(request: Request) {
   const datasetId = typeof body.datasetId === "string" ? body.datasetId.trim() : "";
   const config = body.config as ExperimentConfig | undefined;
 
-  if (!experimentId || !UUID_REGEX.test(experimentId)) {
-    return NextResponse.json({ error: "experimentId is required and must be a valid UUID" }, { status: 400 });
+  if (!experimentId || !isValidEntityId(experimentId)) {
+    return NextResponse.json({ error: "experimentId is required and must be a valid ID" }, { status: 400 });
   }
-  if (!datasetId || !UUID_REGEX.test(datasetId)) {
-    return NextResponse.json({ error: "datasetId is required and must be a valid UUID" }, { status: 400 });
+  if (!datasetId || !isValidEntityId(datasetId)) {
+    return NextResponse.json({ error: "datasetId is required and must be a valid ID" }, { status: 400 });
   }
   if (!config || typeof config !== "object") {
     return NextResponse.json({ error: "config is required" }, { status: 400 });

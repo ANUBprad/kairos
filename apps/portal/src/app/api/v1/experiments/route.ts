@@ -4,7 +4,7 @@ import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
 import { assertIndexableEmbeddingModel, DEFAULT_EMBEDDING_MODEL } from "@/lib/retrieval/embedding-models";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidEntityId } from "@/lib/validation";
 const MAX_LIMIT = 200;
 const MAX_NAME_LENGTH = 255;
 const MAX_DESCRIPTION_LENGTH = 2000;
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       knowledgeBase: { project: { organizationId: auth.organizationId } },
     };
     if (knowledgeBaseId) {
-      if (!UUID_REGEX.test(knowledgeBaseId)) {
+      if (!isValidEntityId(knowledgeBaseId)) {
         return NextResponse.json({ error: "Invalid knowledgeBaseId format" }, { status: 400 });
       }
       where.knowledgeBaseId = knowledgeBaseId;
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
   if (!name || name.length > MAX_NAME_LENGTH) {
     return NextResponse.json({ error: `name is required and must be under ${MAX_NAME_LENGTH} characters` }, { status: 400 });
   }
-  if (!knowledgeBaseId || !UUID_REGEX.test(knowledgeBaseId)) {
-    return NextResponse.json({ error: "knowledgeBaseId is required and must be a valid UUID" }, { status: 400 });
+  if (!knowledgeBaseId || !isValidEntityId(knowledgeBaseId)) {
+    return NextResponse.json({ error: "knowledgeBaseId is required and must be a valid ID" }, { status: 400 });
   }
   if (description && description.length > MAX_DESCRIPTION_LENGTH) {
     return NextResponse.json({ error: `description must be under ${MAX_DESCRIPTION_LENGTH} characters` }, { status: 400 });

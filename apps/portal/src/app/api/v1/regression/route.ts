@@ -4,7 +4,7 @@ import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { validateApiKey } from "@/lib/server/api-auth";
 import { trackRegressionComparison } from "@/lib/evaluation/regression-tracking";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidEntityId } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "baselineRunId and candidateRunId are required" }, { status: 400 });
   }
 
-  if (!UUID_REGEX.test(baselineRunId) || !UUID_REGEX.test(candidateRunId)) {
+  if (!isValidEntityId(baselineRunId) || !isValidEntityId(candidateRunId)) {
     return NextResponse.json({ error: "Invalid run ID format" }, { status: 400 });
   }
 

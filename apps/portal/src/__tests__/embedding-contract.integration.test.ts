@@ -33,7 +33,7 @@ describe("embedding production contract against a real database", () => {
   const testDbUrl = process.env.KAIROS_TEST_DATABASE_URL;
   const orgId = randomUUID();
   const projectId = randomUUID();
-  const kbId = randomUUID();
+  let kbId: string;
 
   let client: PrismaClient;
   let demoId: string;
@@ -79,9 +79,9 @@ describe("embedding production contract against a real database", () => {
     await client.project.create({
       data: { id: projectId, name: "Embedding Contract Project", slug: `embed-contract-p-${randomUUID()}`, organizationId: orgId },
     });
-    await client.knowledgeBase.create({
-      data: { id: kbId, name: "Embedding Contract KB", projectId, retrievalConfig: {} },
-    });
+    kbId = (await client.knowledgeBase.create({
+      data: { name: "Embedding Contract KB", projectId, retrievalConfig: {} },
+    })).id;
     apiKey = (await createApiKey(demoId, orgId, { name: "embedding-contract", scopes: ["experiment"] })).key;
 
     originalFetch = globalThis.fetch;

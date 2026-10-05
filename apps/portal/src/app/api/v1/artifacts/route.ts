@@ -4,7 +4,7 @@ import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidEntityId } from "@/lib/validation";
 const MAX_NAME_LENGTH = 255;
 
 export async function GET(request: NextRequest) {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "experimentId is required" }, { status: 400 });
     }
 
-    if (!UUID_REGEX.test(experimentId)) {
+    if (!isValidEntityId(experimentId)) {
       return NextResponse.json({ error: "Invalid experimentId format" }, { status: 400 });
     }
 
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
   const type = typeof body.type === "string" ? body.type.trim() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
 
-  if (!experimentId || !UUID_REGEX.test(experimentId)) {
-    return NextResponse.json({ error: "experimentId is required and must be a valid UUID" }, { status: 400 });
+  if (!experimentId || !isValidEntityId(experimentId)) {
+    return NextResponse.json({ error: "experimentId is required and must be a valid ID" }, { status: 400 });
   }
   if (!type || type.length > MAX_NAME_LENGTH) {
     return NextResponse.json({ error: "type is required and must be under 255 characters" }, { status: 400 });

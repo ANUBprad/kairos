@@ -4,7 +4,7 @@ import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidEntityId } from "@/lib/validation";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await validateApiKey(request);
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
 
-  if (!UUID_REGEX.test(id)) {
+  if (!isValidEntityId(id)) {
     return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
   }
 

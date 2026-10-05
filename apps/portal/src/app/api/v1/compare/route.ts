@@ -4,7 +4,7 @@ import { validateApiKey } from "@/lib/server/api-auth";
 import { sanitizeError } from "@/lib/errors";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidEntityId } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   const auth = await validateApiKey(request);
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "experimentAId and experimentBId are required" }, { status: 400 });
   }
 
-  if (!UUID_REGEX.test(experimentAId) || !UUID_REGEX.test(experimentBId)) {
+  if (!isValidEntityId(experimentAId) || !isValidEntityId(experimentBId)) {
     return NextResponse.json({ error: "Invalid experiment ID format" }, { status: 400 });
   }
 
