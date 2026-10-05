@@ -73,6 +73,7 @@ describe("embedding production contract against a real database", () => {
         name: "Embedding Contract Org",
         slug: `embed-contract-${randomUUID()}`,
         ownerId: demoId,
+        members: { create: { userId: demoId, role: "OWNER" } },
       },
     });
     await client.project.create({
