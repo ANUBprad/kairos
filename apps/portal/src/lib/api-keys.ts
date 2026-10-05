@@ -169,6 +169,12 @@ export async function validateAndRetrieveApiKey(
           return null;
         }
 
+        const member = await prisma.member.findUnique({
+          where: { organizationId_userId: { organizationId: apiKey.organizationId, userId: apiKey.userId } },
+          select: { id: true },
+        });
+        if (!member) return null;
+
         // Update last used timestamp (fire and forget)
         prisma.apiKey.update({
           where: { id: apiKey.id },
