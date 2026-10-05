@@ -124,11 +124,11 @@ describe("regression tracking API route wiring", () => {
     assert.doesNotMatch(regressionRouteSource, /body\.status|body\.verdict/);
   });
 
-  it("only accepts the two run ids and validates their UUID format", () => {
+  it("only accepts the two run ids and validates their entity ID format", () => {
     assert.match(regressionRouteSource, /body\.baselineRunId/);
     assert.match(regressionRouteSource, /body\.candidateRunId/);
-    assert.match(regressionRouteSource, /UUID_REGEX\.test\(baselineRunId\)/);
-    assert.match(regressionRouteSource, /UUID_REGEX\.test\(candidateRunId\)/);
+    assert.match(regressionRouteSource, /isValidEntityId\(baselineRunId\)/);
+    assert.match(regressionRouteSource, /isValidEntityId\(candidateRunId\)/);
   });
 
   it("delegates the tracked comparison to the shared Slice B engine, unchanged", () => {
