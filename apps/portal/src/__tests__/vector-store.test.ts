@@ -119,6 +119,14 @@ function store_(
 }
 
 describe("PgVectorStore.similaritySearch contract", () => {
+  it("never queries the corpus when an explicit knowledge-base scope is empty or invalid", async () => {
+    for (const ids of [[], ["invalid/id"]]) {
+      const { client, captured } = captureStoreClient();
+      assert.deepEqual(await store_(client, [1, 0, 0], ids), []);
+      assert.equal(captured.length, 0, "an empty tenant scope must not become an unscoped query");
+    }
+  });
+
   it("queries DocumentEmbedding joined to chunks and documents, filtered to INDEXED", async () => {
     const { client, captured } = captureStoreClient();
 

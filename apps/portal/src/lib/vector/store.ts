@@ -140,7 +140,7 @@ export class PgVectorStore implements VectorStore {
 
     const kbIds = options.knowledgeBaseIds?.filter(isValidEntityId);
     const docIds = options.documentIds?.filter(isValidEntityId);
-    if (docIds?.length === 0) return [];
+    if (kbIds?.length === 0 || docIds?.length === 0) return [];
 
     const scope = scopeClause(kbIds, docIds, 1);
     await this.assertQueryDimension(queryEmbedding, scope);
