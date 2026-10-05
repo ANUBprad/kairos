@@ -2,7 +2,7 @@ import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
-import { filterAccessibleRunIds } from "@/lib/actions/evaluation";
+import { filterAccessibleRunIds } from "@/lib/evaluation/access";
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });

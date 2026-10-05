@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { logError } from "@/lib/errors";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import { assertDatasetAccess, assertRunAccess } from "@/lib/evaluation/access";
+import { assertDatasetAccess, assertRunAccess, filterAccessibleRunIds } from "@/lib/evaluation/access";
 import {
   createBenchmarkDataset,
   getBenchmarkDatasets,
@@ -372,22 +372,6 @@ export async function runCampaign(
     logError("runCampaign", error, { userId: session.user.id, datasetId, kbId: knowledgeBaseId });
     throw error;
   }
-}
-
-export async function filterAccessibleRunIds(runIds: string[], userId: string) {
-  const allowed: string[] = [];
-  await Promise.all(
-    runIds.map(async (id) => {
-      try {
-        await assertRunAccess(id, userId);
-        allowed.push(id);
-      } catch {
-        // Foreign, fabricated, and deleted runs are omitted so a leaderboard
-        // request cannot probe another tenant's run existence.
-      }
-    }),
-  );
-  return allowed;
 }
 
 export async function getLeaderboard(runIds: string[]): Promise<LeaderboardEntry[]> {

@@ -54,3 +54,19 @@ export function benchmarkRunScopedToProject(
     dataset: { OR: [{ knowledgeBaseId: null }, { knowledgeBase: { projectId } }] },
   };
 }
+
+export async function filterAccessibleRunIds(runIds: string[], userId: string) {
+  const allowed: string[] = [];
+  await Promise.all(
+    runIds.map(async (id) => {
+      try {
+        await assertRunAccess(id, userId);
+        allowed.push(id);
+      } catch {
+        // Foreign, fabricated, and deleted runs are omitted so a leaderboard
+        // request cannot probe another tenant's run existence.
+      }
+    }),
+  );
+  return allowed;
+}

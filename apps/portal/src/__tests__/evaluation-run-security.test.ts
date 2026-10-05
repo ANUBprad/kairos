@@ -53,7 +53,7 @@ describe("dataset and run authorization shared boundary", () => {
   });
 
   it("makes the actions import the shared boundary and no longer define it locally", () => {
-    assert.match(actionsSource, /import \{ assertDatasetAccess, assertRunAccess \} from "@\/lib\/evaluation\/access";/);
+    assert.match(actionsSource, /import \{ assertDatasetAccess, assertRunAccess, filterAccessibleRunIds \} from "@\/lib\/evaluation\/access";/);
     assert.doesNotMatch(actionsSource, /async function assertDatasetAccess\(/);
     assert.doesNotMatch(actionsSource, /async function assertRunAccess\(/);
   });
@@ -65,6 +65,9 @@ describe("dataset and run authorization shared boundary", () => {
 });
 
 describe("leaderboard run tenancy wiring", () => {
+  it("does not expose a caller-selected user identity as a server action", () => {
+    assert.doesNotMatch(actionsSource, /export async function filterAccessibleRunIds/);
+  });
   it("never queries leaderboard runs by raw caller-supplied ids without the shared boundary", () => {
     assert.doesNotMatch(actionsSource, /benchmarkRun\.findMany\(\{\s*where: \{ id: \{ in: runIds \} \}/);
   });
@@ -75,7 +78,7 @@ describe("leaderboard run tenancy wiring", () => {
   });
 
   it("derives leaderboard access from assertRunAccess through the shared boundary", () => {
-    assert.match(actionsSource, /filterAccessibleRunIds[\s\S]{0,300}await assertRunAccess\(id, userId\)/);
+    assert.match(accessSource, /filterAccessibleRunIds[\s\S]{0,300}await assertRunAccess\(id, userId\)/);
   });
 });
 
