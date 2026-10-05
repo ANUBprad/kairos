@@ -187,7 +187,7 @@ export async function updateOrganization(
 
   const organization = await prisma.organization.update({
     where: { id: organizationId },
-    data: input,
+    data: { name: input.name, logo: input.logo },
     include: {
       _count: {
         select: {

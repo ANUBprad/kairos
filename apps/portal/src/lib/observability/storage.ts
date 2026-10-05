@@ -1,4 +1,17 @@
 import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+const telemetryInput = z.object({
+  samplingRate: z.number().min(0).max(1).optional(),
+  retentionDays: z.number().int().positive().optional(),
+  enableTraces: z.boolean().optional(),
+  enableMetrics: z.boolean().optional(),
+  enableLogs: z.boolean().optional(),
+  maxSpansPerTrace: z.number().int().positive().optional(),
+  maxEventsPerTrace: z.number().int().positive().optional(),
+  compressOldTraces: z.boolean().optional(),
+  archiveAfterDays: z.number().int().positive().optional(),
+});
 
 export interface TelemetryConfigInput {
   samplingRate: number;
@@ -38,13 +51,14 @@ export async function getTelemetryConfig(orgId: string) {
 }
 
 export async function updateTelemetryConfig(orgId: string, input: Partial<TelemetryConfigInput>) {
+  const data = telemetryInput.parse(input);
   return prisma.telemetryConfig.upsert({
     where: { organizationId: orgId },
     create: {
       organizationId: orgId,
-      ...input,
-    } as any,
-    update: input as any,
+      ...data,
+    },
+    update: data,
   });
 }
 

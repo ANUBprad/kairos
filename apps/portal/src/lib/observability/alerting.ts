@@ -1,4 +1,19 @@
 import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+const alertRuleInput = z.object({
+  name: z.string().trim().min(1).max(255),
+  description: z.string().max(2000).optional(),
+  metric: z.enum(['error_rate', 'avg_latency', 'total_cost', 'request_count']),
+  operator: z.enum(['>', '>=', '<', '<=', '==', '!=']),
+  threshold: z.number(),
+  windowMinutes: z.number().int().positive().optional(),
+  severity: z.enum(['INFO', 'WARNING', 'ERROR', 'CRITICAL']).optional(),
+  cooldownMinutes: z.number().int().nonnegative().optional(),
+  notifyWebhook: z.string().optional(),
+  notifyEmail: z.string().optional(),
+  notifySlack: z.string().optional(),
+});
 
 export interface CreateAlertRuleInput {
   name: string;
@@ -17,7 +32,7 @@ export interface CreateAlertRuleInput {
 export async function createAlertRule(orgId: string, input: CreateAlertRuleInput) {
   return prisma.alertRule.create({
     data: {
-      ...input,
+      ...alertRuleInput.parse(input),
       organizationId: orgId,
     },
   });
@@ -36,7 +51,7 @@ export async function getAlertRules(orgId: string) {
 export async function updateAlertRule(ruleId: string, data: Partial<CreateAlertRuleInput>, orgId?: string) {
   return prisma.alertRule.update({
     where: orgId ? { id: ruleId, organizationId: orgId } : { id: ruleId },
-    data,
+    data: alertRuleInput.partial().parse(data),
   });
 }
 
