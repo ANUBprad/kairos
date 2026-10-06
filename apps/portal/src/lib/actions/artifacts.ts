@@ -192,7 +192,7 @@ export async function deleteLearningArtifactForWorkspace(
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
-  if (!(await canAccessKnowledgeBase(session.user.id, knowledgeBaseId))) {
+  if (!(await canAccessKnowledgeBase(session.user.id, knowledgeBaseId, "delete"))) {
     throw new Error("Knowledge base not found");
   }
 
@@ -230,7 +230,7 @@ export async function recoverStaleLearningArtifactsForWorkspace(
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
 
-  if (!(await canAccessKnowledgeBase(session.user.id, knowledgeBaseId))) {
+  if (!(await canAccessKnowledgeBase(session.user.id, knowledgeBaseId, "edit"))) {
     throw new Error("Knowledge base not found");
   }
 

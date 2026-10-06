@@ -82,7 +82,7 @@ export async function generateLearningArtifactForUser(
     );
   }
 
-  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId))) {
+  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId, "create"))) {
     throw new AppError("NOT_FOUND", "Knowledge base not found", 404);
   }
 
@@ -259,7 +259,7 @@ export async function regenerateLearningArtifactForUser(
 ): Promise<LearningArtifactData> {
   const { knowledgeBaseId, artifactId } = request;
 
-  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId))) {
+  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId, "create"))) {
     throw new AppError("NOT_FOUND", "Knowledge base not found", 404);
   }
 

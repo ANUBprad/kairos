@@ -50,7 +50,7 @@ export async function generatePodcastInterruptionForUser(
   const { userId, artifactId, knowledgeBaseId } = request;
   const question = parseInterruptionQuestion(request.question);
 
-  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId))) {
+  if (!(await canAccessKnowledgeBase(userId, knowledgeBaseId, "edit"))) {
     throw new AppError("NOT_FOUND", "Podcast not found", 404);
   }
 

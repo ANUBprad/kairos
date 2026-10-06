@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { hasPermission, type Permission } from "@/lib/rbac";
 
 // Verifies the user is a member of the organization that owns the knowledge
 // base. Returns false for missing KB or missing membership so callers can
 // treat both as "not found" without leaking existence.
-export async function canAccessKnowledgeBase(userId: string, kbId: string): Promise<boolean> {
+export async function canAccessKnowledgeBase(userId: string, kbId: string, permission: Permission = "view"): Promise<boolean> {
   const kb = await prisma.knowledgeBase.findUnique({
     where: { id: kbId },
     select: {
@@ -11,7 +12,7 @@ export async function canAccessKnowledgeBase(userId: string, kbId: string): Prom
         select: {
           organization: {
             select: {
-              members: { where: { userId }, select: { id: true } },
+              members: { where: { userId }, select: { id: true, role: true } },
             },
           },
         },
@@ -19,7 +20,8 @@ export async function canAccessKnowledgeBase(userId: string, kbId: string): Prom
     },
   });
 
-  return !!kb && kb.project.organization.members.length > 0;
+  const member = kb?.project.organization.members[0];
+  return !!member && hasPermission(member.role, permission);
 }
 
 // Pure predicate: a conversation may only be used from the knowledge base it
