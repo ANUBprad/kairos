@@ -1,7 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import {
   createReview,
   getReview,
@@ -17,7 +17,7 @@ import {
   getReviewHistory,
   type CreateReviewInput,
 } from "@/lib/review-queue";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { logger } from "@/lib/logger";
 import type { ReviewStatus, ReviewPriority } from "@prisma/client";
 
@@ -32,7 +32,7 @@ export async function createReviewItem(input: CreateReviewInput) {
       throw new Error("Unauthorized");
     }
 
-    const review = await createReview(await getSelectedOrgId(), session.user.id, input);
+    const review = await createReview(await requireOrgPermission("create"), session.user.id, input);
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -103,7 +103,7 @@ export async function assignReviewItem(reviewId: string, assigneeId: string) {
       throw new Error("Unauthorized");
     }
 
-    const review = await assignReview(reviewId, assigneeId, await getSelectedOrgId());
+    const review = await assignReview(reviewId, assigneeId, await requireOrgPermission("edit"));
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -125,7 +125,7 @@ export async function startReviewItem(reviewId: string) {
       throw new Error("Unauthorized");
     }
 
-    const review = await startReview(reviewId, session.user.id, await getSelectedOrgId());
+    const review = await startReview(reviewId, session.user.id, await requireOrgPermission("edit"));
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -147,7 +147,7 @@ export async function approveReviewItem(reviewId: string, score?: number) {
       throw new Error("Unauthorized");
     }
 
-    const review = await approveReview(reviewId, session.user.id, score, await getSelectedOrgId());
+    const review = await approveReview(reviewId, session.user.id, score, await requireOrgPermission("edit"));
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -169,7 +169,7 @@ export async function rejectReviewItem(reviewId: string, reason?: string) {
       throw new Error("Unauthorized");
     }
 
-    const review = await rejectReview(reviewId, session.user.id, reason, await getSelectedOrgId());
+    const review = await rejectReview(reviewId, session.user.id, reason, await requireOrgPermission("edit"));
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -191,7 +191,7 @@ export async function markReviewNeedsImprovement(reviewId: string, comments: str
       throw new Error("Unauthorized");
     }
 
-    const review = await markNeedsImprovement(reviewId, session.user.id, comments, await getSelectedOrgId());
+    const review = await markNeedsImprovement(reviewId, session.user.id, comments, await requireOrgPermission("edit"));
 
     revalidatePath("/app/reviews");
     return { success: true, review };
@@ -213,7 +213,7 @@ export async function addReviewComment(reviewId: string, content: string) {
       throw new Error("Unauthorized");
     }
 
-    const comment = await addComment(reviewId, session.user.id, content, await getSelectedOrgId());
+    const comment = await addComment(reviewId, session.user.id, content, await requireOrgPermission("edit"));
 
     revalidatePath("/app/reviews");
     return { success: true, comment };

@@ -1,6 +1,6 @@
 'use server';
 
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createTrace,
@@ -20,7 +20,7 @@ async function getOrgId(): Promise<string> {
 }
 
 export async function captureTrace(input: Parameters<typeof createTrace>[1]) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("create");
   const trace = await createTrace(orgId, input);
   await logActivity(orgId, 'TRACE_CREATED', 'Trace', trace.id, { name: input.name });
   return trace;
@@ -30,15 +30,15 @@ export async function completeTrace(
   traceId: string,
   output: Parameters<typeof finishTrace>[1]
 ) {
-  return finishTrace(traceId, output, await getOrgId());
+  return finishTrace(traceId, output, await requireOrgPermission("edit"));
 }
 
 export async function captureSpan(traceId: string, span: Parameters<typeof addSpan>[1]) {
-  return addSpan(traceId, span, await getOrgId());
+  return addSpan(traceId, span, await requireOrgPermission("edit"));
 }
 
 export async function completeSpan(spanId: string, output?: unknown) {
-  return finishSpan(spanId, output, await getOrgId());
+  return finishSpan(spanId, output, await requireOrgPermission("edit"));
 }
 
 export async function traceEvent(
@@ -46,7 +46,7 @@ export async function traceEvent(
   name: string,
   attributes?: Record<string, unknown>
 ) {
-  return addTraceEvent(traceId, name, attributes, await getOrgId());
+  return addTraceEvent(traceId, name, attributes, await requireOrgPermission("edit"));
 }
 
 export async function listTraces(filters: TraceFilter) {

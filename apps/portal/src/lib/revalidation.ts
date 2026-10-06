@@ -3,6 +3,22 @@ import { logger } from "@/lib/logger";
 import { clearKeywordIndexCache } from "@/lib/retrieval/strategies/keyword";
 
 /**
+ * Best-effort path revalidation for server actions. Cache invalidation is a
+ * nicety, never the reason a mutation fails: outside an active request scope
+ * (headless integration tests, fire-and-forget pipelines) Next throws a
+ * static-generation-store invariant instead of revalidating, which we swallow
+ * and continue.
+ */
+export function safeRevalidate(path: string, type?: "page" | "layout"): void {
+  try {
+    revalidatePath(path, type);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("static generation store missing")) return;
+    throw err;
+  }
+}
+
+/**
  * Invalidates the KB-scoped sources page after a background pipeline terminal
  * transition (INDEXED / ERROR / revert-to-INDEXED).
  *

@@ -1,6 +1,6 @@
 'use server';
 
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createAlertRule,
@@ -21,7 +21,7 @@ async function getOrgId(): Promise<string> {
 }
 
 export async function createRule(input: CreateAlertRuleInput) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("create");
   const rule = await createAlertRule(orgId, input);
   await logActivity(orgId, 'ALERT_RULE_CREATED', 'AlertRule', rule.id, { name: input.name });
   return rule;
@@ -33,19 +33,19 @@ export async function listRules() {
 }
 
 export async function updateRule(ruleId: string, data: Partial<CreateAlertRuleInput>) {
-  return updateAlertRule(ruleId, data, await getOrgId());
+  return updateAlertRule(ruleId, data, await requireOrgPermission("edit"));
 }
 
 export async function deleteRule(ruleId: string) {
-  return deleteAlertRule(ruleId, await getOrgId());
+  return deleteAlertRule(ruleId, await requireOrgPermission("delete"));
 }
 
 export async function toggleRule(ruleId: string, enabled: boolean) {
-  return toggleAlertRule(ruleId, enabled, await getOrgId());
+  return toggleAlertRule(ruleId, enabled, await requireOrgPermission("edit"));
 }
 
 export async function checkAlerts() {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("edit");
   const fired = await evaluateAlertRules(orgId);
   for (const alert of fired) {
     await logActivity(orgId, 'ALERT_FIRED', 'AlertRule', alert.rule.id, {
@@ -62,11 +62,11 @@ export async function listAlertEvents(filters?: { status?: string; ruleId?: stri
 }
 
 export async function resolveAlert(eventId: string) {
-  return resolveAlertEvent(eventId, await getOrgId());
+  return resolveAlertEvent(eventId, await requireOrgPermission("edit"));
 }
 
 export async function acknowledgeAlert(eventId: string) {
-  return acknowledgeAlertEvent(eventId, await getOrgId());
+  return acknowledgeAlertEvent(eventId, await requireOrgPermission("edit"));
 }
 
 export async function alertStats(days?: number) {

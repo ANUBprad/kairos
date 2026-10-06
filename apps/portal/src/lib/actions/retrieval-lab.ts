@@ -2,7 +2,7 @@
 
 import { getServerSession } from "@/lib/server/auth-utils";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
 import type { Permission } from "@/lib/rbac";
 import {

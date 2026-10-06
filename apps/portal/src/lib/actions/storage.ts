@@ -1,6 +1,6 @@
 'use server';
 
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import { getTelemetryConfig, updateTelemetryConfig, archiveOldTraces, cleanupOldAlerts, getStorageStats } from '@/lib/observability/storage';
 import type { TelemetryConfigInput } from '@/lib/observability/storage';
 
@@ -14,17 +14,17 @@ export async function telemetryConfig() {
 }
 
 export async function updateConfig(input: Partial<TelemetryConfigInput>) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("edit");
   return updateTelemetryConfig(orgId, input);
 }
 
 export async function archiveTraces() {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("edit");
   return archiveOldTraces(orgId);
 }
 
 export async function cleanupAlerts(days?: number) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("edit");
   return cleanupOldAlerts(orgId, days);
 }
 

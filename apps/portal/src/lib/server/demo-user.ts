@@ -6,6 +6,22 @@ const DEMO_USER_NAME = "Demo User";
 
 let cachedUserId: string | null = null;
 
+/**
+ * Demo identity email. Normally the shared demo user; integration tests that
+ * depend on deterministic org selection (selection falls back to the user's
+ * first organization) can set KAIROS_DEMO_USER_ID so each test file gets its
+ * own user instead of sharing the multi-org demo account. Non-demo code never
+ * sets it.
+ */
+function demoUserEmail(): string {
+  const id = process.env.KAIROS_DEMO_USER_ID;
+  if (id) {
+    const slug = id.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "demo";
+    return `demo-${slug}@kairos.dev`;
+  }
+  return DEMO_USER_EMAIL;
+}
+
 export interface DemoSession {
   user: {
     id: string;
@@ -40,10 +56,10 @@ export async function ensureDemoUser(): Promise<string> {
 
   try {
     const user = await prisma.user.upsert({
-      where: { email: DEMO_USER_EMAIL },
+      where: { email: demoUserEmail() },
       update: {},
       create: {
-        email: DEMO_USER_EMAIL,
+        email: demoUserEmail(),
         name: DEMO_USER_NAME,
         emailVerified: true,
       },
@@ -71,7 +87,7 @@ export async function getDemoUserId(): Promise<string | null> {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { email: DEMO_USER_EMAIL },
+      where: { email: demoUserEmail() },
       select: { id: true },
     });
 
@@ -94,7 +110,7 @@ export async function getDemoSession(): Promise<DemoSession | null> {
   return {
     user: {
       id: userId ?? "",
-      email: DEMO_USER_EMAIL,
+      email: demoUserEmail(),
       name: DEMO_USER_NAME,
       role: "ADMIN",
       image: null,

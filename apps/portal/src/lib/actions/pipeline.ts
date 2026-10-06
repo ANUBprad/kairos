@@ -1,6 +1,6 @@
 'use server';
 
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createPipelineRun,
@@ -17,7 +17,7 @@ async function getOrgId(): Promise<string> {
 }
 
 export async function startPipeline(input: CreatePipelineInput) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("create");
   const pipeline = await createPipelineRun(orgId, input);
   await logActivity(orgId, 'PIPELINE_STARTED', 'PipelineRun', pipeline.id, {
     stepCount: input.steps.length,
@@ -26,11 +26,11 @@ export async function startPipeline(input: CreatePipelineInput) {
 }
 
 export async function completeStep(stepId: string, status: 'COMPLETED' | 'FAILED' | 'TIMEOUT', output?: unknown, error?: string) {
-  return finishPipelineStep(stepId, status, output, error, await getOrgId());
+  return finishPipelineStep(stepId, status, output, error, await requireOrgPermission("edit"));
 }
 
 export async function completePipeline(pipelineId: string, status: 'COMPLETED' | 'FAILED' | 'TIMEOUT') {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("edit");
   const result = await finishPipelineRun(pipelineId, status, orgId);
   await logActivity(orgId, 'PIPELINE_COMPLETED', 'PipelineRun', pipelineId, { status });
   return result;

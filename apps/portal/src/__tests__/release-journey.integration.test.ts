@@ -251,9 +251,13 @@ describe("canonical Portal journey: ingest -> retrieve -> answer -> artifacts ->
   after(async () => {
     if (!testDbUrl) return;
     try {
-      // runBenchmark pins an immutable version row per run, so the children go first.
-      await client.benchmarkRun.deleteMany({ where: { datasetId: { in: datasetIds } } });
-      await client.benchmarkDataset.deleteMany({ where: { id: { in: datasetIds } } });
+      // runBenchmark pins an immutable version row per run, and publish
+      // snapshots spawn child version rows not tracked in datasetIds, so scope
+      // the child-first deletions on the KB anchor as well.
+      await client.benchmarkRun.deleteMany({ where: { dataset: { knowledgeBaseId: kbId } } });
+      await client.benchmarkDataset.deleteMany({
+        where: { OR: [{ id: { in: datasetIds } }, { knowledgeBaseId: kbId }] },
+      });
       if (docId) await client.document.deleteMany({ where: { id: docId } });
       await client.knowledgeBase.deleteMany({ where: { id: kbId } });
       await client.project.deleteMany({ where: { id: { in: [projectId, foreignProjectId] } } });

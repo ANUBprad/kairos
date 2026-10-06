@@ -1,7 +1,7 @@
 "use server";
 
 import { requireSession } from "@/lib/server/auth-utils";
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import {
   createDataset,
   getDataset,
@@ -24,14 +24,14 @@ import {
   type DatasetStats,
   type PublishResult,
 } from "@/lib/golden-datasets";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { logger } from "@/lib/logger";
 
 export async function createGoldenDataset(input: CreateDatasetInput) {
   const session = await requireSession();
 
   try {
-    const dataset = await createDataset(await getSelectedOrgId(), session.user.id, input);
+    const dataset = await createDataset(await requireOrgPermission("create"), session.user.id, input);
     revalidatePath("/app/datasets");
     return { success: true, dataset };
   } catch (error) {
@@ -80,7 +80,7 @@ export async function updateGoldenDataset(datasetId: string, input: Partial<Crea
   const session = await requireSession();
 
   try {
-    const dataset = await updateDataset(datasetId, input, await getSelectedOrgId());
+    const dataset = await updateDataset(datasetId, input, await requireOrgPermission("edit"));
     revalidatePath("/app/datasets");
     return { success: true, dataset };
   } catch (error) {
@@ -97,7 +97,7 @@ export async function deleteGoldenDataset(datasetId: string) {
   const session = await requireSession();
 
   try {
-    const deleted = await deleteDataset(datasetId, await getSelectedOrgId());
+    const deleted = await deleteDataset(datasetId, await requireOrgPermission("delete"));
     revalidatePath("/app/datasets");
     return { success: deleted };
   } catch (error) {
@@ -114,7 +114,7 @@ export async function addGoldenDatasetEntry(datasetId: string, input: CreateEntr
   const session = await requireSession();
 
   try {
-    const entry = await addEntry(datasetId, input, await getSelectedOrgId());
+    const entry = await addEntry(datasetId, input, await requireOrgPermission("edit"));
     revalidatePath("/app/datasets");
     return { success: true, entry };
   } catch (error) {
@@ -131,7 +131,7 @@ export async function bulkAddGoldenDatasetEntries(datasetId: string, entries: Cr
   const session = await requireSession();
 
   try {
-    const result = await bulkAddEntries(datasetId, entries, await getSelectedOrgId());
+    const result = await bulkAddEntries(datasetId, entries, await requireOrgPermission("edit"));
     revalidatePath("/app/datasets");
     return { success: true, ...result };
   } catch (error) {
@@ -149,7 +149,7 @@ export async function updateGoldenDatasetEntry(entryId: string, input: Partial<C
   const session = await requireSession();
 
   try {
-    const entry = await updateEntry(entryId, input, await getSelectedOrgId());
+    const entry = await updateEntry(entryId, input, await requireOrgPermission("edit"));
     revalidatePath("/app/datasets");
     return { success: true, entry };
   } catch (error) {
@@ -166,7 +166,7 @@ export async function deleteGoldenDatasetEntry(entryId: string) {
   const session = await requireSession();
 
   try {
-    const deleted = await deleteEntry(entryId, await getSelectedOrgId());
+    const deleted = await deleteEntry(entryId, await requireOrgPermission("delete"));
     revalidatePath("/app/datasets");
     return { success: deleted };
   } catch (error) {
@@ -183,7 +183,7 @@ export async function importGoldenDataset(input: ImportDatasetInput) {
   const session = await requireSession();
 
   try {
-    const dataset = await importDataset(await getSelectedOrgId(), session.user.id, input);
+    const dataset = await importDataset(await requireOrgPermission("edit"), session.user.id, input);
     revalidatePath("/app/datasets");
     return { success: true, dataset };
   } catch (error) {
@@ -200,7 +200,7 @@ export async function exportGoldenDataset(datasetId: string) {
   const session = await requireSession();
 
   try {
-    const data = await exportDataset(datasetId, await getSelectedOrgId());
+    const data = await exportDataset(datasetId, await requireOrgPermission("export"));
     return { success: true, data };
   } catch (error) {
     logger.error("Failed to export golden dataset", {
@@ -216,7 +216,7 @@ export async function createGoldenDatasetVersion(datasetId: string) {
   const session = await requireSession();
 
   try {
-    const dataset = await createVersion(datasetId, await getSelectedOrgId());
+    const dataset = await createVersion(datasetId, await requireOrgPermission("edit"));
     revalidatePath("/app/datasets");
     return { success: true, dataset };
   } catch (error) {
@@ -237,7 +237,7 @@ export async function publishGoldenDataset(datasetId: string): Promise<{
   const session = await requireSession();
 
   try {
-    const published = await publishDataset(datasetId, await getSelectedOrgId());
+    const published = await publishDataset(datasetId, await requireOrgPermission("edit"));
     revalidatePath("/app/datasets");
     revalidatePath("/app/evaluation");
     return { success: true, published };

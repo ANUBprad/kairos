@@ -3,7 +3,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { getStorageProvider } from "@/lib/storage";
 import { extractText } from "@/lib/extraction";
 import { chunkText } from "@/lib/chunking";

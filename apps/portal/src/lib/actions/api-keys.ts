@@ -1,8 +1,8 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
-import { getSelectedOrgId } from "@/lib/server/workspace";
-import { revalidatePath } from "next/cache";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { logger } from "@/lib/logger";
 import {
   createApiKey,
@@ -37,7 +37,7 @@ export async function createNewApiKey(
         : undefined,
     };
 
-    const organizationId = await getSelectedOrgId();
+    const organizationId = await requireOrgPermission("manage_api_keys");
 
     const result = await createApiKey(
       session.user.id,
@@ -85,7 +85,7 @@ export async function deactivateApiKey(apiKeyId: string) {
       throw new Error("Unauthorized");
     }
 
-    await disableApiKey(session.user.id, apiKeyId, await getSelectedOrgId());
+    await disableApiKey(session.user.id, apiKeyId, await requireOrgPermission("manage_api_keys"));
     revalidatePath("/app/settings/api-keys");
     return { success: true };
   } catch (error) {
@@ -106,7 +106,7 @@ export async function removeApiKey(apiKeyId: string) {
       throw new Error("Unauthorized");
     }
 
-    await deleteApiKey(session.user.id, apiKeyId, await getSelectedOrgId());
+    await deleteApiKey(session.user.id, apiKeyId, await requireOrgPermission("manage_api_keys"));
     revalidatePath("/app/settings/api-keys");
     return { success: true };
   } catch (error) {
@@ -127,7 +127,7 @@ export async function rotateExistingApiKey(apiKeyId: string) {
       throw new Error("Unauthorized");
     }
 
-    const organizationId = await getSelectedOrgId();
+    const organizationId = await requireOrgPermission("manage_api_keys");
 
     const result = await rotateApiKey(
       session.user.id,

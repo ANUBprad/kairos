@@ -1,7 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import {
   createFolder,
   listFolders,
@@ -25,7 +25,7 @@ import {
   type ImportPromptData,
 } from "@/lib/prompts";
 import type { Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { logger } from "@/lib/logger";
 
 // ============================================================================
@@ -39,7 +39,7 @@ export async function createPromptFolder(input: CreateFolderInput) {
       throw new Error("Unauthorized");
     }
 
-    const folder = await createFolder(await getSelectedOrgId(), input);
+    const folder = await createFolder(await requireOrgPermission("create"), input);
     revalidatePath("/app/prompts");
     return { success: true, folder };
   } catch (error) {
@@ -80,7 +80,7 @@ export async function deletePromptFolder(folderId: string) {
       throw new Error("Unauthorized");
     }
 
-    const deleted = await deleteFolder(folderId, await getSelectedOrgId());
+    const deleted = await deleteFolder(folderId, await requireOrgPermission("delete"));
     revalidatePath("/app/prompts");
     return { success: true, deleted };
   } catch (error) {
@@ -105,7 +105,7 @@ export async function createNewPrompt(input: CreatePromptInput) {
       throw new Error("Unauthorized");
     }
 
-    const prompt = await createPrompt(await getSelectedOrgId(), session.user.id, input);
+    const prompt = await createPrompt(await requireOrgPermission("create"), session.user.id, input);
     revalidatePath("/app/prompts");
     return { success: true, prompt };
   } catch (error) {
@@ -173,7 +173,7 @@ export async function updatePromptDetails(promptId: string, input: UpdatePromptI
       throw new Error("Unauthorized");
     }
 
-    const prompt = await updatePrompt(promptId, input, await getSelectedOrgId());
+    const prompt = await updatePrompt(promptId, input, await requireOrgPermission("edit"));
     revalidatePath("/app/prompts");
     return { success: true, prompt };
   } catch (error) {
@@ -194,7 +194,7 @@ export async function deletePromptAction(promptId: string) {
       throw new Error("Unauthorized");
     }
 
-    const deleted = await deletePrompt(promptId, await getSelectedOrgId());
+    const deleted = await deletePrompt(promptId, await requireOrgPermission("delete"));
     revalidatePath("/app/prompts");
     return { success: true, deleted };
   } catch (error) {
@@ -215,7 +215,7 @@ export async function clonePromptAction(promptId: string) {
       throw new Error("Unauthorized");
     }
 
-    const prompt = await clonePrompt(promptId, session.user.id, await getSelectedOrgId());
+    const prompt = await clonePrompt(promptId, session.user.id, await requireOrgPermission("create"));
     revalidatePath("/app/prompts");
     return { success: true, prompt };
   } catch (error) {
@@ -253,7 +253,7 @@ export async function createNewVersion(
     const version = await createVersion(promptId, session.user.id, {
       ...input,
       variables: input.variables as Prisma.JsonValue | undefined,
-    }, await getSelectedOrgId());
+    }, await requireOrgPermission("edit"));
     revalidatePath("/app/prompts");
     return { success: true, version };
   } catch (error) {
@@ -294,7 +294,7 @@ export async function publishPromptVersion(versionId: string) {
       throw new Error("Unauthorized");
     }
 
-    const version = await publishVersion(versionId, await getSelectedOrgId());
+    const version = await publishVersion(versionId, await requireOrgPermission("edit"));
     revalidatePath("/app/prompts");
     return { success: true, version };
   } catch (error) {
@@ -315,7 +315,7 @@ export async function rollbackPromptVersion(promptId: string, version: number) {
       throw new Error("Unauthorized");
     }
 
-    const rolledBack = await rollbackToVersion(promptId, version, await getSelectedOrgId());
+    const rolledBack = await rollbackToVersion(promptId, version, await requireOrgPermission("edit"));
     revalidatePath("/app/prompts");
     return { success: true, version: rolledBack };
   } catch (error) {
@@ -360,7 +360,7 @@ export async function exportPromptData(promptId: string) {
       throw new Error("Unauthorized");
     }
 
-    const data = await exportPrompt(promptId, await getSelectedOrgId());
+    const data = await exportPrompt(promptId, await requireOrgPermission("export"));
     return { success: true, data };
   } catch (error) {
     logger.error("Failed to export prompt", {
@@ -380,7 +380,7 @@ export async function importPromptData(data: ImportPromptData) {
       throw new Error("Unauthorized");
     }
 
-    const prompt = await importPrompt(await getSelectedOrgId(), session.user.id, data);
+    const prompt = await importPrompt(await requireOrgPermission("edit"), session.user.id, data);
     revalidatePath("/app/prompts");
     return { success: true, prompt };
   } catch (error) {

@@ -1,6 +1,6 @@
 'use server';
 
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createIncident,
@@ -21,7 +21,7 @@ async function getOrgId(): Promise<string> {
 }
 
 export async function createNewIncident(input: CreateIncidentInput) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("create");
   const incident = await createIncident(orgId, input);
   await logActivity(orgId, 'INCIDENT_CREATED', 'Incident', incident.id, { title: input.title });
   return incident;
@@ -41,26 +41,26 @@ export async function updateIncident(
   status: 'OPEN' | 'INVESTIGATING' | 'IDENTIFIED' | 'MONITORING' | 'RESOLVED' | 'CLOSED',
   data?: { resolution?: string; rootCause?: string; postmortem?: string }
 ) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("edit");
   const result = await updateIncidentStatus(incidentId, status, data, orgId);
   await logActivity(orgId, 'INCIDENT_UPDATED', 'Incident', incidentId, { status });
   return result;
 }
 
 export async function setIncidentOwner(incidentId: string, ownerId: string) {
-  return assignIncident(incidentId, ownerId, await getOrgId());
+  return assignIncident(incidentId, ownerId, await requireOrgPermission("edit"));
 }
 
 export async function linkAlert(incidentId: string, alertId: string) {
-  return linkAlertToIncident(incidentId, alertId, await getOrgId());
+  return linkAlertToIncident(incidentId, alertId, await requireOrgPermission("edit"));
 }
 
 export async function linkTrace(incidentId: string, traceId: string) {
-  return linkTraceToIncident(incidentId, traceId, await getOrgId());
+  return linkTraceToIncident(incidentId, traceId, await requireOrgPermission("edit"));
 }
 
 export async function addIncidentNote(incidentId: string, message: string) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("edit");
   const event = await createIncidentEvent(incidentId, message, orgId);
   await logActivity(orgId, 'INCIDENT_NOTE', 'Incident', incidentId, { message });
   return event;

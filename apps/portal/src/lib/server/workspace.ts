@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { getServerSession } from "@/lib/server/auth-utils";
+import { requirePermission, type Permission } from "@/lib/rbac";
 import { createOrganization, getUserOrganizations } from "@/lib/organizations";
 import { resolveSelectedOrganization, type OrgRef } from "@/lib/workspace-selection";
 
@@ -144,8 +145,19 @@ export const getWorkspaceContext = cache(async (): Promise<WorkspaceContext | nu
     const session = await getServerSession();
     if (!session?.user?.id) return null;
 
-    const cookieStore = await cookies();
-    const selectedOrganizationId = cookieStore.get(APP_WORKSPACE_ORG_COOKIE)?.value ?? null;
+    // Cookies only exist inside a request scope (real HTTP or the action
+    // runtime). Builds, unit tests, and bare node runs have none; fall back to
+    // the user's default organization so org-scoped guards still resolve.
+    let selectedOrganizationId: string | null = null;
+    try {
+      const cookieStore = await cookies();
+      selectedOrganizationId = cookieStore.get(APP_WORKSPACE_ORG_COOKIE)?.value ?? null;
+    } catch (err) {
+      if (isDynamicServerError(err)) throw err;
+      logger.warn("getWorkspaceContext: cookies unavailable, falling back to default organization", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     const resolved = await resolveUserWorkspace(session.user.id, session.user, selectedOrganizationId);
     if (!resolved) return null;
@@ -177,6 +189,20 @@ export async function getSelectedOrgId(): Promise<string> {
   const ctx = await getWorkspaceContext();
   if (!ctx?.selectedOrganization) throw new Error("No organization selected");
   return ctx.selectedOrganization.id;
+}
+
+/**
+ * Resolves the selected org and requires the caller's live membership there to
+ * hold the given permission. Views keep using getSelectedOrgId; every
+ * organization-scoped mutation calls this so a VIEWER (or anyone lacking the
+ * permission) cannot write.
+ */
+export async function requireOrgPermission(permission: Permission): Promise<string> {
+  const session = await getServerSession();
+  if (!session?.user?.id) throw new Error("Not authenticated");
+  const orgId = await getSelectedOrgId();
+  await requirePermission(session.user.id, "organization", orgId, permission);
+  return orgId;
 }
 
 function isDynamicServerError(err: unknown): boolean {

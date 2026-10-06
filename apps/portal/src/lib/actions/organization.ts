@@ -1,7 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
 import { getMembership } from "@/lib/rbac";

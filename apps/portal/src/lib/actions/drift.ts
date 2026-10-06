@@ -1,6 +1,6 @@
 'use server';
 
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import { logActivity } from '@/lib/activity';
 import {
   createDriftAlert,
@@ -20,7 +20,7 @@ async function getOrgId(): Promise<string> {
 }
 
 export async function reportDrift(input: CreateDriftInput) {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("create");
   const drift = await createDriftAlert(orgId, input);
   await logActivity(orgId, 'DRIFT_DETECTED', 'DriftAlert', drift.id, { type: input.type });
   return drift;
@@ -32,19 +32,19 @@ export async function listDriftAlerts(filters?: { type?: string; status?: string
 }
 
 export async function acknowledgeDriftAlert(driftId: string) {
-  return acknowledgeDrift(driftId, await getOrgId());
+  return acknowledgeDrift(driftId, await requireOrgPermission("edit"));
 }
 
 export async function resolveDriftAlert(driftId: string) {
-  return resolveDrift(driftId, await getOrgId());
+  return resolveDrift(driftId, await requireOrgPermission("edit"));
 }
 
 export async function ignoreDriftAlert(driftId: string) {
-  return ignoreDrift(driftId, await getOrgId());
+  return ignoreDrift(driftId, await requireOrgPermission("edit"));
 }
 
 export async function runDriftDetection() {
-  const orgId = await getOrgId();
+  const orgId = await requireOrgPermission("edit");
   const [latency, cost, quality] = await Promise.all([
     detectLatencyDrift(orgId),
     detectCostDrift(orgId),

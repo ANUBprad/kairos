@@ -1,7 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
-import { getSelectedOrgId } from "@/lib/server/workspace";
+import { getSelectedOrgId, requireOrgPermission } from "@/lib/server/workspace";
 import {
   createGate,
   getGate,
@@ -17,7 +17,7 @@ import {
   type QualityGateCondition,
   type ConditionResult,
 } from "@/lib/quality-gates";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { logger } from "@/lib/logger";
 
 // ============================================================================
@@ -35,7 +35,7 @@ export async function createQualityGate(input: {
       throw new Error("Unauthorized");
     }
 
-    const gate = await createGate(await getSelectedOrgId(), input);
+    const gate = await createGate(await requireOrgPermission("create"), input);
     revalidatePath("/app/quality-gates");
     return { success: true, ...gate };
   } catch (error) {
@@ -107,7 +107,7 @@ export async function updateQualityGate(
       throw new Error("Unauthorized");
     }
 
-    const gate = await updateGate(gateId, input, await getSelectedOrgId());
+    const gate = await updateGate(gateId, input, await requireOrgPermission("edit"));
     revalidatePath("/app/quality-gates");
     return { success: true, ...gate };
   } catch (error) {
@@ -129,7 +129,7 @@ export async function deleteQualityGate(gateId: string) {
       throw new Error("Unauthorized");
     }
 
-    const deleted = await deleteGate(gateId, await getSelectedOrgId());
+    const deleted = await deleteGate(gateId, await requireOrgPermission("delete"));
     revalidatePath("/app/quality-gates");
     return { success: deleted };
   } catch (error) {
@@ -151,7 +151,7 @@ export async function toggleQualityGate(gateId: string, enabled: boolean) {
       throw new Error("Unauthorized");
     }
 
-    const gate = await toggleGate(gateId, enabled, await getSelectedOrgId());
+    const gate = await toggleGate(gateId, enabled, await requireOrgPermission("edit"));
     revalidatePath("/app/quality-gates");
     return { success: true, ...gate };
   } catch (error) {
@@ -231,7 +231,7 @@ export async function recordQualityGateResult(
       throw new Error("Unauthorized");
     }
 
-    const result = await recordResult(gateId, passed, results, score, evaluationRunId, await getSelectedOrgId());
+    const result = await recordResult(gateId, passed, results, score, evaluationRunId, await requireOrgPermission("edit"));
     revalidatePath("/app/quality-gates");
     return { success: true, ...result };
   } catch (error) {

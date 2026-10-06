@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { ensureDefaultOrg } from "@/lib/server/organization";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
 import { getMembershipForResource, isRoleSufficient } from "@/lib/rbac";
 

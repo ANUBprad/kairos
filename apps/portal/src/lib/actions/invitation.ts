@@ -2,7 +2,7 @@
 
 import { getServerSession } from "@/lib/server/auth-utils";
 import { getMembership } from "@/lib/rbac";
-import { revalidatePath } from "next/cache";
+import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { logger } from "@/lib/logger";
 import {
   inviteMember,
