@@ -55,6 +55,7 @@ describe("podcast audio media routes against a real database with a mocked upstr
   const audioLessArtifactId = randomUUID();
   const validInterruptionId = "9f1ea3a2-5555-4000-8000-000000000001";
   const unknownInterruptionId = "9f1ea3a2-5555-4000-8000-00000000dead";
+  const foreignValidInterruptionId = "9f1ea3a2-5555-4000-8000-000000000099";
 
   let client: PrismaClient;
 
@@ -165,6 +166,24 @@ describe("podcast audio media routes against a real database with a mocked upstr
             format: "wav",
             durationSeconds: 3,
           },
+          interruptions: [
+            {
+              id: foreignValidInterruptionId,
+              question: "Private to org B",
+              turns: [
+                { speaker: "HOST_A", text: "Org B's own answer." },
+                { speaker: "HOST_B", text: "Not for org A." },
+              ],
+              createdAt: "2026-01-01T00:00:00.000Z",
+              audio: {
+                provider: "local",
+                storageProvider: "cloudinary",
+                storageKey: "artifacts/podcast-media/foreign-interruption.wav",
+                format: "wav",
+                durationSeconds: 1,
+              },
+            },
+          ],
         },
       },
     });
@@ -339,6 +358,28 @@ describe("podcast audio media routes against a real database with a mocked upstr
     );
     assert.equal(res.status, 404);
     assert.equal(calls.length, 0);
+  });
+
+  it("resolves a valid interruption UUID that exists only in another tenant's podcast to 404 via the caller's own artifact", async (t) => {
+    if (!requireEnvironment(t)) return;
+
+    // foreignValidInterruptionId is a real, well-formed interruption on org B's
+    // podcast. Requested through org A's episode it must be indistinguishable
+    // from any other unknown id: the lookup is scoped to the caller's own
+    // artifact metadata, so tenant B's storage key is never signed or fetched.
+    const res = await interruptionGet(
+      new NextRequest(
+        `http://localhost:3000/api/artifacts/${episodeArtifactId}/audio/interruption/${foreignValidInterruptionId}`,
+      ),
+      { params: Promise.resolve({ artifactId: episodeArtifactId, interruptionId: foreignValidInterruptionId }) },
+    );
+    assert.equal(res.status, 404);
+    assert.deepEqual(await res.json(), { error: "Not found" });
+    assert.equal(calls.length, 0);
+    assert.ok(
+      calls.every((c) => !c.url.includes("foreign-interruption.wav")),
+      "tenant B's storage key must never be signed",
+    );
   });
 
   it("mirrors a refused upstream range as 416 with the storage-provided total", async (t) => {
