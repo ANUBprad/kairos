@@ -4,6 +4,7 @@ import { getServerSession } from "@/lib/server/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { canAccessKnowledgeBase } from "@/lib/ai/chat/access";
+import type { Permission } from "@/lib/rbac";
 import {
   getRetrievalConfig,
   saveRetrievalConfig,
@@ -15,8 +16,8 @@ import {
 } from "@/lib/retrieval/service";
 import type { RetrievalConfig, RetrievalResultDisplay } from "@/lib/retrieval/types";
 
-async function assertKbAccess(kbId: string, userId: string) {
-  if (!(await canAccessKnowledgeBase(userId, kbId))) {
+async function assertKbAccess(kbId: string, userId: string, permission: Permission = "view") {
+  if (!(await canAccessKnowledgeBase(userId, kbId, permission))) {
     throw new Error("Knowledge base not found");
   }
 }
@@ -34,7 +35,7 @@ export async function updateKbRetrievalConfig(
 ): Promise<RetrievalConfig> {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
-  await assertKbAccess(kbId, session.user.id);
+  await assertKbAccess(kbId, session.user.id, "edit");
   const updated = await saveRetrievalConfig(kbId, config);
   revalidatePath(`/app/retrieval-lab`);
   return updated;
@@ -48,7 +49,7 @@ export async function executeRetrieval(
 ): Promise<RetrievalResultDisplay> {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
-  await assertKbAccess(kbId, session.user.id);
+  await assertKbAccess(kbId, session.user.id, "run_experiments");
   return runRetrieval(kbId, query, config, debugMode);
 }
 
@@ -61,7 +62,7 @@ export async function executeComparison(
 ): Promise<{ a: RetrievalResultDisplay; b: RetrievalResultDisplay }> {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
-  await assertKbAccess(kbId, session.user.id);
+  await assertKbAccess(kbId, session.user.id, "run_experiments");
   return runComparison(kbId, query, configA, configB, debugMode);
 }
 
@@ -73,7 +74,7 @@ export async function persistRun(
 ): Promise<string> {
   const session = await getServerSession();
   if (!session) throw new Error("Not authenticated");
-  await assertKbAccess(kbId, session.user.id);
+  await assertKbAccess(kbId, session.user.id, "create");
   return saveExperimentRun(null, kbId, query, config, result);
 }
 

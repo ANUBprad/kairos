@@ -43,7 +43,7 @@ describe("knowledge base member authorization wiring", () => {
   ] as const) {
     describe(`knowledge base authorization wiring: ${name}`, () => {
       it("routes KB access through the caller identity, not KB existence", () => {
-        assert.match(source, /canAccessKnowledgeBase\(userId, kbId\)/);
+        assert.match(source, /canAccessKnowledgeBase\(userId, kbId(?:, permission)?\)/);
         assert.doesNotMatch(source, /assertKbAccess\(kbId, _userId\)/);
       });
 
