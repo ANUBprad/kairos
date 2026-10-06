@@ -1392,9 +1392,9 @@ export async function deleteDocument(formData: FormData) {
   await logActivity(id, session.user.id, "DELETED", { fileName: doc.name });
 
   const storage = getStorageProvider();
-  if (doc.storageKey) storage.delete(doc.storageKey).catch(() => {});
 
   await prisma.document.delete({ where: { id } });
+  if (doc.storageKey) storage.delete(doc.storageKey).catch(() => {});
 
   revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
 }
@@ -1490,9 +1490,6 @@ export async function bulkDeleteDocuments(formData: FormData) {
   await getOrgFromKb(bulkKbId, session.user.id, "delete");
 
   const storage = getStorageProvider();
-  for (const doc of docs) {
-    if (doc.storageKey) storage.delete(doc.storageKey).catch(() => {});
-  }
 
   await prisma.$transaction([
     prisma.documentActivity.createMany({
@@ -1505,6 +1502,9 @@ export async function bulkDeleteDocuments(formData: FormData) {
     }),
     prisma.document.deleteMany({ where: { id: { in: ids } } }),
   ]);
+  for (const doc of docs) {
+    if (doc.storageKey) storage.delete(doc.storageKey).catch(() => {});
+  }
 
   revalidatePath(`/app/knowledge-bases/${docs[0].knowledgeBaseId}`);
 }
