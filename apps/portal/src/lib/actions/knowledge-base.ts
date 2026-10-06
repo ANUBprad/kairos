@@ -109,7 +109,20 @@ export async function deleteKnowledgeBase(formData: FormData) {
 
   await assertCanMutateKnowledgeBase(id, session.user.id);
 
-  await prisma.knowledgeBase.delete({ where: { id } });
+  // Benchmark datasets keep a restrictive foreign key on their knowledge base:
+  // detaching them would turn a tenant dataset into a globally readable one.
+  // Report that as an actionable message instead of a raw database error.
+  try {
+    await prisma.knowledgeBase.delete({ where: { id } });
+  } catch (error) {
+    if ((error as { code?: string })?.code === "P2003") {
+      throw new Error(
+        "This knowledge base still has benchmark datasets. Delete them first, then delete the knowledge base.",
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 
   revalidatePath("/app");
 }

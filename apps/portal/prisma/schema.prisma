@@ -666,7 +666,7 @@ model BenchmarkDataset {
   contentHash String? @db.VarChar(64)
 
   knowledgeBaseId String?
-  knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: SetNull)
+  knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: Restrict)
 
   parentVersionId String?
   parentVersion   BenchmarkDataset? @relation("BenchmarkDatasetVersion", fields: [parentVersionId], references: [id], onDelete: SetNull)
@@ -1639,5 +1639,4 @@ model TelemetryConfig {
   compressOldTraces  Boolean @default(true)
   archiveAfterDays   Int     @default(30)
 }
-
 
