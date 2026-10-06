@@ -152,11 +152,11 @@ export async function detectQualityDrift(orgId: string) {
 
   const [currentWeek, previousWeek] = await Promise.all([
     prisma.experimentRun.aggregate({
-      where: { startedAt: { gte: last7 } },
+      where: { startedAt: { gte: last7 }, knowledgeBase: { project: { organizationId: orgId } } },
       _avg: { tokensUsed: true },
     }),
     prisma.experimentRun.aggregate({
-      where: { startedAt: { gte: prev7, lt: last7 } },
+      where: { startedAt: { gte: prev7, lt: last7 }, knowledgeBase: { project: { organizationId: orgId } } },
       _avg: { tokensUsed: true },
     }),
   ]);

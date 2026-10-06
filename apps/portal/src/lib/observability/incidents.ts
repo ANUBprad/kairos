@@ -9,7 +9,19 @@ export interface CreateIncidentInput {
   linkedTraceIds?: string[];
 }
 
+// An incident's owner is joined into list/detail responses (name, email), so
+// the owner must be a member of the incident's organization at write time;
+// otherwise a caller could attach a foreign user and read their PII back.
+async function assertOwnerInOrg(ownerId: string, orgId: string) {
+  const member = await prisma.member.findUnique({
+    where: { organizationId_userId: { organizationId: orgId, userId: ownerId } },
+    select: { id: true },
+  });
+  if (!member) throw new Error("Owner not found");
+}
+
 export async function createIncident(orgId: string, input: CreateIncidentInput) {
+  if (input.ownerId) await assertOwnerInOrg(input.ownerId, orgId);
   return prisma.incident.create({
     data: {
       title: input.title,
@@ -79,6 +91,7 @@ export async function updateIncidentStatus(
 }
 
 export async function assignIncident(incidentId: string, ownerId: string, orgId?: string) {
+  if (orgId) await assertOwnerInOrg(ownerId, orgId);
   return prisma.incident.update({
     where: orgId ? { id: incidentId, organizationId: orgId } : { id: incidentId },
     data: { ownerId },
