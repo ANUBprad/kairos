@@ -518,6 +518,7 @@ export async function publishDataset(
     description: dataset.description,
     tags: dataset.tags,
     source: `golden:${dataset.id}`,
+    organizationId: dataset.organizationId,
     questions: dataset.entries.map((e) => ({
       question: e.question,
       expectedAnswer: e.expectedAnswer,

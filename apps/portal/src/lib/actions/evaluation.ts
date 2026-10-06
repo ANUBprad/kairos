@@ -288,8 +288,9 @@ export async function getDatasetsForSelector() {
   return prisma.benchmarkDataset.findMany({
     where: {
       OR: [
-        { knowledgeBaseId: null },
+        { knowledgeBaseId: null, organizationId: null },
         { knowledgeBase: { project: { organization: { members: { some: { userId: session.user.id } } } } } },
+        { organization: { members: { some: { userId: session.user.id } } } },
       ],
     },
     select: { id: true, name: true, _count: { select: { questions: true } } },
@@ -329,8 +330,9 @@ export async function getBaselines() {
       status: "completed",
       dataset: {
         OR: [
-          { knowledgeBaseId: null },
+          { knowledgeBaseId: null, organizationId: null },
           { knowledgeBase: { project: { organization: { members: { some: { userId: session.user.id } } } } } },
+          { organization: { members: { some: { userId: session.user.id } } } },
         ],
       },
     },

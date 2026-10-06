@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       where: {
         id: datasetId,
         OR: [
-          { knowledgeBaseId: null },
+          { knowledgeBaseId: null, organizationId: null },
           {
             knowledgeBase: {
               project: {
@@ -90,6 +90,11 @@ export async function POST(request: Request) {
                   members: { some: { userId: session.user.id } },
                 },
               },
+            },
+          },
+          {
+            organization: {
+              members: { some: { userId: session.user.id } },
             },
           },
         ],

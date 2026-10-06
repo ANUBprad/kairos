@@ -117,6 +117,7 @@ describe("dataset and run authorization against a real database", () => {
       assert.deepEqual(await assertDatasetAccess(owned.id, memberUserId), {
         id: owned.id,
         knowledgeBaseId: kb.id,
+        organizationId: null,
       });
 
       // Authenticated non-members and members of other orgs are rejected with
@@ -137,6 +138,7 @@ describe("dataset and run authorization against a real database", () => {
       assert.deepEqual(await assertDatasetAccess(foreign.id, foreignUserId), {
         id: foreign.id,
         knowledgeBaseId: foreignKb.id,
+        organizationId: null,
       });
 
       // A forged dataset id stays rejected even for a member.
@@ -148,10 +150,12 @@ describe("dataset and run authorization against a real database", () => {
       assert.deepEqual(await assertDatasetAccess(standalone.id, outsiderUserId), {
         id: standalone.id,
         knowledgeBaseId: null,
+        organizationId: null,
       });
       assert.deepEqual(await assertDatasetAccess(standalone.id, memberUserId), {
         id: standalone.id,
         knowledgeBaseId: null,
+        organizationId: null,
       });
 
       // Run access follows the run dataset's tenancy.

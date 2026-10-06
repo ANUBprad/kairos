@@ -157,6 +157,7 @@ model Organization {
   telemetryConfig TelemetryConfig?
   providerHealth  ProviderHealth[]
   pipelineRuns    PipelineRun[]
+  benchmarkDatasets BenchmarkDataset[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -668,6 +669,9 @@ model BenchmarkDataset {
   knowledgeBaseId String?
   knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: Restrict)
 
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   parentVersionId String?
   parentVersion   BenchmarkDataset? @relation("BenchmarkDatasetVersion", fields: [parentVersionId], references: [id], onDelete: SetNull)
   childVersions   BenchmarkDataset[] @relation("BenchmarkDatasetVersion")
@@ -681,6 +685,7 @@ model BenchmarkDataset {
   updatedAt DateTime @updatedAt
 
   @@index([knowledgeBaseId])
+  @@index([organizationId])
   @@index([parentVersionId])
   @@index([version])
   @@unique([parentVersionId, version])

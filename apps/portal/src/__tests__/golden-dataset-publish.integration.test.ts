@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { createDataset, addEntry, publishDataset } from "@/lib/golden-datasets";
 import { publishDatasetSnapshot, resolveRunDataset } from "@/lib/evaluation/benchmark";
+import { assertDatasetAccess } from "@/lib/evaluation/access";
 
 function makeTestClient(url: string): PrismaClient {
   return new PrismaClient({ datasources: { db: { url } } });
@@ -95,6 +96,8 @@ describe("golden dataset → benchmark platform publish bridge", () => {
       assert.equal(snapshot.source, `golden:${dataset.id}`);
       assert.deepEqual(snapshot.tags, ["support", "billing"]);
       assert.equal(snapshot.questions.length, 2);
+      assert.equal(snapshot.knowledgeBaseId, null);
+      assert.equal(snapshot.organizationId, orgId, "org-private QA data must anchor to the owning org, not go global");
 
       const withContext = snapshot.questions.find((q) => q.expectedContext === "Refunds are processed from the billing settings page.");
       assert.ok(withContext);
@@ -219,6 +222,13 @@ describe("golden dataset → benchmark platform publish bridge", () => {
 
       // A user from another org cannot publish this org's golden dataset.
       await assert.rejects(publishDataset(dataset.id, foreignOrgId), /Dataset not found/);
+
+      // Ownership anchors survive publish: the owner can read the snapshot but
+      // a user from another org cannot (org-QA data is not global material).
+      const secure = await publishDataset(dataset.id, orgId);
+      registerPublished(secure.benchmarkDatasetId);
+      await assert.doesNotReject(assertDatasetAccess(secure.benchmarkDatasetId, ownerUserId));
+      await assert.rejects(assertDatasetAccess(secure.benchmarkDatasetId, foreignUserId), /Dataset not found/);
 
       // Empty dataset is refused.
       const emptyDataset = await createDataset(orgId, ownerUserId, { name: "Empty QA" });

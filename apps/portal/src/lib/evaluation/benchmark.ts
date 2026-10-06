@@ -28,6 +28,7 @@ export async function createBenchmarkDataset(data: {
   description?: string;
   source?: string;
   knowledgeBaseId?: string;
+  organizationId?: string;
   questions: Array<{
     question: string;
     expectedAnswer?: string;
@@ -42,6 +43,7 @@ export async function createBenchmarkDataset(data: {
       description: data.description,
       source: data.source,
       knowledgeBaseId: data.knowledgeBaseId,
+      organizationId: data.organizationId,
       questions: {
         create: data.questions.map((q) => ({
           question: q.question,
@@ -195,6 +197,7 @@ export interface PublishSnapshotInput {
   tags?: string[];
   source: string;
   knowledgeBaseId?: string;
+  organizationId?: string;
   questions: Array<{
     question: string;
     expectedAnswer?: string | null;
@@ -225,6 +228,7 @@ export async function publishDatasetSnapshot(
         tags: input.tags ?? [],
         contentHash: hash,
         knowledgeBaseId: input.knowledgeBaseId,
+        organizationId: input.organizationId,
         questions: { create: snapshotQuestions(input.questions) },
       },
       include: { questions: true },
@@ -270,6 +274,7 @@ async function createSnapshotVersion(
     source: string | null;
     tags: string[];
     knowledgeBaseId: string | null;
+    organizationId: string | null;
   },
   hash: string,
   input: PublishSnapshotInput,
@@ -292,6 +297,7 @@ async function createSnapshotVersion(
         contentHash: hash,
         parentVersionId: root.id,
         knowledgeBaseId: input.knowledgeBaseId ?? root.knowledgeBaseId,
+        organizationId: input.organizationId ?? root.organizationId,
         questions: { create: snapshotQuestions(input.questions) },
       },
       include: { questions: true },
@@ -322,8 +328,9 @@ export async function getBenchmarkDatasets(userId?: string) {
       ? {
           where: {
             OR: [
-              { knowledgeBaseId: null },
+              { knowledgeBaseId: null, organizationId: null },
               { knowledgeBase: { project: { organization: { members: { some: { userId } } } } } },
+              { organization: { members: { some: { userId } } } },
             ],
           },
         }

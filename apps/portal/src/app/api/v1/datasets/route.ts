@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
         where: {
           OR: [
             { knowledgeBase: { project: { organizationId: auth.organizationId } } },
-            { knowledgeBaseId: null },
+            { organizationId: auth.organizationId },
+            { knowledgeBaseId: null, organizationId: null },
           ],
         },
         include: {
@@ -46,7 +47,8 @@ export async function GET(request: NextRequest) {
         where: {
           OR: [
             { knowledgeBase: { project: { organizationId: auth.organizationId } } },
-            { knowledgeBaseId: null },
+            { organizationId: auth.organizationId },
+            { knowledgeBaseId: null, organizationId: null },
           ],
         },
       }),
@@ -107,6 +109,7 @@ export async function POST(request: NextRequest) {
         source: typeof body.source === "string" ? body.source : undefined,
         tags: Array.isArray(body.tags) ? body.tags.slice(0, 20) : [],
         knowledgeBaseId,
+        organizationId: auth.organizationId,
       },
     });
 

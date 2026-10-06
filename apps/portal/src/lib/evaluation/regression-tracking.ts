@@ -100,15 +100,19 @@ export function serializeRegressionComparison(result: RegressionComparisonResult
   };
 }
 
-// Runs anchored to a knowledge base are scoped to the API key's organization;
-// standalone datasets (no knowledge base) remain global, matching the shared
-// access boundary. Foreign, fabricated, and deleted ids resolve identically,
-// so the API cannot probe another tenant's run existence.
+// Runs anchored to a knowledge base or organization are scoped to the API
+// key's organization; standalone datasets (no anchor at all) remain global,
+// matching the shared access boundary. Foreign, fabricated, and deleted ids
+// resolve identically, so the API cannot probe another tenant's run existence.
 function regressionRunWhere(runId: string, organizationId: string) {
   return {
-    id: runId,
+id: runId,
     dataset: {
-      OR: [{ knowledgeBaseId: null }, { knowledgeBase: { project: { organizationId } } }],
+      OR: [
+        { knowledgeBaseId: null, organizationId: null },
+        { knowledgeBase: { project: { organizationId } } },
+        { organizationId },
+      ],
     },
   };
 }
@@ -210,10 +214,11 @@ export async function trackRegressionComparison(
 }
 
 // Reads a persisted regression comparison through the same shared access
-// boundary as tracking: datasets anchored to a knowledge base resolve only
-// inside the caller's organization, standalone (unanchored) datasets stay
-// global, and a foreign, fabricated, or deleted id resolves identically to
-// null so the caller cannot probe another tenant's record existence.
+// boundary as tracking: datasets anchored to a knowledge base or organization
+// resolve only inside the caller's organization, standalone (unanchored)
+// datasets stay global, and a foreign, fabricated, or deleted id resolves
+// identically to null so the caller cannot probe another tenant's record
+// existence.
 export async function getBenchmarkRegressionForOrg(
   regressionId: string,
   organizationId: string,
@@ -221,8 +226,12 @@ export async function getBenchmarkRegressionForOrg(
   const row = await prisma.benchmarkRegression.findFirst({
     where: {
       id: regressionId,
-      dataset: {
-        OR: [{ knowledgeBaseId: null }, { knowledgeBase: { project: { organizationId } } }],
+dataset: {
+        OR: [
+          { knowledgeBaseId: null, organizationId: null },
+          { knowledgeBase: { project: { organizationId } } },
+          { organizationId },
+        ],
       },
     },
   });
