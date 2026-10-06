@@ -96,6 +96,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "knowledgeBaseId not found" }, { status: 404 });
     }
 
+    // datasetId must not attach this experiment to another tenant's dataset:
+    // only datasets anchored to the caller's organization or knowledge base are
+    // bindable, plus unanchored (standalone) datasets that are intentionally
+    // shared with every tenant. A foreign or fabricated id resolves to 404 so
+    // its existence cannot be probed.
+    let datasetId: string | undefined;
+    if (typeof body.datasetId === "string" && body.datasetId.trim() !== "") {
+      datasetId = body.datasetId.trim();
+      if (!isValidEntityId(datasetId)) {
+        return NextResponse.json({ error: "Invalid datasetId format" }, { status: 400 });
+      }
+      const dataset = await prisma.benchmarkDataset.findFirst({
+        where: {
+          id: datasetId,
+          OR: [
+            { organizationId: auth.organizationId },
+            { knowledgeBase: { project: { organizationId: auth.organizationId } } },
+            { organizationId: null, knowledgeBaseId: null },
+          ],
+        },
+        select: { id: true },
+      });
+      if (!dataset) {
+        return NextResponse.json({ error: "datasetId not found" }, { status: 404 });
+      }
+    }
+
     const requestedModel =
       typeof body.embeddingModel === "string" && body.embeddingModel
         ? body.embeddingModel
@@ -127,7 +154,7 @@ export async function POST(request: NextRequest) {
         name,
         description: description || undefined,
         knowledgeBaseId,
-        datasetId: typeof body.datasetId === "string" ? body.datasetId : undefined,
+        datasetId,
         createdById: auth.userId,
         ...config,
         tags,
