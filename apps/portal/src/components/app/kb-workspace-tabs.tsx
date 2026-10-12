@@ -36,7 +36,7 @@ export function KbWorkspaceTabs({ kbId, active, customHighlight }: KbWorkspaceTa
   return (
     <nav
       className="mt-4 inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1"
-      aria-label="Knowledge base workspace"
+      aria-label="Workspace"
     >
       {KB_WORKSPACE_TABS.map((tab) =>
         tab.value === active ? (

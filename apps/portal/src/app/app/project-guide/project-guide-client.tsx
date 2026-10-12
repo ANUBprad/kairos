@@ -356,7 +356,7 @@ export function ProjectGuide() {
               <div className="space-y-3">
                 <VivaQuestion
                   question="What is RAG and why is it important?"
-                  answer="Retrieval-Augmented Generation (RAG) is an AI architecture that combines information retrieval with text generation. It retrieves relevant documents from a knowledge base and feeds them as context to an LLM for answer generation. RAG is important because it reduces hallucinations, provides verifiable sources, keeps knowledge up-to-date without retraining, and allows domain-specific customization of LLMs."
+                  answer="Retrieval-Augmented Generation (RAG) is an AI architecture that combines information retrieval with text generation. It retrieves relevant documents from your sources and feeds them as context to an LLM for answer generation. RAG is important because it reduces hallucinations, provides verifiable sources, keeps knowledge up-to-date without retraining, and allows domain-specific customization of LLMs."
                 />
                 <VivaQuestion
                   question="How does Kairos differ from other RAG evaluation tools?"

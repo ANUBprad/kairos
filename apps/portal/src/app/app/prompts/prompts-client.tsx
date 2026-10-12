@@ -261,7 +261,7 @@ export function PromptsClient() {
         title="Prompt Library"
         description="Create, manage, and version your LLM prompts with full lifecycle control."
         purpose="Organize prompts into folders, track versions, and publish when ready."
-        nextAction={{ label: "Knowledge Bases", href: "/app/knowledge-bases" }}
+        nextAction={{ label: "Workspaces", href: "/app/knowledge-bases" }}
         relatedPages={[
           { label: "Evaluation", href: "/app/evaluation" },
         ]}

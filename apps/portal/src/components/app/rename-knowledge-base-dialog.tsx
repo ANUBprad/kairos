@@ -84,12 +84,12 @@ export function RenameKnowledgeBaseDialog({ kb, onClose }: Props) {
       formData.set("name", data.name);
 
       await renameKnowledgeBase(formData);
-      toast.success("Knowledge base renamed");
+      toast.success("Workspace renamed");
       reset();
       onClose();
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to rename knowledge base");
+      toast.error(err instanceof Error ? err.message : "Failed to rename workspace");
     } finally {
       setIsLoading(false);
     }
@@ -119,7 +119,7 @@ export function RenameKnowledgeBaseDialog({ kb, onClose }: Props) {
           </button>
         </div>
 
-        <p id="rename-kb-description" className="sr-only">Enter a new name for this knowledge base.</p>
+        <p id="rename-kb-description" className="sr-only">Enter a new name for this workspace.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <FormField

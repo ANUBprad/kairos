@@ -267,7 +267,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
           </div>
           <h2 className="mt-6 text-xl font-semibold text-text-primary">No sources yet</h2>
           <p className="mt-2 max-w-sm text-center text-sm text-text-secondary">
-            Upload files, or add a URL or YouTube video to populate your knowledge base.
+            Upload files, or add a URL or YouTube video to populate your workspace.
           </p>
           <Button variant="primary" className="mt-8" onClick={() => setSourceAddOpen(true)}>
             <Plus size={16} />
@@ -297,7 +297,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
           <p className="text-xs font-medium text-brand">{kbName}</p>
           <h1 className="page-title mt-0.5">Sources</h1>
           <p className="page-description mt-1">
-            {items.length} source{items.length !== 1 ? "s" : ""} in this knowledge base
+            {items.length} source{items.length !== 1 ? "s" : ""} in this workspace
           </p>
         </div>
         <Button variant="primary" onClick={() => setSourceAddOpen(true)}>

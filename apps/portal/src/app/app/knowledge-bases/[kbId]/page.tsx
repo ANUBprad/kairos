@@ -4,7 +4,7 @@ import { DocumentTable } from "@/components/app/document-table";
 import { listDocuments } from "@/lib/actions/document";
 
 export const metadata = {
-  title: "Knowledge Base",
+  title: "Workspace",
 };
 
 interface Props {

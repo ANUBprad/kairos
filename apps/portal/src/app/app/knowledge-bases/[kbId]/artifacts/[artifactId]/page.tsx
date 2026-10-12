@@ -4,7 +4,7 @@ import { getServerSession } from "@/lib/server/auth-utils";
 import { getArtifactDetailForUser, resolveArtifactReturnTarget } from "@/lib/artifacts/detail";
 import { ArtifactDetailClient } from "@/components/app/studio/artifact-detail-client";
 
-export const metadata: Metadata = { title: "Artifact | Knowledge Base" };
+export const metadata: Metadata = { title: "Artifact | Workspace" };
 
 interface Props {
   params: Promise<{ kbId: string; artifactId: string }>;

@@ -34,15 +34,15 @@ export function KnowledgeBaseList({ items }: Props) {
           <BookOpen size={32} className="text-brand" />
         </div>
         <h2 className="mt-6 text-xl font-semibold text-text-primary">
-          No knowledge bases yet
+          No workspaces yet
         </h2>
         <p className="mt-2 max-w-sm text-center text-sm text-text-secondary">
-          Create your first knowledge base to start uploading documents and building retrieval systems.
+          Create your first workspace to bring in your sources, then research, create, and study from them.
         </p>
         <div className="mt-8 flex flex-col items-center gap-4">
           <div className="flex items-center gap-3 text-xs text-text-tertiary">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-brand font-semibold">1</span>
-            Create a knowledge base
+            Create a workspace
           </div>
           <div className="flex items-center gap-3 text-xs text-text-tertiary">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover font-semibold">2</span>
@@ -50,12 +50,12 @@ export function KnowledgeBaseList({ items }: Props) {
           </div>
           <div className="flex items-center gap-3 text-xs text-text-tertiary">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover font-semibold">3</span>
-            Run retrieval tests and evaluate results
+            Research your sources and turn them into study artifacts
           </div>
         </div>
         <Button variant="primary" className="mt-8" onClick={() => setCreateOpen(true)}>
           <Plus size={16} />
-          Create knowledge base
+          Create workspace
         </Button>
         <CreateKnowledgeBaseDialog
           open={createOpen}
@@ -69,9 +69,9 @@ export function KnowledgeBaseList({ items }: Props) {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="page-title">Knowledge Bases</h1>
+          <h1 className="page-title">Library</h1>
           <p className="page-description mt-1">
-            {items.length} {items.length === 1 ? "knowledge base" : "knowledge bases"}
+            {items.length} {items.length === 1 ? "workspace" : "workspaces"}
           </p>
         </div>
         <Button variant="primary" onClick={() => setCreateOpen(true)}>
@@ -108,7 +108,7 @@ export function KnowledgeBaseList({ items }: Props) {
               <button
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === kb.id ? null : kb.id); }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary opacity-0 transition-opacity hover:bg-surface-hover hover:text-text-secondary group-hover:opacity-100"
-                aria-label="Knowledge base actions"
+                aria-label="Workspace actions"
               >
                 <MoreHorizontal size={16} />
               </button>

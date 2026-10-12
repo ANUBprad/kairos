@@ -62,11 +62,11 @@ export function DeleteKnowledgeBaseDialog({ kb, onClose }: Props) {
       formData.set("id", kb.id);
 
       await deleteKnowledgeBase(formData);
-      toast.success("Knowledge base deleted");
+      toast.success("Workspace deleted");
       onClose();
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete knowledge base");
+      toast.error(err instanceof Error ? err.message : "Failed to delete workspace");
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +105,7 @@ export function DeleteKnowledgeBaseDialog({ kb, onClose }: Props) {
               Delete &ldquo;{kb.name}&rdquo;?
             </p>
             <p className="mt-1 text-xs text-text-secondary">
-              This action cannot be undone. All documents in this knowledge base will be permanently deleted.
+              This action cannot be undone. All sources in this workspace will be permanently deleted.
             </p>
           </div>
         </div>

@@ -5,7 +5,7 @@ import { listLearningArtifactsForWorkspace } from "@/lib/actions/artifacts";
 import { ArtifactStudio } from "@/components/app/studio/artifact-studio";
 
 export const metadata = {
-  title: "Studio | Knowledge Base",
+  title: "Studio | Workspace",
 };
 
 interface Props {

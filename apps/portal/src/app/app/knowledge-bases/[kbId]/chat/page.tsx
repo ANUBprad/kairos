@@ -6,7 +6,7 @@ import { getServerSession } from "@/lib/server/auth-utils";
 import { isValidEntityId } from "@/lib/validation";
 
 export const metadata = {
-  title: "Knowledge Base Chat",
+  title: "Workspace Chat",
 };
 
 interface Props {

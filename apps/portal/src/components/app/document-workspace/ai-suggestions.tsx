@@ -47,7 +47,7 @@ const DEMO_SUGGESTIONS: Suggestion[] = [
     id: "3",
     type: "success",
     title: "Embedding coverage is excellent",
-    description: "100% of chunks have been embedded successfully. Your knowledge base is ready for retrieval.",
+    description: "100% of chunks have been embedded successfully. Your workspace is ready for retrieval.",
   },
 ];
 

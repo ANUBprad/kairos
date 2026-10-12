@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-text-primary">Information We Collect</h2>
             <p className="text-text-secondary">
               Kairos collects information you provide directly: account information (email, name),
-              documents you upload, knowledge bases you create, and conversations with AI features.
+              documents you upload, workspaces you create, and conversations with AI features.
               We may collect usage data such as page views, session duration, and feature usage patterns.
               {PLACEHOLDER}
             </p>

@@ -446,7 +446,7 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
   const openBenchmarkDialog = async (datasetId: string) => {
     const kbs = await listKbsForLab();
     if (kbs.length === 0) {
-      toast.error("No knowledge bases available. Create one first.");
+      toast.error("No workspaces available. Create one first.");
       return;
     }
     setAvailableKbs(kbs);
@@ -690,9 +690,9 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
             await handleRunBenchmark();
           }
         }}
-        title={benchmarkKbId ? "Run Benchmark" : "Select Knowledge Base"}
+        title={benchmarkKbId ? "Run Benchmark" : "Select Workspace"}
         description={benchmarkKbId ? "Optional: Enter a name for this benchmark run." : `Available: ${availableKbs.map((k) => `${k.name} (${k.id})`).join(", ")}`}
-        placeholder={benchmarkKbId ? "Run name (optional)" : "Enter Knowledge Base ID"}
+        placeholder={benchmarkKbId ? "Run name (optional)" : "Enter Workspace ID"}
         confirmLabel={benchmarkKbId ? "Start Benchmark" : "Next"}
         isLoading={benchmarkLoading}
       />
@@ -1374,7 +1374,7 @@ function CampaignTab({ datasets }: { datasets: DatasetSummary[] }) {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1" htmlFor="campaign-kb">Knowledge Base</label>
+            <label className="block text-xs font-medium text-text-secondary mb-1" htmlFor="campaign-kb">Workspace</label>
             <select
               id="campaign-kb"
               value={selectedKb}

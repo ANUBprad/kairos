@@ -17,11 +17,11 @@ export const metadata: Metadata = {
     template: "%s | Kairos",
   },
   description:
-    "Kairos is an AI-powered research and study workspace. Upload sources, conduct research, build knowledge bases, and study with AI assistance.",
+    "Kairos is an AI-powered research and study workspace. Upload sources, conduct research, build workspaces, and study with AI assistance.",
   openGraph: {
     title: "Kairos — AI Research & Study Workspace",
     description:
-      "Upload sources, conduct research, build knowledge bases, and study with AI assistance.",
+      "Upload sources, conduct research, build workspaces, and study with AI assistance.",
     type: "website",
     siteName: "Kairos",
     locale: "en_US",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Kairos — AI Research & Study Workspace",
     description:
-      "Upload sources, conduct research, build knowledge bases, and study with AI assistance.",
+      "Upload sources, conduct research, build workspaces, and study with AI assistance.",
     images: ["/og-image.png"],
   },
   robots: {

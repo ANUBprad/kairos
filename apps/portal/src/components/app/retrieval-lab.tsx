@@ -107,7 +107,7 @@ export function RetrievalLab({ kbs }: RetrievalLabProps) {
 
   const handleRun = async () => {
     if (!selectedKbId || !query.trim()) {
-      toast.error("Select a knowledge base and enter a query");
+      toast.error("Select a workspace and enter a query");
       return;
     }
     setLoading(true);
@@ -533,7 +533,7 @@ export function RetrievalLab({ kbs }: RetrievalLabProps) {
         </div>
         <h1 className="text-xl font-semibold text-text-primary">Retrieval Lab</h1>
         <p className="mt-2 text-sm text-text-secondary max-w-md">
-          Create a knowledge base and upload documents first to start experimenting with retrieval.
+          Create a workspace and upload documents first to start experimenting with retrieval.
         </p>
       </div>
     );

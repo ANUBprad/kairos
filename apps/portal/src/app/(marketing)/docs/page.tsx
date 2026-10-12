@@ -20,8 +20,8 @@ const sections = [
   },
   {
     icon: Database,
-    title: "Knowledge Base",
-    description: "Creating and managing knowledge bases. Document upload and processing.",
+    title: "Workspace",
+    description: "Creating and managing workspaces. Document upload and processing.",
     href: "/app/knowledge-bases",
   },
   {

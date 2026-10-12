@@ -2,7 +2,7 @@ import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
 import { KnowledgeBaseList } from "@/components/app/knowledge-base-list";
 
 export const metadata = {
-  title: "Knowledge Bases",
+  title: "Library",
 };
 
 export default async function KnowledgeBasesPage() {
@@ -14,7 +14,7 @@ export default async function KnowledgeBasesPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <h2 className="text-lg font-semibold text-text-primary">Error loading knowledge bases</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Error loading your library</h2>
           <p className="mt-2 text-sm text-text-secondary">
             Please try refreshing the page. If the problem persists, contact support.
           </p>

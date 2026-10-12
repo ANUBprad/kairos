@@ -106,7 +106,7 @@ export function SourceAddDialog({ kbId, open, onOpenChange, onOpenFileUpload }: 
           </button>
         </div>
 
-        <p id="source-add-description" className="sr-only">Add a URL, YouTube video, or raw text note as a knowledge base source.</p>
+        <p id="source-add-description" className="sr-only">Add a URL, YouTube video, or raw text note as a workspace source.</p>
 
         <div className="flex gap-2">
           {MODES.map((m) => (

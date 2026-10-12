@@ -3,7 +3,7 @@ import { getServerSession } from "@/lib/server/auth-utils";
 import { getStudyDashboardForUser } from "@/lib/study/dashboard";
 import { StudyDashboard } from "@/components/app/study/study-dashboard";
 
-export const metadata = { title: "Study | Knowledge Base" };
+export const metadata = { title: "Study | Workspace" };
 
 export default async function StudyDashboardPage({
   params,

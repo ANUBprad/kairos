@@ -104,7 +104,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Knowledge Bases" value={String(stats.kbCount)} footer="Available for retrieval" />
+        <MetricCard label="Workspaces" value={String(stats.kbCount)} footer="Available for retrieval" />
         <MetricCard label="Completed Benchmarks" value={String(stats.totalBenchmarks)} footer="Benchmark runs" />
         <MetricCard label="Experiment Runs" value={String(stats.totalExperiments)} footer="Retrieval experiments" />
         <MetricCard label="Avg Retrieval Latency" value={`${stats.avgLatency.toFixed(1)}ms`} higherIsBetter={false} />
@@ -118,7 +118,7 @@ export function AdvancedRetrievalDashboard({ kbs, benchmarkRuns, experimentRuns 
           </div>
 
           <div>
-            <label className="text-xs font-medium text-text-secondary mb-1 block">Knowledge Base</label>
+            <label className="text-xs font-medium text-text-secondary mb-1 block">Workspace</label>
             <select
               value={selectedKb}
               onChange={(e) => setSelectedKb(e.target.value)}

@@ -114,7 +114,7 @@ export function StudyDashboard({ kbId, kbName, data }: Props) {
         <p className="text-xs font-medium text-brand">{kbName}</p>
         <h1 className="page-title mt-0.5">Study</h1>
         <p className="page-description mt-1">
-          Your study state across the artifacts in this knowledge base.
+          Your study state across the artifacts in this workspace.
         </p>
         <KbWorkspaceTabs kbId={kbId} active="study" />
       </header>

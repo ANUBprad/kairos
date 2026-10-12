@@ -93,7 +93,7 @@ export function DocumentDetailsClient({ document, kbId, initialChunkIndex }: Doc
           <Link
             href={`/app/knowledge-bases/${kbId}`}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-border text-text-tertiary hover:bg-surface-hover hover:text-text-primary transition-colors mt-0.5"
-            aria-label="Back to knowledge base"
+            aria-label="Back to workspace"
           >
             <ArrowLeft size={16} />
           </Link>

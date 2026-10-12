@@ -85,12 +85,12 @@ export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
       if (data.description) formData.set("description", data.description);
 
       await createKnowledgeBase(formData);
-      toast.success("Knowledge base created");
+      toast.success("Workspace created");
       reset();
       onOpenChange(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create knowledge base");
+      toast.error(err instanceof Error ? err.message : "Failed to create workspace");
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +109,7 @@ export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
         className="relative z-10 w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl outline-none"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 id="create-kb-title" className="text-lg font-semibold text-text-primary">Create knowledge base</h2>
+          <h2 id="create-kb-title" className="text-lg font-semibold text-text-primary">Create workspace</h2>
           <button
             onClick={() => onOpenChange(false)}
             className="text-text-tertiary hover:text-text-primary transition-colors"
@@ -120,7 +120,7 @@ export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
           </button>
         </div>
 
-        <p id="create-kb-description" className="sr-only">Create a new knowledge base to organize your documents.</p>
+        <p id="create-kb-description" className="sr-only">Create a new workspace to organize your sources.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -133,7 +133,7 @@ export function CreateKnowledgeBaseDialog({ open, onOpenChange }: Props) {
           />
           <FormField
             label="Description (optional)"
-            placeholder="What is this knowledge base for?"
+            placeholder="What is this workspace for?"
             register={register("description")}
             error={errors.description}
             value={watch("description") || ""}

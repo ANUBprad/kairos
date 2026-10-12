@@ -178,7 +178,7 @@ export function ResearchDashboard({
       {/* Research Brief Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricDisplay
-          label="Knowledge Bases"
+          label="Workspaces"
           value={knowledgeBases}
           compact
         />
@@ -207,7 +207,7 @@ export function ResearchDashboard({
         </CardHeader>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           <div className="space-y-1">
-            <span className="text-xs text-text-tertiary">Knowledge Base</span>
+            <span className="text-xs text-text-tertiary">Workspace</span>
             <p className="text-sm font-medium text-text-primary truncate">{currentKbName ?? "—"}</p>
             <p className="text-xs text-text-tertiary">{currentKbDocs} documents</p>
           </div>
@@ -237,7 +237,7 @@ export function ResearchDashboard({
 
       {/* KB Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <MetricCard label="Knowledge Bases" value={String(knowledgeBases)} icon="Database" />
+        <MetricCard label="Workspaces" value={String(knowledgeBases)} icon="Database" />
         <MetricCard label="Documents" value={String(totalDocuments)} icon="FileText" />
         <MetricCard label="Chunks" value={String(totalChunks)} icon="Scissors" />
         <MetricCard label="Embeddings" value={String(totalEmbeddings)} icon="TableProperties" />

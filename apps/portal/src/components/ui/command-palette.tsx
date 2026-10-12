@@ -40,8 +40,8 @@ const NAVIGATION_COMMANDS: CommandItem[] = FLAT_APP_NAV.map((item) => ({
 }));
 
 const ACTION_COMMANDS: CommandItem[] = [
-  { id: "upload", label: "Upload Document", description: "Add files to a knowledge base", href: "/app/knowledge-bases", action: "upload", icon: Upload, category: "Actions", keywords: ["upload", "file", "document", "add"], shortcut: "U" },
-  { id: "create-kb", label: "Create Knowledge Base", description: "Start a new knowledge base", href: "/app/knowledge-bases", action: "create-kb", icon: Plus, category: "Actions", keywords: ["create", "knowledge", "base", "new"], shortcut: "N" },
+  { id: "upload", label: "Upload Document", description: "Add files to a workspace", href: "/app/knowledge-bases", action: "upload", icon: Upload, category: "Actions", keywords: ["upload", "file", "document", "add"], shortcut: "U" },
+  { id: "create-kb", label: "Create Workspace", description: "Start a new workspace", href: "/app/knowledge-bases", action: "create-kb", icon: Plus, category: "Actions", keywords: ["create", "workspace", "knowledge", "base", "new"], shortcut: "N" },
   { id: "new-chat", label: "Open Chat", description: "Ask questions about your documents", href: "/app/knowledge-bases", action: "new-chat", icon: MessageSquare, category: "Actions", keywords: ["chat", "ask", "question", "rag"], shortcut: "R" },
   { id: "new-experiment", label: "New Experiment", description: "Build and test a retrieval pipeline", href: "/app/experiment-builder", action: "new-experiment", icon: FlaskConical, category: "Actions", keywords: ["experiment", "new", "build", "test"] },
   { id: "run-evaluation", label: "Run Evaluation", description: "Benchmark retrieval performance", href: "/app/evaluation", action: "run-evaluation", icon: BarChart3, category: "Actions", keywords: ["evaluation", "benchmark", "metrics"], shortcut: "E" },

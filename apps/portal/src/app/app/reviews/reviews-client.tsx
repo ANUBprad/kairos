@@ -331,10 +331,10 @@ export function ReviewsClient() {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Review Queue"
-        description="Manage human-in-the-loop review workflows for prompts, datasets, experiments, and knowledge base content."
+        description="Manage human-in-the-loop review workflows for prompts, datasets, experiments, and workspace content."
         purpose="Review, approve, or request changes on AI resources before production use."
         relatedPages={[
-          { label: "Knowledge Bases", href: "/app/knowledge-bases" },
+          { label: "Workspaces", href: "/app/knowledge-bases" },
           { label: "Settings", href: "/app/settings" },
         ]}
       />
