@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/app/page-header";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -128,7 +129,6 @@ export function ExperimentBuilderClient() {
     },
   ]);
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
 
   useEffect(() => {
     async function fetchDynamicOptions() {
@@ -192,11 +192,6 @@ export function ExperimentBuilderClient() {
     setExpandedStage(null);
   }
 
-  function runExperiment() {
-    setIsRunning(true);
-    setTimeout(() => setIsRunning(false), 3000);
-  }
-
   const completedCount = stages.filter((s) => s.selected).length;
 
   return (
@@ -229,19 +224,13 @@ export function ExperimentBuilderClient() {
             <RotateCcw size={14} />
             Reset
           </button>
-          <button
-            onClick={runExperiment}
-            disabled={isRunning}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-medium transition-colors",
-              isRunning
-                ? "bg-brand/20 text-brand cursor-wait"
-                : "bg-brand text-white hover:bg-brand-hover"
-            )}
+          <Link
+            href="/app/evaluation"
+            className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-brand-hover"
           >
-            <Play size={14} className={isRunning ? "animate-spin" : ""} />
-            {isRunning ? "Running..." : "Run Experiment"}
-          </button>
+            <Play size={14} />
+            Run in Evaluation
+          </Link>
         </div>
       </div>
 

@@ -76,7 +76,6 @@ describe("embedding contract source guards", () => {
     "../app/app/experiment-builder/experiment-builder-client.tsx",
     "../app/app/advanced-retrieval/advanced-retrieval-client.tsx",
     "../app/app/evaluation/evaluation-client.tsx",
-    "../app/app/experiments/experiments-client.tsx",
   ];
 
   it("never offers a non-indexable embedding model from any production surface", () => {

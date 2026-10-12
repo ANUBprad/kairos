@@ -1,23 +1,23 @@
 "use client";
 
 import { PageHeader } from "@/components/app/page-header";
-import { Leaderboards } from "@/components/evaluation/leaderboards";
+import { Leaderboards, type LeaderboardRowEntry } from "@/components/evaluation/leaderboards";
 
-export function LeaderboardsClient() {
+export function LeaderboardsClient({ entries }: { entries: LeaderboardRowEntry[] }) {
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="Leaderboards"
-        description="Rank and compare prompts, models, retrievers, and experiments."
-        purpose="Track the top performers across your evaluation platform."
+        description="Rank and compare your completed benchmark runs."
+        purpose="Track the top-performing configurations across your workspace."
         relatedPages={[
-          { label: "Analytics", href: "/app/analytics" },
+          { label: "Research Analytics", href: "/app/research/analytics" },
           { label: "Quality Gates", href: "/app/quality-gates" },
-          { label: "Experiments", href: "/app/experiment-builder" },
+          { label: "Experiment Builder", href: "/app/experiment-builder" },
         ]}
       />
 
-      <Leaderboards />
+      <Leaderboards entries={entries} />
     </div>
   );
 }
