@@ -133,7 +133,7 @@ export function NotebookPageClient() {
     <div className="animate-fade-in">
       <PageHeader
         title="Research Notebook"
-        description="Create, organize, and export research notes with charts, tables, and experiment references."
+        description="Create, organize, and export research notes with charts, tables, and experiment references. Notes are saved in this browser only."
         purpose="Capture insights, observations, and findings during your RAG research experiments."
         nextAction={{ label: "New Note", href: "#" }}
         relatedPages={[
