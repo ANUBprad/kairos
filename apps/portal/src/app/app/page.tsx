@@ -17,34 +17,27 @@ export default async function AppPage() {
 
   let knowledgeBases: Awaited<ReturnType<typeof listKnowledgeBases>> = [];
   let docCount = 0;
-  let chunkCount = 0;
-  let experimentCount = 0;
-  let latestBenchmark: {
-    name: string | null;
-    createdAt: Date;
-    aggregatedMetrics: import("@prisma/client").Prisma.JsonValue | null;
-  } | null = null;
+  let artifactCount = 0;
+  let conversationCount = 0;
   let studies: StudyCounts = { quizzesTaken: 0, cardsKnown: 0 };
 
   try {
     const session = project ? await getServerSession() : null;
     if (project && session?.user?.id) {
-      [knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark, studies] =
+      [knowledgeBases, docCount, artifactCount, conversationCount, studies] =
         await Promise.all([
           listKnowledgeBases(),
           prisma.document.count({
             where: { knowledgeBase: { projectId: project.id } },
           }),
-          prisma.documentChunk.count({
-            where: { document: { knowledgeBase: { projectId: project.id } } },
-          }),
-          prisma.experimentRun.count({
+          prisma.learningArtifact.count({
             where: { knowledgeBase: { projectId: project.id } },
           }),
-          prisma.benchmarkRun.findFirst({
-            where: { status: "completed", dataset: { knowledgeBase: { projectId: project.id } } },
-            orderBy: { createdAt: "desc" },
-            select: { name: true, createdAt: true, aggregatedMetrics: true },
+          prisma.conversation.count({
+            where: {
+              userId: session.user.id,
+              knowledgeBase: { projectId: project.id },
+            },
           }),
           getStudyCountsForProject(session.user.id, project.id),
         ]);
@@ -62,15 +55,8 @@ export default async function AppPage() {
           _count: kb._count,
         })),
         docCount,
-        chunkCount,
-        experimentCount,
-        latestBenchmark: latestBenchmark
-          ? {
-              name: latestBenchmark.name,
-              createdAt: latestBenchmark.createdAt,
-              aggregatedMetrics: latestBenchmark.aggregatedMetrics as Record<string, number> | null,
-            }
-          : null,
+        artifactCount,
+        conversationCount,
         quizzesTaken: studies.quizzesTaken,
         cardsKnown: studies.cardsKnown,
       }}

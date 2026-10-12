@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Capabilities",
   description:
-    "Explore the technical capabilities of Kairos — an open-source RAG research platform.",
+    "The technical capabilities behind Kairos — grounded retrieval, evaluation, and explainability tooling for research and study.",
 };
 
 const sections = [
@@ -87,7 +87,8 @@ export default function CapabilitiesPage() {
           Capabilities
         </h1>
         <p className="mt-4 text-[18px] text-text-secondary max-w-xl mx-auto">
-          A complete platform for building, evaluating, and comparing RAG pipelines.
+          Grounded answers and study artifacts, built on real retrieval, evaluation, and
+          explainability tooling you can inspect and tune.
         </p>
       </div>
 

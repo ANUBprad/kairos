@@ -6,15 +6,9 @@ import { cn } from "@/lib/utils";
 
 const sections = [
   { id: "hero", label: "Welcome" },
-  { id: "upload", label: "Upload" },
-  { id: "extraction", label: "Extraction" },
-  { id: "chunking", label: "Chunking" },
-  { id: "embeddings", label: "Embeddings" },
-  { id: "retrieval", label: "Retrieval" },
-  { id: "reranking", label: "Reranking" },
-  { id: "generation", label: "Generation" },
-  { id: "evaluation", label: "Evaluation" },
-  { id: "architecture", label: "Architecture" },
+  { id: "how-it-works", label: "How it works" },
+  { id: "artifacts", label: "Artifacts" },
+  { id: "cta", label: "Start" },
 ];
 
 export function SectionNav() {

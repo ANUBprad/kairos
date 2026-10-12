@@ -8,7 +8,7 @@ import { ScrollReveal, StaggerContainer } from "@/components/shared/scroll-revea
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Why Kairos exists, the problems RAG solves, and why systematic evaluation of retrieval strategies matters for AI research.",
+  description: "Why Kairos exists: a research and study workspace that keeps answers grounded in your sources — and the retrieval and evaluation behind them honest.",
 };
 
 const researchGoals = [
@@ -47,7 +47,8 @@ export default function AboutPage() {
             Why Kairos Exists
           </h1>
           <p className="mt-4 text-[18px] text-text-secondary max-w-2xl mx-auto">
-            A research platform for understanding what actually works in Retrieval-Augmented Generation.
+            A research and study workspace that keeps your answers grounded in your
+            sources — and the engineering behind them honest.
           </p>
         </ScrollReveal>
       </div>

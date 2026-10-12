@@ -66,7 +66,7 @@ function FloatingDocument() {
 function AnimatedHeadline() {
   const ref = useRef<HTMLHeadingElement>(null);
   const isInView = useInView(ref, { once: true });
-  const words = ["Build.", "Understand.", "Trust."];
+  const words = ["Understand.", "Create.", "Learn."];
 
   return (
     <h1
@@ -106,7 +106,7 @@ function AnimatedHeadline() {
 function TypewriterText() {
   const ref = useRef<HTMLParagraphElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const text = "Every AI answer has a story.";
+  const text = "Every answer cites your sources.";
   const [displayed, setDisplayed] = useState("");
 
   useEffect(() => {
@@ -198,7 +198,7 @@ export function Hero() {
           >
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/60 bg-surface/60 text-[11px] font-semibold uppercase tracking-widest text-text-tertiary">
               <FileText size={12} className="text-brand" />
-              Explainable RAG Research Platform
+              Your research workspace
             </span>
           </motion.div>
 
@@ -214,7 +214,7 @@ export function Hero() {
           >
             <Button variant="primary" size="lg" className="gap-2" asChild>
               <Link href="/app">
-                Start researching
+                Open your workspace
                 <ArrowRight size={16} />
               </Link>
             </Button>

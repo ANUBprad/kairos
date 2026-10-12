@@ -10,7 +10,7 @@ import { ScrollReveal } from "@/components/shared/scroll-reveal";
 
 export const metadata: Metadata = {
   title: "Features",
-  description: "Research modules for studying chunking strategies, embedding models, retrieval algorithms, evaluation metrics, and explainable AI in RAG systems.",
+  description: "Kairos is a research workspace for grounded, cited answers and study artifacts — built on real retrieval, evaluation, and explainability tooling you can inspect and tune.",
 };
 
 const modules = [
@@ -97,7 +97,9 @@ export default function FeaturesPage() {
             Research Modules
           </h1>
           <p className="mt-4 text-[18px] text-text-secondary max-w-2xl mx-auto">
-            Nine modules covering the complete RAG research pipeline — from document ingestion to academic reporting.
+            Nine modules in Kairos's research toolkit. Underneath every grounded answer and
+            study artifact, there is document intelligence, retrieval, evaluation, and
+            explainability tooling you can inspect and tune.
           </p>
         </ScrollReveal>
       </div>
@@ -147,7 +149,7 @@ export default function FeaturesPage() {
       <div className="text-center py-20 px-6 sm:px-8">
         <ScrollReveal>
           <h2 className="text-[24px] font-semibold text-text-primary mb-4">Start experimenting</h2>
-          <p className="text-text-secondary mb-8 max-w-md mx-auto">Upload documents, run retrieval tests, and generate evaluation reports.</p>
+          <p className="text-text-secondary mb-8 max-w-md mx-auto">Bring your sources, ask grounded questions, and turn them into study-ready artifacts.</p>
           <Button variant="primary" size="lg" asChild>
             <Link href="/app">Launch Workspace <ArrowRight size={16} /></Link>
           </Button>

@@ -40,12 +40,12 @@ export function FinalCTASection() {
           transition={{ duration: 0.7 }}
           className="text-[44px] sm:text-[56px] md:text-[64px] font-bold tracking-tight leading-[1] text-text-primary"
         >
+          Your Sources.
+          <br />
           Your Research.
           <br />
-          Your Knowledge.
-          <br />
           <span className="bg-gradient-to-r from-brand to-brand-hover bg-clip-text text-transparent">
-            Your Models.
+            Your Knowledge.
           </span>
         </motion.h2>
 
@@ -56,8 +56,8 @@ export function FinalCTASection() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mt-6 text-[17px] text-text-secondary max-w-lg mx-auto leading-relaxed"
         >
-          One workbench to build, evaluate, and understand
-          your RAG systems — with full transparency.
+          One workspace to bring your sources, understand them,
+          create from them, and learn from them.
         </motion.p>
 
         <motion.div

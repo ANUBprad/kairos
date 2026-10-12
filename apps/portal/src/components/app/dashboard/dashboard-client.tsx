@@ -4,13 +4,12 @@ import Link from "next/link";
 import {
   FolderOpen,
   FileText,
-  FlaskConical,
   MessageSquare,
-  BarChart3,
   ArrowRight,
   Upload,
   Layers,
   ListChecks,
+  GraduationCap,
 } from "lucide-react";
 import { DashboardCard, CardSectionHeader, CardSectionTitle, CardSectionLink } from "@/components/app/dashboard/dashboard-card";
 import { StatCard } from "@/components/app/dashboard/stat-card";
@@ -23,15 +22,10 @@ interface DashboardData {
     _count: { documents: number };
   }>;
   docCount: number;
-  chunkCount: number;
-  experimentCount: number;
+  artifactCount: number;
+  conversationCount: number;
   quizzesTaken: number;
   cardsKnown: number;
-  latestBenchmark: {
-    name: string | null;
-    createdAt: Date;
-    aggregatedMetrics: Record<string, number> | null;
-  } | null;
 }
 
 interface DashboardClientProps {
@@ -86,24 +80,18 @@ const WORKSPACE_LINKS: { label: string; href: (kbId: string) => string }[] = [
 ];
 
 export function DashboardClient({ data }: DashboardClientProps) {
-  const { knowledgeBases, docCount, chunkCount, experimentCount, latestBenchmark, quizzesTaken, cardsKnown } = data;
+  const { knowledgeBases, docCount, artifactCount, conversationCount, quizzesTaken, cardsKnown } = data;
 
   const hasKb = knowledgeBases.length > 0;
   const hasDocs = docCount > 0;
-
-  const benchmarkMetrics = latestBenchmark?.aggregatedMetrics;
-  const avgRecall =
-    benchmarkMetrics && typeof benchmarkMetrics.avgRecallAtK === "number"
-      ? benchmarkMetrics.avgRecallAtK
-      : null;
 
   if (!hasKb) {
     return (
       <div className="space-y-6 animate-fade-in">
         <header className="flex items-end justify-between gap-4">
           <div>
-            <h1 className="page-title">Research workspace</h1>
-            <p className="page-description mt-1">Start by building a knowledge base from your documents.</p>
+            <h1 className="page-title">Workspace</h1>
+            <p className="page-description mt-1">Bring your sources, then research, create, and study from them.</p>
           </div>
         </header>
 
@@ -113,9 +101,9 @@ export function DashboardClient({ data }: DashboardClientProps) {
           </CardSectionHeader>
           <div className="mt-4 min-w-0 space-y-3">
             {[
-              { text: "Create a knowledge base and upload your research documents.", href: "/app/knowledge-bases" },
-              { text: "Ask questions against those documents with grounded citations.", href: "/app/knowledge-bases" },
-              { text: "Build retrieval experiments and benchmark them.", href: "/app/evaluation" },
+              { text: "Create a workspace and upload your research sources.", href: "/app/knowledge-bases" },
+              { text: "Ask grounded questions with citations against those sources.", href: "/app/research" },
+              { text: "Turn sources into summaries, quizzes, and flashcards.", href: "/app/study" },
             ].map((step, i) => (
               <Link
                 key={i}
@@ -138,10 +126,10 @@ export function DashboardClient({ data }: DashboardClientProps) {
     <div className="space-y-6 animate-fade-in">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="page-title">Research workspace</h1>
+          <h1 className="page-title">Workspace</h1>
           <p className="page-description mt-1">
-            {knowledgeBases.length} knowledge base{knowledgeBases.length !== 1 ? "s" : ""},{" "}
-            {docCount} document{docCount !== 1 ? "s" : ""}, {chunkCount.toLocaleString()} chunks.
+            {knowledgeBases.length} workspace{knowledgeBases.length !== 1 ? "s" : ""},{" "}
+            {docCount} document{docCount !== 1 ? "s" : ""}.
           </p>
         </div>
         <Link
@@ -149,24 +137,24 @@ export function DashboardClient({ data }: DashboardClientProps) {
           className="hidden shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary sm:flex"
         >
           <FolderOpen size={14} />
-          Knowledge Bases
+          Library
         </Link>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-        <StatCard label="Knowledge Bases" value={knowledgeBases.length} icon={FolderOpen} status="brand" />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <StatCard label="Workspaces" value={knowledgeBases.length} icon={FolderOpen} status="brand" />
         <StatCard label="Documents" value={docCount} icon={FileText} status={hasDocs ? "success" : "default"} />
-        <StatCard label="Chunks" value={chunkCount.toLocaleString()} icon={Layers} status={chunkCount > 0 ? "success" : "default"} />
-        <StatCard label="Experiments" value={experimentCount} icon={FlaskConical} status={experimentCount > 0 ? "success" : "default"} trend={avgRecall !== null ? "up" : undefined} trendValue={avgRecall !== null ? `${(avgRecall * 100).toFixed(0)}% recall` : undefined} />
+        <StatCard label="Artifacts" value={artifactCount} icon={Layers} status={artifactCount > 0 ? "success" : "default"} />
+        <StatCard label="Conversations" value={conversationCount} icon={MessageSquare} status={conversationCount > 0 ? "success" : "default"} />
         <StatCard label="Quizzes Taken" value={quizzesTaken} icon={ListChecks} status={quizzesTaken > 0 ? "success" : "default"} />
-        <StatCard label="Cards Known" value={cardsKnown} icon={Layers} status={cardsKnown > 0 ? "success" : "default"} />
+        <StatCard label="Cards Known" value={cardsKnown} icon={GraduationCap} status={cardsKnown > 0 ? "success" : "default"} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <QuickActionCard href="/app/knowledge-bases" icon={Upload} title="Upload Document" description="Add files to a knowledge base" shortcut="U" />
-        <QuickActionCard href="/app/knowledge-bases" icon={MessageSquare} title="Open Chat" description="Ask questions about your docs" shortcut="R" />
-        <QuickActionCard href="/app/experiment-builder" icon={FlaskConical} title="New Experiment" description="Build a retrieval experiment" />
-        <QuickActionCard href="/app/evaluation" icon={BarChart3} title="Run Evaluation" description="Benchmark retrieval performance" shortcut="E" />
+        <QuickActionCard href="/app/knowledge-bases" icon={Upload} title="Upload Document" description="Add files to a workspace" shortcut="U" />
+        <QuickActionCard href="/app/research" icon={MessageSquare} title="Open Research" description="Ask grounded questions" shortcut="R" />
+        <QuickActionCard href="/app/studio" icon={Layers} title="Open Studio" description="Create artifacts from sources" />
+        <QuickActionCard href="/app/study" icon={GraduationCap} title="Open Study" description="Quiz and flashcards from your material" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -175,7 +163,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
             <CardSectionHeader>
               <CardSectionTitle className="flex items-center gap-2">
                 <FolderOpen size={14} className="text-brand" />
-                Knowledge Bases
+                Workspaces
               </CardSectionTitle>
               <CardSectionLink href="/app/knowledge-bases">View all</CardSectionLink>
             </CardSectionHeader>
@@ -229,7 +217,7 @@ export function DashboardClient({ data }: DashboardClientProps) {
               </div>
             ) : (
               <p className="mt-4 text-sm text-text-tertiary">
-                No study activity yet. Open a knowledge base and start studying.
+                No study activity yet. Open a workspace and turn sources into quizzes and flashcards.
               </p>
             )}
             {hasKb && (
@@ -245,39 +233,20 @@ export function DashboardClient({ data }: DashboardClientProps) {
 
           <DashboardCard variant="default">
             <CardSectionHeader>
-              <CardSectionTitle>Latest evaluation</CardSectionTitle>
+              <CardSectionTitle>Next steps</CardSectionTitle>
             </CardSectionHeader>
-            {latestBenchmark ? (
-              <div className="mt-4 space-y-3 text-sm">
-                <p className="text-sm font-medium text-text-primary truncate">{latestBenchmark.name ?? "Benchmark run"}</p>
-                <p className="text-xs text-text-tertiary">
-                  {latestBenchmark.createdAt.toLocaleDateString()}
-                </p>
-                {avgRecall !== null && (
-                  <div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-text-secondary">Avg recall@k</span>
-                      <span className="font-semibold text-text-primary">{(avgRecall * 100).toFixed(1)}%</span>
-                    </div>
-                    <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-hover">
-                      <div
-                        className="h-full rounded-full bg-brand transition-all"
-                        style={{ width: `${Math.min(avgRecall * 100, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-text-tertiary">
-                No evaluations yet. Run one to see retrieval metrics here.
-              </p>
-            )}
+            <p className="mt-4 text-sm text-text-tertiary">
+              {!hasDocs
+                ? "Add documents to a workspace to start researching."
+                : artifactCount === 0
+                  ? "Create an artifact from your sources to start studying."
+                  : "Keep going — study a quiz or flashcard deck in any workspace."}
+            </p>
             <Link
-              href="/app/evaluation"
+              href={hasDocs ? "/app/studio" : "/app/knowledge-bases"}
               className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-brand hover:text-brand-hover transition-colors"
             >
-              Open Evaluation
+              {hasDocs ? "Open Studio" : "Open Library"}
               <ArrowRight size={12} />
             </Link>
           </DashboardCard>

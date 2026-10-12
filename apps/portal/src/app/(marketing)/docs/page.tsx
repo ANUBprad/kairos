@@ -8,7 +8,7 @@ import { ScrollReveal, StaggerContainer } from "@/components/shared/scroll-revea
 
 export const metadata: Metadata = {
   title: "Documentation",
-  description: "Learn how Retrieval-Augmented Generation works. Educational documentation on chunking, embeddings, retrieval strategies, evaluation metrics, and explainable AI.",
+  description: "Documentation for Kairos: how to bring your sources, ask grounded questions, create artifacts from your research, and study — plus the retrieval, evaluation, and explainability tooling under the hood.",
 };
 
 const sections = [
@@ -125,7 +125,7 @@ export default function DocsPage() {
           <ScrollReveal>
             <h2 className="text-[24px] font-semibold text-text-primary mb-6">Understanding the Pipeline</h2>
             <p className="text-sm text-text-secondary mb-6">
-              RAG pipelines transform raw documents into intelligent question-answering systems. Here is how data flows through Kairos:
+              Under the hood, Kairos turns your documents into grounded, citable answers. Here is how data flows through the pipeline:
             </p>
             <div className="space-y-3">
               {pipelineSteps.map((step) => (
