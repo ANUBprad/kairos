@@ -1,350 +1,147 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { ArrowRight, FolderOpen, MessageSquare, Microscope } from "lucide-react";
 import { prisma } from "@/lib/prisma";
-import { compareMetrics } from "@/lib/evaluation/significance";
-import { analyzeResearchIntelligence, type IntelligenceRun } from "@/lib/evaluation/research-intelligence";
-import { generateResearchPaper } from "@/lib/research-scientist";
-import dynamic from "next/dynamic";
-
-const ResearchDashboard = dynamic(
-  () => import("./research-client").then((mod) => mod.ResearchDashboard),
-  {
-    loading: () => (
-      <div className="space-y-4">
-        <div className="h-8 w-64 animate-pulse rounded bg-surface" />
-        <div className="h-4 w-96 animate-pulse rounded bg-surface" />
-        <div className="h-64 animate-pulse rounded-xl bg-surface" />
-      </div>
-    ),
-  }
-);
+import { getServerSession } from "@/lib/server/auth-utils";
+import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
+import { Card } from "@/components/ui/card";
+import { kbWorkspaceHref } from "@/components/app/kb-workspace-tabs";
 
 export const metadata = {
-  title: "Research Dashboard",
+  title: "Research",
 };
 
+// The research hub: the grounded-chat experience lives inside each knowledge
+// base, so this page lists the workspaces to research in and the sessions you
+// can pick back up. Everything is scoped to the caller's project and userId.
 export default async function ResearchPage() {
+  const session = await getServerSession();
+  if (!session?.user?.id) redirect("/login");
+
+  let projectId: string | null = null;
   try {
     const { ensureDefaultOrg } = await import("@/lib/server/organization");
     const result = await ensureDefaultOrg();
-    if (!result) throw new Error("No organization found");
-    const { project } = result;
-    const [
-      knowledgeBases,
-      totalDocuments,
-      totalChunks,
-      totalEmbeddings,
-      experiments,
-      experimentRuns,
-      benchmarkRuns,
-      datasets,
-    ] = await Promise.all([
-    prisma.knowledgeBase.findMany({
-      where: { projectId: project.id },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: { id: true, name: true, retrievalConfig: true, _count: { select: { documents: true } } },
-    }),
-    prisma.document.count({ where: { knowledgeBase: { projectId: project.id } } }),
-    prisma.documentChunk.count({ where: { document: { knowledgeBase: { projectId: project.id } } } }),
-    prisma.documentEmbedding.count({ where: { chunk: { document: { knowledgeBase: { projectId: project.id } } } } }),
-    prisma.experiment.count({ where: { knowledgeBase: { projectId: project.id } } }),
-    prisma.experimentRun.count({ where: { knowledgeBase: { projectId: project.id } } }),
-    prisma.benchmarkRun.findMany({
-      where: { status: "completed", dataset: { knowledgeBase: { projectId: project.id } } },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: {
-        id: true,
-        name: true,
-        aggregatedMetrics: true,
-        createdAt: true,
-        dataset: { select: { name: true, _count: { select: { questions: true } } } },
-        results: {
+    if (result) projectId = result.project.id;
+  } catch {
+    projectId = null;
+  }
+
+  const [knowledgeBases, conversations] = await Promise.all([
+    listKnowledgeBases(),
+    projectId
+      ? prisma.conversation.findMany({
+          where: { userId: session.user.id, knowledgeBase: { projectId } },
+          orderBy: { updatedAt: "desc" },
+          take: 8,
           select: {
-            retrievalMetrics: true,
-            generationMetrics: true,
-            latencySearchMs: true,
+            id: true,
+            title: true,
+            updatedAt: true,
+            knowledgeBaseId: true,
+            knowledgeBase: { select: { name: true } },
           },
-        },
-      },
-    }),
-    prisma.benchmarkDataset.findMany({
-      where: { knowledgeBase: { projectId: project.id } },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-      select: { id: true, name: true, _count: { select: { questions: true, runs: true } } },
-    }),
+        })
+      : Promise.resolve([]),
   ]);
 
-  const latestEval = benchmarkRuns[0] ?? null;
-  const currentKb = (knowledgeBases as Array<{ id: string; name: string; retrievalConfig: unknown; _count: { documents: number } }>)[0] ?? null;
-
-  const latestReport = latestEval && latestEval.aggregatedMetrics
-    ? { name: latestEval.name, date: latestEval.createdAt, metrics: latestEval.aggregatedMetrics as Record<string, number> }
-    : null;
-
-  const aggregatedMetricsList = benchmarkRuns
-    .map((r) => r.aggregatedMetrics as Record<string, number> | null)
-    .filter((m): m is Record<string, number> => m !== null);
-
-  const avgRecall = aggregatedMetricsList.length > 0
-    ? aggregatedMetricsList.reduce((s, m) => s + (m.avgRecallAtK ?? 0), 0) / aggregatedMetricsList.length
-    : 0;
-
-  const currentConfig = currentKb
-    ? (currentKb.retrievalConfig as Record<string, unknown> | null)
-    : null;
-
-  const scientificAnalysis = (() => {
-    if (benchmarkRuns.length < 2) {
-      return {
-        significantImprovements: [],
-        equivalentConfigurations: [],
-        confidenceIntervals: [],
-        summary: { totalComparisons: 0, significantCount: 0 },
-      };
-    }
-
-    const significantImprovements: Array<{
-      metric: string;
-      from: string;
-      to: string;
-      improvement: number;
-      pValue: number;
-      effectSize: string;
-      ci: [number, number];
-    }> = [];
-
-    const equivalentConfigurations: Array<{
-      metric: string;
-      configs: string[];
-    }> = [];
-
-    const confidenceIntervals: Array<{
-      config: string;
-      metric: string;
-      mean: number;
-      ciLower: number;
-      ciUpper: number;
-    }> = [];
-
-    const metricKeys = ["recallAtK", "precisionAtK", "mrr", "ndcg", "hitRate"];
-    let totalComparisons = 0;
-    let significantCount = 0;
-
-    for (let i = 0; i < Math.min(benchmarkRuns.length, 5); i++) {
-      const run = benchmarkRuns[i];
-      const perQuery: Record<string, number[]> = {};
-      for (const result of run.results) {
-        const rm = result.retrievalMetrics as Record<string, number> | null;
-        if (rm) {
-          for (const [key, val] of Object.entries(rm)) {
-            if (typeof val === "number") {
-              if (!perQuery[key]) perQuery[key] = [];
-              perQuery[key].push(val);
-            }
-          }
-        }
-      }
-
-      for (const key of metricKeys) {
-        const values = perQuery[key] ?? [];
-        if (values.length >= 2) {
-          const mean = values.reduce((s, v) => s + v, 0) / values.length;
-          const n = values.length;
-          const stdDev = Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / (n - 1));
-          const se = stdDev / Math.sqrt(n);
-          const ciLower = mean - 1.96 * se;
-          const ciUpper = mean + 1.96 * se;
-
-          confidenceIntervals.push({
-            config: run.name || "Unnamed",
-            metric: key,
-            mean: Math.round(mean * 10000) / 10000,
-            ciLower: Math.round(ciLower * 10000) / 10000,
-            ciUpper: Math.round(ciUpper * 10000) / 10000,
-          });
-        }
-      }
-    }
-
-    for (let i = 0; i < Math.min(benchmarkRuns.length - 1, 4); i++) {
-      for (let j = i + 1; j < Math.min(benchmarkRuns.length, 5); j++) {
-        const runA = benchmarkRuns[i];
-        const runB = benchmarkRuns[j];
-
-        const perQueryA: Record<string, number[]> = {};
-        const perQueryB: Record<string, number[]> = {};
-
-        for (const result of runA.results) {
-          const rm = result.retrievalMetrics as Record<string, number> | null;
-          if (rm) {
-            for (const [key, val] of Object.entries(rm)) {
-              if (typeof val === "number") {
-                if (!perQueryA[key]) perQueryA[key] = [];
-                perQueryA[key].push(val);
-              }
-            }
-          }
-        }
-
-        for (const result of runB.results) {
-          const rm = result.retrievalMetrics as Record<string, number> | null;
-          if (rm) {
-            for (const [key, val] of Object.entries(rm)) {
-              if (typeof val === "number") {
-                if (!perQueryB[key]) perQueryB[key] = [];
-                perQueryB[key].push(val);
-              }
-            }
-          }
-        }
-
-        for (const key of metricKeys) {
-          const aValues = perQueryA[key] ?? [];
-          const bValues = perQueryB[key] ?? [];
-          if (aValues.length >= 2 && bValues.length >= 2) {
-            try {
-              const result = compareMetrics(aValues, bValues, key, runA.name || "A", runB.name || "B");
-              totalComparisons++;
-              if (result.significance.significant) {
-                significantCount++;
-                significantImprovements.push({
-                  metric: key,
-                  from: runB.name || "Unnamed",
-                  to: runA.name || "Unnamed",
-                  improvement: result.meanDifference,
-                  pValue: result.significance.pValue,
-                  effectSize: result.effectSize.magnitude,
-                  ci: [result.bootstrapCI.ciLower, result.bootstrapCI.ciUpper],
-                });
-              }
-            } catch {
-              // skip
-            }
-          }
-        }
-      }
-    }
-
-    const configGroups = new Map<string, Set<string>>();
-    for (const ci of confidenceIntervals) {
-      const key = ci.metric;
-      if (!configGroups.has(key)) configGroups.set(key, new Set());
-      configGroups.get(key)!.add(ci.config);
-    }
-
-    for (const [metric, configs] of configGroups) {
-      if (configs.size >= 2) {
-        equivalentConfigurations.push({
-          metric,
-          configs: Array.from(configs),
-        });
-      }
-    }
-
-    return {
-      significantImprovements: significantImprovements.slice(0, 10),
-      equivalentConfigurations: equivalentConfigurations.slice(0, 10),
-      confidenceIntervals: confidenceIntervals.slice(0, 20),
-      summary: { totalComparisons, significantCount },
-    };
-  })();
-
-  const intelligenceResult = analyzeResearchIntelligence(
-    benchmarkRuns.map((r) => ({
-      id: r.id,
-      name: r.name,
-      aggregatedMetrics: r.aggregatedMetrics as Record<string, number> | null,
-      createdAt: r.createdAt,
-      datasetName: r.dataset.name,
-      questionCount: r.dataset._count.questions,
-      results: r.results.map((res) => ({
-        retrievalMetrics: res.retrievalMetrics as Record<string, number> | null,
-        generationMetrics: res.generationMetrics as Record<string, number> | null,
-        latencySearchMs: res.latencySearchMs,
-      })),
-    })) as IntelligenceRun[],
-  );
-
-  const researchScientistResult = generateResearchPaper({
-    runs: benchmarkRuns.map((r) => ({
-      id: r.id,
-      name: r.name,
-      aggregatedMetrics: r.aggregatedMetrics as Record<string, number> | null,
-      createdAt: r.createdAt,
-      datasetName: r.dataset.name,
-      questionCount: r.dataset._count.questions,
-      config: {} as Record<string, unknown>,
-      results: r.results.map((res) => ({
-        retrievalMetrics: res.retrievalMetrics as Record<string, number> | null,
-        generationMetrics: res.generationMetrics as Record<string, number> | null,
-        latencySearchMs: res.latencySearchMs,
-      })),
-    })),
-    datasetName: benchmarkRuns[0]?.dataset.name ?? "Unknown",
-    totalQuestions: benchmarkRuns[0]?.dataset._count.questions ?? 0,
-  });
+  const readyToResearch = knowledgeBases.filter((kb) => kb._count.documents > 0);
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-border bg-surface p-5">
-        <h1 className="text-lg font-semibold text-text-primary">Research Dashboard</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          <strong className="text-text-primary">Purpose:</strong> Central hub for RAG research with automated intelligence and statistical analysis.
+    <div className="space-y-6 animate-fade-in">
+      <header>
+        <h1 className="page-title">Research</h1>
+        <p className="page-description mt-1">
+          Ask questions grounded in your own sources and follow the citations back to the text.
         </p>
-        <p className="mt-1 text-sm text-text-tertiary">
-          <strong className="text-text-secondary">Why it matters:</strong> Manual analysis of benchmark data is time-consuming and error-prone.
-          The research intelligence engine automatically discovers patterns, detects trends, infers root causes, and suggests experiments.
-        </p>
-        <p className="mt-1 text-sm text-text-tertiary">
-          <strong className="text-text-secondary">What you can learn:</strong> Which metrics are correlated. Whether performance is improving or declining over time.
-          What configuration changes would have the most impact. Which experiments to run next.
-        </p>
-      </div>
-      <ResearchDashboard
-      currentKbName={currentKb?.name ?? null}
-      currentKbDocs={currentKb?._count.documents ?? 0}
-      retrievalStrategy={String(currentConfig?.retrievalMode ?? currentConfig?.retrievalStrategy ?? "vector")}
-      embeddingModel={String(currentConfig?.embeddingModel ?? "—")}
-      chunkingStrategy={String(currentConfig?.chunkStrategy ?? "—")}
-      knowledgeBases={knowledgeBases.length}
-      totalDocuments={totalDocuments}
-      totalChunks={totalChunks}
-      totalEmbeddings={totalEmbeddings}
-      totalExperiments={experiments}
-      totalExperimentRuns={experimentRuns}
-      datasets={datasets}
-      benchmarkRuns={benchmarkRuns.map((r) => ({
-        id: r.id,
-        name: r.name,
-        aggregatedMetrics: r.aggregatedMetrics as Record<string, number> | null,
-        createdAt: r.createdAt,
-        datasetName: r.dataset.name,
-        questionCount: r.dataset._count.questions,
-      }))}
-      avgRecall={avgRecall}
-      latestEval={latestEval ? {
-        name: latestEval.name,
-        date: latestEval.createdAt,
-        metrics: latestEval.aggregatedMetrics as Record<string, number> | null,
-      } : null}
-      latestReport={latestReport}
-      scientificAnalysis={scientificAnalysis}
-      intelligenceResult={intelligenceResult}
-      researchScientistResult={researchScientistResult}
-    />
+      </header>
+
+      {knowledgeBases.length === 0 ? (
+        <Card className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10">
+            <Microscope size={26} className="text-brand" />
+          </div>
+          <h2 className="mt-5 text-lg font-semibold text-text-primary">Nothing to research yet</h2>
+          <p className="mt-2 max-w-md text-sm text-text-secondary">
+            Create a workspace and add sources, then come back here to ask questions grounded in them.
+          </p>
+          <Link
+            href="/app/knowledge-bases"
+            className="mt-6 inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-hover"
+          >
+            Create a workspace
+            <ArrowRight size={14} />
+          </Link>
+        </Card>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="p-5">
+            <div className="flex items-center gap-2">
+              <FolderOpen size={16} className="text-brand" />
+              <h2 className="text-sm font-semibold text-text-primary">Start researching</h2>
+            </div>
+            <p className="mt-1 text-xs text-text-tertiary">
+              Open a workspace to start a grounded conversation.
+            </p>
+            <div className="mt-4 space-y-2">
+              {knowledgeBases.slice(0, 6).map((kb) => (
+                <Link
+                  key={kb.id}
+                  href={kbWorkspaceHref(kb.id, "research")}
+                  className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-surface/50 px-3 py-2.5 transition-colors hover:border-border-hover hover:bg-surface-hover"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-text-primary">{kb.name}</p>
+                    <p className="text-xs text-text-tertiary">
+                      {kb._count.documents} source{kb._count.documents !== 1 ? "s" : ""}
+                      {kb._count.documents === 0 ? " — add sources first" : ""}
+                    </p>
+                  </div>
+                  <ArrowRight
+                    size={14}
+                    className="shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5"
+                  />
+                </Link>
+              ))}
+            </div>
+            {readyToResearch.length === 0 && (
+              <p className="mt-3 text-xs text-text-tertiary">
+                Add sources to a workspace to enable grounded answers.
+              </p>
+            )}
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={16} className="text-brand" />
+              <h2 className="text-sm font-semibold text-text-primary">Pick up a session</h2>
+            </div>
+            <p className="mt-1 text-xs text-text-tertiary">Your most recent conversations.</p>
+            {conversations.length > 0 ? (
+              <div className="mt-4 space-y-2">
+                {conversations.map((conversation) => (
+                  <Link
+                    key={conversation.id}
+                    href={`${kbWorkspaceHref(conversation.knowledgeBaseId, "research")}?conversation=${conversation.id}`}
+                    className="group block rounded-lg border border-border bg-surface/50 px-3 py-2.5 transition-colors hover:border-border-hover hover:bg-surface-hover"
+                  >
+                    <p className="truncate text-sm font-medium text-text-primary">
+                      {conversation.title || "Untitled conversation"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-text-tertiary">
+                      {conversation.knowledgeBase.name} · {conversation.updatedAt.toLocaleDateString()}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-text-tertiary">
+                No conversations yet. Open a workspace above to ask your first question.
+              </p>
+            )}
+          </Card>
+        </div>
+      )}
     </div>
   );
-  } catch {
-    return (
-      <div className="space-y-6">
-        <div className="rounded-xl border border-border bg-surface p-5">
-          <h1 className="text-lg font-semibold text-text-primary">Research Dashboard</h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Unable to load research data. Please try again later.
-          </p>
-        </div>
-      </div>
-    );
-  }
 }

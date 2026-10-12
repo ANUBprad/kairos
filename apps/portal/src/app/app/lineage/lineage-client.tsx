@@ -184,7 +184,7 @@ export function LineagePage({ runs }: LineagePageProps) {
         description="Trace the complete lineage of your experiments from dataset to research report."
         purpose="Track experiment history and provenance."
         relatedPages={[
-          { label: "Research Dashboard", href: "/app/research" },
+          { label: "Research Analytics", href: "/app/research/analytics" },
           { label: "Evaluation", href: "/app/evaluation" },
         ]}
       />

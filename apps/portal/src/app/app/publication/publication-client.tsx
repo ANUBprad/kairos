@@ -192,7 +192,7 @@ export function PublicationModeClient() {
           purpose="Transform experiment results into professional research papers suitable for sharing, publishing, or archival."
           nextAction={{ label: "Research Notebook", href: "/app/notebook" }}
           relatedPages={[
-            { label: "Research Dashboard", href: "/app/research" },
+            { label: "Research Analytics", href: "/app/research/analytics" },
             { label: "Experiment Lineage", href: "/app/lineage" },
           ]}
         />
@@ -216,8 +216,8 @@ export function PublicationModeClient() {
         purpose="Transform experiment results into professional research papers suitable for sharing, publishing, or archival."
         nextAction={{ label: "Research Notebook", href: "/app/notebook" }}
         relatedPages={[
-          { label: "Research Dashboard", href: "/app/research" },
-          { label: "Experiment Lineage", href: "/app/lineage" },
+            { label: "Research Analytics", href: "/app/research/analytics" },
+            { label: "Experiment Lineage", href: "/app/lineage" },
         ]}
       />
 

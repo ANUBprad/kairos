@@ -9,13 +9,13 @@ import {
   Menu,
   X,
   Check,
-  FlaskConical,
-  BarChart3,
+  Plus,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useTransition } from "react";
 import { switchWorkspaceOrganization } from "@/lib/actions/organization";
-import { APP_NAV, type AppNavSection } from "@/lib/app-nav";
+import { APP_NAV } from "@/lib/app-nav";
 
 interface SidebarProps {
   organization: {
@@ -35,14 +35,17 @@ interface SidebarProps {
   }[];
 }
 
-type NavSection = AppNavSection;
-
 export function AppSidebar({ organization, organizations }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [experimentOpen, setExperimentOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      APP_NAV.filter((section) => section.defaultCollapsed).map((section) => [section.label, true])
+    )
+  );
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -150,18 +153,18 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
                 Quick Actions
               </p>
               <Link
-                href="/app/experiment-builder"
+                href="/app/knowledge-bases"
                 className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
               >
-                <FlaskConical size={12} />
-                New Experiment
+                <Plus size={12} />
+                New workspace
               </Link>
               <Link
-                href="/app/evaluation"
+                href="/app/studio"
                 className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
               >
-                <BarChart3 size={12} />
-                View Benchmarks
+                <Sparkles size={12} />
+                Open Studio
               </Link>
             </div>
           )}
@@ -170,43 +173,71 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
 
       <div className="flex-1 overflow-y-auto p-3">
         <nav className="space-y-5" role="navigation" aria-label="Main navigation">
-          {APP_NAV.map((section) => (
-            <div key={section.label}>
-              <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary/60">
-                {section.label}
-              </p>
-              <div className="space-y-0.5">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    item.href === "/app"
-                      ? pathname === "/app"
-                      : pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
-                        isActive
-                          ? "bg-brand/10 text-brand"
-                          : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-                      )}
-                    >
-                      <Icon
-                        size={18}
-                        className={cn(
-                          "transition-colors duration-150",
-                          isActive ? "text-brand" : "text-text-tertiary group-hover:text-text-secondary"
-                        )}
-                      />
-                      <span className="flex-1 truncate">{item.label}</span>
-                    </Link>
-                  );
-                })}
+          {APP_NAV.map((section) => {
+            const sectionHasActive = section.items.some((item) =>
+              item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href)
+            );
+            const isCollapsed = Boolean(collapsedSections[section.label]) && !sectionHasActive;
+            return (
+              <div key={section.label}>
+                {section.defaultCollapsed ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsedSections((prev) => ({
+                        ...prev,
+                        [section.label]: !prev[section.label],
+                      }))
+                    }
+                    aria-expanded={!isCollapsed}
+                    className="flex w-full items-center justify-between px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary/60 transition-colors hover:text-text-secondary"
+                  >
+                    {section.label}
+                    <ChevronDown
+                      size={12}
+                      className={cn("transition-transform", !isCollapsed && "rotate-180")}
+                    />
+                  </button>
+                ) : (
+                  <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-text-tertiary/60">
+                    {section.label}
+                  </p>
+                )}
+                {!isCollapsed && (
+                  <div className="space-y-0.5">
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive =
+                        item.href === "/app"
+                          ? pathname === "/app"
+                          : pathname.startsWith(item.href);
+                      return (
+                        <Link
+                          key={item.label}
+                          href={item.href}
+                          className={cn(
+                            "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+                            isActive
+                              ? "bg-brand/10 text-brand"
+                              : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                          )}
+                        >
+                          <Icon
+                            size={18}
+                            className={cn(
+                              "transition-colors duration-150",
+                              isActive ? "text-brand" : "text-text-tertiary group-hover:text-text-secondary"
+                            )}
+                          />
+                          <span className="flex-1 truncate">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </nav>
       </div>
 

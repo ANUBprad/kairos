@@ -110,7 +110,7 @@ export function EvaluationDashboard({ runs, datasets, benchmarkRuns }: Props) {
         nextAction={{ label: "Benchmark Explorer", href: "/app/benchmark-explorer" }}
         relatedPages={[
           { label: "Retrieval Lab", href: "/app/retrieval-lab" },
-          { label: "Research Dashboard", href: "/app/research" },
+          { label: "Research Analytics", href: "/app/research/analytics" },
         ]}
       />
 

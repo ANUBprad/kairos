@@ -137,7 +137,7 @@ export function NotebookPageClient() {
         purpose="Capture insights, observations, and findings during your RAG research experiments."
         nextAction={{ label: "New Note", href: "#" }}
         relatedPages={[
-          { label: "Research Dashboard", href: "/app/research" },
+          { label: "Research Analytics", href: "/app/research/analytics" },
           { label: "Publication Mode", href: "/app/publication" },
         ]}
       />

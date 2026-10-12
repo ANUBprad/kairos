@@ -172,7 +172,7 @@ export function PlannerPage({ runs }: PlannerPageProps) {
           description="AI-powered experiment recommendations"
           purpose="AI-powered suggestions for your next experiments."
           relatedPages={[
-            { label: "Research Dashboard", href: "/app/research" },
+            { label: "Research Analytics", href: "/app/research/analytics" },
           ]}
         />
         <PremiumCard variant="elevated">
@@ -195,7 +195,7 @@ export function PlannerPage({ runs }: PlannerPageProps) {
         description="AI-powered experiment recommendations based on your configuration space, coverage gaps, and expected information gain."
         purpose="AI-powered suggestions for your next experiments."
         relatedPages={[
-          { label: "Research Dashboard", href: "/app/research" },
+          { label: "Research Analytics", href: "/app/research/analytics" },
         ]}
       />
       {/* Hero Header */}

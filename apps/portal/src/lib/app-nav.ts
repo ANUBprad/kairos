@@ -1,19 +1,19 @@
 import {
   LayoutDashboard,
+  FolderOpen,
   Microscope,
+  Sparkles,
+  GraduationCap,
   GitBranch,
   Lightbulb,
   FileText,
-  FolderOpen,
   Code2,
   FlaskConical,
   Search,
   BarChart3,
   Bot,
   BookOpen,
-  GraduationCap,
   SlidersHorizontal,
-  NotebookPen,
   Eye,
   Activity,
   Radio,
@@ -39,72 +39,137 @@ export interface AppNavItem {
 export interface AppNavSection {
   label: string;
   items: AppNavItem[];
+  // Advanced sections collapse by default so the sidebar reads as the core
+  // research journey (Home / Library / Research / Studio / Study) rather than
+  // an engineering control panel. Every route stays reachable.
+  defaultCollapsed?: boolean;
 }
 
-// Five calm groups instead of eight: Library (where you start), Research
-// (the work), Evaluate (measure it), Observe (operate it), System (configure
-// it). Every route below it lived before — only the grouping and ordering
-// changed, so the sidebar reads as a hierarchy instead of an admin panel.
-// Advanced craft (Experiment Planner/Lineage/Benchmarks, the Observability
-// sub-pages) stays flat and findable; the command palette still indexes all
-// of it via FLAT_APP_NAV.
+// The workspace journey first, then the advanced tooling folded away.
+//
+// Workspace — the product: where you bring sources, research them, create
+// artifacts and study them.
+// Evaluate — datasets, experiments and retrieval tooling for measuring quality.
+// Observe — operational telemetry for operators, not the default experience.
+// Settings — configuration and reference material.
+//
+// Only grouping and ordering are expressed here; every route below predates
+// this file, so deep links keep working and the command palette (FLAT_APP_NAV)
+// still indexes everything.
 export const APP_NAV: AppNavSection[] = [
   {
-    label: "Library",
+    label: "Workspace",
     items: [
       {
-        label: "Overview",
+        label: "Home",
         href: "/app",
         icon: LayoutDashboard,
-        description: "Workspace home",
+        description: "Your work at a glance",
         keywords: ["dashboard", "home", "overview"],
       },
       {
-        label: "Knowledge Bases",
+        label: "Library",
         href: "/app/knowledge-bases",
         icon: FolderOpen,
-        description: "Upload and organize source documents",
-        keywords: ["documents", "knowledge", "base", "upload"],
+        description: "Research workspaces and sources",
+        keywords: ["documents", "knowledge", "base", "upload", "sources", "library"],
       },
       {
-        label: "Notebook",
-        href: "/app/notebook",
-        icon: NotebookPen,
-        description: "Research notes and journal",
-        keywords: ["notebook", "notes", "journal", "markdown"],
-      },
-      {
-        label: "Research Dashboard",
+        label: "Research",
         href: "/app/research",
         icon: Microscope,
-        description: "Aggregated research metrics and analysis",
-        keywords: ["research", "dashboard", "metrics", "analysis"],
+        description: "Ask questions grounded in your sources",
+        keywords: ["research", "chat", "ask", "questions", "citations"],
+      },
+      {
+        label: "Studio",
+        href: "/app/studio",
+        icon: Sparkles,
+        description: "Summaries, reports, quizzes and more",
+        keywords: ["studio", "artifacts", "summary", "report", "quiz", "podcast"],
+      },
+      {
+        label: "Study",
+        href: "/app/study",
+        icon: GraduationCap,
+        description: "Quizzes, flashcards and learning progress",
+        keywords: ["study", "quiz", "flashcards", "review", "progress", "learn"],
       },
     ],
   },
   {
-    label: "Research",
+    label: "Evaluate",
+    defaultCollapsed: true,
     items: [
       {
-        label: "Experiment Lineage",
-        href: "/app/lineage",
+        label: "Evaluation",
+        href: "/app/evaluation",
+        icon: BarChart3,
+        description: "Benchmark retrieval performance",
+        keywords: ["evaluation", "metrics", "benchmark", "recall", "ndcg"],
+      },
+      {
+        label: "Retrieval Lab",
+        href: "/app/retrieval-lab",
+        icon: Search,
+        description: "Test retrieval configurations",
+        keywords: ["retrieval", "lab", "test", "search"],
+      },
+      {
+        label: "Benchmark Explorer",
+        href: "/app/benchmark-explorer",
+        icon: FlaskConical,
+        description: "Compare benchmark runs",
+        keywords: ["benchmark", "explorer", "compare", "scatter"],
+      },
+      {
+        label: "Leaderboards",
+        href: "/app/leaderboards",
+        icon: BarChart3,
+        description: "Ranked benchmark results",
+        keywords: ["leaderboards", "rankings"],
+      },
+      {
+        label: "Golden Datasets",
+        href: "/app/datasets",
+        icon: FolderOpen,
+        description: "Curated evaluation datasets",
+        keywords: ["datasets", "golden", "evaluation"],
+      },
+      {
+        label: "Regression Testing",
+        href: "/app/regression",
+        icon: FlaskConical,
+        description: "Guard retrieval quality over time",
+        keywords: ["regression", "testing", "guards"],
+      },
+      {
+        label: "Model Comparison",
+        href: "/app/model-comparison",
         icon: GitBranch,
-        description: "Version and provenance history",
-        keywords: ["lineage", "history", "versions", "provenance"],
+        description: "Compare model outputs",
+        keywords: ["model", "comparison", "providers"],
       },
       {
-        label: "Experiment Planner",
-        href: "/app/planner",
+        label: "Research Analytics",
+        href: "/app/research/analytics",
         icon: Lightbulb,
-        description: "Plan and suggest experiments",
-        keywords: ["planner", "plan", "experiment", "suggest"],
+        description: "Statistical analysis of evaluation runs",
+        keywords: ["research", "analytics", "statistics", "runs"],
       },
       {
-        label: "Publication",
-        href: "/app/publication",
+        label: "Prompt Library",
+        href: "/app/prompts",
         icon: FileText,
-        description: "Export research into reports",
-        keywords: ["publication", "export", "paper", "report", "pdf"],
+        description: "Curated prompt templates",
+        keywords: ["prompt", "library", "templates"],
+      },
+      {
+        label: "Advanced Retrieval",
+        href: "/app/advanced-retrieval",
+        icon: GitBranch,
+        description: "Hybrid and BM25 retrieval controls",
+        keywords: ["advanced", "retrieval", "hybrid", "bm25"],
       },
       {
         label: "Chunking Studio",
@@ -117,83 +182,29 @@ export const APP_NAV: AppNavSection[] = [
         label: "Experiment Builder",
         href: "/app/experiment-builder",
         icon: FlaskConical,
-        description: "Build a retrieval pipeline",
+        description: "Build a retrieval experiment",
         keywords: ["experiment", "builder", "workflow", "pipeline"],
       },
-    ],
-  },
-  {
-    label: "Evaluate",
-    items: [
       {
-        label: "Retrieval Lab",
-        href: "/app/retrieval-lab",
-        icon: Search,
-        description: "Test retrieval configurations",
-        keywords: ["retrieval", "lab", "test", "search"],
+        label: "Experiment Planner",
+        href: "/app/planner",
+        icon: Lightbulb,
+        description: "Plan and suggest experiments",
+        keywords: ["planner", "plan", "experiment", "suggest"],
       },
       {
-        label: "Advanced Retrieval",
-        href: "/app/advanced-retrieval",
+        label: "Experiment Lineage",
+        href: "/app/lineage",
         icon: GitBranch,
-        description: "Hybrid and BM25 retrieval controls",
-        keywords: ["advanced", "retrieval", "hybrid", "bm25"],
+        description: "Version and provenance history",
+        keywords: ["lineage", "history", "versions", "provenance"],
       },
       {
-        label: "Evaluation",
-        href: "/app/evaluation",
-        icon: BarChart3,
-        description: "Benchmark retrieval performance",
-        keywords: ["evaluation", "metrics", "benchmark", "recall", "ndcg"],
-      },
-      {
-        label: "Benchmark Explorer",
-        href: "/app/benchmark-explorer",
-        icon: FlaskConical,
-        description: "Compare benchmark runs",
-        keywords: ["benchmark", "explorer", "compare", "scatter"],
-      },
-      {
-        label: "Prompt Library",
-        href: "/app/prompts",
+        label: "Publication",
+        href: "/app/publication",
         icon: FileText,
-        description: "Curated prompt templates",
-        keywords: ["prompt", "library", "templates"],
-      },
-      {
-        label: "Model Comparison",
-        href: "/app/model-comparison",
-        icon: GitBranch,
-        description: "Compare model outputs",
-        keywords: ["model", "comparison", "providers"],
-      },
-      {
-        label: "Regression Testing",
-        href: "/app/regression",
-        icon: FlaskConical,
-        description: "Guard retrieval quality over time",
-        keywords: ["regression", "testing", "guards"],
-      },
-      {
-        label: "Leaderboards",
-        href: "/app/leaderboards",
-        icon: BarChart3,
-        description: "Ranked benchmark results",
-        keywords: ["leaderboards", "rankings"],
-      },
-      {
-        label: "Quality Gates",
-        href: "/app/quality-gates",
-        icon: Bot,
-        description: "Hard quality checkpoints",
-        keywords: ["quality", "gates", "guardrails"],
-      },
-      {
-        label: "Golden Datasets",
-        href: "/app/datasets",
-        icon: FolderOpen,
-        description: "Curated evaluation datasets",
-        keywords: ["datasets", "golden", "evaluation"],
+        description: "Export research into reports",
+        keywords: ["publication", "export", "paper", "report", "pdf"],
       },
       {
         label: "Review Queue",
@@ -203,16 +214,17 @@ export const APP_NAV: AppNavSection[] = [
         keywords: ["review", "queue", "human", "answers"],
       },
       {
-        label: "Analytics",
-        href: "/app/analytics",
-        icon: Lightbulb,
-        description: "Usage and performance trends",
-        keywords: ["analytics", "usage", "trends"],
+        label: "Quality Gates",
+        href: "/app/quality-gates",
+        icon: Bot,
+        description: "Hard quality checkpoints",
+        keywords: ["quality", "gates", "guardrails"],
       },
     ],
   },
   {
     label: "Observe",
+    defaultCollapsed: true,
     items: [
       {
         label: "Observability",
@@ -284,7 +296,8 @@ export const APP_NAV: AppNavSection[] = [
     ],
   },
   {
-    label: "System",
+    label: "Settings",
+    defaultCollapsed: true,
     items: [
       {
         label: "Configuration",

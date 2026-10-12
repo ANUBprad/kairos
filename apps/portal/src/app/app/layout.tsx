@@ -7,7 +7,7 @@ import { PageTransition } from "@/components/shared/page-transition";
 import { KeyboardShortcuts } from "@/components/app/dashboard/keyboard-shortcuts";
 
 export const metadata = {
-  title: { template: "%s | Kairos", default: "Research Platform | Kairos" },
+  title: { template: "%s | Kairos", default: "Kairos" },
   robots: { index: false, follow: false },
 };
 
