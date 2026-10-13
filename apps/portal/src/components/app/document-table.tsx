@@ -32,7 +32,7 @@ SearchX,
   Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
+import { WorkspaceHeader } from "@/components/app/kb-workspace-tabs";
 import { ProcessingBadge } from "@/components/app/processing-badge";
 import { SourceTypeBadge } from "@/components/app/source-type-badge";
 import { DocumentUploadDialog } from "@/components/app/document-upload-dialog";
@@ -255,12 +255,13 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
   if (items.length === 0) {
     return (
       <div>
-        <div className="mb-6">
-          <h1 className="page-title">{kbName}</h1>
-          <p className="page-description mt-1">
-            No sources yet. Add your first source to get started.
-          </p>
-        </div>
+        <WorkspaceHeader
+          kbId={kbId}
+          kbName={kbName}
+          title="Sources"
+          description="No sources yet. Add your first source to get started."
+          active="sources"
+        />
         <div className="flex flex-col items-center justify-center py-24">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10">
             <FileText size={32} className="text-brand" />
@@ -292,21 +293,19 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-xs font-medium text-brand">{kbName}</p>
-          <h1 className="page-title mt-0.5">Sources</h1>
-          <p className="page-description mt-1">
-            {items.length} source{items.length !== 1 ? "s" : ""} in this workspace
-          </p>
-        </div>
-        <Button variant="primary" onClick={() => setSourceAddOpen(true)}>
-          <Plus size={16} />
-          Add source
-        </Button>
-      </div>
-
-      <KbWorkspaceTabs kbId={kbId} active="sources" />
+      <WorkspaceHeader
+        kbId={kbId}
+        kbName={kbName}
+        title="Sources"
+        description={`${items.length} source${items.length !== 1 ? "s" : ""} in this workspace`}
+        active="sources"
+        action={
+          <Button variant="primary" onClick={() => setSourceAddOpen(true)}>
+            <Plus size={16} />
+            Add source
+          </Button>
+        }
+      />
 
       <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3">

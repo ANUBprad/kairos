@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookOpen, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { ArrowRight, BookOpen, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreateKnowledgeBaseDialog } from "@/components/app/create-knowledge-base-dialog";
 import { RenameKnowledgeBaseDialog } from "@/components/app/rename-knowledge-base-dialog";
@@ -29,45 +28,58 @@ export function KnowledgeBaseList({ items }: Props) {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10">
-          <BookOpen size={32} className="text-brand" />
-        </div>
-        <h2 className="mt-6 text-xl font-semibold text-text-primary">
-          No workspaces yet
-        </h2>
-        <p className="mt-2 max-w-sm text-center text-sm text-text-secondary">
-          Create your first workspace to bring in your sources, then research, create, and study from them.
-        </p>
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <div className="flex items-center gap-3 text-xs text-text-tertiary">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-brand font-semibold">1</span>
-            Create a workspace
-          </div>
-          <div className="flex items-center gap-3 text-xs text-text-tertiary">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover font-semibold">2</span>
-            Upload PDFs, DOCX, TXT, MD, or CSV files
-          </div>
-          <div className="flex items-center gap-3 text-xs text-text-tertiary">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-hover font-semibold">3</span>
-            Research your sources and turn them into study artifacts
-          </div>
-        </div>
-        <Button variant="primary" className="mt-8" onClick={() => setCreateOpen(true)}>
-          <Plus size={16} />
-          Create workspace
-        </Button>
-        <CreateKnowledgeBaseDialog
-          open={createOpen}
-          onOpenChange={setCreateOpen}
-        />
+      <div>
+        <header className="mb-6">
+          <h1 className="page-title">Library</h1>
+          <p className="page-description mt-1">Workspaces hold your sources. Create one to begin.</p>
+        </header>
+
+        <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-6 sm:p-8">
+          <h2 className="section-title">Set up your first workspace</h2>
+          <p className="mt-2 max-w-xl text-sm text-text-secondary">
+            A workspace keeps one set of sources together. Upload files or add links, then research,
+            create artifacts, and study from them.
+          </p>
+          <ol className="mt-6 space-y-5">
+            {[
+              {
+                title: "Create a workspace",
+                description: "Name it after the subject you're researching.",
+              },
+              {
+                title: "Add your sources",
+                description: "Upload PDFs, DOCX, TXT, MD or CSV files, or add a URL or video.",
+              },
+              {
+                title: "Research, create, and study",
+                description: "Ask grounded questions and turn your sources into artifacts.",
+              },
+            ].map((step, i) => (
+              <li key={step.title} className="flex gap-4">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border bg-bg text-xs font-semibold text-text-secondary">
+                  {i + 1}
+                </span>
+                <div>
+                  <p className="text-sm font-medium text-text-primary">{step.title}</p>
+                  <p className="mt-0.5 text-sm text-text-tertiary">{step.description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <Button variant="primary" className="mt-6" onClick={() => setCreateOpen(true)}>
+            <Plus size={16} />
+            Create workspace
+          </Button>
+        </section>
+
+        <CreateKnowledgeBaseDialog open={createOpen} onOpenChange={setCreateOpen} />
       </div>
     );
   }
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-end justify-between gap-4">
         <div>
           <h1 className="page-title">Library</h1>
           <p className="page-description mt-1">
@@ -80,76 +92,85 @@ export function KnowledgeBaseList({ items }: Props) {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((kb) => (
-          <Card key={kb.id} className="group relative overflow-hidden">
-            <Link
-              href={`/app/knowledge-bases/${kb.id}`}
-              className="block p-4 pr-10"
-              prefetch={false}
-            >
-              <h3 className="truncate font-medium text-text-primary transition-colors group-hover:text-brand">
-                {kb.name}
-              </h3>
-              {kb.description && (
-                <p className="mt-1 text-xs leading-relaxed text-text-secondary line-clamp-2">
-                  {kb.description}
-                </p>
-              )}
-              <div className="mt-3 flex items-center gap-2 text-xs text-text-tertiary">
-                <span>
-                  {kb._count.documents} {kb._count.documents === 1 ? "document" : "documents"}
-                </span>
-                <span aria-hidden="true">·</span>
-                <span>Created {new Date(kb.createdAt).toLocaleDateString()}</span>
-              </div>
-            </Link>
-            <div className="absolute right-3 top-3 z-10">
-              <button
-                onClick={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === kb.id ? null : kb.id); }}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary opacity-0 transition-opacity hover:bg-surface-hover hover:text-text-secondary group-hover:opacity-100"
-                aria-label="Workspace actions"
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface">
+        <ul className="divide-y divide-border">
+          {items.map((kb) => (
+            <li key={kb.id} className="group flex items-center">
+              <Link
+                href={`/app/knowledge-bases/${kb.id}`}
+                prefetch={false}
+                className="flex min-w-0 flex-1 items-center gap-4 py-4 pl-5 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
               >
-                <MoreHorizontal size={16} />
-              </button>
-              {menuOpen === kb.id && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(null)} />
-                  <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-border bg-surface p-1 shadow-xl">
-                    <button
-                      onClick={() => { setRenameTarget(kb); setMenuOpen(null); }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                    >
-                      <Pencil size={15} />
-                      Rename
-                    </button>
-                    <button
-                      onClick={() => { setDeleteTarget(kb); setMenuOpen(null); }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-error"
-                    >
-                      <Trash2 size={15} />
-                      Delete
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </Card>
-        ))}
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-hover text-text-tertiary">
+                  <BookOpen size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-text-primary transition-colors group-hover:text-brand">
+                    {kb.name}
+                  </span>
+                  {kb.description && (
+                    <span className="mt-0.5 block truncate text-xs text-text-tertiary">
+                      {kb.description}
+                    </span>
+                  )}
+                </span>
+                <span className="hidden shrink-0 items-center gap-3 text-xs text-text-tertiary sm:flex">
+                  <span>
+                    {kb._count.documents} {kb._count.documents === 1 ? "document" : "documents"}
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <span>{new Date(kb.createdAt).toLocaleDateString()}</span>
+                </span>
+                <ArrowRight
+                  size={14}
+                  className="hidden shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5 sm:block"
+                />
+              </Link>
+
+              <div className="relative shrink-0 pr-3">
+                <button
+                  onClick={() => setMenuOpen(menuOpen === kb.id ? null : kb.id)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:opacity-0 sm:group-hover:opacity-100"
+                  aria-label={`Actions for ${kb.name}`}
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+                {menuOpen === kb.id && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(null)} />
+                    <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-border bg-surface p-1 shadow-xl">
+                      <button
+                        onClick={() => {
+                          setRenameTarget(kb);
+                          setMenuOpen(null);
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                      >
+                        <Pencil size={15} />
+                        Rename
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDeleteTarget(kb);
+                          setMenuOpen(null);
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-error"
+                      >
+                        <Trash2 size={15} />
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <CreateKnowledgeBaseDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-      />
-      <RenameKnowledgeBaseDialog
-        kb={renameTarget}
-        onClose={() => setRenameTarget(null)}
-      />
-      <DeleteKnowledgeBaseDialog
-        kb={deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-      />
+      <CreateKnowledgeBaseDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <RenameKnowledgeBaseDialog kb={renameTarget} onClose={() => setRenameTarget(null)} />
+      <DeleteKnowledgeBaseDialog kb={deleteTarget} onClose={() => setDeleteTarget(null)} />
     </div>
   );
 }

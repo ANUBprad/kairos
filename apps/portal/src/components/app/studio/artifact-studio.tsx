@@ -30,7 +30,7 @@ import {
 import { ArtifactList } from "./artifact-list";
 import { ArtifactDialog } from "./artifact-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
+import { WorkspaceHeader } from "@/components/app/kb-workspace-tabs";
 
 interface Props {
   kbId: string;
@@ -153,14 +153,13 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
 
   return (
     <div>
-      <header className="mb-6">
-        <p className="text-xs font-medium text-brand">{kbName}</p>
-        <h1 className="page-title mt-0.5">Studio</h1>
-        <p className="page-description mt-1">
-          Generate learning artifacts from the indexed sources in this workspace.
-        </p>
-        <KbWorkspaceTabs kbId={kbId} active="studio" />
-      </header>
+      <WorkspaceHeader
+        kbId={kbId}
+        kbName={kbName}
+        title="Studio"
+        description="Generate learning artifacts from the indexed sources in this workspace."
+        active="studio"
+      />
 
       <section className="rounded-xl border border-border bg-surface p-5" aria-label="Artifact generator">
         <h2 className="text-base font-semibold text-text-primary">Generate an artifact</h2>

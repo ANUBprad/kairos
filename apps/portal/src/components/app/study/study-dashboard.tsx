@@ -12,7 +12,7 @@ import {
 import { flashcardsStudyLine } from "@/components/app/studio/artifact-list";
 import { parseFlashcardsContent } from "@/lib/artifacts/flashcards-view";
 import { studyArtifactHref } from "@/lib/study/hrefs";
-import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
+import { WorkspaceHeader } from "@/components/app/kb-workspace-tabs";
 import type { StudyDashboardData } from "@/lib/study/dashboard";
 import type { LearningArtifactWithStudy } from "@/lib/artifacts/types";
 
@@ -110,14 +110,13 @@ export function StudyDashboard({ kbId, kbName, data }: Props) {
 
   return (
     <div>
-      <header className="mb-6">
-        <p className="text-xs font-medium text-brand">{kbName}</p>
-        <h1 className="page-title mt-0.5">Study</h1>
-        <p className="page-description mt-1">
-          Your study state across the artifacts in this workspace.
-        </p>
-        <KbWorkspaceTabs kbId={kbId} active="study" />
-      </header>
+      <WorkspaceHeader
+        kbId={kbId}
+        kbName={kbName}
+        title="Study"
+        description="Your study state across the artifacts in this workspace."
+        active="study"
+      />
 
       {artifacts.length === 0 ? (
         <section className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface px-5 py-14 text-center">

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { KbWorkspaceTabs } from "@/components/app/kb-workspace-tabs";
+import { WorkspaceHeader } from "@/components/app/kb-workspace-tabs";
 import {
   Send,
   Square,
@@ -404,15 +404,14 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
 
   return (
     <div>
-      <header className="mb-2">
-        <p className="text-xs font-medium text-brand">{kbName}</p>
-        <h1 className="page-title mt-0.5">Research</h1>
-        <p className="page-description mt-1">
-          Ask questions and get grounded answers. Every response cites the source
-          chunks it draws from.
-        </p>
-        <KbWorkspaceTabs kbId={kbId} active="research" />
-      </header>
+      <WorkspaceHeader
+        kbId={kbId}
+        kbName={kbName}
+        title="Research"
+        description="Ask questions and get grounded answers. Every response cites the source chunks it draws from."
+        active="research"
+        className="mb-2"
+      />
       <div className="flex h-[calc(100vh-16rem)] -m-6 mt-3 overflow-hidden">
       {showSidebar && (
         <div className="w-64 shrink-0 border-r border-border bg-surface overflow-y-auto">

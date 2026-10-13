@@ -32,6 +32,46 @@ interface KbWorkspaceTabsProps {
   customHighlight?: string;
 }
 
+// The workspace title + tab bar are the same on every KB surface, so the four
+// surfaces share one header instead of re-deriving the eyebrow, title and tabs
+// each time. The artifact detail page keeps its own header because its title is
+// the artifact name, not a tab.
+interface WorkspaceHeaderProps {
+  kbId: string;
+  kbName: string;
+  title: string;
+  description?: string;
+  active?: KbWorkspaceTabValue;
+  customHighlight?: string;
+  action?: React.ReactNode;
+  className?: string;
+}
+
+export function WorkspaceHeader({
+  kbId,
+  kbName,
+  title,
+  description,
+  active,
+  customHighlight,
+  action,
+  className = "mb-6",
+}: WorkspaceHeaderProps) {
+  return (
+    <header className={className}>
+      <div className="flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-brand">{kbName}</p>
+          <h1 className="page-title mt-0.5">{title}</h1>
+          {description ? <p className="page-description mt-1">{description}</p> : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+      <KbWorkspaceTabs kbId={kbId} active={active} customHighlight={customHighlight} />
+    </header>
+  );
+}
+
 export function KbWorkspaceTabs({ kbId, active, customHighlight }: KbWorkspaceTabsProps) {
   return (
     <nav
