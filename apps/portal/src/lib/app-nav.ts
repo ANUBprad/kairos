@@ -325,3 +325,8 @@ export const APP_NAV: AppNavSection[] = [
 ];
 
 export const FLAT_APP_NAV: AppNavItem[] = APP_NAV.flatMap((section) => section.items);
+
+// The off-canvas sidebar and its header trigger live in different components
+// either side of the server layout, so they coordinate through this window
+// event rather than threading client state through the layout.
+export const APP_SIDEBAR_OPEN_EVENT = "kairos:open-sidebar";

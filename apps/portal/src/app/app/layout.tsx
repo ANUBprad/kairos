@@ -29,7 +29,7 @@ export default async function AppLayout({
       <KeyboardShortcuts />
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:bg-background focus:px-4 focus:py-2 focus:rounded-lg focus:border focus:border-border"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-lg focus:border focus:border-border focus:bg-surface focus:px-4 focus:py-2 focus:text-text-primary"
       >
         Skip to content
       </a>
@@ -37,14 +37,14 @@ export default async function AppLayout({
         organization={organization}
         organizations={workspace?.organizations ?? []}
       />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <AppHeader
           email={session.user.email}
           name={session.user.name}
           image={session.user.image ?? null}
           organizationName={organization?.name ?? null}
         />
-        <main id="main-content" className="flex-1 p-6">
+        <main id="main-content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>

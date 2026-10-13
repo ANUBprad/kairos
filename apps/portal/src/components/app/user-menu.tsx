@@ -66,7 +66,7 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
     <div ref={menuRef} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+        className="flex h-9 items-center gap-1.5 rounded-md px-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
         aria-label="User menu"
         aria-expanded={open}
       >
