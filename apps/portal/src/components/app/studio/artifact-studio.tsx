@@ -162,10 +162,10 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
       />
 
       <section className="rounded-xl border border-border bg-surface p-5" aria-label="Artifact generator">
-        <h2 className="text-base font-semibold text-text-primary">Generate an artifact</h2>
+        <h2 className="section-title">Generate an artifact</h2>
 
         <div
-          className="mt-4 inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1"
+          className="mt-4 flex flex-wrap items-center gap-1 rounded-lg border border-border bg-surface p-1"
           role="group"
           aria-label="Artifact type"
         >
@@ -208,7 +208,7 @@ export function ArtifactStudio({ kbId, kbName, sources, initialArtifacts }: Prop
           </div>
         ) : (
           <>
-            <ul className="mt-4 space-y-1">
+            <ul className="mt-4 max-h-80 space-y-1 overflow-y-auto overscroll-contain pr-1">
               {sources.map((source) => {
                 const selectable = source.status === "INDEXED";
                 const checked = selectedIds.includes(source.id);

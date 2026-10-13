@@ -37,21 +37,21 @@ export function ArtifactDetailClient({
   return (
     <div>
       <header className="mb-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="flex items-center gap-2 truncate page-title">
-              {meta && <meta.Icon size={20} className="shrink-0 text-text-tertiary" />}
-              <span className="truncate">
-                {artifact.name || `Untitled ${meta?.label.toLowerCase() ?? "artifact"}`}
-              </span>
-            </h1>
-            <p className="mt-1 text-sm text-text-secondary">
-              {meta?.label ?? artifact.type} · {kbName} ·{" "}
-              {new Date(artifact.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-          <ArtifactStatusBadge status={artifact.status} />
+        <p className="text-xs font-medium text-brand">{kbName}</p>
+        <div className="mt-2 flex items-start justify-between gap-3">
+          <h1 className="flex items-center gap-2 page-title">
+            {meta && <meta.Icon size={20} className="shrink-0 text-text-tertiary" />}
+            <span className="truncate">
+              {artifact.name || `Untitled ${meta?.label.toLowerCase() ?? "artifact"}`}
+            </span>
+          </h1>
+          <ArtifactStatusBadge status={artifact.status} className="mt-1 shrink-0" />
         </div>
+        <p className="page-description mt-1">
+          {meta?.label ?? artifact.type} · {new Date(artifact.createdAt).toLocaleDateString()}
+          {artifact.sourceIds.length > 0 &&
+            ` · ${artifact.sourceIds.length} source${artifact.sourceIds.length !== 1 ? "s" : ""}`}
+        </p>
 
         <KbWorkspaceTabs kbId={kbId} customHighlight="Artifact" />
 
