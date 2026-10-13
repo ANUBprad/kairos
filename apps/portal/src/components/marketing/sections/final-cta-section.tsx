@@ -1,79 +1,50 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { ArrowRight, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function FinalCTASection() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start end", "end start"],
-  });
-
-  const bgOpacity = useTransform(scrollYProgress, [0.2, 0.5], [0, 1]);
-
   return (
-    <section
-      id="cta"
-      ref={sectionRef}
-      className="relative min-h-screen flex items-center py-20 md:py-28 overflow-hidden"
-    >
-      <motion.div
-        style={{ opacity: bgOpacity }}
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden="true"
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(255,90,10,0.08),transparent)]" />
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/20 to-transparent" />
-      </motion.div>
-
-      <div className="relative mx-auto w-full max-w-[1280px] px-6 sm:px-8 text-center">
+    <section id="cta" className="border-t border-border bg-bg-secondary">
+      <div className="mx-auto w-full max-w-[1120px] px-6 py-24 text-center sm:px-8">
         <motion.h2
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="text-[44px] sm:text-[56px] md:text-[64px] font-bold tracking-tight leading-[1] text-text-primary"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6 }}
+          className="mx-auto max-w-[22ch] text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-text-primary sm:text-[44px]"
         >
-          Your Sources.
-          <br />
-          Your Research.
-          <br />
-          <span className="bg-gradient-to-r from-brand to-brand-hover bg-clip-text text-transparent">
-            Your Knowledge.
-          </span>
+          Your sources. Your research.{" "}
+          <span className="text-brand">Your knowledge.</span>
         </motion.h2>
 
         <motion.p
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-6 text-[17px] text-text-secondary max-w-lg mx-auto leading-relaxed"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mx-auto mt-5 max-w-[52ch] text-[16px] leading-relaxed text-text-secondary sm:text-[17px]"
         >
-          One workspace to bring your sources, understand them,
-          create from them, and learn from them.
+          One workspace to bring your sources, understand them, create from them,
+          and learn from them.
         </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3"
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
-          <Button variant="primary" size="xl" className="gap-2" asChild>
+          <Button variant="primary" size="lg" className="gap-2" asChild>
             <Link href="/app">
               Start researching
               <ArrowRight size={16} />
             </Link>
           </Button>
-          <Button variant="secondary" size="xl" className="gap-2" asChild>
+          <Button variant="secondary" size="lg" className="gap-2" asChild>
             <a
               href="https://github.com/ANUBprad/kairos"
               target="_blank"
@@ -88,8 +59,8 @@ export function FinalCTASection() {
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.8, duration: 0.5 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ delay: 0.35, duration: 0.5 }}
           className="mt-8 text-[13px] text-text-tertiary"
         >
           Open source • MIT License • No vendor lock-in
