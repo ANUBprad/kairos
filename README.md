@@ -244,6 +244,7 @@ CI (`test.yml`, `portal.yml`, `lint.yml`) additionally runs the full Python suit
 
 ## Documentation Index
 
+- [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) — **canonical system design** for the whole repository (Portal + legacy v1 stack).
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system architecture, components, pipeline.
 - [docs/DEVELOPER.md](docs/DEVELOPER.md) — contributor guide, code style, testing.
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — deployment options and production checklist.
