@@ -70,7 +70,7 @@ export default function RootLayout({
             __html: `
               try {
                 const theme = localStorage.getItem('theme');
-                if (theme === 'light' || (!theme && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+                if (theme !== 'dark') {
                   document.documentElement.classList.add('light');
                 }
               } catch (e) {}
@@ -93,7 +93,7 @@ export default function RootLayout({
           expand={false}
           richColors
           closeButton
-          theme="dark"
+          theme="system"
           toastOptions={{
             duration: 3000,
           }}

@@ -26,7 +26,7 @@ interface UserMenuProps {
 export function UserMenu({ email, name, image, organizationName }: UserMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
