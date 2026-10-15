@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { AlertCircle, CheckCircle2, Loader2, RotateCcw, Sparkles, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtifactStatusBadge } from "./artifact-status-badge";
@@ -35,7 +35,10 @@ type View =
 // computed by the server (submitQuizAttemptForWorkspace); this component only
 // collects the caller's { questionId, selectedAnswer } and renders the result.
 export function QuizArtifactViewer({ artifact, sources, onClose }: Props) {
-  const content = parseQuizContent(artifact.content);
+  // parseQuizContent returns a fresh object each call, so memoizing on the
+  // stable artifact.content keeps it out of the load effect's dependency list;
+  // otherwise the effect would re-run (and re-fetch) on every render.
+  const content = useMemo(() => parseQuizContent(artifact.content), [artifact.content]);
   const kbId = artifact.knowledgeBaseId;
   const [view, setView] = useState<View>({ kind: "loading" });
   const [history, setHistory] = useState<QuizAttemptSummary[]>([]);
@@ -249,45 +252,92 @@ function AnswerQuiz({
   answeredCount: number;
 }) {
   const allAnswered = answeredCount === content.questions.length;
+
+  // Roving focus for the option radiogroup: arrow keys move (and select, per the
+  // selection-follows-focus convention) so the group is one tab stop, not N.
+  const handleOptionKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    questionIndex: number,
+    optionIndex: number,
+    optionCount: number,
+  ) => {
+    const offset =
+      event.key === "ArrowDown" || event.key === "ArrowRight"
+        ? 1
+        : event.key === "ArrowUp" || event.key === "ArrowLeft"
+          ? -1
+          : 0;
+    if (offset === 0) return;
+    event.preventDefault();
+    const nextIndex = (optionIndex + offset + optionCount) % optionCount;
+    onSelect(questionIndex, nextIndex);
+    const group = event.currentTarget.closest<HTMLElement>('[role="radiogroup"]');
+    group?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[nextIndex]?.focus();
+  };
+
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary">{content.title}</h3>
-          <p className="mt-1 text-xs text-text-tertiary">{content.instructions}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="section-title">{content.title}</h3>
+          <p className="mt-1 text-sm text-text-secondary">{content.instructions}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-text-secondary">
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="text-xs font-medium tabular-nums text-text-secondary">
             {answeredCount}/{content.questions.length} answered
           </span>
-          <Button variant="ghost" size="sm" onClick={onReset} aria-label="Reset answers">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onReset}
+            disabled={submitting || answeredCount === 0}
+            aria-label="Reset answers"
+          >
             <RotateCcw size={13} />
             Reset
           </Button>
         </div>
       </div>
 
-      <ol className="mt-5 space-y-5">
+      <ol className="mt-6 divide-y divide-border">
         {content.questions.map((question, qi) => {
           const selected = answers[qi];
+          const questionId = `quiz-question-${qi}`;
           return (
-            <li key={qi} className="rounded-lg border border-border p-4">
-              <p className="text-sm font-medium text-text-primary">
-                {qi + 1}. {question.question}
+            <li key={qi} className="py-6 first:pt-0">
+              <p
+                id={questionId}
+                className="flex gap-2.5 text-[15px] font-medium leading-relaxed text-text-primary"
+              >
+                <span className="shrink-0 tabular-nums text-text-tertiary">{qi + 1}.</span>
+                <span>{question.question}</span>
               </p>
-              <div className="mt-3 space-y-1.5">
+              <div role="radiogroup" aria-labelledby={questionId} className="mt-3 space-y-1.5">
                 {question.options.map((option, oi) => {
                   const isSelected = selected === oi;
                   return (
                     <button
                       key={oi}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      tabIndex={isSelected || (selected === undefined && oi === 0) ? 0 : -1}
                       disabled={submitting}
                       onClick={() => onSelect(qi, oi)}
-                      className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm text-text-secondary transition-colors disabled:opacity-50 ${
-                        isSelected ? "border-brand bg-brand/5" : "border-border hover:bg-surface-hover"
+                      onKeyDown={(event) => handleOptionKeyDown(event, qi, oi, question.options.length)}
+                      className={`flex w-full items-center gap-3 rounded-lg border px-3.5 py-2.5 text-left text-sm transition-colors disabled:opacity-50 ${
+                        isSelected
+                          ? "border-brand bg-brand/5 text-text-primary"
+                          : "border-border text-text-secondary hover:border-border-hover hover:bg-surface-hover"
                       }`}
                     >
-                      <span className="w-4 shrink-0 text-xs font-medium text-text-tertiary">
+                      <span
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold ${
+                          isSelected
+                            ? "border-brand bg-brand text-white"
+                            : "border-border text-text-tertiary"
+                        }`}
+                      >
                         {String.fromCharCode(65 + oi)}
                       </span>
                       <span>{option}</span>
@@ -300,7 +350,7 @@ function AnswerQuiz({
         })}
       </ol>
 
-      <div className="mt-5 flex items-center justify-between">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
         <p className="text-xs text-text-tertiary">
           Your answers are graded and stored when you finish.
         </p>
@@ -366,45 +416,50 @@ function QuizResults({
         </div>
       </div>
 
-      <ol className="mt-5 space-y-5">
+      <ol className="mt-6 divide-y divide-border">
         {content.questions.map((question, qi) => {
           const answer = byQuestion.get(qi);
           const isCorrect = answer?.isCorrect ?? false;
           return (
-            <li key={qi} className="rounded-lg border border-border p-4">
-              <p className="text-sm font-medium text-text-primary">
-                {qi + 1}. {question.question}
+            <li key={qi} className="py-6 first:pt-0">
+              <p className="flex gap-2.5 text-[15px] font-medium leading-relaxed text-text-primary">
+                <span className="shrink-0 tabular-nums text-text-tertiary">{qi + 1}.</span>
+                <span>{question.question}</span>
               </p>
               <div className="mt-3 space-y-1.5">
                 {question.options.map((option, oi) => {
                   const isAnswer = oi === question.correctAnswer;
                   const isSelected = answer?.selectedAnswer === oi;
                   const stateClass = isAnswer
-                    ? "border-success bg-success/10"
+                    ? "border-success bg-success/10 text-text-primary"
                     : isSelected
-                      ? "border-error bg-error/10"
-                      : "border-border opacity-60";
+                      ? "border-error bg-error/10 text-text-primary"
+                      : "border-border text-text-secondary opacity-60";
                   return (
                     <div
                       key={oi}
-                      className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm text-text-secondary ${stateClass}`}
+                      className={`flex w-full items-center gap-3 rounded-lg border px-3.5 py-2.5 text-sm ${stateClass}`}
                     >
-                      <span className="w-4 shrink-0 text-xs font-medium text-text-tertiary">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-current text-[11px] font-semibold opacity-70">
                         {String.fromCharCode(65 + oi)}
                       </span>
                       <span>{option}</span>
                       {isAnswer && (
-                        <CheckCircle2 size={14} className="ml-auto shrink-0 text-success" />
+                        <span className="ml-auto shrink-0 text-[11px] font-semibold uppercase tracking-wide text-success">
+                          Correct answer
+                        </span>
                       )}
                       {isSelected && !isAnswer && (
-                        <XCircle size={14} className="ml-auto shrink-0 text-error" />
+                        <span className="ml-auto shrink-0 text-[11px] font-semibold uppercase tracking-wide text-error">
+                          Your answer
+                        </span>
                       )}
                     </div>
                   );
                 })}
               </div>
               <div
-                className={`mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-sm ${
+                className={`mt-3 flex items-start gap-2 rounded-lg px-3.5 py-3 text-sm ${
                   isCorrect ? "bg-success/10 text-success" : "bg-error/10 text-error"
                 }`}
               >

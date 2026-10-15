@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -35,7 +35,10 @@ interface Props {
 // deck completion are always derived from those rows (a card counts as
 // reviewed once it has reviewCount > 0), never from a stored flag.
 export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) {
-  const content = parseFlashcardsContent(artifact.content);
+  // parseFlashcardsContent returns a fresh object each call; memoizing on the
+  // stable artifact.content keeps the load effect from re-running (and
+  // re-fetching every review row) on every render.
+  const content = useMemo(() => parseFlashcardsContent(artifact.content), [artifact.content]);
   const kbId = artifact.knowledgeBaseId;
   const [reviews, setReviews] = useState<FlashcardReviewData[] | null>(null);
   const [index, setIndex] = useState(0);
@@ -48,6 +51,32 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
   const current = content?.cards[index];
   const progress = reviews ? summarizeFlashcardDeckProgress(reviews) : null;
   const currentReview = reviews ? reviews[index] : undefined;
+  const reviewsReady = reviews !== null;
+  const pct =
+    progress && progress.cardCount > 0
+      ? Math.round((progress.reviewedCount / progress.cardCount) * 100)
+      : 0;
+
+  const goTo = (next: number) => {
+    setRevealed(false);
+    setIndex(() => Math.max(0, Math.min(cardCount - 1, next)));
+  };
+
+  // Keyboard access for the card reader: the deck is one focusable group, so
+  // arrows page through cards and space/enter reveals the answer.
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      goTo(index + 1);
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      goTo(index - 1);
+    } else if (event.key === " " || event.key === "Enter") {
+      event.preventDefault();
+      setRevealed((r) => !r);
+    }
+  };
 
   useEffect(() => {
     if (artifact.status !== "COMPLETED" || !content) return;
@@ -71,7 +100,7 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
   }, [kbId, artifact.id, content]);
 
   const mark = async (verdict: "AGAIN" | "KNOWN") => {
-    if (!content || busy) return;
+    if (!content || busy || !reviewsReady) return;
     setBusy(true);
     setError(null);
     try {
@@ -139,14 +168,16 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
             </div>
           ) : (
             <div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-text-primary">{content.title}</h3>
-                  <p className="mt-1 text-xs text-text-tertiary">
-                    Card {index + 1} of {cardCount}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="section-title">{content.title}</h3>
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-tertiary">
+                    <span className="tabular-nums">
+                      Card {index + 1} of {cardCount}
+                    </span>
                     {currentReview && (
                       <span
-                        className={`ml-2 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                        className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
                           STATUS_CHIP[currentReview.status].klass
                         }`}
                       >
@@ -155,7 +186,7 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                     )}
                   </p>
                 </div>
-                <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-text-secondary">
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-text-secondary">
                   {loading ? (
                     <Loader2 size={14} className="animate-spin text-text-tertiary" />
                   ) : (
@@ -171,18 +202,59 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                 </span>
               </div>
 
+              <div className="mt-3 flex items-center gap-2">
+                <div
+                  role="progressbar"
+                  aria-valuenow={progress?.reviewedCount ?? 0}
+                  aria-valuemin={0}
+                  aria-valuemax={progress?.cardCount ?? cardCount}
+                  aria-label="Cards reviewed"
+                  className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover"
+                >
+                  <div
+                    className="h-full rounded-full bg-brand transition-[width]"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className="shrink-0 text-[11px] font-medium tabular-nums text-text-tertiary">
+                  {pct}%
+                </span>
+              </div>
+
               {current ? (
-                <div className="mt-4 rounded-xl border border-border p-6 text-center">
-                  <p className="text-sm font-medium text-text-primary">{current.front}</p>
-                  <div className="mx-auto my-4 h-px w-full max-w-xs bg-border" />
-                  <div className="min-h-16">
+                <div
+                  role="group"
+                  aria-label="Flashcard. Left and right arrows change cards; space reveals the answer."
+                  tabIndex={0}
+                  onKeyDown={handleCardKeyDown}
+                  className="mt-4 rounded-xl border border-border p-6 outline-none transition-colors focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand"
+                >
+                  <div className="text-center">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+                      Prompt
+                    </p>
+                    <p className="mt-3 text-lg font-medium leading-snug text-text-primary">
+                      {current.front}
+                    </p>
+                  </div>
+                  <div className="mx-auto my-5 h-px w-full max-w-xs bg-border" />
+                  <div className="min-h-20">
                     {revealed ? (
-                      <p className="text-sm leading-relaxed text-text-secondary">{current.back}</p>
+                      <div className="rounded-lg bg-bg-secondary px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+                          Answer
+                        </p>
+                        <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-text-primary">
+                          {current.back}
+                        </p>
+                      </div>
                     ) : (
-                      <p className="text-sm text-text-tertiary">Reveal the back to check yourself.</p>
+                      <p className="pt-6 text-center text-sm text-text-tertiary">
+                        Reveal the answer to check yourself.
+                      </p>
                     )}
                   </div>
-                  <div className="mt-2 flex items-center justify-center gap-2">
+                  <div className="mt-4 flex items-center justify-center gap-2">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -190,14 +262,14 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                       disabled={busy}
                     >
                       {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
-                      {revealed ? "Hide back" : "Reveal back"}
+                      {revealed ? "Hide answer" : "Reveal answer"}
                     </Button>
                     {revealed && (
                       <>
                         <Button
                           variant="secondary"
                           size="sm"
-                          disabled={busy}
+                          disabled={busy || !reviewsReady}
                           onClick={() => mark("AGAIN")}
                         >
                           <XCircle size={13} />
@@ -206,7 +278,7 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                         <Button
                           variant="primary"
                           size="sm"
-                          disabled={busy}
+                          disabled={busy || !reviewsReady}
                           onClick={() => mark("KNOWN")}
                         >
                           <CheckCircle2 size={13} />
@@ -215,6 +287,11 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                       </>
                     )}
                   </div>
+                  {!reviewsReady && (
+                    <p className="mt-2 text-center text-[11px] text-text-tertiary">
+                      Loading your review progress…
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4 rounded-xl border border-border p-6 text-center text-sm text-text-tertiary">
@@ -251,10 +328,7 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => {
-                    setRevealed(false);
-                    setIndex((i) => Math.max(0, i - 1));
-                  }}
+                  onClick={() => goTo(index - 1)}
                   disabled={index === 0}
                 >
                   <ChevronLeft size={13} />
@@ -263,10 +337,7 @@ export function FlashcardsArtifactViewer({ artifact, sources, onClose }: Props) 
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => {
-                    setRevealed(false);
-                    setIndex((i) => Math.min(cardCount - 1, i + 1));
-                  }}
+                  onClick={() => goTo(index + 1)}
                   disabled={cardCount === 0 || index >= cardCount - 1}
                 >
                   Next

@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { listKnowledgeBases } from "@/lib/actions/knowledge-base";
 import { getStudyCountsForProject } from "@/lib/study";
-import { Card } from "@/components/ui/card";
 import { kbWorkspaceHref } from "@/components/app/kb-workspace-tabs";
 
 export const metadata = {
@@ -61,50 +60,65 @@ export default async function StudyPage() {
       </header>
 
       {(hasActivity || studyWorkspaces.length > 0) && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:max-w-sm">
+          <div className="bg-surface p-5">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
               Quizzes taken
-            </p>
-            <p className="mt-3 text-2xl font-bold tabular-nums text-text-primary">{counts.quizzesTaken}</p>
+            </dt>
+            <dd className="mt-2 text-2xl font-semibold tabular-nums text-text-primary">
+              {counts.quizzesTaken}
+            </dd>
           </div>
-          <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+          <div className="bg-surface p-5">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
               Cards known
-            </p>
-            <p className="mt-3 text-2xl font-bold tabular-nums text-text-primary">{counts.cardsKnown}</p>
+            </dt>
+            <dd className="mt-2 text-2xl font-semibold tabular-nums text-text-primary">
+              {counts.cardsKnown}
+            </dd>
           </div>
-        </div>
+        </dl>
       )}
 
       {studyWorkspaces.length > 0 ? (
-        <Card className="p-5">
-          <h2 className="text-sm font-semibold text-text-primary">Study sets</h2>
-          <p className="mt-1 text-xs text-text-tertiary">Decks you can review, grouped by workspace.</p>
-          <div className="mt-4 space-y-2">
+        <section
+          className="overflow-hidden rounded-xl border border-border bg-surface"
+          aria-label="Study sets"
+        >
+          <header className="border-b border-border px-5 py-4">
+            <h2 className="section-title">Study sets</h2>
+            <p className="mt-1 text-sm text-text-secondary">
+              Decks you can review, grouped by workspace.
+            </p>
+          </header>
+          <ul className="divide-y divide-border">
             {studyWorkspaces.map((kb) => (
-              <Link
-                key={kb.id}
-                href={kbWorkspaceHref(kb.id, "study")}
-                className="group flex items-center justify-between gap-3 rounded-lg border border-border bg-surface/50 px-3 py-2.5 transition-colors hover:border-border-hover hover:bg-surface-hover"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-text-primary">{kb.name}</p>
-                  <p className="text-xs text-text-tertiary">
-                    {artifactCountByKb.get(kb.id)} study artifact
-                    {artifactCountByKb.get(kb.id) !== 1 ? "s" : ""}
-                  </p>
-                </div>
-                <ArrowRight
-                  size={14}
-                  className="shrink-0 text-text-tertiary transition-transform group-hover:translate-x-0.5"
-                />
-              </Link>
+              <li key={kb.id}>
+                <Link
+                  href={kbWorkspaceHref(kb.id, "study")}
+                  className="group flex items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-surface-hover"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-text-primary">{kb.name}</p>
+                    <p className="mt-0.5 text-xs text-text-tertiary">
+                      {artifactCountByKb.get(kb.id)} study artifact
+                      {artifactCountByKb.get(kb.id) !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-brand">
+                    Study
+                    <ArrowRight
+                      size={14}
+                      className="transition-transform group-hover:translate-x-0.5"
+                    />
+                  </span>
+                </Link>
+              </li>
             ))}
-          </div>
-        </Card>
+          </ul>
+        </section>
       ) : (
-        <Card className="flex flex-col items-center justify-center py-16 text-center">
+        <section className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface py-16 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10">
             <GraduationCap size={26} className="text-brand" />
           </div>
@@ -119,7 +133,7 @@ export default async function StudyPage() {
             Go to Library
             <ArrowRight size={14} />
           </Link>
-        </Card>
+        </section>
       )}
     </div>
   );

@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Sparkles, Check } from "lucide-react";
+import { BookOpen, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MetricCard } from "@/components/ui/metric-display";
 import {
   ARTIFACT_TYPE_META,
   isActiveStudioArtifactType,
@@ -52,34 +51,103 @@ function continueLabel(artifact: LearningArtifactWithStudy): string {
   return artifact.type === "QUIZ" ? "Retake quiz" : deckComplete(artifact) ? "Review again" : "Review deck";
 }
 
-function ArtifactRow({
-  artifact,
-  action,
-}: {
-  artifact: LearningArtifactWithStudy;
-  action: "continue" | "view";
-}) {
+// Reviewed percent for a deck's thin progress bar; null when card count is
+// unknown (quiz or unparseable content) so we draw nothing rather than a lie.
+function deckPercent(artifact: LearningArtifactWithStudy): number | null {
+  if (artifact.type !== "FLASHCARDS") return null;
+  const total = parseFlashcardsContent(artifact.content)?.cards.length ?? 0;
+  if (total === 0) return null;
+  const reviewed = Math.min(artifact.study?.attempts ?? 0, total);
+  return Math.round((reviewed / total) * 100);
+}
+
+function ArtifactTitle({ artifact }: { artifact: LearningArtifactWithStudy }) {
   const meta = isActiveStudioArtifactType(artifact.type) ? ARTIFACT_TYPE_META[artifact.type] : null;
   const href = studyArtifactHref(artifact.knowledgeBaseId, artifact.id);
   const title = artifact.name || `Untitled ${meta?.label.toLowerCase() ?? "artifact"}`;
-  const complete = deckComplete(artifact);
-
   return (
-    <li className="flex items-center gap-3 px-5 py-3">
+    <div className="flex min-w-0 items-center gap-2">
+      {meta ? <meta.Icon size={14} className="shrink-0 text-text-tertiary" /> : null}
+      <Link
+        href={href}
+        className="truncate text-sm font-medium text-text-primary transition-colors hover:text-brand"
+      >
+        {title}
+      </Link>
+      {meta ? (
+        <Badge variant="secondary" className="shrink-0">
+          {meta.label}
+        </Badge>
+      ) : null}
+    </div>
+  );
+}
+
+function DeckBar({ pct }: { pct: number }) {
+  return (
+    <div className="mt-2 flex max-w-xs items-center gap-2">
+      <div
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Cards reviewed"
+        className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover"
+      >
+        <div
+          className="h-full rounded-full bg-brand transition-[width]"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="shrink-0 text-[11px] font-medium tabular-nums text-text-tertiary">
+        {pct}%
+      </span>
+    </div>
+  );
+}
+
+function ResumeHero({ artifact }: { artifact: LearningArtifactWithStudy }) {
+  const href = studyArtifactHref(artifact.knowledgeBaseId, artifact.id);
+  const pct = deckPercent(artifact);
+  return (
+    <section className="rounded-xl border border-border bg-surface p-5" aria-label="Continue studying">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+        Continue studying
+      </p>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <ArtifactTitle artifact={artifact} />
+          <p className="mt-1 text-sm text-text-secondary">{studyLine(artifact)}</p>
+          {pct !== null && <DeckBar pct={pct} />}
+        </div>
+        <Button variant="primary" size="sm" asChild>
+          <Link href={href}>{continueLabel(artifact)}</Link>
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-surface p-5">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
+        {label}
+      </dt>
+      <dd className="mt-2 text-2xl font-semibold tabular-nums text-text-primary">{value}</dd>
+    </div>
+  );
+}
+
+function StudySetRow({ artifact }: { artifact: LearningArtifactWithStudy }) {
+  const href = studyArtifactHref(artifact.knowledgeBaseId, artifact.id);
+  const complete = deckComplete(artifact);
+  const pct = deckPercent(artifact);
+  return (
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          {meta ? <meta.Icon size={14} className="shrink-0 text-text-tertiary" /> : null}
-          <Link
-            href={href}
-            className="truncate text-sm font-medium text-text-primary transition-colors hover:text-brand"
-          >
-            {title}
-          </Link>
-          {meta ? (
-            <Badge variant="secondary" className="shrink-0">
-              {meta.label}
-            </Badge>
-          ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <ArtifactTitle artifact={artifact} />
           {complete ? (
             <Badge variant="success" className="shrink-0 gap-1">
               <Check size={11} />
@@ -87,26 +155,23 @@ function ArtifactRow({
             </Badge>
           ) : null}
         </div>
-        <p className="mt-0.5 text-xs text-text-secondary">
+        <p className="mt-1 text-xs text-text-secondary">
           {studyLine(artifact)}
-          <span className="text-text-tertiary">
-            {" · "}
-            {new Date(artifact.createdAt).toLocaleDateString()}
-          </span>
+          <span className="text-text-tertiary"> · {new Date(artifact.createdAt).toLocaleDateString()}</span>
         </p>
+        {pct !== null && <DeckBar pct={pct} />}
       </div>
-      <div className="flex shrink-0 items-center">
-        <Button variant={action === "continue" ? "primary" : "secondary"} size="sm" asChild>
-          <Link href={href}>{action === "continue" ? continueLabel(artifact) : "View"}</Link>
-        </Button>
-      </div>
+      <Button variant="secondary" size="sm" asChild className="shrink-0">
+        <Link href={href}>{isStudied(artifact) ? continueLabel(artifact) : "Start"}</Link>
+      </Button>
     </li>
   );
 }
 
 export function StudyDashboard({ kbId, kbName, data }: Props) {
   const { artifacts, summary, recentAttempts } = data;
-  const continueList = artifacts.filter(isStudied).slice(0, 5);
+  const resume = artifacts.find(isStudied);
+  const hasRecent = recentAttempts.length > 0;
 
   return (
     <div>
@@ -116,16 +181,26 @@ export function StudyDashboard({ kbId, kbName, data }: Props) {
         title="Study"
         description="Your study state across the artifacts in this workspace."
         active="study"
+        action={
+          <Button variant="secondary" size="sm" asChild>
+            <Link href={`/app/knowledge-bases/${kbId}/studio`}>
+              <Sparkles size={14} />
+              Studio
+            </Link>
+          </Button>
+        }
       />
 
       {artifacts.length === 0 ? (
-        <section className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface px-5 py-14 text-center">
-          <BookOpen size={24} className="text-text-tertiary" />
-          <p className="mt-3 text-sm font-medium text-text-primary">No study content yet</p>
-          <p className="mt-1 text-xs text-text-tertiary">
-            Generate a quiz or flashcards in Studio to begin studying.
+        <section className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface px-5 py-16 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/10">
+            <BookOpen size={22} className="text-brand" />
+          </span>
+          <p className="mt-4 text-base font-semibold text-text-primary">No study content yet</p>
+          <p className="mt-1 max-w-sm text-sm text-text-secondary">
+            Generate a quiz or flashcard deck in Studio, then study from here.
           </p>
-          <Link href={`/app/knowledge-bases/${kbId}/studio`} className="mt-4">
+          <Link href={`/app/knowledge-bases/${kbId}/studio`} className="mt-5">
             <Button variant="primary" size="sm">
               <Sparkles size={14} />
               Open Studio
@@ -134,80 +209,78 @@ export function StudyDashboard({ kbId, kbName, data }: Props) {
         </section>
       ) : (
         <>
-          <section className="rounded-xl border border-border bg-surface p-5" aria-label="Study overview">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <MetricCard label="Quizzes taken" value={summary.quizzesTaken} />
-              <MetricCard label="Cards known" value={summary.cardsKnown} />
-              <MetricCard label="Card reviews" value={summary.cardReviews} />
-              <MetricCard label="Artifacts studied" value={summary.studiedArtifacts} />
-            </div>
-            <p className="mt-3 text-xs text-text-tertiary">
-              Cards known = flashcards currently marked KNOWN. Card reviews = total verdict
-              marks recorded, including repeats.
+          {resume && <ResumeHero artifact={resume} />}
+
+          <section
+            className="mt-6 overflow-hidden rounded-xl border border-border bg-surface"
+            aria-label="Study overview"
+          >
+            <dl className="grid grid-cols-2 gap-px bg-border lg:grid-cols-4">
+              <Stat label="Quizzes taken" value={summary.quizzesTaken} />
+              <Stat label="Cards known" value={summary.cardsKnown} />
+              <Stat label="Card reviews" value={summary.cardReviews} />
+              <Stat label="Artifacts studied" value={summary.studiedArtifacts} />
+            </dl>
+            <p className="border-t border-border px-5 py-3 text-xs text-text-tertiary">
+              Cards known = flashcards currently marked Known. Card reviews = total verdict marks
+              recorded, including repeats.
             </p>
           </section>
 
-          {continueList.length > 0 && (
-            <section className="mt-6 rounded-xl border border-border bg-surface" aria-label="Continue studying">
+          <div
+            className={`mt-6 grid gap-6 ${hasRecent ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : ""}`}
+          >
+            <section
+              className="overflow-hidden rounded-xl border border-border bg-surface"
+              aria-label="Study sets"
+            >
               <header className="flex items-center justify-between border-b border-border px-5 py-4">
-                <h2 className="text-base font-semibold text-text-primary">Continue studying</h2>
-                <span className="text-xs font-medium text-text-tertiary">By last studied</span>
-              </header>
-              <ul className="divide-y divide-border">
-                {continueList.map((artifact) => (
-                  <ArtifactRow key={artifact.id} artifact={artifact} action="continue" />
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {recentAttempts.length > 0 && (
-            <section className="mt-6 rounded-xl border border-border bg-surface" aria-label="Recent quizzes">
-              <header className="flex items-center justify-between border-b border-border px-5 py-4">
-                <h2 className="text-base font-semibold text-text-primary">Recent quizzes</h2>
+                <h2 className="section-title">Study sets</h2>
                 <span className="text-xs font-medium text-text-tertiary">
-                  Last {recentAttempts.length} completed
+                  {artifacts.length} artifact{artifacts.length !== 1 ? "s" : ""}
                 </span>
               </header>
               <ul className="divide-y divide-border">
-                {recentAttempts.map((attempt) => (
-                  <li key={attempt.id} className="flex items-center gap-3 px-5 py-2.5">
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={studyArtifactHref(kbId, attempt.artifactId)}
-                        className="block truncate text-sm font-medium text-text-primary transition-colors hover:text-brand"
-                      >
-                        {attempt.artifactName || "Untitled quiz"}
-                      </Link>
-                      <p className="mt-0.5 text-xs text-text-tertiary">
-                        {new Date(attempt.completedAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <Badge variant="secondary" className="shrink-0 tabular-nums">
-                      Score {attempt.score}/{attempt.totalQuestions}
-                    </Badge>
-                  </li>
+                {artifacts.map((artifact) => (
+                  <StudySetRow key={artifact.id} artifact={artifact} />
                 ))}
               </ul>
             </section>
-          )}
 
-          <section
-            className="mt-6 rounded-xl border border-border bg-surface"
-            aria-label="Artifact study progress"
-          >
-            <header className="flex items-center justify-between border-b border-border px-5 py-4">
-              <h2 className="text-base font-semibold text-text-primary">Artifact study progress</h2>
-              <span className="text-xs font-medium text-text-tertiary">
-                {artifacts.length} study artifact{artifacts.length !== 1 ? "s" : ""}
-              </span>
-            </header>
-            <ul className="divide-y divide-border">
-              {artifacts.map((artifact) => (
-                <ArtifactRow key={artifact.id} artifact={artifact} action="view" />
-              ))}
-            </ul>
-          </section>
+            {hasRecent && (
+              <aside
+                className="self-start overflow-hidden rounded-xl border border-border bg-surface"
+                aria-label="Recent quizzes"
+              >
+                <header className="border-b border-border px-5 py-4">
+                  <h2 className="section-title">Recent quizzes</h2>
+                  <p className="mt-1 text-xs text-text-tertiary">
+                    Last {recentAttempts.length} completed
+                  </p>
+                </header>
+                <ul className="divide-y divide-border">
+                  {recentAttempts.map((attempt) => (
+                    <li key={attempt.id} className="flex items-center gap-3 px-5 py-3">
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={studyArtifactHref(kbId, attempt.artifactId)}
+                          className="block truncate text-sm font-medium text-text-primary transition-colors hover:text-brand"
+                        >
+                          {attempt.artifactName || "Untitled quiz"}
+                        </Link>
+                        <p className="mt-0.5 text-xs text-text-tertiary">
+                          {new Date(attempt.completedAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="shrink-0 tabular-nums">
+                        {attempt.score}/{attempt.totalQuestions}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+            )}
+          </div>
         </>
       )}
     </div>
