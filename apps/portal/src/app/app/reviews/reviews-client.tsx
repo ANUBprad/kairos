@@ -47,12 +47,12 @@ import type { ReviewStatus, ReviewPriority } from "@prisma/client";
 
 const STATUS_CONFIG: Record<
   ReviewStatus,
-  { label: string; badge: "default" | "brand" | "success" | "warning" | "info"; icon: typeof Clock }
+  { label: string; badge: "default" | "brand" | "success" | "warning" | "info" | "destructive"; icon: typeof Clock }
 > = {
   PENDING: { label: "Pending", badge: "default", icon: Clock },
   IN_REVIEW: { label: "In Review", badge: "info", icon: Eye },
   APPROVED: { label: "Approved", badge: "success", icon: CheckCircle2 },
-  REJECTED: { label: "Rejected", badge: "default", icon: XCircle },
+  REJECTED: { label: "Rejected", badge: "destructive", icon: XCircle },
   NEEDS_IMPROVEMENT: { label: "Needs Improvement", badge: "warning", icon: AlertTriangle },
 };
 

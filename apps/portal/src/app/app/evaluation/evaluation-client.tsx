@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { InputDialog } from "@/components/ui/input-dialog";
 import {
@@ -93,6 +94,22 @@ function formatMetric(value: number): string {
   return value.toFixed(4);
 }
 
+// BenchmarkRun.status is a free-form string on the server (default "running").
+// Only these three states are ever written; anything else is an unknown state
+// that must not be shown as success.
+function runStatusMeta(status: string) {
+  switch (status) {
+    case "completed":
+      return { label: "Completed", badge: "success" as const, iconClass: "text-success", Icon: CheckCircle2 };
+    case "running":
+      return { label: "Running", badge: "info" as const, iconClass: "text-info", Icon: Clock };
+    case "failed":
+      return { label: "Failed", badge: "destructive" as const, iconClass: "text-error", Icon: AlertCircle };
+    default:
+      return { label: status || "Unknown", badge: "default" as const, iconClass: "text-text-tertiary", Icon: AlertCircle };
+  }
+}
+
 export function EvaluationDashboard({ runs, datasets, benchmarkRuns }: Props) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "datasets" | "runs" | "leaderboard" | "campaign" | "guide">("dashboard");
   const [selectedDataset, setSelectedDataset] = useState<string | null>(null);
@@ -168,7 +185,7 @@ function DashboardTab({ runs, datasets, benchmarkRuns }: Props) {
       totalRuns: runs.length,
       avgLatency: latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0,
       totalDatasets: datasets.length,
-      completedBenchmarks: benchmarkRuns.length,
+      completedBenchmarks: benchmarkRuns.filter((r) => r.status === "completed").length,
     };
   }, [runs, datasets, benchmarkRuns]);
 
@@ -235,10 +252,11 @@ function DashboardTab({ runs, datasets, benchmarkRuns }: Props) {
             <div className="space-y-2">
               {recentBenchmarks.map((b) => {
                 const metrics = b.aggregatedMetrics as Record<string, number> | null;
+                const s = runStatusMeta(b.status);
                 return (
                   <div key={b.id} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 size={14} className="text-emerald-500" />
+                      <s.Icon size={14} className={s.iconClass} />
                       <span className="font-medium">{b.name || "Unnamed Run"}</span>
                       <span className="text-text-secondary">— {b.dataset.name}</span>
                     </div>
@@ -541,7 +559,7 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setShowCreate(false)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-input hover:bg-surface-hover"
+              className="px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-surface-hover"
             >
               Cancel
             </button>
@@ -567,7 +585,7 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
             <Card
               key={ds.id}
               className={`!p-4 cursor-pointer transition-colors hover:bg-surface-hover ${
-                selectedDataset === ds.id ? "ring-2 ring-primary" : ""
+                selectedDataset === ds.id ? "ring-2 ring-brand" : ""
               }`}
               onClick={() => loadDetail(ds.id)}
             >
@@ -592,7 +610,7 @@ function DatasetsTab({ datasets, selectedDataset, onSelect }: {
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); openDeleteDialog(ds.id); }}
-                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20"
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-error/10 text-error hover:bg-error/20"
                     aria-label="Delete dataset"
                   >
                     <Trash2 size={12} />
@@ -787,6 +805,7 @@ function RunsTab({ runs, compareA, compareB, setCompareA, setCompareB, compariso
         ) : (
           runs.map((run) => {
             const metrics = run.aggregatedMetrics as Record<string, number> | null;
+            const s = runStatusMeta(run.status);
             return (
               <Card
                 key={run.id}
@@ -795,11 +814,7 @@ function RunsTab({ runs, compareA, compareB, setCompareA, setCompareB, compariso
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    {run.status === "completed" ? (
-                      <CheckCircle2 size={16} className="text-emerald-500" />
-                    ) : (
-                      <AlertCircle size={16} className="text-amber-500" />
-                    )}
+                    <s.Icon size={16} className={s.iconClass} />
                     <div>
                       <p className="font-medium text-sm">{run.name || `Run #${run.id.slice(0, 8)}`}</p>
                       <p className="text-xs text-text-secondary">
@@ -824,7 +839,7 @@ function RunsTab({ runs, compareA, compareB, setCompareA, setCompareB, compariso
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); deleteRun(run.id); }}
-                      className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20"
+                      className="flex items-center gap-1 px-2 py-1 text-xs rounded-md bg-error/10 text-error hover:bg-error/20"
                       aria-label="Delete run"
                     >
                       <Trash2 size={12} />
@@ -862,6 +877,8 @@ function RunDetailView({ run }: {
   const metrics = run.aggregatedMetrics;
   if (!metrics) return null;
 
+  const statusMeta = runStatusMeta(run.status);
+
   const retrievalKeys = [
     { key: "avgRecallAtK", label: "Recall@K" },
     { key: "avgPrecisionAtK", label: "Precision@K" },
@@ -886,11 +903,7 @@ function RunDetailView({ run }: {
     <Card className="!p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{run.name || "Run Details"} — {run.dataset.name}</h3>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${
-          run.status === "completed" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-amber-100 text-amber-700"
-        }`}>
-          {run.status}
-        </span>
+        <Badge variant={statusMeta.badge}>{statusMeta.label}</Badge>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -956,8 +969,8 @@ function ComparisonView({ comparison }: { comparison: ComparisonViewProps }) {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">Comparison</h3>
         <div className={`text-sm font-semibold px-3 py-1 rounded-full ${
-          winner === "A" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
-          winner === "B" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" :
+          winner === "A" ? "bg-info/10 text-info" :
+          winner === "B" ? "bg-brand/10 text-brand" :
           "bg-bg-secondary text-text-secondary"
         }`}>
           {winner === "tie" ? "Tie" : `${winner === "A" ? configA.label : configB.label} Wins`}
@@ -993,7 +1006,7 @@ function ComparisonView({ comparison }: { comparison: ComparisonViewProps }) {
                 <td className="text-right py-2 px-4 font-mono">{val.a.toFixed(4)}</td>
                 <td className="text-right py-2 px-4 font-mono">{val.b.toFixed(4)}</td>
                 <td className="text-right py-2 px-4 font-mono">
-                  <span className={val.diff > 0 ? "text-emerald-500" : val.diff < 0 ? "text-red-500" : ""}>
+                  <span className={val.diff > 0 ? "text-success" : val.diff < 0 ? "text-error" : ""}>
                     {val.diff > 0 ? "+" : ""}{val.diff.toFixed(4)}
                   </span>
                 </td>
@@ -1001,11 +1014,11 @@ function ComparisonView({ comparison }: { comparison: ComparisonViewProps }) {
                   {val.better === "tie" ? (
                     <Minus size={14} className="inline text-text-secondary" />
                   ) : val.better === "A" ? (
-                    <span className="flex items-center justify-end gap-1 text-blue-500">
+                    <span className="flex items-center justify-end gap-1 text-info">
                       <TrendingUp size={14} /> {configA.label}
                     </span>
                   ) : (
-                    <span className="flex items-center justify-end gap-1 text-purple-500">
+                    <span className="flex items-center justify-end gap-1 text-brand">
                       <TrendingUp size={14} /> {configB.label}
                     </span>
                   )}
@@ -1038,7 +1051,7 @@ function ReportView({ report, onClose }: { report: ReportViewProps; onClose: () 
           <button onClick={handleDownload} className="flex items-center gap-1 px-3 py-1 text-xs rounded-lg bg-brand text-white hover:bg-brand-hover">
             <Download size={12} /> Export JSON
           </button>
-          <button onClick={onClose} className="px-3 py-1 text-xs rounded-lg border border-input hover:bg-surface-hover">
+          <button onClick={onClose} className="px-3 py-1 text-xs rounded-lg border border-border hover:bg-surface-hover">
             Close
           </button>
         </div>
@@ -1096,7 +1109,7 @@ function ReportView({ report, onClose }: { report: ReportViewProps; onClose: () 
           <div className="text-sm font-medium mb-2">Recommendations</div>
           <ul className="space-y-1">
             {report.recommendations.map((rec) => (
-              <li key={rec} className="flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400">
+              <li key={rec} className="flex items-start gap-2 text-sm text-warning">
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
                 {rec}
               </li>
@@ -1126,7 +1139,7 @@ function MetricsGuide() {
                 <span className="text-xs text-text-secondary ml-2">({m.id})</span>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full ${
-                m.higherIsBetter ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-amber-100 text-amber-700"
+                m.higherIsBetter ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
               }`}>
                 {m.higherIsBetter ? "Higher is better" : "Lower is better"}
               </span>
@@ -1138,10 +1151,10 @@ function MetricsGuide() {
             </div>
             <div className="grid gap-2 sm:grid-cols-2 text-xs text-text-secondary">
               <div>
-                <span className="font-medium text-foreground">Interpretation:</span> {m.interpretation}
+                <span className="font-medium text-text-primary">Interpretation:</span> {m.interpretation}
               </div>
               <div>
-                <span className="font-medium text-foreground">Why it matters:</span> {m.whyItMatters}
+                <span className="font-medium text-text-primary">Why it matters:</span> {m.whyItMatters}
               </div>
             </div>
           </Card>
@@ -1157,7 +1170,7 @@ function MetricsGuide() {
                 <span className="font-medium text-sm">{m.name}</span>
                 <span className="text-xs text-text-secondary ml-2">({m.id})</span>
               </div>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">
                 Higher is better
               </span>
             </div>
@@ -1168,10 +1181,10 @@ function MetricsGuide() {
             </div>
             <div className="grid gap-2 sm:grid-cols-2 text-xs text-text-secondary">
               <div>
-                <span className="font-medium text-foreground">Interpretation:</span> {m.interpretation}
+                <span className="font-medium text-text-primary">Interpretation:</span> {m.interpretation}
               </div>
               <div>
-                <span className="font-medium text-foreground">Why it matters:</span> {m.whyItMatters}
+                <span className="font-medium text-text-primary">Why it matters:</span> {m.whyItMatters}
               </div>
             </div>
           </Card>
@@ -1272,7 +1285,7 @@ function LeaderboardTab({ runs }: { runs: BenchmarkRunSummary[] }) {
                     {entry.adjacentComparison ? (
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         entry.adjacentComparison.significant
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                          ? "bg-success/10 text-success"
                           : "bg-bg-secondary text-text-secondary"
                       }`}>
                         {entry.adjacentComparison.significant

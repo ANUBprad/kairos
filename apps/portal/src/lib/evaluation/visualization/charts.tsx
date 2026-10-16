@@ -41,13 +41,13 @@ export function RadarChart({
       })
       .join(" ");
     gridPoints.push(
-      <polygon key={`grid-${level}`} points={points} fill="none" stroke="hsl(var(--border))" strokeWidth={1} />,
+      <polygon key={`grid-${level}`} points={points} fill="none" className="stroke-border" strokeWidth={1} />,
     );
   }
 
   const axisLines = data.map((_, i) => {
     const p = getPoint(i, 1);
-    return <line key={`axis-${i}`} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="hsl(var(--border))" strokeWidth={1} />;
+    return <line key={`axis-${i}`} x1={cx} y1={cy} x2={p.x} y2={p.y} className="stroke-border" strokeWidth={1} />;
   });
 
   const dataPoints = data.map((d, i) => getPoint(i, d.value));
@@ -62,7 +62,7 @@ export function RadarChart({
         y={p.y}
         textAnchor="middle"
         dominantBaseline="middle"
-        className="fill-foreground"
+        className="fill-text-primary"
         fontSize={11}
       >
         {d.label}
@@ -71,14 +71,14 @@ export function RadarChart({
   });
 
   const dataCircles = dataPoints.map((p, i) => (
-    <circle key={`dot-${i}`} cx={p.x} cy={p.y} r={3} className="fill-primary" />
+    <circle key={`dot-${i}`} cx={p.x} cy={p.y} r={3} className="fill-brand" />
   ));
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
       {gridPoints}
       {axisLines}
-      <polygon points={polygonPoints} fill="hsl(var(--primary) / 0.15)" stroke="hsl(var(--primary))" strokeWidth={2} />
+      <polygon points={polygonPoints} className="fill-brand/15 stroke-brand" strokeWidth={2} />
       {dataCircles}
       {labels}
     </svg>
@@ -114,8 +114,8 @@ export function BarChart({
         const y = padding.top + chartH - (val / maxValue) * chartH;
         return (
           <g key={`ytick-${val}`}>
-            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="hsl(var(--border))" strokeWidth={1} />
-            <text x={padding.left - 6} y={y} textAnchor="end" dominantBaseline="middle" fill="hsl(var(--muted-foreground))" fontSize={10}>
+            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} className="stroke-border" strokeWidth={1} />
+            <text x={padding.left - 6} y={y} textAnchor="end" dominantBaseline="middle" className="fill-text-secondary" fontSize={10}>
               {val.toFixed(2)}
             </text>
           </g>
@@ -127,9 +127,9 @@ export function BarChart({
         const y = padding.top + chartH - barH;
         return (
           <g key={`bar-${i}`}>
-            <rect x={x} y={y} width={barWidth} height={Math.max(barH, 1)} rx={3} className="fill-primary" fillOpacity={0.85} />
+            <rect x={x} y={y} width={barWidth} height={Math.max(barH, 1)} rx={3} className="fill-brand" fillOpacity={0.85} />
             {showValues && (
-              <text x={x + barWidth / 2} y={y - 6} textAnchor="middle" fill="hsl(var(--foreground))" fontSize={10}>
+              <text x={x + barWidth / 2} y={y - 6} textAnchor="middle" className="fill-text-primary" fontSize={10}>
                 {d.value.toFixed(3)}
               </text>
             )}
@@ -137,7 +137,7 @@ export function BarChart({
               x={x + barWidth / 2}
               y={height - 8}
               textAnchor="middle"
-              fill="hsl(var(--muted-foreground))"
+              className="fill-text-secondary"
               fontSize={10}
               transform={`rotate(-35, ${x + barWidth / 2}, ${height - 8})`}
             >
@@ -166,21 +166,21 @@ export function MetricCard({
   icon?: React.ComponentType<{ size?: number; className?: string }>;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="rounded-lg border border-border bg-surface p-4">
       <div className="flex items-center gap-2 mb-1">
-        {Icon && <Icon size={14} className="text-muted-foreground" />}
-        <div className="text-sm text-muted-foreground">{label}</div>
+        {Icon && <Icon size={14} className="text-text-secondary" />}
+        <div className="text-sm text-text-secondary">{label}</div>
       </div>
       <div className="flex items-baseline gap-2">
         <span className="text-2xl font-bold">{value}</span>
-        {secondary && <span className="text-sm text-muted-foreground">{secondary}</span>}
+        {secondary && <span className="text-sm text-text-secondary">{secondary}</span>}
         {higherIsBetter !== undefined && (
-          <span className={`text-xs ${higherIsBetter ? "text-emerald-500" : "text-amber-500"}`}>
+          <span className={`text-xs ${higherIsBetter ? "text-success" : "text-warning"}`}>
             {higherIsBetter ? "↑ higher is better" : "↓ lower is better"}
           </span>
         )}
       </div>
-      {footer && <div className="text-xs text-muted-foreground mt-1">{footer}</div>}
+      {footer && <div className="text-xs text-text-secondary mt-1">{footer}</div>}
     </div>
   );
 }

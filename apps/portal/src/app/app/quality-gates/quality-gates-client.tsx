@@ -375,7 +375,7 @@ function GateDetail({
                             {r.passed ? (
                               <Badge variant="success">Passed</Badge>
                             ) : (
-                              <Badge variant="info">Failed</Badge>
+                              <Badge variant="destructive">Failed</Badge>
                             )}
                           </td>
                           <td className="px-3 py-2 text-text-secondary">
