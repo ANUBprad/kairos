@@ -1,7 +1,7 @@
 "use server";
 
 import { getServerSession } from "@/lib/server/auth-utils";
-import { getMembership } from "@/lib/rbac";
+import { getMembership, hasPermission } from "@/lib/rbac";
 import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { logger } from "@/lib/logger";
 import {
@@ -80,7 +80,11 @@ export async function revokeOrganizationInvitation(
       throw new Error("Organization not found");
     }
 
-    await revokeInvitation(invitationId, session.user.id);
+    const revoked = await revokeInvitation(invitationId, session.user.id);
+    if (!revoked) {
+      return { success: false, error: "Invitation not found" };
+    }
+
     revalidatePath("/app/settings/members");
     return { success: true };
   } catch (error) {
@@ -101,8 +105,14 @@ export async function listOrganizationInvitations(organizationId: string) {
       throw new Error("Unauthorized");
     }
 
-    if (!(await getMembership(session.user.id, organizationId))) {
+    const membership = await getMembership(session.user.id, organizationId);
+    if (!membership) {
       throw new Error("Organization not found");
+    }
+    // Pending invitations carry invitee emails and are an administrative concern;
+    // gate reads on the same permission that guards issuing and revoking them.
+    if (!hasPermission(membership.role, "manage_invitations")) {
+      throw new Error("Viewing invitations requires admin access");
     }
 
     const invitations = await getOrganizationInvitations(organizationId);

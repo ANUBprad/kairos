@@ -10,6 +10,7 @@ import {
   createAuditLog,
   getMembership,
   hasPermission,
+  isMemberRole,
   isRoleSufficient,
 } from "./rbac";
 import { createNotification } from "./notifications";
@@ -54,6 +55,15 @@ export interface UpdateOrganizationInput {
 export interface InviteMemberInput {
   email: string;
   role: MemberRole;
+}
+
+// Role values arrive from request bodies, where TypeScript's MemberRole type is
+// already erased. Validate at the boundary so a forged role fails loudly instead
+// of reaching Prisma's enum as an opaque database error.
+function assertMemberRole(role: unknown): asserts role is MemberRole {
+  if (!isMemberRole(role)) {
+    throw new Error("Invalid role: must be OWNER, ADMIN, MEMBER or VIEWER");
+  }
 }
 
 export async function createOrganization(
@@ -282,6 +292,8 @@ export async function addMember(
   role: MemberRole,
   invitedBy?: string
 ): Promise<void> {
+  assertMemberRole(role);
+
   if (invitedBy) {
     const membership = await getMembership(invitedBy, organizationId);
     if (!membership || !hasPermission(membership.role, "manage_members")) {
@@ -339,6 +351,8 @@ export async function updateMemberRole(
   newRole: MemberRole,
   updatedBy: string
 ): Promise<void> {
+  assertMemberRole(newRole);
+
   const membership = await getMembership(updatedBy, organizationId);
   if (!membership || membership.role !== "OWNER") {
     throw new Error("Only the organization owner can update member roles");
@@ -351,6 +365,17 @@ export async function updateMemberRole(
 
   if (!member) {
     throw new Error("Member not found");
+  }
+
+  // removeMember refuses to touch any OWNER, so demoting the last one here would
+  // leave the organization with nobody able to manage members or roles again.
+  if (member.role === "OWNER" && newRole !== "OWNER") {
+    const ownerCount = await prisma.member.count({
+      where: { organizationId, role: "OWNER" },
+    });
+    if (ownerCount <= 1) {
+      throw new Error("Cannot change the role of the last organization owner");
+    }
   }
 
   await prisma.member.update({
@@ -424,6 +449,8 @@ export async function inviteMember(
   invitedById: string,
   input: InviteMemberInput
 ): Promise<{ invitationId: string; token: string }> {
+  assertMemberRole(input.role);
+
   const membership = await getMembership(invitedById, organizationId);
   if (!membership || !hasPermission(membership.role, "manage_invitations")) {
     throw new Error("Only owners and admins can invite members");

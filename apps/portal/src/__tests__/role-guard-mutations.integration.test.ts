@@ -11,6 +11,10 @@ import { createPromptFolder, deletePromptFolder, createNewPrompt, exportPromptDa
 import { listQualityGates, createQualityGate, deleteQualityGate } from "@/lib/actions/quality-gates";
 import { createGoldenDataset } from "@/lib/actions/golden-datasets";
 import { createNewApiKey } from "@/lib/actions/api-keys";
+import {
+  listOrganizationInvitations,
+  revokeOrganizationInvitation,
+} from "@/lib/actions/invitation";
 
 if (process.env.NODE_ENV !== "production") {
   process.env.KAIROS_DEMO_MODE = "true";
@@ -84,6 +88,11 @@ describe("mutation actions require create/edit/delete/manage_api_keys, not just 
     assert.equal((await createQualityGate({ name: "v", conditions: [] })).success, false);
     assert.equal((await createGoldenDataset({ name: "v" })).success, false);
     assert.equal((await createNewApiKey("v", [])).success, false, "API-key lifecycle is admin-only");
+    assert.equal(
+      (await listOrganizationInvitations(orgId)).success,
+      false,
+      "viewers cannot enumerate pending invitations"
+    );
 
     const folder = await client.promptFolder.create({ data: { name: "vw", organizationId: orgId } });
     assert.equal((await deletePromptFolder(folder.id)).success, false);
@@ -138,5 +147,13 @@ describe("mutation actions require create/edit/delete/manage_api_keys, not just 
     const key = await createNewApiKey("a", []);
     assert.equal(key.success, true, "admins can create API keys");
     assert.ok((key as { keyPrefix: string }).keyPrefix);
+
+    assert.equal(
+      (await listOrganizationInvitations(orgId)).success,
+      true,
+      "admins can enumerate pending invitations"
+    );
+    const missing = await revokeOrganizationInvitation(orgId, `missing-${randomUUID()}`);
+    assert.equal(missing.success, false, "revoking a missing invitation must not report success");
   });
 });

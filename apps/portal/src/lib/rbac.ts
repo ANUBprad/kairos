@@ -57,6 +57,14 @@ export type ResourceType =
 
 export type MemberRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
 
+// Lowest to highest privilege. Shared so ordering and validation have one source
+// of truth; a role string that is not in this list is never a valid request value.
+export const MEMBER_ROLES: readonly MemberRole[] = ["VIEWER", "MEMBER", "ADMIN", "OWNER"];
+
+export function isMemberRole(value: unknown): value is MemberRole {
+  return typeof value === "string" && (MEMBER_ROLES as readonly string[]).includes(value);
+}
+
 const ROLE_PERMISSIONS: Record<MemberRole, Permission[]> = {
   OWNER: [
     "view", "create", "edit", "delete", "share", "export",
@@ -254,8 +262,7 @@ export async function requirePermission(
 }
 
 export function getRequiredRole(permission: Permission): MemberRole {
-  const roles: MemberRole[] = ["VIEWER", "MEMBER", "ADMIN", "OWNER"];
-  for (const role of roles) {
+  for (const role of MEMBER_ROLES) {
     if (hasPermission(role, permission)) {
       return role;
     }
