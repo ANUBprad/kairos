@@ -13,6 +13,8 @@ class ConfigValidationError(Exception):
 
 
 def validate_config(settings: Settings) -> List[str]:
+    from intelligence.llm.model_policy import model_errors
+
     errors: List[str] = []
 
     profile = get_environment_profile(settings.environment)
@@ -40,6 +42,14 @@ def validate_config(settings: Settings) -> List[str]:
             errors.append("KAIROS_LARGE_GROQ_MODEL is required when deployment=True")
         if not settings.small_groq_model:
             errors.append("KAIROS_SMALL_GROQ_MODEL is required when deployment=True")
+        errors.extend(
+            model_errors(
+                [
+                    ("groq", settings.large_groq_model, "KAIROS_LARGE_GROQ_MODEL"),
+                    ("groq", settings.small_groq_model, "KAIROS_SMALL_GROQ_MODEL"),
+                ]
+            )
+        )
         return errors
 
     if settings.llm_provider == "gemini":
@@ -49,6 +59,11 @@ def validate_config(settings: Settings) -> List[str]:
             errors.append(
                 "KAIROS_GEMINI_MODEL_NAME is required when KAIROS_LLM_PROVIDER=gemini"
             )
+        errors.extend(
+            model_errors(
+                [("gemini", settings.gemini_model_name, "KAIROS_GEMINI_MODEL_NAME")]
+            )
+        )
         return errors
 
     if settings.llm_provider == "openai":
@@ -58,6 +73,11 @@ def validate_config(settings: Settings) -> List[str]:
             errors.append(
                 "KAIROS_OPENAI_MODEL_NAME is required when KAIROS_LLM_PROVIDER=openai"
             )
+        errors.extend(
+            model_errors(
+                [("openai", settings.openai_model_name, "KAIROS_OPENAI_MODEL_NAME")]
+            )
+        )
         return errors
 
     if settings.llm_provider == "ollama":
@@ -69,6 +89,11 @@ def validate_config(settings: Settings) -> List[str]:
             errors.append(
                 "KAIROS_OLLAMA_URL is required when KAIROS_LLM_PROVIDER=ollama"
             )
+        errors.extend(
+            model_errors(
+                [("ollama", settings.ollama_model_name, "KAIROS_OLLAMA_MODEL_NAME")]
+            )
+        )
         return errors
 
     if settings.large_groq_model and settings.small_groq_model:
@@ -76,6 +101,14 @@ def validate_config(settings: Settings) -> List[str]:
             errors.append("GROQ_API_KEY is required for Groq configuration")
         if not settings.groq_base_url:
             errors.append("GROQ_BASE_URL is required for Groq configuration")
+        errors.extend(
+            model_errors(
+                [
+                    ("groq", settings.large_groq_model, "KAIROS_LARGE_GROQ_MODEL"),
+                    ("groq", settings.small_groq_model, "KAIROS_SMALL_GROQ_MODEL"),
+                ]
+            )
+        )
         return errors
 
     if not errors and settings.llm_provider is None:

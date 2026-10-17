@@ -141,6 +141,8 @@ def validate_env(cfg: ServerConfig) -> list[str]:
 
     Returns an empty list when the configuration is valid.
     """
+    from intelligence.llm.model_policy import model_errors
+
     errors: list[str] = []
 
     if cfg.deployment:
@@ -156,6 +158,14 @@ def validate_env(cfg: ServerConfig) -> list[str]:
             errors.append(
                 "KAIROS_SMALL_GROQ_MODEL is required when KAIROS_DEPLOYMENT=True"
             )
+        errors.extend(
+            model_errors(
+                [
+                    ("groq", cfg.large_groq_model, "KAIROS_LARGE_GROQ_MODEL"),
+                    ("groq", cfg.small_groq_model, "KAIROS_SMALL_GROQ_MODEL"),
+                ]
+            )
+        )
         return errors
 
     if cfg.llm_provider == "gemini":
@@ -165,6 +175,11 @@ def validate_env(cfg: ServerConfig) -> list[str]:
             errors.append(
                 "KAIROS_GEMINI_MODEL_NAME is required when KAIROS_LLM_PROVIDER=gemini"
             )
+        errors.extend(
+            model_errors(
+                [("gemini", cfg.gemini_model_name, "KAIROS_GEMINI_MODEL_NAME")]
+            )
+        )
         return errors
 
     if cfg.llm_provider == "openai":
@@ -174,6 +189,11 @@ def validate_env(cfg: ServerConfig) -> list[str]:
             errors.append(
                 "KAIROS_OPENAI_MODEL_NAME is required when KAIROS_LLM_PROVIDER=openai"
             )
+        errors.extend(
+            model_errors(
+                [("openai", cfg.openai_model_name, "KAIROS_OPENAI_MODEL_NAME")]
+            )
+        )
         return errors
 
     if cfg.llm_provider == "ollama":
@@ -185,6 +205,11 @@ def validate_env(cfg: ServerConfig) -> list[str]:
             errors.append(
                 "KAIROS_OLLAMA_URL is required when KAIROS_LLM_PROVIDER=ollama"
             )
+        errors.extend(
+            model_errors(
+                [("ollama", cfg.ollama_model_name, "KAIROS_OLLAMA_MODEL_NAME")]
+            )
+        )
         return errors
 
     if cfg.large_groq_model and cfg.small_groq_model:
@@ -196,6 +221,14 @@ def validate_env(cfg: ServerConfig) -> list[str]:
             errors.append(
                 "GROQ_BASE_URL is required for non-deployment Groq configuration"
             )
+        errors.extend(
+            model_errors(
+                [
+                    ("groq", cfg.large_groq_model, "KAIROS_LARGE_GROQ_MODEL"),
+                    ("groq", cfg.small_groq_model, "KAIROS_SMALL_GROQ_MODEL"),
+                ]
+            )
+        )
         return errors
 
     errors.append(

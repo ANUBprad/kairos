@@ -13,6 +13,7 @@ from typing import Optional
 from intelligence.evaluation.entry_result import RunResult
 from intelligence.evaluation.run_config import RunConfig
 from intelligence.judging.judge import CompositeJudge
+from intelligence.llm.model_policy import validate_model
 
 
 def _build_judge(use_llm_judges: bool, llm_client) -> Optional[CompositeJudge]:
@@ -94,6 +95,9 @@ def _build_llm_client(cfg):
 
         from intelligence.llm.gemini_llm import GeminiLLM
 
+        model = validate_model(
+            "gemini", cfg.gemini_model_name, "KAIROS_GEMINI_MODEL_NAME"
+        )
         client = genai.Client(
             api_key=cfg.gemini_api_key,
             http_options=genai_types.HttpOptions(
@@ -102,8 +106,8 @@ def _build_llm_client(cfg):
         )
         return (
             client,
-            GeminiLLM(client=client, model_name=cfg.gemini_model_name),
-            cfg.gemini_model_name,
+            GeminiLLM(client=client, model_name=model),
+            model,
         )
 
     if cfg.llm_provider == "openai":
@@ -111,13 +115,16 @@ def _build_llm_client(cfg):
 
         from intelligence.llm.openai_llm import OpenaiLLM
 
+        model = validate_model(
+            "openai", cfg.openai_model_name, "KAIROS_OPENAI_MODEL_NAME"
+        )
         client = OpenAI(
             api_key=cfg.openai_api_key, timeout=cfg.provider_timeout_seconds
         )
         return (
             client,
-            OpenaiLLM(client=client, model_name=cfg.openai_model_name),
-            cfg.openai_model_name,
+            OpenaiLLM(client=client, model_name=model),
+            model,
         )
 
     if cfg.llm_provider == "ollama":
@@ -125,11 +132,14 @@ def _build_llm_client(cfg):
 
         from intelligence.llm.openai_llm import OpenaiLLM
 
+        model = validate_model(
+            "ollama", cfg.ollama_model_name, "KAIROS_OLLAMA_MODEL_NAME"
+        )
         client = OpenAI(base_url=cfg.ollama_url, timeout=cfg.provider_timeout_seconds)
         return (
             client,
-            OpenaiLLM(client=client, model_name=cfg.ollama_model_name),
-            cfg.ollama_model_name,
+            OpenaiLLM(client=client, model_name=model),
+            model,
         )
 
     if cfg.large_groq_model and cfg.small_groq_model:
@@ -137,6 +147,7 @@ def _build_llm_client(cfg):
 
         from intelligence.llm.openai_llm import OpenaiLLM
 
+        model = validate_model("groq", cfg.large_groq_model, "KAIROS_LARGE_GROQ_MODEL")
         client = OpenAI(
             api_key=cfg.groq_api_key,
             base_url=cfg.groq_base_url,
@@ -144,8 +155,8 @@ def _build_llm_client(cfg):
         )
         return (
             client,
-            OpenaiLLM(client=client, model_name=cfg.large_groq_model),
-            cfg.large_groq_model,
+            OpenaiLLM(client=client, model_name=model),
+            model,
         )
 
     raise ValueError(
