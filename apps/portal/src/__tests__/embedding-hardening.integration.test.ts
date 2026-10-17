@@ -65,7 +65,12 @@ describe("embedding production hardening against a real database", () => {
   const projectIds: string[] = [];
   const orgIds: string[] = [];
 
-  const stub = { mode: "ok" as "ok" | "fail" | "hang" | "flaky", dim: DIM, failRemaining: 0 };
+  const stub = {
+    mode: "ok" as "ok" | "fail" | "hang" | "flaky" | "permanent",
+    dim: DIM,
+    failRemaining: 0,
+    calls: 0,
+  };
   let originalFetch: typeof globalThis.fetch | undefined;
   let originalEmbeddingTimeout: string | undefined;
 
@@ -80,12 +85,16 @@ describe("embedding production hardening against a real database", () => {
 
     originalFetch = globalThis.fetch;
     globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+      stub.calls += 1;
       if (stub.mode === "hang") {
         return new Promise((_resolve, reject) => {
           init?.signal?.addEventListener("abort", () =>
             reject(new Error("The operation was aborted")),
           );
         }) as unknown as Promise<Response>;
+      }
+      if (stub.mode === "permanent") {
+        return new Response("invalid request", { status: 400 });
       }
       if (stub.mode === "fail" || (stub.mode === "flaky" && stub.failRemaining > 0)) {
         if (stub.mode === "flaky") stub.failRemaining -= 1;
@@ -503,5 +512,40 @@ describe("embedding production hardening against a real database", () => {
       select: { status: true },
     });
     assert.equal(after?.status, "ERROR", "stranded sibling must settle into ERROR");
+  });
+
+  it("a permanent provider rejection fails fast without retrying", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
+      return;
+    }
+    const clientRef = client as PrismaClient;
+    stub.mode = "permanent";
+    stub.dim = DIM;
+    const demoUser = await ensureDemoUser();
+    const kbId = await makeKbForDemo(demoUser);
+    const doc = await seedDoc(clientRef, kbId);
+
+    stub.calls = 0;
+    await assert.rejects(() => generateEmbeddings(doc.docId), /embedding error: 400/);
+    // A 400 is a permanent failure: one attempt, no backoff.
+    assert.equal(stub.calls, 1, "a permanent rejection must not be retried");
+  });
+
+  it("a transient provider failure is retried a bounded number of times", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
+      return;
+    }
+    const clientRef = client as PrismaClient;
+    stub.mode = "fail";
+    stub.dim = DIM;
+    const demoUser = await ensureDemoUser();
+    const kbId = await makeKbForDemo(demoUser);
+    const doc = await seedDoc(clientRef, kbId);
+
+    stub.calls = 0;
+    await assert.rejects(() => generateEmbeddings(doc.docId), /embedding error: 500/);
+    assert.equal(stub.calls, 3, "a 500 must be attempted exactly MAX_RETRIES (3) times");
   });
 });

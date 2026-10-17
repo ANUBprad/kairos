@@ -5,6 +5,7 @@ import { revalidateSourcePage } from "@/lib/revalidation";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { resolveEmbeddingModel, assertIndexableEmbeddingModel } from "@/lib/retrieval/embedding-models";
 import type { ProviderType } from "@/lib/ai/types";
+import { parseRetryAfter } from "@/lib/ai/errors";
 
 const BATCH_SIZE = 20;
 const MAX_RETRIES = 3;
@@ -21,16 +22,86 @@ interface EmbeddingGuardError extends Error {
   retryable?: boolean;
 }
 
+/**
+ * A failure that retrying cannot fix (bad request, missing model, malformed or
+ * non-finite vectors, a dimension change mid-document). Retrying it only wastes
+ * provider quota and delays the explicit error state.
+ */
+class PermanentEmbeddingError extends Error {
+  readonly retryable = false;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "PermanentEmbeddingError";
+  }
+}
+
+/** Failures that are worth another attempt: rate limits, server faults, timeouts. */
+const BACKOFF_BASE_MS = 1_000;
+const BACKOFF_CAP_MS = 30_000;
+
+function httpStatus(err: unknown): number | undefined {
+  const status = (err as { status?: unknown }).status;
+  return typeof status === "number" ? status : undefined;
+}
+
+function retryAfterMsOf(err: unknown): number | undefined {
+  const direct = (err as { retryAfterMs?: unknown }).retryAfterMs;
+  if (typeof direct === "number" && Number.isFinite(direct)) {
+    return Math.max(0, direct);
+  }
+  const headers = (err as { headers?: { get?: (name: string) => string | null } })
+    .headers;
+  if (headers && typeof headers.get === "function") {
+    return parseRetryAfter(headers.get("retry-after"));
+  }
+  return undefined;
+}
+
+/**
+ * Decide whether an embedding failure may be retried. Rate limits (429) and
+ * server faults (5xx) are transient, as are timeouts and network errors that
+ * arrive without an HTTP status. Every other 4xx — a bad request, bad key, or
+ * missing model — is permanent and must fail fast.
+ */
+export function isTransientEmbeddingError(err: unknown): boolean {
+  const guard = err as EmbeddingGuardError;
+  if (guard.retryable === false) return false;
+  if (guard.retryable === true) return true;
+  const status = httpStatus(err);
+  if (status === undefined) return true;
+  if (status === 429) return true;
+  return status >= 500;
+}
+
+/**
+ * Exponential backoff with full jitter, never less than the server's
+ * `Retry-After` and never more than the cap, so a hostile or buggy
+ * `Retry-After` cannot stall ingestion indefinitely.
+ */
+export function computeBackoffMs(attempt: number, retryAfterMs?: number): number {
+  const exponential = Math.min(BACKOFF_CAP_MS, BACKOFF_BASE_MS * 2 ** attempt);
+  const jittered = Math.random() * exponential;
+  const honored =
+    retryAfterMs !== undefined ? Math.min(BACKOFF_CAP_MS, retryAfterMs) : 0;
+  return Math.min(BACKOFF_CAP_MS, Math.max(jittered, honored));
+}
+
 export function validateEmbeddingResponse(embeddings: number[][], expectedCount: number): number {
   if (embeddings.length !== expectedCount) {
-    throw new Error(
+    throw new PermanentEmbeddingError(
       `Embedding provider returned ${embeddings.length} vectors for ${expectedCount} chunks`,
     );
   }
   const dimensions = embeddings[0]?.length ?? 0;
   if (dimensions === 0 || embeddings.some((vector) => vector.length !== dimensions)) {
-    throw new Error(
+    throw new PermanentEmbeddingError(
       `Embedding provider returned empty or inconsistent vector dimensions (expected ${dimensions})`,
+    );
+  }
+  if (embeddings.some((vector) => vector.some((value) => !Number.isFinite(value)))) {
+    throw new PermanentEmbeddingError(
+      "Embedding provider returned a non-finite value (NaN/Infinity) in a vector",
     );
   }
   return dimensions;
@@ -185,7 +256,7 @@ export async function generateEmbeddings(
 
         const dimensions = validateEmbeddingResponse(response.embeddings, batch.length);
         if (expectedDimensions !== null && dimensions !== expectedDimensions) {
-          throw new Error(
+          throw new PermanentEmbeddingError(
             `Embedding dimension changed mid-document: ${expectedDimensions} → ${dimensions}`,
           );
         }
@@ -210,7 +281,7 @@ export async function generateEmbeddings(
             data: { model, dimensions, status: "completed" },
           });
           if (updated.count !== batch.length) {
-            throw new Error(
+            throw new PermanentEmbeddingError(
               `Embedding metadata update covered ${updated.count} of ${batch.length} chunks`,
             );
           }
@@ -221,9 +292,11 @@ export async function generateEmbeddings(
         break;
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
-        if ((lastError as EmbeddingGuardError).retryable === false) break;
+        if (!isTransientEmbeddingError(lastError)) break;
         if (attempt < MAX_RETRIES - 1) {
-          await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+          await new Promise((r) =>
+            setTimeout(r, computeBackoffMs(attempt, retryAfterMsOf(lastError))),
+          );
         }
       } finally {
         clearTimeout(timeout);

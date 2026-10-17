@@ -8,6 +8,7 @@ import type {
   StreamChunk,
 } from "../types";
 import { createAbortError, providerDeadline } from "../abort";
+import { ProviderRequestError, parseRetryAfter } from "../errors";
 
 const CHAT_MODELS = [
   "gemini-2.0-flash",
@@ -194,7 +195,11 @@ export class GeminiProvider implements AIProvider {
 
       if (!res.ok) {
         const err = await res.text();
-        throw new Error(`Gemini embedding error: ${res.status} ${err}`);
+        throw new ProviderRequestError(
+          `Gemini embedding error: ${res.status} ${err}`,
+          res.status,
+          parseRetryAfter(res.headers.get("retry-after")),
+        );
       }
 
       const data = await res.json();
