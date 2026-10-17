@@ -50,7 +50,7 @@ export async function createKnowledgeBase(formData: FormData) {
     select: { id: true, name: true, description: true, createdAt: true },
   });
 
-  serverTrackEvent("knowledge_base_created", { kbId: kb.id, name: kb.name }, session.user.id);
+  serverTrackEvent("knowledge_base_created", { kbId: kb.id }, session.user.id);
   revalidatePath("/app");
   return kb;
 }

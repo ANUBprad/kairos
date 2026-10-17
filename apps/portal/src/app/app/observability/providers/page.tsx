@@ -82,7 +82,7 @@ export default function ProvidersPage() {
                     <p className="text-2xl font-bold">
                       {data.totalRequests > 0
                         ? ((data.successCount / data.totalRequests) * 100).toFixed(1)
-                        : '100'}%
+                        : '—'}%
                     </p>
                   </div>
                   <div>

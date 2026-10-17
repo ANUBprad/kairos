@@ -55,7 +55,7 @@ export default function LiveMetricsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="page-title">Live Metrics</h1>
-        <p className="page-description mt-1">Real-time system health (auto-refreshes every 30s)</p>
+        <p className="page-description mt-1">System health from recorded traces and costs (auto-refreshes every 30s)</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">

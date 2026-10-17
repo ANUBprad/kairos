@@ -100,8 +100,15 @@ export async function getProviderHealthSummary(orgId: string, days: number = 7) 
     p.models[h.model].push(h);
   }
 
-  for (const p of Object.values(byProvider)) {
-    p.uptime = p.totalRequests > 0 ? (p.successCount / p.totalRequests) * 100 : 100;
+  for (const [provider, p] of Object.entries(byProvider)) {
+    // A provider that recorded no requests carries no health signal. Reporting
+    // it as 100% uptime would fabricate a green status, so drop it and let the
+    // UI render its honest "no data" state instead.
+    if (p.totalRequests === 0) {
+      delete byProvider[provider];
+      continue;
+    }
+    p.uptime = (p.successCount / p.totalRequests) * 100;
     let totalLatency = 0;
     let totalCount = 0;
     for (const modelHealth of Object.values(p.models)) {
