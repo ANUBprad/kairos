@@ -7,7 +7,10 @@ import { DEFAULT_RETRIEVAL_CONFIG } from "./types";
 import { assertIndexableEmbeddingModel, defaultEmbeddingProvider, resolveIndexableEmbeddingModel } from "./embedding-models";
 import {
   executeRetrievalWithTrace,
+  isSupportedStrategy,
+  resolveSupportedStrategy,
   strategyRegistry,
+  SUPPORTED_STRATEGIES,
 } from "./strategies";
 
 export async function getRetrievalConfig(kbId: string): Promise<RetrievalConfig> {
@@ -49,6 +52,21 @@ export async function saveRetrievalConfig(
     assertIndexableEmbeddingModel(config.embeddingModel);
   }
 
+  // A persisted strategy must be one the registry can actually run, so an
+  // unknown or dormant name never reaches retrieval and masquerades as vector.
+  if (config.retrievalStrategy !== undefined && !isSupportedStrategy(config.retrievalStrategy)) {
+    throw new Error(
+      `Unsupported retrieval strategy: ${String(config.retrievalStrategy)}. ` +
+        `Supported: ${SUPPORTED_STRATEGIES.join(", ")}`,
+    );
+  }
+  if (config.retrievalMode !== undefined && !isSupportedStrategy(config.retrievalMode)) {
+    throw new Error(
+      `Unsupported retrieval mode: ${String(config.retrievalMode)}. ` +
+        `Supported: ${SUPPORTED_STRATEGIES.join(", ")}`,
+    );
+  }
+
   await prisma.knowledgeBase.update({
     where: { id: kbId },
     data: { retrievalConfig: merged as never },
@@ -70,7 +88,7 @@ export async function runRetrieval(
     vectorSearchMs: 0,
   };
 
-  const strategyName = config.retrievalStrategy || config.retrievalMode || "vector";
+  const strategyName = resolveSupportedStrategy(config.retrievalStrategy || config.retrievalMode);
   const strategyInst = strategyRegistry.get(strategyName);
   const embeddingStart = performance.now();
 
@@ -79,7 +97,7 @@ export async function runRetrieval(
       kbId,
       query,
       {
-        strategy: strategyName as "vector" | "keyword" | "hybrid" | "query-expansion" | "multi-query" | "reranking",
+        strategy: strategyName,
         topK: config.topK,
         enableQueryExpansion: config.enableQueryExpansion || false,
         enableMultiQuery: config.enableMultiQuery || false,

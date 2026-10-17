@@ -50,13 +50,14 @@ export const RETRIEVAL_MODES: { value: RetrievalMode; label: string; description
   { value: "keyword", label: "Keyword Search", description: "Traditional keyword/text search" },
 ];
 
+// Only strategies the registry can actually execute are offered. Dormant
+// implementations (query expansion, multi-query, reranking) live behind feature
+// flags, so listing them here would let a user select something that silently
+// runs vector search instead.
 export const RETRIEVAL_STRATEGIES: { value: StrategyName; label: string; description: string }[] = [
   { value: "vector", label: "Vector Search", description: "Pure semantic embedding search" },
   { value: "keyword", label: "BM25 Keyword", description: "Pure keyword/text search" },
   { value: "hybrid", label: "Hybrid (Vector + BM25)", description: "Combined with RRF fusion" },
-  { value: "query-expansion", label: "Query Expansion", description: "LLM-expanded queries with vector search" },
-  { value: "multi-query", label: "Multi-Query", description: "Multiple semantic query variations" },
-  { value: "reranking", label: "Reranking", description: "Cross-encoder style reranking" },
 ];
 
 export interface RetrievedChunkDisplay {

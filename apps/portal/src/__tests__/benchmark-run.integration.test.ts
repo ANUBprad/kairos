@@ -103,9 +103,10 @@ describe("runBenchmark failure lifecycle against a real database", () => {
       datasetIds.push(dataset.id);
       assert.equal(dataset.questions.length, 2);
 
-      // Deterministically broken retrieval: an unregistered strategy falls
-      // through to getEmbeddingProvider("gemini"), which throws synchronously
-      // because this file deletes GEMINI_API_KEY before any provider is built.
+      // Deterministically broken retrieval: an unregistered strategy is
+      // normalised to vector, whose retrieve() calls
+      // getEmbeddingProvider("gemini") and throws synchronously because this
+      // file deletes GEMINI_API_KEY before any provider is built.
       const config = {
         ...DEFAULT_RETRIEVAL_CONFIG,
         retrievalStrategy: "no-such-strategy",

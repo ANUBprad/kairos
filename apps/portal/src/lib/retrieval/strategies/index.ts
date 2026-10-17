@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import type { RetrievalStrategy, RetrievalContext, FullRetrievalTrace, StrategyStep, ProviderType } from "./types";
 import { VectorStrategy } from "./vector";
 import { KeywordStrategy } from "./keyword";
@@ -62,6 +63,37 @@ export class RetrievalStrategyRegistry {
 
 export const strategyRegistry = new RetrievalStrategyRegistry();
 
+/**
+ * The only strategies that are actually registered and executable. The dormant
+ * names in {@link StrategyName} (query-expansion, multi-query, reranking) exist
+ * as wrapper classes behind feature flags, not as selectable strategies, so a
+ * stored config that asks for one is refused rather than silently downgraded.
+ */
+export const SUPPORTED_STRATEGIES = ["vector", "keyword", "hybrid"] as const;
+export type SupportedStrategyName = (typeof SUPPORTED_STRATEGIES)[number];
+
+export function isSupportedStrategy(name: unknown): name is SupportedStrategyName {
+  return (
+    typeof name === "string" &&
+    (SUPPORTED_STRATEGIES as readonly string[]).includes(name)
+  );
+}
+
+/**
+ * Resolve a config-supplied strategy to one that can actually run. Unknown or
+ * dormant names are refused and fall back to the documented default ("vector"),
+ * and the substitution is logged so it is never silent.
+ */
+export function resolveSupportedStrategy(name: unknown): SupportedStrategyName {
+  if (isSupportedStrategy(name)) return name;
+  if (name !== undefined && name !== null && name !== "") {
+    logger.warn("Unsupported retrieval strategy requested; using default", {
+      requested: String(name),
+    });
+  }
+  return "vector";
+}
+
 export async function executeRetrievalWithTrace(
   kbId: string,
   query: string,
@@ -84,7 +116,8 @@ export async function executeRetrievalWithTrace(
     documentIds: config.documentIds,
   };
 
-  const baseStrategy = strategyRegistry.get(mergedConfig.strategy) || strategyRegistry.get("vector")!;
+  const strategyName = resolveSupportedStrategy(mergedConfig.strategy);
+  const baseStrategy = strategyRegistry.get(strategyName)!;
 
   let activeStrategy: RetrievalStrategy = baseStrategy;
 
@@ -132,8 +165,8 @@ export async function executeRetrievalWithTrace(
   const retrieveDuration = Math.round((performance.now() - retrieveStart) * 100) / 100;
 
   steps.push({
-    name: mergedConfig.strategy,
-    description: `Using ${mergedConfig.strategy} strategy`,
+    name: strategyName,
+    description: `Using ${strategyName} strategy`,
     durationMs: retrieveDuration,
     output: {
       chunkCount: result.chunks.length,
@@ -169,7 +202,7 @@ export async function executeRetrievalWithTrace(
   const vectorSearchMs = (result.metadata?.vectorSearchMs as number) || 0;
 
   return {
-    strategy: mergedConfig.strategy,
+    strategy: strategyName,
     query,
     steps,
     result: finalChunks,

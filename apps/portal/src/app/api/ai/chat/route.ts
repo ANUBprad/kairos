@@ -6,7 +6,7 @@ import { streamChatResponse } from "@/lib/ai/chat";
 import { isChatModelAllowed } from "@/lib/ai/providers";
 import { getRetrievalConfig } from "@/lib/retrieval/service";
 import { buildChatPrompt } from "@/lib/ai/prompts";
-import { executeRetrievalWithTrace } from "@/lib/retrieval/strategies";
+import { executeRetrievalWithTrace, resolveSupportedStrategy } from "@/lib/retrieval/strategies";
 import { getConversationMessages } from "@/lib/ai/memory";
 import { parseSourceIds, filterScopedSourceIds } from "@/lib/ai/chat/source-scope";
 import { canAccessKnowledgeBase, canUseConversationInKb } from "@/lib/ai/chat/access";
@@ -172,7 +172,9 @@ export async function POST(request: NextRequest) {
             kbId,
             query,
             {
-              strategy: (retrievalConfig.retrievalStrategy || retrievalConfig.retrievalMode || "vector") as "vector" | "keyword" | "hybrid" | "query-expansion" | "multi-query" | "reranking",
+              strategy: resolveSupportedStrategy(
+                retrievalConfig.retrievalStrategy || retrievalConfig.retrievalMode,
+              ),
               documentIds: scopedSourceIds,
               topK: retrievalConfig.topK,
               enableQueryExpansion: retrievalConfig.enableQueryExpansion || false,
