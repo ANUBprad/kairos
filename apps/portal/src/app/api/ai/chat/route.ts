@@ -338,7 +338,12 @@ ${contextStr || "No relevant documents found."}`;
 
       } catch (err) {
         const sanitized = sanitizeError(err);
-        const errorData = JSON.stringify({ type: "error", content: "An error occurred while processing your request", errorId: sanitized.errorId });
+        const errorData = JSON.stringify({
+          type: "error",
+          content: sanitized.message,
+          code: sanitized.code,
+          errorId: sanitized.errorId,
+        });
         try {
           controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
         } catch {

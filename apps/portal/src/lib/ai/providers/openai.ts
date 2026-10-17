@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { resolveMaxOutputTokens, type AIProvider } from "./types";
+import { toProviderRequestError } from "../errors";
 import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
@@ -42,18 +43,22 @@ export class OpenAIProvider implements AIProvider {
   async generateChat(
     request: ChatCompletionRequest,
   ): Promise<ChatCompletionResponse> {
-    const response = await this.client.chat.completions.create(
-      {
-        model: request.model || this.defaultChatModel,
-        messages: request.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        temperature: request.temperature ?? 0.7,
-        max_tokens: resolveMaxOutputTokens(request.maxTokens),
-      },
-      { signal: request.signal },
-    );
+    const response = await this.client.chat.completions
+      .create(
+        {
+          model: request.model || this.defaultChatModel,
+          messages: request.messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          temperature: request.temperature ?? 0.7,
+          max_tokens: resolveMaxOutputTokens(request.maxTokens),
+        },
+        { signal: request.signal },
+      )
+      .catch((err: unknown) => {
+        throw toProviderRequestError(err);
+      });
 
     const choice = response.choices[0];
     return {
@@ -72,19 +77,23 @@ export class OpenAIProvider implements AIProvider {
   async *streamChat(
     request: ChatCompletionRequest,
   ): AsyncGenerator<StreamChunk, void, unknown> {
-    const stream = await this.client.chat.completions.create(
-      {
-        model: request.model || this.defaultChatModel,
-        messages: request.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        temperature: request.temperature ?? 0.7,
-        max_tokens: resolveMaxOutputTokens(request.maxTokens),
-        stream: true,
-      },
-      { signal: request.signal },
-    );
+    const stream = await this.client.chat.completions
+      .create(
+        {
+          model: request.model || this.defaultChatModel,
+          messages: request.messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          temperature: request.temperature ?? 0.7,
+          max_tokens: resolveMaxOutputTokens(request.maxTokens),
+          stream: true,
+        },
+        { signal: request.signal },
+      )
+      .catch((err: unknown) => {
+        throw toProviderRequestError(err);
+      });
 
     for await (const chunk of stream) {
       const content = chunk.choices?.[0]?.delta?.content || "";

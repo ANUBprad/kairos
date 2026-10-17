@@ -75,7 +75,11 @@ export class GeminiProvider implements AIProvider {
 
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`Gemini API error: ${res.status} ${err}`);
+      throw new ProviderRequestError(
+        `Gemini API error: ${res.status} ${err}`,
+        res.status,
+        parseRetryAfter(res.headers.get("retry-after")),
+      );
     }
 
     const data = await res.json();
@@ -133,7 +137,11 @@ export class GeminiProvider implements AIProvider {
 
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`Gemini stream error: ${res.status} ${err}`);
+      throw new ProviderRequestError(
+        `Gemini stream error: ${res.status} ${err}`,
+        res.status,
+        parseRetryAfter(res.headers.get("retry-after")),
+      );
     }
 
     const reader = res.body?.getReader();
