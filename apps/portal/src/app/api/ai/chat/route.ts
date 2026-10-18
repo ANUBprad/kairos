@@ -15,6 +15,7 @@ import { isValidEntityId, jsonObjectSchema } from "@/lib/validation";
 import { rateLimit, rateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeError } from "@/lib/errors";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
+import { incrementCounter, observeHistogram } from "@/lib/telemetry/metrics";
 import type { ProviderType } from "@/lib/ai/types";
 import type { ChatTraceContext } from "@/lib/ai/chat/engine";
 
@@ -148,6 +149,7 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      const startedAt = performance.now();
       // SSE heartbeat to prevent proxy/load balancer timeouts
       heartbeatInterval = setInterval(() => {
         try {
@@ -338,7 +340,10 @@ ${contextStr || "No relevant documents found."}`;
         const finalData = JSON.stringify({ type: "done" });
         controller.enqueue(encoder.encode(`data: ${finalData}\n\n`));
 
+        incrementCounter("ai_chat_requests_total");
+        observeHistogram("ai_chat_generation_ms", performance.now() - startedAt);
       } catch (err) {
+        incrementCounter("ai_chat_errors_total");
         const sanitized = sanitizeError(err);
         const errorData = JSON.stringify({
           type: "error",
