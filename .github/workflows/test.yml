@@ -76,6 +76,23 @@ jobs:
         run: |
           docker compose build intelligence gateway
 
+      # The stack runs with KAIROS_LLM_PROVIDER=ollama and
+      # KAIROS_OLLAMA_URL=http://ollama:11434 (see the job env), and the E2E
+      # tests assert a generated answer, so Ollama has to answer on the compose
+      # network before the stack starts. Mirrors the evaluate job.
+      - name: Start Ollama and pull llama3
+        run: |
+          docker network create kairos-network 2>/dev/null || true
+          docker run -d --name ollama --network kairos-network ollama/ollama
+          for i in $(seq 1 30); do
+            if docker exec ollama ollama list > /dev/null 2>&1; then
+              echo "Ollama is up after ${i} attempts"
+              break
+            fi
+            sleep 2
+          done
+          docker exec ollama ollama pull llama3
+
       - name: Start core stack
         run: |
           docker compose up -d chromadb intelligence gateway
@@ -143,4 +160,8 @@ jobs:
 
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: |
+          # Detach Ollama first: it is not part of the compose project, and the
+          # network cannot be removed while its endpoint is still attached.
+          docker rm -f ollama || true
+          docker compose down -v
