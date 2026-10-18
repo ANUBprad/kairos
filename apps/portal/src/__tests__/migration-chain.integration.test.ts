@@ -346,7 +346,10 @@ describe("prisma migration chain", () => {
 
       // 9. Migrations that realign a foreign key are legal only when they
       //    re-create the same constraint (Prisma's own output for an onDelete
-      //    change). Everything else data-destroying is banned.
+      //    change). Migrations that reshape a unique key are legal only when
+      //    they replace it with an index on the same table (Prisma's own output
+      //    for an @@unique field-list change). Everything else data-destroying
+      //    is banned.
       const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
       for (const dir of readdirSync(migrationsDir, { withFileTypes: true })) {
         if (!dir.isDirectory()) continue;
@@ -355,11 +358,31 @@ describe("prisma migration chain", () => {
           "utf8",
         );
         const hardBans =
-          /(^|\n)\s*(DROP\s+(TABLE|COLUMN|INDEX|EXTENSION|SCHEMA)|TRUNCATE|DELETE\s+FROM)/i;
+          /(^|\n)\s*(DROP\s+(TABLE|COLUMN|EXTENSION|SCHEMA)|TRUNCATE|DELETE\s+FROM)/i;
         assert.ok(
           !hardBans.test(sql),
           `destructive statement detected in migration ${dir.name}`,
         );
+        // An index carries no rows, so reshaping one is not destructive — but
+        // it must be replaced, not merely dropped, or the schema silently loses
+        // a uniqueness guarantee the application still declares.
+        const createdIndexes = [
+          ...sql.matchAll(
+            /CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?"([^"]+)"/gi,
+          ),
+        ].map((m) => m[1]);
+        for (const match of sql.matchAll(
+          /DROP\s+INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+EXISTS\s+)?"([^"]+)"/gi,
+        )) {
+          const dropped = match[1];
+          // Index names are `<Table>_<columns>_<suffix>`, so the table is the
+          // prefix before the first underscore.
+          const table = dropped.split("_")[0];
+          assert.ok(
+            createdIndexes.some((created) => created.startsWith(`${table}_`)),
+            `DROP INDEX "${dropped}" in ${dir.name} must be replaced by an index on the same table`,
+          );
+        }
         const droppedFks = sql.match(/DROP CONSTRAINT "([^"]+)"/g);
         for (const drop of droppedFks ?? []) {
           const name = /"([^"]+)"/.exec(drop)![1];
