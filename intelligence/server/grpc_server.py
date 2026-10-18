@@ -204,14 +204,24 @@ def _make_cb_on_change(name: str):
 
 
 def _wrap_llm_client_with_cb(client, breaker):
-    if hasattr(client, "models"):
-        models = client.models
+    """Route provider calls through ``breaker``.
+
+    Both client shapes expose ``models``: Gemini's has ``generate_content``,
+    while the OpenAI-compatible clients (openai, groq, ollama) reach the
+    provider through ``chat.completions.create``. Probing ``hasattr(client,
+    "models")`` alone sent every OpenAI-shaped client down the Gemini branch and
+    raised ``AttributeError: 'Models' object has no attribute
+    'generate_content'`` before the first request was ever made.
+    """
+    models = getattr(client, "models", None)
+    if getattr(models, "generate_content", None) is not None:
         orig = models.generate_content
         models.generate_content = lambda *a, **kw: breaker.call(orig, *a, **kw)
-    elif hasattr(client, "chat"):
-        completions = client.chat.completions
-        orig = completions.create
-        completions.create = lambda *a, **kw: breaker.call(orig, *a, **kw)
+        return client
+
+    completions = client.chat.completions
+    orig = completions.create
+    completions.create = lambda *a, **kw: breaker.call(orig, *a, **kw)
     return client
 
 
