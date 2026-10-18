@@ -26,7 +26,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install ruff mypy types-setuptools
+          # Pinned: ruff's default rule set changes between releases, so an
+          # unpinned install turns a green lint into a red one with no code
+          # change. Bump deliberately.
+          pip install "ruff==0.15.19" mypy types-setuptools
 
       - name: Run ruff (linter)
         run: ruff check intelligence/ tests/

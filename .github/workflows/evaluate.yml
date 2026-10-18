@@ -31,14 +31,15 @@ jobs:
       - name: Start ChromaDB
         run: |
           docker run -d --name chromadb -p 7777:8000 -v chroma_data:/data chromadb/chroma:1.0.15
+          # Chroma 1.x has no python3 on PATH; probe the port with bash /dev/tcp.
           for i in $(seq 1 30); do
-            if docker exec chromadb python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8000)); s.close()" 2>/dev/null; then
+            if docker exec chromadb bash -c "exec 3<>/dev/tcp/127.0.0.1/8000" 2>/dev/null; then
               echo "ChromaDB is up after ${i} attempts"
               break
             fi
             sleep 5
           done
-          docker exec chromadb python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',8000)); s.close()" || { docker logs chromadb --tail 50; exit 1; }
+          docker exec chromadb bash -c "exec 3<>/dev/tcp/127.0.0.1/8000" || { docker logs chromadb --tail 50; exit 1; }
 
       - name: Start Ollama and pull llama3
         run: |

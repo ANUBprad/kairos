@@ -40,6 +40,10 @@ jobs:
 
       - name: Validate Prisma schema
         run: npx prisma validate
+        env:
+          # `prisma validate` still resolves datasource env vars; CI has no
+          # .env, so pass a placeholder like the build step does.
+          DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
       - name: Build
         run: npm run build
