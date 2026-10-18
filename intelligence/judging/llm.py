@@ -95,9 +95,7 @@ class LLMJudge(BaseJudge):
                 explanation="Empty answer",
             )
 
-        if self.requires_context and not any(
-            str(c).strip() for c in context
-        ):
+        if self.requires_context and not any(str(c).strip() for c in context):
             return JudgeResult(
                 dimension=self.dimension,
                 score=0.0,

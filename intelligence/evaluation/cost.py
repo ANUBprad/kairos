@@ -44,7 +44,9 @@ def _is_self_hosted(model: str) -> bool:
     return False
 
 
-def estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float | None:
+def estimate_cost(
+    model: str, prompt_tokens: int, completion_tokens: int
+) -> float | None:
     """Estimated USD cost of one LLM interaction, or None when the model has no known price."""
     per_mtok = _per_mtok(model)
     if per_mtok is None:

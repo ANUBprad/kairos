@@ -111,7 +111,9 @@ class TestFaithfulnessLLMJudge:
     def test_whitespace_only_context_fails_without_llm_call(self) -> None:
         llm = _FakeLLM(['{"score": 1.0, "reason": "nothing contradicts"}'])
         judge = FaithfulnessLLMJudge(llm)
-        result = judge.evaluate(query="q", answer="the sky is blue", context=["   ", "\n\t"])
+        result = judge.evaluate(
+            query="q", answer="the sky is blue", context=["   ", "\n\t"]
+        )
         assert result.judgment == Judgment.FAIL
         assert result.score == 0.0
         assert llm.prompts == []

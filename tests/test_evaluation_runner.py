@@ -267,7 +267,9 @@ class TestRunResult:
         assert d["succeeded"] == 1
         assert d["mean_recall"] == pytest.approx(0.8)
         assert d["mean_precision"] == pytest.approx(0.5)
-        assert "results" not in d, "per-entry data must stay off the aggregate contract by default"
+        assert "results" not in d, (
+            "per-entry data must stay off the aggregate contract by default"
+        )
 
     def test_to_dict_include_results(self) -> None:
         r = RunResult(
