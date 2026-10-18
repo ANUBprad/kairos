@@ -15,7 +15,7 @@ import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { hasPermission, type Permission } from "@/lib/rbac";
 import { sanitizeFilename } from "@/lib/validation";
 import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError, type FetchUrlOptions } from "@/lib/ingestion/url";
-import { buildYouTubeDocumentData, fetchYouTubeTranscript, YouTubeTranscriptError, type FetchYoutubeOptions } from "@/lib/ingestion/youtube";
+import { buildYouTubeDocumentData, fetchYouTubeTranscript, youtubeIngestErrorMessage, YouTubeTranscriptError, type FetchYoutubeOptions } from "@/lib/ingestion/youtube";
 import { buildTextDocumentData, normalizeTextInput, textDocumentFileHash } from "@/lib/ingestion/text";
 import { assertSameKnowledgeBase, MAX_BULK_OPERATIONS, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
 import type { DocumentStatus, Prisma } from "@prisma/client";
@@ -265,33 +265,6 @@ function urlIngestErrorMessage(code: string): string {
       return "That URL redirects too many times.";
     default:
       return "Could not fetch that URL.";
-  }
-}
-
-function youtubeIngestErrorMessage(code: string): string {
-  switch (code) {
-    case "invalid_url":
-      return "That doesn't look like a valid YouTube video link.";
-    case "unsupported_host":
-      return "Only youtube.com and youtu.be links are supported.";
-    case "invalid_video_id":
-      return "That YouTube link does not have a valid video ID.";
-    case "transcript_unavailable":
-      return "No captions or transcript are available for that video.";
-    case "transcript_fetch":
-      return "Could not reach YouTube to fetch the transcript.";
-    case "transcript_timeout":
-      return "YouTube did not respond in time.";
-    case "transcript_malformed":
-      return "The transcript returned by YouTube could not be read.";
-    case "transcript_empty":
-      return "That video has no usable transcribed text.";
-    case "too_many_redirects":
-      return "That video link redirects too many times.";
-    case "too_large":
-      return "That video's transcript is too large to ingest.";
-    default:
-      return "Could not fetch that video's transcript.";
   }
 }
 

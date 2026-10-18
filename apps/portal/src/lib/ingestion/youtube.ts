@@ -19,6 +19,10 @@ const MAX_REDIRECTS = 5;
 const YOUTUBE_MIN_CONTENT_CHARS = 20;
 const WORDS_PER_PARAGRAPH = 40;
 const USER_AGENT = "KairosYT/1.0 (+https://kairos.dev; transcript ingestion bot)";
+// The watch page is served as HTML; the timedtext endpoint must be requested as
+// XML or YouTube answers with an HTML shell instead of caption cues.
+const WATCH_ACCEPT = "text/html,application/xhtml+xml,*/*;q=0.1";
+const TIMEDTEXT_ACCEPT = "text/xml,application/xml,*/*;q=0.1";
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 const SENTENCE_END_RE = /[.!?…]$/;
 
@@ -33,6 +37,7 @@ export type YouTubeTranscriptErrorCode =
   | "transcript_timeout"
   | "transcript_malformed"
   | "transcript_empty"
+  | "transcript_blocked"
   | "too_many_redirects"
   | "too_large";
 
@@ -44,6 +49,37 @@ export class YouTubeTranscriptError extends Error {
   ) {
     super(message, options);
     this.name = "YouTubeTranscriptError";
+  }
+}
+
+// User-facing copy for every failure code. Kept next to the codes so the two
+// stay in sync and can be asserted in tests without a database.
+export function youtubeIngestErrorMessage(code: string): string {
+  switch (code) {
+    case "invalid_url":
+      return "That doesn't look like a valid YouTube video link.";
+    case "unsupported_host":
+      return "Only youtube.com and youtu.be links are supported.";
+    case "invalid_video_id":
+      return "That YouTube link does not have a valid video ID.";
+    case "transcript_unavailable":
+      return "No captions or transcript are available for that video.";
+    case "transcript_fetch":
+      return "Could not reach YouTube to fetch the transcript.";
+    case "transcript_timeout":
+      return "YouTube did not respond in time.";
+    case "transcript_malformed":
+      return "The transcript returned by YouTube could not be read.";
+    case "transcript_empty":
+      return "That video has no usable transcribed text.";
+    case "transcript_blocked":
+      return "YouTube did not return the transcript for that video. This is usually temporary — please try again in a moment.";
+    case "too_many_redirects":
+      return "That video link redirects too many times.";
+    case "too_large":
+      return "That video's transcript is too large to ingest.";
+    default:
+      return "Could not fetch that video's transcript.";
   }
 }
 
@@ -142,7 +178,7 @@ function mapUrlError(err: unknown): YouTubeTranscriptError {
 
 // Fixed, allowlisted endpoint host only. No generic fetch-any-URL path for
 // YouTube; every hop is host-allowlisted AND resolves to a public address.
-async function fetchYoutubeText(url: string, opts: Required<FetchYoutubeOptions>): Promise<string> {
+async function fetchYoutubeText(url: string, opts: Required<FetchYoutubeOptions>, accept: string): Promise<string> {
   let current = loadTarget(url);
   for (let hop = 0; ; hop++) {
     if (!isYoutubeHost(current.hostname)) {
@@ -158,7 +194,7 @@ async function fetchYoutubeText(url: string, opts: Required<FetchYoutubeOptions>
         signal: controller.signal,
         headers: {
           "user-agent": USER_AGENT,
-          accept: "text/xml,application/x-www-form-urlencoded,*/*;q=0.1",
+          accept,
           "accept-language": "en",
         },
       });
@@ -179,6 +215,12 @@ async function fetchYoutubeText(url: string, opts: Required<FetchYoutubeOptions>
       }
 
       if (response.status !== 200) {
+        // A refusal is not "could not reach": 429 (rate limited) and 403
+        // (blocked) mean YouTube answered and declined, which is usually
+        // temporary. Keep that distinct from a transport-level failure.
+        if (response.status === 429 || response.status === 403) {
+          throw new YouTubeTranscriptError("transcript_blocked", `YouTube refused the transcript request (HTTP ${response.status})`);
+        }
         throw new YouTubeTranscriptError("transcript_fetch", `HTTP ${response.status}`);
       }
 
@@ -204,6 +246,10 @@ interface CaptionTrack {
 }
 
 interface PlayerResponseLike {
+  playabilityStatus?: {
+    status?: string;
+    reason?: string;
+  };
   captions?: {
     playerCaptionsTracklistRenderer?: {
       captionTracks?: CaptionTrack[];
@@ -215,22 +261,52 @@ interface PlayerResponseLike {
   };
 }
 
-function extractPlayerResponse(infoBody: string): PlayerResponseLike {
-  const params = new URLSearchParams(infoBody);
-  if (params.get("status") === "fail") {
-    throw new YouTubeTranscriptError("transcript_unavailable", "video info returned status=fail");
+// The watch page embeds its player payload as an inline JS object. The legacy
+// get_video_info endpoint that used to expose the same payload now returns HTTP
+// 410 (retired by YouTube), so we read the payload straight from the watch page.
+function extractPlayerResponse(html: string): PlayerResponseLike {
+  const assignment = /ytInitialPlayerResponse"?\]?\s*=\s*\{/.exec(html);
+  if (assignment?.index === undefined) {
+    throw new YouTubeTranscriptError("transcript_unavailable", "watch page did not include a player response");
   }
-  const encoded = params.get("player_response");
-  if (!encoded) {
-    throw new YouTubeTranscriptError("transcript_unavailable", "no player_response in video info");
-  }
+  const start = assignment.index + assignment[0].length - 1;
   let parsed: unknown;
   try {
-    parsed = JSON.parse(encoded);
+    parsed = JSON.parse(extractBalancedObject(html, start));
   } catch (err) {
-    throw new YouTubeTranscriptError("transcript_malformed", "player_response was not valid JSON", { cause: err });
+    if (err instanceof YouTubeTranscriptError) throw err;
+    throw new YouTubeTranscriptError("transcript_malformed", "player response was not valid JSON", { cause: err });
   }
-  return parsed as PlayerResponseLike;
+  const player = parsed as PlayerResponseLike;
+  const status = player.playabilityStatus?.status;
+  if (status && status !== "OK") {
+    throw new YouTubeTranscriptError("transcript_unavailable", `video is not playable (${status})`);
+  }
+  return player;
+}
+
+// Slice the balanced JSON object starting at `start` (which must be "{"), while
+// ignoring braces inside string literals/escapes.
+function extractBalancedObject(text: string, start: number): string {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  throw new YouTubeTranscriptError("transcript_malformed", "player response JSON was incomplete");
 }
 
 function selectCaptionTrack(player: PlayerResponseLike): CaptionTrack {
@@ -314,8 +390,8 @@ export async function fetchYouTubeTranscript(rawUrl: string, opts: FetchYoutubeO
     maxRedirects: opts.maxRedirects ?? MAX_REDIRECTS,
   };
 
-  const infoUrl = `https://www.youtube.com/get_video_info?video_id=${videoId}&hl=en&el=embedded`;
-  const player = extractPlayerResponse(await fetchYoutubeText(infoUrl, fullOpts));
+  const watchUrl = `https://www.youtube.com/watch?v=${videoId}&hl=en`;
+  const player = extractPlayerResponse(await fetchYoutubeText(watchUrl, fullOpts, WATCH_ACCEPT));
   const track = selectCaptionTrack(player);
 
   const baseUrl = track.baseUrl;
@@ -329,7 +405,15 @@ export async function fetchYouTubeTranscript(rawUrl: string, opts: FetchYoutubeO
   } catch (err) {
     throw new YouTubeTranscriptError("transcript_malformed", "caption track baseUrl was invalid", { cause: err });
   }
-  const timedTextBody = await fetchYoutubeText(timedTextUrl, fullOpts);
+  const timedTextBody = await fetchYoutubeText(timedTextUrl, fullOpts, TIMEDTEXT_ACCEPT);
+  if (timedTextBody.trim().length === 0) {
+    // A caption track was offered but YouTube served an empty body — a temporary
+    // throttle or server-side restriction, not "this video has no captions".
+    throw new YouTubeTranscriptError(
+      "transcript_blocked",
+      "YouTube returned an empty transcript response for a video that has captions",
+    );
+  }
 
   const cues = parseTimedText(timedTextBody);
   if (cues.length === 0) {

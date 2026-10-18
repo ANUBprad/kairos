@@ -45,11 +45,12 @@ function htmlResponse(body: string, status = 200, contentType = "text/plain"): H
   };
 }
 
-function infoBody(player: unknown, status = "ok"): string {
-  const params = new URLSearchParams();
-  params.set("status", status);
-  params.set("player_response", JSON.stringify(player));
-  return params.toString();
+function watchPage(player: unknown): string {
+  return (
+    `<!DOCTYPE html><html><head><title>YouTube</title></head><body>` +
+    `<script nonce="test">var ytInitialPlayerResponse = ${JSON.stringify(player)};</script>` +
+    `</body></html>`
+  );
 }
 
 function captionTrack(videoId: string, lang = "en"): { baseUrl: string; languageCode: string; kind: string; name: { simpleText: string } } {
@@ -81,17 +82,18 @@ function ytHttpGetFor(videos: {
     const videoId = url.match(/[?&](?:video_id|v)=([A-Za-z0-9_-]{11})/)?.[1] ?? null;
     const v = videoId ? videos[videoId] : undefined;
     if (!v) throw new Error(`No stub for video ${videoId ?? url}`);
-    if (url.includes("get_video_info")) {
-      return htmlResponse(
-        infoBody({
-          captions: { playerCaptionsTracklistRenderer: { captionTracks: [captionTrack(videoId!)] } },
-          videoDetails: { videoId, title: v.title },
-        }),
-        200,
-        "application/x-www-form-urlencoded",
-      );
+    if (url.includes("/api/timedtext")) {
+      return htmlResponse(v.timedText, 200, "text/xml");
     }
-    return htmlResponse(v.timedText, 200, "text/xml");
+    return htmlResponse(
+      watchPage({
+        playabilityStatus: { status: "OK" },
+        captions: { playerCaptionsTracklistRenderer: { captionTracks: [captionTrack(videoId!)] } },
+        videoDetails: { videoId, title: v.title },
+      }),
+      200,
+      "text/html",
+    );
   };
 }
 
