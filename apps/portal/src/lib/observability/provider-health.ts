@@ -20,14 +20,34 @@ export async function recordProviderHealth(data: {
   const dateOnly = new Date(data.date);
   dateOnly.setHours(0, 0, 0, 0);
 
-  return prisma.providerHealth.upsert({
-    where: {
-      provider_model_date: {
-        provider: data.provider,
-        model: data.model,
-        date: dateOnly,
-      },
+  const where = {
+    organizationId_provider_model_date: {
+      organizationId: data.organizationId,
+      provider: data.provider,
+      model: data.model,
+      date: dateOnly,
     },
+  };
+
+  const existing = await prisma.providerHealth.findUnique({
+    where,
+    select: { totalRequests: true, avgLatencyMs: true },
+  });
+
+  // Weighted running mean. Incrementing every other field but leaving
+  // avgLatencyMs at its first value would report a frozen sample as the
+  // average, i.e. a fabricated number once more than one request is recorded.
+  // ponytail: read-then-write, so two concurrent writers can skew the mean by
+  // one sample; provider health is best-effort telemetry, not a ledger.
+  const prevTotal = existing?.totalRequests ?? 0;
+  const nextTotal = prevTotal + data.totalRequests;
+  const avgLatencyMs =
+    nextTotal > 0
+      ? ((existing?.avgLatencyMs ?? 0) * prevTotal + data.avgLatencyMs * data.totalRequests) / nextTotal
+      : 0;
+
+  return prisma.providerHealth.upsert({
+    where,
     create: {
       provider: data.provider,
       model: data.model,
@@ -36,7 +56,7 @@ export async function recordProviderHealth(data: {
       successCount: data.successCount,
       errorCount: data.errorCount,
       timeoutCount: data.timeoutCount,
-      avgLatencyMs: data.avgLatencyMs,
+      avgLatencyMs,
       p50LatencyMs: data.p50LatencyMs,
       p95LatencyMs: data.p95LatencyMs,
       p99LatencyMs: data.p99LatencyMs,
@@ -51,12 +71,49 @@ export async function recordProviderHealth(data: {
       successCount: { increment: data.successCount },
       errorCount: { increment: data.errorCount },
       timeoutCount: { increment: data.timeoutCount },
+      avgLatencyMs,
       totalCost: { increment: data.totalCost },
       totalTokens: { increment: data.totalTokens },
       lastError: data.lastError,
       lastErrorAt: data.lastError ? new Date() : undefined,
     },
   });
+}
+
+/**
+ * One provider-call sample for the health board. Best-effort by design: an
+ * observability write must never turn a working chat turn into a failed one, so
+ * every error is swallowed. `errorCode` is a bounded classification (never raw
+ * provider text) because it is stored and later surfaced.
+ */
+export async function recordProviderRequest(sample: {
+  organizationId?: string | null;
+  provider: string;
+  model: string;
+  outcome: "success" | "error" | "timeout";
+  latencyMs: number;
+  errorCode?: string;
+  tokens?: number;
+}): Promise<void> {
+  if (!sample.organizationId) return;
+  try {
+    await recordProviderHealth({
+      organizationId: sample.organizationId,
+      provider: sample.provider,
+      model: sample.model,
+      date: new Date(),
+      totalRequests: 1,
+      successCount: sample.outcome === "success" ? 1 : 0,
+      errorCount: sample.outcome === "error" ? 1 : 0,
+      timeoutCount: sample.outcome === "timeout" ? 1 : 0,
+      avgLatencyMs: Math.max(0, sample.latencyMs),
+      totalCost: 0,
+      totalTokens: sample.tokens ?? 0,
+      lastError: sample.outcome === "success" ? undefined : sample.errorCode,
+    });
+  } catch {
+    // Telemetry only; never surface a health-write failure to the caller.
+  }
 }
 
 export async function getProviderHealthSummary(orgId: string, days: number = 7) {

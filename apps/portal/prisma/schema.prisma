@@ -1572,7 +1572,7 @@ model ProviderHealth {
 
   createdAt DateTime @default(now())
 
-  @@unique([provider, model, date])
+  @@unique([organizationId, provider, model, date])
   @@index([provider, date])
   @@index([date])
   @@index([organizationId, date])

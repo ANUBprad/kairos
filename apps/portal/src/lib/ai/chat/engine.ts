@@ -9,6 +9,8 @@ import { createTrace, finishTrace, addSpan, finishSpan, addTraceEvent } from "@/
 import { buildChatTraceMetadata } from "@/lib/ai/chat/observability";
 import { EMPTY_RETRIEVAL_TEXT, GENERATION_FAILED_TEXT, GENERATION_STOPPED_TEXT } from "@/lib/ai/chat/stream-markers";
 import { logger } from "@/lib/logger";
+import { recordProviderRequest } from "@/lib/observability/provider-health";
+import { sanitizeError } from "@/lib/errors";
 import type { ProviderType, CitationSource, StreamChunk, RetrievedChunk, AIMessage } from "@/lib/ai/types";
 
 export interface ChatTraceContext {
@@ -270,18 +272,44 @@ export async function* streamChatResponse(
       generationSpanId = span.id;
     }
 
+    const providerModel = request.model || provider.getDefaultModel();
+    const generationStartedAt = performance.now();
     const stream = provider.streamChat({
-      model: request.model || provider.getDefaultModel(),
+      model: providerModel,
       messages: formattedMessages,
       signal: request.signal,
     });
 
-    for await (const chunk of stream) {
-      if (request.signal?.aborted) throw createAbortError();
-      if (chunk.done) break;
-      fullContent += chunk.content;
-      yield { content: chunk.content, done: false };
+    try {
+      for await (const chunk of stream) {
+        if (request.signal?.aborted) throw createAbortError();
+        if (chunk.done) break;
+        fullContent += chunk.content;
+        yield { content: chunk.content, done: false };
+      }
+    } catch (err) {
+      // A client stop is not a provider failure, so it is not counted; only a
+      // real provider error moves the health board.
+      if (!(err instanceof Error && err.name === "AbortError")) {
+        void recordProviderRequest({
+          organizationId: traceCtx?.organizationId,
+          provider: provider.type,
+          model: providerModel,
+          outcome: "error",
+          latencyMs: performance.now() - generationStartedAt,
+          errorCode: sanitizeError(err).code,
+        });
+      }
+      throw err;
     }
+
+    void recordProviderRequest({
+      organizationId: traceCtx?.organizationId,
+      provider: provider.type,
+      model: providerModel,
+      outcome: "success",
+      latencyMs: performance.now() - generationStartedAt,
+    });
 
     if (startedTrace && traceCtx) {
       if (generationSpanId) {
