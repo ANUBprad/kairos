@@ -1,13 +1,20 @@
-"""Tests for the circuit-breaker wrapper around an LLM client.
+"""Tests for how the LLM client is built and where the circuit breaker sits.
 
-The wrapper has to work for two client shapes: Gemini
-(``models.generate_content``) and the OpenAI-compatible clients used by the
-``openai``, ``groq`` and ``ollama`` providers (``chat.completions.create``).
+Two things are pinned here. First, the wrapper has to work for two client
+shapes: Gemini (``models.generate_content``) and the OpenAI-compatible clients
+used by the ``openai``, ``groq`` and ``ollama`` providers
+(``chat.completions.create``). Second, every client must be constructible
+without ambient credentials: the SDK refuses to build an ``OpenAI`` client when
+it finds no key at all.
 """
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 from intelligence.server.grpc_server import _wrap_llm_client_with_cb
 
@@ -64,3 +71,52 @@ def test_openai_compatible_client_is_wrapped_through_chat_completions() -> None:
     assert getattr(create, "__self__", None) is None, (
         "chat.completions.create must be wrapped in the breaker passthrough"
     )
+
+
+def test_ollama_provider_builds_its_client_without_openai_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """CI has no OPENAI_API_KEY, and the SDK refuses to build a client without one.
+
+    The ollama branch used to pass only ``base_url``, so the evaluate job died
+    while the engine was being constructed.
+    """
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    from intelligence.evaluation.factory import _build_llm_client
+    from intelligence.server.config import ServerConfig
+
+    cfg = ServerConfig(
+        llm_provider="ollama",
+        ollama_url="http://localhost:11434",
+        ollama_model_name="llama3",
+    )
+    client, llm_client, model_name = _build_llm_client(cfg)
+
+    assert model_name == "llama3"
+    assert llm_client is not None
+    assert client.api_key == "ollama"
+
+
+def test_every_openai_client_is_built_with_an_api_key() -> None:
+    """Guard the whole defect class, not just the branch that broke CI."""
+    root = Path(__file__).resolve().parent.parent / "intelligence"
+    checked = 0
+
+    for path in root.rglob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = (
+                func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+            )
+            if name != "OpenAI":
+                continue
+            checked += 1
+            assert "api_key" in {kw.arg for kw in node.keywords}, (
+                f"{path}:{node.lineno}: OpenAI() is built without an api_key"
+            )
+
+    assert checked >= 3, "expected to find the OpenAI client constructions"

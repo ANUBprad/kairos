@@ -135,7 +135,15 @@ def _build_llm_client(cfg):
         model = validate_model(
             "ollama", cfg.ollama_model_name, "KAIROS_OLLAMA_MODEL_NAME"
         )
-        client = OpenAI(base_url=cfg.ollama_url, timeout=cfg.provider_timeout_seconds)
+        # Ollama serves the OpenAI-compatible API without auth, but the SDK
+        # refuses to build a client when it cannot find a key at all - which is
+        # the case in CI, where no OPENAI_API_KEY exists. Never forward a real
+        # OpenAI key to a local, unauthenticated endpoint.
+        client = OpenAI(
+            api_key="ollama",
+            base_url=cfg.ollama_url,
+            timeout=cfg.provider_timeout_seconds,
+        )
         return (
             client,
             OpenaiLLM(client=client, model_name=model),

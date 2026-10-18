@@ -465,8 +465,13 @@ def serve():
             model_name = cfg.openai_model_name
 
         elif cfg.llm_provider == "ollama":
+            # Ollama serves the OpenAI-compatible API without auth, but the SDK
+            # refuses to build a client when it cannot find a key at all - which
+            # is the case in CI, where no OPENAI_API_KEY exists.
             client = OpenAI(
-                base_url=cfg.ollama_url, timeout=cfg.provider_timeout_seconds
+                api_key="ollama",
+                base_url=cfg.ollama_url,
+                timeout=cfg.provider_timeout_seconds,
             )
             llm_client = OpenaiLLM(client=client, model_name=cfg.ollama_model_name)
             model_name = cfg.ollama_model_name
