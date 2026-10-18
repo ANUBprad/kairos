@@ -229,8 +229,12 @@ The App Router is organised into three groups plus the API:
 
 - **`(marketing)`** — public: `/`, `/features`, `/capabilities`, `/about`,
   `/blog`, `/changelog`, `/docs`, `/privacy`, `/terms`, `/security`.
-- **`(auth)`** — `/login`, `/signup`.
-- **`/app`** — the authenticated workspace. Top-level tools include
+- **`(auth)`** — `/login`, `/signup`. Public and optional; an account is never
+  required to use the workspace.
+- **`/app`** — the workspace, usable without an account. When a visitor has no
+  session the layout bootstraps an isolated anonymous session via
+  `GET /api/session` (see [F.2](#f2-middleware)) instead of redirecting to
+  `/login`. Top-level tools include
   `/app/knowledge-bases`, `/app/research`, `/app/studio`, `/app/study`,
   `/app/evaluation`, `/app/leaderboards`, `/app/datasets`, `/app/prompts`,
   `/app/planner`, `/app/experiment-builder`, `/app/rag-chat`, `/app/copilot`,
@@ -254,6 +258,14 @@ The App Router is organised into three groups plus the API:
 3. Matches everything except static assets.
 
 It does **not** enforce authentication. Route/action-level checks do that.
+
+Authentication is never a hard barrier: the `/app` layout resolves a session
+and, when there is none, redirects once to `GET /api/session`, which issues an
+anonymous session through the Better Auth `anonymous` plugin (isolated to the
+visitor's own auto-provisioned organization) and returns them to `/app`.
+Registered accounts are optional and only upgrade an anonymous session; the
+plugin is configured with `disableDeleteAnonymousUser` so an anonymous
+visitor's work is never destroyed on sign-up.
 
 ### F.3 Application layers
 

@@ -29,6 +29,7 @@ export interface DemoSession {
     name: string;
     role: string;
     image?: string | null;
+    isAnonymous?: boolean;
   };
 }
 

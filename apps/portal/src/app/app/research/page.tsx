@@ -16,7 +16,7 @@ export const metadata = {
 // can pick back up. Everything is scoped to the caller's project and userId.
 export default async function ResearchPage() {
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect("/api/session");
 
   let projectId: string | null = null;
   try {

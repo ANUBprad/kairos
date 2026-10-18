@@ -46,9 +46,9 @@ const detailClientSource = readFileSync(
 );
 
 describe("artifact detail route", () => {
-  it("has a server page at the canonical deep-link path with session gating", () => {
+  it("has a server page at the canonical deep-link path with session bootstrapping", () => {
     assert.match(detailPageSource, /next\/navigation/);
-    assert.match(detailPageSource, /redirect\("\/login"\)/);
+    assert.match(detailPageSource, /redirect\("\/api\/session"\)/);
     assert.match(detailPageSource, /getServerSession/);
   });
 

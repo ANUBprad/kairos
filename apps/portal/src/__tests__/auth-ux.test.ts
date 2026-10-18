@@ -41,6 +41,17 @@ describe("auth UX wiring", () => {
     }
   });
 
+  it("auth pages open the app only for authenticated non-anonymous visitors", () => {
+    const login = sourceFile("src/app/(auth)/login/page.tsx");
+    const signup = sourceFile("src/app/(auth)/signup/page.tsx");
+    for (const page of [login, signup]) {
+      assert.match(page, /getServerSession/);
+      assert.match(page, /redirect\(\s*["']\/app["']/);
+      // An anonymous session must still see the page (accounts are optional).
+      assert.match(page, /isAnonymous/, "auth pages must let anonymous sessions through");
+    }
+  });
+
   it("login and signup forms submit through the shared Better Auth client", () => {
     assert.match(loginForm, /@\/lib\/auth-client/);
     assert.match(loginForm, /authClient\.signIn\.email/);
@@ -48,9 +59,17 @@ describe("auth UX wiring", () => {
     assert.match(signupForm, /authClient\.signUp\.email/);
   });
 
-  it("the /app shell gates every route on the server session", () => {
+  it("the /app shell bootstraps an anonymous session instead of gating on login", () => {
     assert.match(appLayout, /getServerSession/);
-    assert.match(appLayout, /redirect\(\s*["']\/login["']\s*\)/);
+    assert.match(
+      appLayout,
+      /redirect\(\s*["']\/api\/session["']\s*\)/,
+      "unauthenticated /app must bootstrap an anonymous session",
+    );
+    assert.ok(
+      !/redirect\(\s*["']\/login["']\s*\)/.test(appLayout),
+      "the workspace must not gate on a sign-in screen",
+    );
   });
 
   it("the /app shell derives identity from the server session, not a hardcoded demo user", () => {

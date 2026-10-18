@@ -18,7 +18,7 @@ export default async function ArtifactDetailPage({ params, searchParams }: Props
     typeof sp.conversation === "string" ? sp.conversation : undefined;
 
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect("/api/session");
 
   const detail = await getArtifactDetailForUser(kbId, artifactId, session.user.id);
   if (!detail) notFound();

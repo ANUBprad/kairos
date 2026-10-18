@@ -13,7 +13,7 @@ export default async function StudyDashboardPage({
   const { kbId } = await params;
 
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect("/api/session");
 
   const data = await getStudyDashboardForUser(session.user.id, kbId);
   // Missing kb, wrong org, or no membership: same landing spot as the sibling

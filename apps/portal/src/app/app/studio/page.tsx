@@ -18,7 +18,7 @@ export const metadata = {
 // caller's project; nothing here reaches another tenant's artifacts.
 export default async function StudioPage() {
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect("/api/session");
 
   let projectId: string | null = null;
   try {

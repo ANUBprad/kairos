@@ -19,8 +19,15 @@ Kairos is a public-facing RAG research workbench. The threat model assumes:
 ## Authentication
 
 ### Session Management
-- Sessions are validated on every request via session middleware
-- Failed validation redirects to `/login`
+- Sessions are validated on every request server-side (layout / API handlers)
+- No account is required: a visitor with no session is issued an isolated
+  **anonymous** session via `GET /api/session`, so `/app` never redirects to a
+  sign-in wall. Accounts (email/password, optional GitHub OAuth) are optional
+  and only upgrade an anonymous session.
+- Anonymous users are isolated exactly like registered ones: each owns only its
+  own auto-provisioned organization, and cross-tenant access still 404s.
+- Anonymous users are never deleted on account linking
+  (`disableDeleteAnonymousUser`), so account-less work is never destroyed.
 - Session tokens are never exposed to client-side JavaScript
 - OAuth supported as optional social login
 
@@ -42,8 +49,11 @@ All server actions and API routes verify:
 3. **Resource existence**: Resource must exist and belong to the user's organization
 
 ### API Route Protection
-- `/app/*` routes: Protected by middleware (session cookie check)
+- `/app/*` routes: session-gated by the `/app` layout; an unauthenticated
+  visitor is bootstrapped into an anonymous session rather than blocked
 - `/api/*` routes: Protected by `getServerSession()` in each handler
+- `GET /api/session` (anonymous bootstrap) and `/api/auth/*` are public and
+  rate-limited
 - Public routes: `/`, `/login`, `/signup`, `/features`, `/capabilities`, etc.
 
 ---

@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { anonymous } from "better-auth/plugins";
 import { logger } from "@/lib/logger";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -50,7 +51,19 @@ function getAuth(): any {
           }
         : {}),
     },
-    plugins: [nextCookies()],
+    // Anonymous access is the default entry into the workspace: visitors use
+    // the app without an account. `disableDeleteAnonymousUser` guarantees an
+    // anonymous visitor's work is never destroyed when they later sign up, and
+    // since User -> Organization is an ON DELETE CASCADE, this is deliberate.
+    plugins: [
+      anonymous({
+        generateName: () => "Guest",
+        disableDeleteAnonymousUser: true,
+      }),
+      // nextCookies() must stay last so it can flush Set-Cookie into the
+      // Next.js cookie store after every other plugin has run.
+      nextCookies(),
+    ],
   });
 
   return _auth;

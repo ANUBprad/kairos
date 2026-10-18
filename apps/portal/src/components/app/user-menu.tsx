@@ -11,6 +11,8 @@ import {
   Sun,
   Moon,
   LogOut,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/app/user-avatar";
@@ -21,9 +23,10 @@ interface UserMenuProps {
   name?: string | null;
   image?: string | null;
   organizationName?: string | null;
+  isAnonymous?: boolean;
 }
 
-export function UserMenu({ email, name, image, organizationName }: UserMenuProps) {
+export function UserMenu({ email, name, image, organizationName, isAnonymous = false }: UserMenuProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -81,9 +84,11 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
               <UserAvatar image={image} name={name} email={email} size="lg" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-text-primary truncate">
-                  {name || email.split("@")[0] || "User"}
+                  {isAnonymous ? "Guest" : name || email.split("@")[0] || "User"}
                 </p>
-                <p className="text-xs text-text-tertiary truncate">{email}</p>
+                <p className="text-xs text-text-tertiary truncate">
+                  {isAnonymous ? "Not signed in" : email}
+                </p>
               </div>
             </div>
             {organizationName && (
@@ -134,13 +139,34 @@ export function UserMenu({ email, name, image, organizationName }: UserMenuProps
           </div>
 
           <div className="border-t border-border pt-1">
-            <button
-              onClick={handleSignOut}
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-            >
-              <LogOut size={16} />
-              Sign out
-            </button>
+            {isAnonymous ? (
+              <>
+                <Link
+                  href="/signup"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-brand transition-colors hover:bg-surface-hover"
+                >
+                  <UserPlus size={16} />
+                  Create an account
+                </Link>
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                >
+                  <LogIn size={16} />
+                  Sign in
+                </Link>
+              </>
+            ) : (
+              <button
+                onClick={handleSignOut}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+              >
+                <LogOut size={16} />
+                Sign out
+              </button>
+            )}
           </div>
         </div>
       )}

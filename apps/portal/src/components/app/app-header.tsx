@@ -11,9 +11,10 @@ interface AppHeaderProps {
   name: string | null;
   image: string | null;
   organizationName: string | null;
+  isAnonymous: boolean;
 }
 
-export function AppHeader({ email, name, image, organizationName }: AppHeaderProps) {
+export function AppHeader({ email, name, image, organizationName, isAnonymous }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border bg-bg/85 px-3 backdrop-blur-md sm:gap-4 sm:px-6">
       <button
@@ -54,6 +55,7 @@ export function AppHeader({ email, name, image, organizationName }: AppHeaderPro
           name={name}
           image={image}
           organizationName={organizationName}
+          isAnonymous={isAnonymous}
         />
       </div>
     </header>

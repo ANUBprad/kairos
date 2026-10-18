@@ -10,6 +10,8 @@ export const metadata: Metadata = {
 
 export default async function LoginPage() {
   const session = await getServerSession();
-  if (session?.user?.id) redirect("/app");
+  // Anonymous visitors are allowed here: an account is optional, and this is
+  // one of the ways to upgrade an anonymous session.
+  if (session?.user?.id && !session.user.isAnonymous) redirect("/app");
   return <LoginForm />;
 }

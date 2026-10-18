@@ -19,6 +19,7 @@ model User {
   image         String?
   passwordHash  String?
   role          UserRole @default(USER)
+  isAnonymous   Boolean  @default(false)
 
   banned     Boolean   @default(false)
   banReason  String?

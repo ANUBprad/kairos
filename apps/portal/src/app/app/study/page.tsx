@@ -17,7 +17,7 @@ export const metadata = {
 // workspace where the study experience lives.
 export default async function StudyPage() {
   const session = await getServerSession();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect("/api/session");
 
   let projectId: string | null = null;
   try {

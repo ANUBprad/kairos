@@ -18,7 +18,9 @@ export default async function AppLayout({
 }) {
   const session = await getServerSession();
   if (!session?.user?.id) {
-    redirect("/login");
+    // No account required: bootstrap an isolated anonymous session instead of
+    // gating the workspace behind a sign-in screen.
+    redirect("/api/session");
   }
 
   const workspace = await getWorkspaceContext();
@@ -43,6 +45,7 @@ export default async function AppLayout({
           name={session.user.name}
           image={session.user.image ?? null}
           organizationName={organization?.name ?? null}
+          isAnonymous={Boolean(session.user.isAnonymous)}
         />
         <main id="main-content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <PageTransition>{children}</PageTransition>
