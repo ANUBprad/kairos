@@ -10,7 +10,10 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --chown=kairos:kairos . .
-ENV PYTHONPATH=/app/intelligence:/app/generated/python \
+# The engine writes retrieval telemetry relative to its working directory, and
+# /app itself is root-owned; give the non-root user a writable home for it.
+RUN install -d -o kairos -g kairos /app/telemetry
+ENV PYTHONPATH=/app:/app/intelligence:/app/generated/python \
     PYTHONPYCACHEPREFIX=/tmp/pycache \
     PYTHONDONTWRITEBYTECODE=1
 USER kairos
