@@ -131,11 +131,25 @@ jobs:
       - name: Verify container health status
         run: |
           docker compose ps --format "table {{.Service}}\t{{.Status}}"
+          # The wait above returns as soon as /health answers, but Docker only
+          # reports `healthy` once a probe passes, and these healthchecks use a
+          # 30s interval with a 30s start_period — so the status reads
+          # `starting` for up to a minute after the port opens. Wait for the
+          # status instead of sampling it once, or this fails whenever the
+          # gateway happens to open its port promptly.
           for svc in chromadb intelligence gateway; do
-            status=$(docker compose ps -q "$svc" | head -1 | xargs docker inspect --format '{{.State.Health.Status}}' 2>/dev/null || echo "unknown")
+            deadline=$((SECONDS + 120))
+            status=unknown
+            while [ "$SECONDS" -lt "$deadline" ]; do
+              status=$(docker compose ps -q "$svc" | head -1 | xargs docker inspect --format '{{.State.Health.Status}}' 2>/dev/null || echo "unknown")
+              if [ "$status" = "healthy" ]; then break; fi
+              sleep 5
+            done
             echo "$svc: $status"
             if [ "$status" != "healthy" ]; then
               echo "Service $svc is not healthy"
+              docker compose ps --format "table {{.Service}}\t{{.Status}}"
+              docker compose logs --tail 100
               exit 1
             fi
           done
