@@ -82,7 +82,10 @@ jobs:
       # network before the stack starts. Mirrors the evaluate job.
       - name: Start Ollama and pull llama3
         run: |
-          docker network create kairos-network 2>/dev/null || true
+          # Compose has to create kairos-network itself: a bare
+          # `docker network create` makes a network without compose's labels,
+          # and `docker compose up` refuses to adopt it.
+          docker compose up -d --no-start chromadb
           docker run -d --name ollama --network kairos-network ollama/ollama
           for i in $(seq 1 30); do
             if docker exec ollama ollama list > /dev/null 2>&1; then
