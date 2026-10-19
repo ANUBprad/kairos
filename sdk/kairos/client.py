@@ -91,6 +91,10 @@ class KairosClient:
             raw = self._post_multipart(
                 "/v1/ingest",
                 files={"file": (path.name, f, _mime_type(path))},
+                # The gateway requires the field (its own upload form and the
+                # load-test client send it too). 0 is the proto's DEFAULT
+                # strategy, which the chunker treats as fixed-size splitting.
+                data={"chunking_strategy": "0"},
             )
         return IngestResponse.model_validate(raw).job_id
 
