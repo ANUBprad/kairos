@@ -153,7 +153,11 @@ jobs:
           KAIROS_E2E_SECRET: ${{ env.KAIROS_SECRET }}
           KAIROS_E2E: "1"
         run: |
-          python -m pytest tests/e2e/test_full_pipeline.py -v --tb=short -x
+          # --noconftest: this job installs only the SDK, and tests/conftest.py
+          # imports the repo's own intelligence stack (pydantic-settings,
+          # chromadb, ...). Its autouse fixture patches Settings for in-process
+          # unit tests; these tests only speak HTTP to the running stack.
+          python -m pytest tests/e2e/test_full_pipeline.py -v --tb=short -x --noconftest
 
       - name: Collect logs on failure
         if: failure()
