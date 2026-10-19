@@ -53,6 +53,9 @@ jobs:
       KAIROS_OLLAMA_URL: http://ollama:11434
       KAIROS_OLLAMA_MODEL_NAME: llama3
       KAIROS_EMBEDDING_MODEL: local
+      # The E2E tests assert generated answers, and llama3 on a shared 4-core
+      # runner needs longer than the 30s client default for an 8B generation.
+      KAIROS_PROVIDER_TIMEOUT_SECONDS: "180"
       KAIROS_SECRET: test-secret-e2e
       KAIROS_API_SECRET: test-api-secret-e2e
       CHROMA_STORE_HOST: chromadb
@@ -67,9 +70,10 @@ jobs:
       - name: Prepare test environment
         run: |
           cp .env.example .env
-          printf '\nKAIROS_LLM_PROVIDER=%s\nKAIROS_OLLAMA_URL=%s\nKAIROS_OLLAMA_MODEL_NAME=%s\nKAIROS_EMBEDDING_MODEL=%s\nKAIROS_SECRET=%s\nKAIROS_API_SECRET=%s\nCHROMA_STORE_HOST=%s\nCHROMA_STORE_PORT=%s\nINTELLIGENCE_HOST=%s\nINTELLIGENCE_PORT=%s\nGATEWAY_PORT=%s\n' \
+          printf '\nKAIROS_LLM_PROVIDER=%s\nKAIROS_OLLAMA_URL=%s\nKAIROS_OLLAMA_MODEL_NAME=%s\nKAIROS_EMBEDDING_MODEL=%s\nKAIROS_PROVIDER_TIMEOUT_SECONDS=%s\nKAIROS_SECRET=%s\nKAIROS_API_SECRET=%s\nCHROMA_STORE_HOST=%s\nCHROMA_STORE_PORT=%s\nINTELLIGENCE_HOST=%s\nINTELLIGENCE_PORT=%s\nGATEWAY_PORT=%s\n' \
             "$KAIROS_LLM_PROVIDER" "$KAIROS_OLLAMA_URL" "$KAIROS_OLLAMA_MODEL_NAME" \
-            "$KAIROS_EMBEDDING_MODEL" "$KAIROS_SECRET" "$KAIROS_API_SECRET" \
+            "$KAIROS_EMBEDDING_MODEL" "$KAIROS_PROVIDER_TIMEOUT_SECONDS" "$KAIROS_SECRET" \
+            "$KAIROS_API_SECRET" \
             "$CHROMA_STORE_HOST" "$CHROMA_STORE_PORT" "$INTELLIGENCE_HOST" "$INTELLIGENCE_PORT" "$GATEWAY_PORT" >> .env
 
       - name: Build core stack images
