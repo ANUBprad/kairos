@@ -13,6 +13,7 @@ from __future__ import annotations
 import statistics
 import time
 from dataclasses import dataclass
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -581,6 +582,48 @@ class TestMultiHopRetrieverMocked:
         )
         with pytest.raises(ValueError):
             retriever.retrieve_top_k(ns, top_k=3, query="test")
+
+    def test_empty_plan_keeps_first_hop_chunks(self, populated_chroma):
+        """llama3 answers `{}` in json_object mode; that must not lose the
+        chunks the first retrieval already found."""
+        ns, ec = populated_chroma
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content="{}"))]
+        )
+        retriever = MultiHopRetriever(
+            embedder=ec.embedder,
+            store=ec.store,
+            client=mock_client,
+            model_name="test",
+            model_provider="ollama",
+            num_hops=3,
+        )
+
+        results = retriever.retrieve_top_k(ns, top_k=3, query="Apple revenue")
+
+        assert len(results) > 0
+        # Stopped planning instead of retrying the unusable answer.
+        assert mock_client.chat.completions.create.call_count == 1
+
+    def test_unparsed_plan_keeps_first_hop_chunks(self, populated_chroma):
+        ns, ec = populated_chroma
+        mock_client = MagicMock()
+        unparsed = MagicMock()
+        unparsed.parsed = None
+        mock_client.models.generate_content.return_value = unparsed
+        retriever = MultiHopRetriever(
+            embedder=ec.embedder,
+            store=ec.store,
+            client=mock_client,
+            model_name="test",
+            model_provider="gemini",
+            num_hops=3,
+        )
+
+        results = retriever.retrieve_top_k(ns, top_k=3, query="Apple revenue")
+
+        assert len(results) > 0
 
 
 # ============================================================================

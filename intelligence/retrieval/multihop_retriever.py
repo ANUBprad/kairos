@@ -1,10 +1,13 @@
-from typing import Union, Literal
+import logging
+from typing import Union, Literal, Optional
 from intelligence.embeddings.base_embedder import BaseEmbedder
 from openai import OpenAI
 from intelligence.vectorstore.chroma_store import ChromaStore
 from .retriever import BaseRetriever
 from pydantic import BaseModel, ValidationError
 from google import genai
+
+logger = logging.getLogger(__name__)
 
 
 class MultiHopResponseSchema(BaseModel):
@@ -70,6 +73,13 @@ class MultiHopRetriever(BaseRetriever):
                     f"Unable to generate response in Multi Hop retriever. ERROR: {e}"
                 ) from e
 
+            if hop_data is None:
+                # The planner answered with nothing usable (llama3 replies
+                # `{}` to this prompt in json_object mode). Hops only enrich
+                # the retrieval that already ran above, so stop hopping and
+                # keep those chunks instead of failing the whole query.
+                break
+
             if hop_data.is_enough:
                 break
 
@@ -92,7 +102,7 @@ class MultiHopRetriever(BaseRetriever):
 
         return cleaned_chunks[:max_total_chunks]
 
-    def _llm_response(self, prompt: str):
+    def _llm_response(self, prompt: str) -> Optional[MultiHopResponseSchema]:
         if self.llm_provider == "gemini":
             try:
                 # noinspection PyTypeChecker
@@ -115,12 +125,13 @@ class MultiHopRetriever(BaseRetriever):
 
             try:
                 # noinspection PyTypeChecker
-                json_response: MultiHopResponseSchema = answer.parsed
-                return json_response
+                json_response: Optional[MultiHopResponseSchema] = answer.parsed
             except (AttributeError, ValidationError, ValueError) as e:
-                raise ValueError(
-                    f"Unable to parse the data in Multi Hop Retriever. ERROR: {e}"
-                ) from e
+                logger.warning("Multi-hop planner returned no usable plan: %s", e)
+                return None
+            if json_response is None:
+                logger.warning("Multi-hop planner returned no usable plan")
+            return json_response
 
         elif self.llm_provider in ["openai", "ollama"]:
             try:
@@ -140,13 +151,11 @@ class MultiHopRetriever(BaseRetriever):
                 ) from e
 
             try:
-                json_response = MultiHopResponseSchema.model_validate_json(
+                return MultiHopResponseSchema.model_validate_json(
                     str(answer.choices[0].message.content)
                 )
-                return json_response
             except (AttributeError, ValidationError, ValueError) as e:
-                raise ValueError(
-                    f"Unable to generate answer in Multi Hop Retriever, ERROR: {e}"
-                ) from e
+                logger.warning("Multi-hop planner returned no usable plan: %s", e)
+                return None
         else:
             raise ValueError("Unidentified model provider given")
