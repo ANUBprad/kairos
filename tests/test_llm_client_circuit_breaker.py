@@ -1,11 +1,12 @@
 """Tests for how the LLM client is built and where the circuit breaker sits.
 
-Two things are pinned here. First, the wrapper has to work for two client
+Three things are pinned here. First, the wrapper has to work for two client
 shapes: Gemini (``models.generate_content``) and the OpenAI-compatible clients
 used by the ``openai``, ``groq`` and ``ollama`` providers
 (``chat.completions.create``). Second, every client must be constructible
 without ambient credentials: the SDK refuses to build an ``OpenAI`` client when
-it finds no key at all.
+it finds no key at all. Third, the Ollama client's base URL must point at the
+``/v1`` routes Ollama actually serves.
 """
 
 from __future__ import annotations
@@ -96,6 +97,55 @@ def test_ollama_provider_builds_its_client_without_openai_api_key(
     assert model_name == "llama3"
     assert llm_client is not None
     assert client.api_key == "ollama"
+
+
+def test_ollama_url_is_normalized_to_the_openai_v1_routes() -> None:
+    """``KAIROS_OLLAMA_URL`` is the bare server root; the SDK needs ``/v1``.
+
+    The SDK joins request paths onto the base verbatim, so a bare
+    ``http://host:11434`` sends every chat call to ``/chat/completions`` —
+    a route Ollama does not serve. Go's default mux answers
+    ``404 page not found`` for it, and the LLM circuit breaker opens after
+    five of those, which is how every entry of the evaluate job failed.
+    """
+    from intelligence.server.config import ServerConfig
+
+    assert (
+        ServerConfig(ollama_url="http://localhost:11434").ollama_url
+        == "http://localhost:11434/v1"
+    )
+    assert (
+        ServerConfig(ollama_url="http://ollama:11434/").ollama_url
+        == "http://ollama:11434/v1"
+    )
+    assert (
+        ServerConfig(ollama_url="http://ollama:11434/v1").ollama_url
+        == "http://ollama:11434/v1"
+    )
+    assert ServerConfig(ollama_url=None).ollama_url is None
+
+
+def test_ollama_client_resolves_chat_calls_to_the_served_route(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The built client must post to /v1/chat/completions, not /chat/completions."""
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    from intelligence.evaluation.factory import _build_llm_client
+    from intelligence.server.config import ServerConfig
+
+    cfg = ServerConfig(
+        llm_provider="ollama",
+        ollama_url="http://localhost:11434",
+        ollama_model_name="llama3",
+    )
+    client, _, _ = _build_llm_client(cfg)
+
+    assert str(client.base_url).rstrip("/") == "http://localhost:11434/v1"
+    assert (
+        client._prepare_url("/chat/completions")
+        == "http://localhost:11434/v1/chat/completions"
+    )
 
 
 def test_every_openai_client_is_built_with_an_api_key() -> None:

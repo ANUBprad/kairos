@@ -76,6 +76,17 @@ class ServerConfig:
     metrics_enabled: bool = True
     metrics_port: int = 8001
 
+    def __post_init__(self) -> None:
+        # KAIROS_OLLAMA_URL is the bare server root, but the OpenAI SDK joins
+        # request paths onto its base verbatim: without the /v1 prefix every
+        # chat call lands on /chat/completions, a route Ollama does not serve.
+        # Go's default mux answers "404 page not found" for it, and after five
+        # of those the LLM circuit breaker opens - which is how every entry in
+        # the evaluate job failed.
+        if self.ollama_url:
+            base = self.ollama_url.rstrip("/")
+            self.ollama_url = base if base.endswith("/v1") else base + "/v1"
+
     @classmethod
     def from_env(cls) -> ServerConfig:
         """Create ServerConfig by reading the current environment.
