@@ -163,31 +163,33 @@ class MetricsInterceptor(grpc.ServerInterceptor):
 
     def intercept_service(self, continuation, handler_call_details):
         method = handler_call_details.method
+        handler = continuation(handler_call_details)
 
-        def wrapper(behavior, request_streaming, response_streaming):
-            original = behavior
-            if not response_streaming:
+        # ``handler`` is an ``RpcMethodHandler`` namedtuple: ``unary_unary`` is a
+        # field holding the servicer callable, not a method that wraps one.
+        # Calling it as a method raised ``TypeError`` inside the interceptor
+        # pipeline, which gRPC reports as "Error in service handler!" - every
+        # RPC failed while metrics were enabled.
+        if handler is None or handler.unary_unary is None:
+            return handler
 
-                def new_behavior(request, context):
-                    active_connections.inc()
-                    try:
-                        with request_duration_seconds.labels(method=method).time():
-                            response = original(request, context)
-                            requests_total.labels(method=method, status="ok").inc()
-                            return response
-                    except Exception:
-                        requests_total.labels(method=method, status="error").inc()
-                        raise
-                    finally:
-                        active_connections.dec()
+        original = handler.unary_unary
 
-                return new_behavior
-            return original
+        def new_behavior(request, context):
+            active_connections.inc()
+            try:
+                with request_duration_seconds.labels(method=method).time():
+                    response = original(request, context)
+                    requests_total.labels(method=method, status="ok").inc()
+                    return response
+            except Exception:
+                requests_total.labels(method=method, status="error").inc()
+                raise
+            finally:
+                active_connections.dec()
 
-        return continuation(handler_call_details).unary_unary(
-            wrapper(
-                continuation(handler_call_details).unary_unary,
-                False,
-                False,
-            )
+        return grpc.unary_unary_rpc_method_handler(
+            new_behavior,
+            request_deserializer=handler.request_deserializer,
+            response_serializer=handler.response_serializer,
         )

@@ -177,8 +177,8 @@ def _create_embedder(cfg: ServerConfig):
             cache = EmbeddingCache(
                 maxsize=cfg.cache_maxsize,
                 ttl_seconds=cfg.cache_ttl_seconds,
-                on_hit=lambda: cache_hits_total.labels(cache="embedding").inc(),
-                on_miss=lambda: cache_misses_total.labels(cache="embedding").inc(),
+                on_hit=lambda: cache_hits_total.labels(cache_name="embedding").inc(),
+                on_miss=lambda: cache_misses_total.labels(cache_name="embedding").inc(),
             )
         else:
             cache = EmbeddingCache(

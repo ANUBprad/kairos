@@ -66,10 +66,79 @@ class TestMetricsDefinitions:
         )
 
 
+class TestMetricsLabelWiring:
+    def test_embedder_cache_callbacks_match_declared_labels(self) -> None:
+        """Cache callbacks must use the label names the counters declare.
+
+        ``prometheus_client`` raises ``ValueError('Incorrect label names')`` on
+        a mismatch, which aborts every retrieval instead of looking like a
+        metrics bug, so pin the wiring through the real factory.
+        """
+        from intelligence.server import grpc_server
+        from intelligence.server.config import ServerConfig
+
+        class _FakeLocalEmbedder:
+            def embed(self, text: str) -> list[float]:
+                return [0.0]
+
+            def embed_batch(self, texts: list[str]) -> list[list[float]]:
+                return [[0.0] for _ in texts]
+
+        cfg = ServerConfig()
+        assert cfg.metrics_enabled
+        with patch.object(grpc_server, "LocalEmbedder", _FakeLocalEmbedder):
+            embedder = grpc_server._create_embedder(cfg)
+
+        label = {"cache_name": "embedding"}
+        hits_before = cache_hits_total.labels(**label)._value.get()
+        misses_before = cache_misses_total.labels(**label)._value.get()
+
+        embedder.embed("metrics-label-check")
+        embedder.embed("metrics-label-check")
+
+        assert cache_misses_total.labels(**label)._value.get() == misses_before + 1
+        assert cache_hits_total.labels(**label)._value.get() == hits_before + 1
+
+
 class TestMetricsInterceptor:
     def test_interceptor_creates_wrapper(self) -> None:
         interceptor = MetricsInterceptor()
         assert interceptor is not None
+
+    def test_interceptor_serves_unary_calls(self) -> None:
+        """A real unary RPC must pass through the interceptor and be counted.
+
+        ``RpcMethodHandler.unary_unary`` is a field holding the servicer
+        callable, not a wrapper method. Treating it as a method raised
+        ``TypeError`` inside gRPC's interceptor pipeline, so every RPC on a
+        metrics-enabled server failed with "Error in service handler!".
+        """
+        from concurrent import futures
+
+        import grpc
+        from grpc_health.v1 import health, health_pb2, health_pb2_grpc
+
+        server = grpc.server(
+            futures.ThreadPoolExecutor(max_workers=2),
+            interceptors=[MetricsInterceptor()],
+        )
+        servicer = health.HealthServicer()
+        servicer.set("", health_pb2.HealthCheckResponse.SERVING)
+        health_pb2_grpc.add_HealthServicer_to_server(servicer, server)
+        port = server.add_insecure_port("127.0.0.1:0")
+        server.start()
+        label = {"method": "/grpc.health.v1.Health/Check", "status": "ok"}
+        ok_before = requests_total.labels(**label)._value.get()
+        try:
+            with grpc.insecure_channel(f"127.0.0.1:{port}") as channel:
+                response = health_pb2_grpc.HealthStub(channel).Check(
+                    health_pb2.HealthCheckRequest(), timeout=10
+                )
+        finally:
+            server.stop(None)
+
+        assert response.status == health_pb2.HealthCheckResponse.SERVING
+        assert requests_total.labels(**label)._value.get() == ok_before + 1
 
     def test_interceptor_counts_requests(self) -> None:
 
