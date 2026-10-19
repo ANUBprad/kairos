@@ -95,7 +95,7 @@ Privacy-friendly analytics via PostHog (self-hostable).
 
 **Environment variables:**
 - `NEXT_PUBLIC_POSTHOG_KEY` — PostHog project API key
-- `NEXT_PUBLIC_POSTHog_HOST` — PostHog instance URL (default: `https://us.i.posthog.com`)
+- `NEXT_PUBLIC_POSTHOG_HOST` — PostHog instance URL (default: `https://us.i.posthog.com`)
 
 **Events tracked:**
 - `user_signed_up` (email/github)
