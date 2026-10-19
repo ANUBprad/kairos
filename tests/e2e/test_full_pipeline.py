@@ -87,7 +87,8 @@ X-Namespace header.
 
 
 def _unique_namespace() -> str:
-    return f"kairos-e2e-{uuid.uuid4().hex[:12]}"
+    # The gateway's Namespace middleware accepts only [A-Za-z0-9]{1,63}.
+    return f"kairose2e{uuid.uuid4().hex[:12]}"
 
 
 def _poll_job(client: KairosClient, job_id: str) -> dict:
@@ -237,7 +238,7 @@ class TestFailureCases:
         client = KairosClient(
             base_url=GATEWAY_URL,
             secret="wrong-secret-12345",
-            namespace="kairos-e2e-fail",
+            namespace="kairose2efail",
         )
         try:
             with pytest.raises(AuthenticationError):
