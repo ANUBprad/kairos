@@ -564,7 +564,7 @@ tables). Access checks verify membership in that chain; see
 | Route | Purpose | Auth |
 |-------|---------|------|
 | `GET /api/health`, `/api/health/ready`, `/api/health/live` | health + probes | none |
-| `GET /api/metrics` | app metrics + deployment metadata | none |
+| `GET /api/metrics` | app metrics + deployment metadata | session |
 | `ALL /api/auth/[...all]` | better-auth handler | n/a |
 | `POST /api/ai/chat` | streaming RAG chat | session |
 | `GET/POST /api/ai/conversations[/id]` | conversation CRUD | session |
@@ -730,12 +730,14 @@ OAuth, AI, analytics (public). See `.env.example` for the authoritative list.
 
 ### L.2 Partial / dormant
 
-- **In-memory metrics** (`lib/telemetry/metrics.ts`) have no active call sites,
-  and `/api/metrics` consequently reports no live counters. `docs/OBSERVABILITY.md`
-  documents a metric catalogue that the code does not currently populate. This is
-  a documentation-vs-reality gap, tracked as risk [Q3](#q-risks-and-gaps).
+- **In-memory metrics** (`lib/telemetry/metrics.ts`) are fed by chat turns:
+  `/api/ai/chat` records `ai_chat_requests_total`, `ai_chat_errors_total` and
+  the `ai_chat_generation_ms` histogram, and `GET /api/metrics` (session-gated)
+  serves them with deployment metadata. The series set is deliberately small
+  and fixed — no user content and no free-text labels. `docs/OBSERVABILITY.md`
+  documents the series that are actually emitted.
 - Metrics are explicitly **in-memory and reset on restart**; there is no
-  persistent Portal metrics sink wired to Prometheus today.
+  persistent Portal metrics sink wired to Prometheus today (risk [Q3](#q-risks-and-gaps)).
 
 ### L.3 Failure behaviour worth knowing
 
@@ -932,9 +934,12 @@ Prioritised. Each cites where to look.
    `apps/portal/prisma/schema.prisma` lines 214–297.
 
 **P2 — Architectural ambiguity.**
-3. **Dormant in-memory metrics.** `lib/telemetry/metrics.ts` has no call sites;
-   `/api/metrics` does not populate the catalogue in `OBSERVABILITY.md`.
-   *Impact:* operators expect metrics that are not emitted.
+3. **In-memory metrics reset on restart.** The chat-turn counters and latency
+   histogram fed by `/api/ai/chat` are the only Portal series emitted, and
+   `/api/metrics` is in-memory with no persistent sink, so a restart zeroes
+   them. *Impact:* operators cannot graph long-window trends from the endpoint
+   alone. (The earlier gap — a `OBSERVABILITY.md` catalogue of series the code
+   never emitted — was corrected in the same pass.)
 4. **Two quality-gate systems.** `lib/evaluation/quality-gate.ts` (wired to
    `ci-regression.yml`) and the DB-backed `lib/quality-gates.ts` +
    `lib/actions/quality-gates.ts` + `/app/quality-gates` (self-labelled
