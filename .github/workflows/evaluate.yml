@@ -22,6 +22,9 @@ jobs:
       KAIROS_OLLAMA_URL: http://localhost:11434
       KAIROS_OLLAMA_MODEL_NAME: llama3
       KAIROS_EMBEDDING_MODEL: local
+      # llama3 on a shared runner needs longer than the 30s client default to
+      # finish a generation once retrieval returns chunks.
+      KAIROS_PROVIDER_TIMEOUT_SECONDS: "180"
       KAIROS_EVAL_NAMESPACE: ci-eval
       KAIROS_EVAL_MAX_ENTRIES: "6"
 
@@ -62,6 +65,12 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install --no-deps -e sdk 2>/dev/null || true
+
+      - name: Seed the evaluation namespace
+        run: |
+          # Nothing else creates this namespace, and the golden queries need a
+          # non-empty collection to retrieve from.
+          python scripts/seed_eval_corpus.py --namespace "$KAIROS_EVAL_NAMESPACE"
 
       - name: Run evaluation and create baseline
         run: |
