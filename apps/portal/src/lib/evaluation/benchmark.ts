@@ -29,6 +29,7 @@ export async function createBenchmarkDataset(data: {
   source?: string;
   knowledgeBaseId?: string;
   organizationId?: string;
+  createdById?: string;
   questions: Array<{
     question: string;
     expectedAnswer?: string;
@@ -44,6 +45,7 @@ export async function createBenchmarkDataset(data: {
       source: data.source,
       knowledgeBaseId: data.knowledgeBaseId,
       organizationId: data.organizationId,
+      createdById: data.createdById,
       questions: {
         create: data.questions.map((q) => ({
           question: q.question,
@@ -124,6 +126,8 @@ async function createVersionRow(
     source: string | null;
     tags: string[];
     knowledgeBaseId: string | null;
+    organizationId: string | null;
+    createdById: string | null;
     questions: VersionableQuestions;
   },
   hash: string,
@@ -147,6 +151,8 @@ async function createVersionRow(
         contentHash: hash,
         parentVersionId: parent.id,
         knowledgeBaseId: parent.knowledgeBaseId,
+        organizationId: parent.organizationId,
+        createdById: parent.createdById,
         questions: {
           create: parent.questions.map((q) => ({
             question: q.question,
@@ -275,6 +281,7 @@ async function createSnapshotVersion(
     tags: string[];
     knowledgeBaseId: string | null;
     organizationId: string | null;
+    createdById: string | null;
   },
   hash: string,
   input: PublishSnapshotInput,
@@ -298,6 +305,7 @@ async function createSnapshotVersion(
         parentVersionId: root.id,
         knowledgeBaseId: input.knowledgeBaseId ?? root.knowledgeBaseId,
         organizationId: input.organizationId ?? root.organizationId,
+        createdById: root.createdById,
         questions: { create: snapshotQuestions(input.questions) },
       },
       include: { questions: true },
@@ -322,19 +330,15 @@ export async function listBenchmarkDatasetVersions(datasetId: string) {
   return { rootId, versions };
 }
 
-export async function getBenchmarkDatasets(userId?: string) {
+export async function getBenchmarkDatasets(userId: string) {
   return prisma.benchmarkDataset.findMany({
-    ...(userId
-      ? {
-          where: {
-            OR: [
-              { knowledgeBaseId: null, organizationId: null },
-              { knowledgeBase: { project: { organization: { members: { some: { userId } } } } } },
-              { organization: { members: { some: { userId } } } },
-            ],
-          },
-        }
-      : {}),
+    where: {
+      OR: [
+        { knowledgeBase: { project: { organization: { members: { some: { userId } } } } } },
+        { organization: { members: { some: { userId } } } },
+        { knowledgeBaseId: null, organizationId: null, createdById: userId },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { questions: true } } },
   });
@@ -359,7 +363,16 @@ export async function getBenchmarkDataset(id: string) {
   return { ...detail, runs };
 }
 
+async function failStaleBenchmarkRuns() {
+  const staleBefore = new Date(Date.now() - 15 * 60 * 1000);
+  await prisma.benchmarkRun.updateMany({
+    where: { status: "running", startedAt: { lt: staleBefore } },
+    data: { status: "failed", completedAt: new Date() },
+  });
+}
+
 export async function getBenchmarkRuns(datasetId: string, userId?: string) {
+  await failStaleBenchmarkRuns();
   if (userId) {
     await assertDatasetAccess(datasetId, userId);
   }
@@ -376,6 +389,7 @@ export async function getBenchmarkRuns(datasetId: string, userId?: string) {
 }
 
 export async function getBenchmarkRun(runId: string) {
+  await failStaleBenchmarkRuns();
   return prisma.benchmarkRun.findUnique({
     where: { id: runId },
     include: {
@@ -483,11 +497,13 @@ export async function runBenchmark(
     latencySearchMs: number | null;
     totalLatencyMs: number | null;
     configSnapshot: unknown;
+    error?: unknown;
   }> = [];
 
   let promptTokensTotal = 0;
   let completionTokensTotal = 0;
   let usageComplete = true;
+  let failedQuestions = 0;
 
   for (let i = 0; i < target.questions.length; i++) {
     const q = target.questions[i];
@@ -498,19 +514,20 @@ export async function runBenchmark(
       const retrievalResult = await runRetrieval(knowledgeBaseId, q.question, config, true);
 
       const allChunkIds = retrievalResult.chunks.map((c) => c.id);
-      const relevantChunkIds = q.referenceDocId
-        ? retrievalResult.chunks.filter((c) => c.documentId === q.referenceDocId).map((c) => c.id)
+      const relevantChunks = q.referenceDocId
+        ? await prisma.documentChunk.findMany({
+            where: { documentId: q.referenceDocId, document: { knowledgeBaseId } },
+            select: { id: true },
+          })
         : [];
-
-      const retrievalMetrics = calculateRetrievalMetrics(
-        allChunkIds,
-        relevantChunkIds.length > 0 ? relevantChunkIds : allChunkIds.slice(0, Math.min(2, allChunkIds.length)),
-        config.topK,
-      );
+      const retrievalMetrics = relevantChunks.length > 0
+        ? calculateRetrievalMetrics(allChunkIds, relevantChunks.map((chunk) => chunk.id), config.topK)
+        : null;
 
       const contexts = retrievalResult.chunks.map((c) => c.content);
 
       let generatedAnswer = "";
+      let generationFailed = false;
       try {
         const provider = getAIProvider((config.embeddingProvider as "openai" | "gemini") || "openai");
         const contextStr = contexts.map((c, i) => `[Source ${i + 1}] ${c}`).join("\n\n");
@@ -536,14 +553,18 @@ export async function runBenchmark(
       } catch {
         generatedAnswer = "";
         usageComplete = false;
+        generationFailed = true;
+        failedQuestions++;
       }
 
-      const generationMetrics = calculateGenerationMetrics({
-        question: q.question,
-        generatedAnswer,
-        retrievedContexts: contexts,
-        expectedAnswer: q.expectedAnswer || undefined,
-      });
+      const generationMetrics = generatedAnswer
+        ? calculateGenerationMetrics({
+            question: q.question,
+            generatedAnswer,
+            retrievedContexts: contexts,
+            expectedAnswer: q.expectedAnswer || undefined,
+          })
+        : null;
 
       results.push({
         questionId: q.id,
@@ -557,11 +578,27 @@ export async function runBenchmark(
         latencySearchMs: retrievalResult.metrics?.vectorSearchMs ?? null,
         totalLatencyMs: retrievalResult.latencyMs,
         configSnapshot: config as never,
+        error: generationFailed ? { message: "Answer generation failed" } : undefined,
       });
 
-      onProgress?.({ current: i + 1, total: target.questions.length, question: q.question, status: "completed" });
+      onProgress?.({ current: i + 1, total: target.questions.length, question: q.question, status: generationFailed ? "error" : "completed", ...(generationFailed ? { error: "Answer generation failed" } : {}) });
     } catch (err) {
       usageComplete = false;
+      failedQuestions++;
+      results.push({
+        questionId: q.id,
+        runId: run.id,
+        retrievedChunkIds: "",
+        retrievedChunks: [],
+        generatedAnswer: null,
+        retrievalMetrics: null,
+        generationMetrics: null,
+        latencyEmbeddingMs: null,
+        latencySearchMs: null,
+        totalLatencyMs: null,
+        configSnapshot: config as never,
+        error: { message: err instanceof Error ? err.message : "Question evaluation failed" },
+      });
       onProgress?.({ current: i + 1, total: target.questions.length, question: q.question, status: "error", error: String(err) });
     }
   }
@@ -571,8 +608,8 @@ export async function runBenchmark(
   }
 
   const allRetrievalMetrics = results
-    .map((r) => r.retrievalMetrics as { recallAtK: number; precisionAtK: number; hitRate: number; meanReciprocalRank: number; ndcg: number; k: number })
-    .filter(Boolean);
+    .map((r) => r.retrievalMetrics as { recallAtK: number; precisionAtK: number; hitRate: number; meanReciprocalRank: number; ndcg: number; k: number } | null)
+    .filter((metric): metric is NonNullable<typeof metric> => metric !== null);
   const allGenerationMetrics = results
     .map((r) => r.generationMetrics as { faithfulness: number; contextPrecision: number; contextRecall: number; answerRelevancy: number })
     .filter(Boolean);
@@ -611,9 +648,9 @@ export async function runBenchmark(
   await prisma.benchmarkRun.update({
     where: { id: run.id },
     data: {
-      status: results.length === 0 ? "failed" : "completed",
+      status: failedQuestions > 0 || results.length === 0 ? "failed" : "completed",
       completedAt: new Date(),
-      aggregatedMetrics: aggregatedMetrics as never,
+      aggregatedMetrics: { ...aggregatedMetrics, failedQuestions, completedQuestions: target.questions.length - failedQuestions } as never,
     },
   });
 
@@ -686,14 +723,15 @@ export function generateEvaluationReport(
   };
 
   const recommendations: string[] = [];
+  const hasRetrievalGroundTruth = run.results.some((result) => result.retrievalMetrics != null);
 
-  if (avgMetrics.retrieval.recallAtK < 0.7) {
+  if (hasRetrievalGroundTruth && avgMetrics.retrieval.recallAtK < 0.7) {
     recommendations.push("Increase top-K or lower similarity threshold to improve recall.");
   }
-  if (avgMetrics.retrieval.precisionAtK < 0.5) {
+  if (hasRetrievalGroundTruth && avgMetrics.retrieval.precisionAtK < 0.5) {
     recommendations.push("Increase similarity threshold or improve chunk quality to boost precision.");
   }
-  if (avgMetrics.retrieval.meanReciprocalRank < 0.6 && avgMetrics.retrieval.hitRate > 0.8) {
+  if (hasRetrievalGroundTruth && avgMetrics.retrieval.meanReciprocalRank < 0.6 && avgMetrics.retrieval.hitRate > 0.8) {
     recommendations.push("First relevant result appears late. Consider re-ranking to improve MRR.");
   }
   if (avgMetrics.generation && avgMetrics.generation.faithfulness < 0.7) {
@@ -704,13 +742,16 @@ export function generateEvaluationReport(
   }
 
   const observations: string[] = [];
+  if (!hasRetrievalGroundTruth) {
+    observations.push("Retrieval metrics are unavailable because no reference-document ground truth was supplied.");
+  }
 
-  if (avgMetrics.retrieval.hitRate > 0.9) {
+  if (hasRetrievalGroundTruth && avgMetrics.retrieval.hitRate > 0.9) {
     observations.push("System consistently finds relevant content across all queries.");
   }
-  if (avgMetrics.retrieval.precisionAtK > avgMetrics.retrieval.recallAtK) {
+  if (hasRetrievalGroundTruth && avgMetrics.retrieval.precisionAtK > avgMetrics.retrieval.recallAtK) {
     observations.push("Precision exceeds recall — the system is conservative but accurate when it retrieves.");
-  } else if (avgMetrics.retrieval.recallAtK > avgMetrics.retrieval.precisionAtK) {
+  } else if (hasRetrievalGroundTruth && avgMetrics.retrieval.recallAtK > avgMetrics.retrieval.precisionAtK) {
     observations.push("Recall exceeds precision — the system casts a wide net but includes some noise.");
   }
   if (avgMetrics.latency.totalMs < 500) {
@@ -885,6 +926,9 @@ export async function runStrategyBenchmark(
   const target = await resolveRunDataset(datasetId, { createIfMissing: false });
   if (target.questions.length === 0) throw new Error("Dataset has no questions");
   assertRunQuestionCount(target.questions.length);
+  if (!target.questions.some((question) => question.referenceDocId)) {
+    throw new Error("Strategy benchmarks require at least one question with a reference document.");
+  }
 
   const results: StrategyBenchmarkResult[] = [];
 
@@ -911,6 +955,7 @@ export async function runStrategyBenchmark(
       ndcg: number;
       latencyMs: number;
     }> = [];
+    const latencyResults: number[] = [];
 
     for (let i = 0; i < target.questions.length; i++) {
       const q = target.questions[i];
@@ -920,34 +965,34 @@ export async function runStrategyBenchmark(
         const retrievalResult = await runRetrieval(knowledgeBaseId, q.question, baseConfig, false);
 
         const allChunkIds = retrievalResult.chunks.map((c) => c.id);
-        const relevantChunkIds = q.referenceDocId
-          ? retrievalResult.chunks.filter((c) => c.documentId === q.referenceDocId).map((c) => c.id)
-          : allChunkIds.slice(0, Math.min(2, allChunkIds.length));
-
-        const metrics = calculateRetrievalMetrics(
-          allChunkIds,
-          relevantChunkIds,
-          baseConfig.topK,
-        );
-
-        questionResults.push({
-          recallAtK: metrics.recallAtK,
-          precisionAtK: metrics.precisionAtK,
-          hitRate: metrics.hitRate,
-          mrr: metrics.meanReciprocalRank,
-          ndcg: metrics.ndcg,
-          latencyMs: retrievalResult.latencyMs,
-        });
+        latencyResults.push(retrievalResult.latencyMs);
+        const relevantChunks = q.referenceDocId
+          ? await prisma.documentChunk.findMany({
+              where: { documentId: q.referenceDocId, document: { knowledgeBaseId } },
+              select: { id: true },
+            })
+          : [];
+        if (relevantChunks.length > 0) {
+          const metrics = calculateRetrievalMetrics(allChunkIds, relevantChunks.map((chunk) => chunk.id), baseConfig.topK);
+          questionResults.push({
+            recallAtK: metrics.recallAtK,
+            precisionAtK: metrics.precisionAtK,
+            hitRate: metrics.hitRate,
+            mrr: metrics.meanReciprocalRank,
+            ndcg: metrics.ndcg,
+            latencyMs: retrievalResult.latencyMs,
+          });
+        }
       } catch {
-        questionResults.push({
-          recallAtK: 0, precisionAtK: 0, hitRate: 0, mrr: 0, ndcg: 0, latencyMs: 0,
-        });
+        latencyResults.push(0);
       }
     }
 
     const n = questionResults.length;
+    if (n === 0) throw new Error("No reference-document chunks were found in the selected knowledge base.");
     const avg = (field: keyof typeof questionResults[0]) =>
-      n > 0 ? questionResults.reduce((s, r) => s + r[field], 0) / n : 0;
+      questionResults.reduce((s, r) => s + r[field], 0) / n;
+    const avgLatency = latencyResults.reduce((sum, value) => sum + value, 0) / latencyResults.length;
 
     results.push({
       strategy: strategy.name,
@@ -956,7 +1001,7 @@ export async function runStrategyBenchmark(
       avgHitRate: round(avg("hitRate")),
       avgMRR: round(avg("mrr")),
       avgNDCG: round(avg("ndcg")),
-      avgLatencyMs: round(avg("latencyMs")),
+      avgLatencyMs: round(avgLatency),
       totalQuestions: n,
     });
   }

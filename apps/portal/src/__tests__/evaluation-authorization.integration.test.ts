@@ -94,7 +94,7 @@ describe("dataset and run authorization against a real database", () => {
         select: { id: true },
       });
       const standalone = await client.benchmarkDataset.create({
-        data: { name: `standalone-${randomUUID()}`, description: "no tenant anchor", knowledgeBaseId: null },
+        data: { name: `standalone-${randomUUID()}`, description: "creator-owned dataset", knowledgeBaseId: null, createdById: memberUserId },
         select: { id: true },
       });
       const foreign = await client.benchmarkDataset.create({
@@ -118,6 +118,7 @@ describe("dataset and run authorization against a real database", () => {
         id: owned.id,
         knowledgeBaseId: kb.id,
         organizationId: null,
+        createdById: null,
       });
 
       // Authenticated non-members and members of other orgs are rejected with
@@ -139,6 +140,7 @@ describe("dataset and run authorization against a real database", () => {
         id: foreign.id,
         knowledgeBaseId: foreignKb.id,
         organizationId: null,
+        createdById: null,
       });
 
       // A forged dataset id stays rejected even for a member.
@@ -146,16 +148,15 @@ describe("dataset and run authorization against a real database", () => {
         message: "Dataset not found",
       });
 
-      // Datasets with no knowledge-base anchor keep the legacy global scope.
-      assert.deepEqual(await assertDatasetAccess(standalone.id, outsiderUserId), {
-        id: standalone.id,
-        knowledgeBaseId: null,
-        organizationId: null,
+      // Standalone datasets are private to their creator.
+      await assert.rejects(() => assertDatasetAccess(standalone.id, outsiderUserId), {
+        message: "Dataset not found",
       });
       assert.deepEqual(await assertDatasetAccess(standalone.id, memberUserId), {
         id: standalone.id,
         knowledgeBaseId: null,
         organizationId: null,
+        createdById: memberUserId,
       });
 
       // Run access follows the run dataset's tenancy.
@@ -175,7 +176,7 @@ describe("dataset and run authorization against a real database", () => {
 
       // Page-level scope helpers match assertDatasetAccess semantics for the
       // list queries used by the Evaluation and Advanced Retrieval pages:
-      // owned + standalone visible, foreign excluded.
+      // Tenant-owned visible, standalone excluded from project-only scope, foreign excluded.
       const dsScope = benchmarkDatasetScopedToProject(project.id);
       const dsList = await client.benchmarkDataset.findMany({
         where: { ...dsScope, id: { in: datasetIds } },
@@ -183,7 +184,7 @@ describe("dataset and run authorization against a real database", () => {
       });
       const dsIds = new Set(dsList.map((d) => d.id));
       assert.ok(dsIds.has(owned.id), "owned dataset visible via page scope");
-      assert.ok(dsIds.has(standalone.id), "standalone dataset visible via page scope");
+      assert.ok(!dsIds.has(standalone.id), "standalone dataset excluded from project scope");
       assert.ok(!dsIds.has(foreign.id), "foreign dataset excluded by page scope");
 
       const runScope = benchmarkRunScopedToProject(project.id);

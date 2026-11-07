@@ -60,7 +60,7 @@ export async function createDataset(data: {
       await assertKbAccess(data.knowledgeBaseId, session.user.id);
     }
 
-    const dataset = await createBenchmarkDataset(data);
+    const dataset = await createBenchmarkDataset({ ...data, createdById: session.user.id });
     revalidatePath("/app/evaluation");
     return dataset;
   } catch (error) {
@@ -99,6 +99,7 @@ export async function importJsonDataset(
     description,
     source,
     knowledgeBaseId: kbId,
+    createdById: session.user.id,
     questions: json.questions.map((q: { question: string; expected_answer?: string; expectedAnswer?: string; reference_doc_id?: string; referenceDocId?: string }) => ({
       question: q.question,
       expectedAnswer: q.expectedAnswer || q.expected_answer,
@@ -288,9 +289,9 @@ export async function getDatasetsForSelector() {
   return prisma.benchmarkDataset.findMany({
     where: {
       OR: [
-        { knowledgeBaseId: null, organizationId: null },
         { knowledgeBase: { project: { organization: { members: { some: { userId: session.user.id } } } } } },
         { organization: { members: { some: { userId: session.user.id } } } },
+        { knowledgeBaseId: null, organizationId: null, createdById: session.user.id },
       ],
     },
     select: { id: true, name: true, _count: { select: { questions: true } } },
@@ -330,9 +331,9 @@ export async function getBaselines() {
       status: "completed",
       dataset: {
         OR: [
-          { knowledgeBaseId: null, organizationId: null },
           { knowledgeBase: { project: { organization: { members: { some: { userId: session.user.id } } } } } },
           { organization: { members: { some: { userId: session.user.id } } } },
+          { knowledgeBaseId: null, organizationId: null, createdById: session.user.id },
         ],
       },
     },

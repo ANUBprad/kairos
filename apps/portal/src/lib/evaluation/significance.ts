@@ -166,12 +166,30 @@ function tPValue(t: number, df: number): number {
   return Math.min(1, Math.max(0, p));
 }
 
-function wilcoxonPValue(w: number, n: number): number {
-  const mu = n * (n + 1) / 4;
-  const sigma = Math.sqrt(n * (n + 1) * (2 * n + 1) / 24);
+function wilcoxonPValue(w: number, ranks: number[]): number {
+  const n = ranks.length;
+  if (n === 0) return 1;
+  const totalRank = ranks.reduce((sum, rank) => sum + rank, 0);
+  const observed = Math.min(w, totalRank - w);
+  if (n <= 20) {
+    const assignments = 2 ** n;
+    let extreme = 0;
+    for (let mask = 0; mask < assignments; mask++) {
+      let positiveRankSum = 0;
+      for (let bit = 0; bit < n; bit++) {
+        if (mask & (1 << bit)) positiveRankSum += ranks[bit];
+      }
+      const statistic = Math.min(positiveRankSum, totalRank - positiveRankSum);
+      if (statistic <= observed + 1e-12) extreme++;
+    }
+    return extreme / assignments;
+  }
+  const mu = totalRank / 2;
+  const variance = ranks.reduce((sum, rank) => sum + rank * rank, 0) / 4;
+  const sigma = Math.sqrt(variance);
   if (sigma === 0) return 1;
-  const z = (w - mu) / sigma;
-  return 2 * (1 - normalCDF(Math.abs(z)));
+  const z = Math.max(0, Math.abs(w - mu) - 0.5) / sigma;
+  return Math.min(1, 2 * (1 - normalCDF(z)));
 }
 
 function checkNormality(diffs: number[]): boolean {
@@ -248,7 +266,7 @@ function wilcoxonSignedRankTest(baseline: number[], treatment: number[], alpha: 
     rankIdx = j;
   }
   const w = Math.min(wPlus, wMinus);
-  const p = wilcoxonPValue(w, n);
+  const p = wilcoxonPValue(w, ranks);
   return {
     testUsed: "Wilcoxon signed-rank",
     statistic: Math.round(w * 10000) / 10000,

@@ -7,14 +7,16 @@ import { getMembership } from "@/lib/rbac";
 // a dataset's knowledge base anchors it to a project/org whose members may
 // access it. Foreign, forged, or unauthorized ids all fail as "not found" so
 // the existence of another tenant's resources cannot be probed.
-// Datasets without any tenant anchor (standalone benchmark material) have no
-// scope and remain accessible to any authenticated caller.
+// Standalone datasets are private to their creator.
 export async function assertDatasetAccess(datasetId: string, userId: string) {
   const dataset = await prisma.benchmarkDataset.findUnique({
     where: { id: datasetId },
-    select: { id: true, knowledgeBaseId: true, organizationId: true },
+    select: { id: true, knowledgeBaseId: true, organizationId: true, createdById: true },
   });
   if (!dataset) throw new Error("Dataset not found");
+  if (!dataset.knowledgeBaseId && !dataset.organizationId && dataset.createdById !== userId) {
+    throw new Error("Dataset not found");
+  }
   if (
     dataset.knowledgeBaseId &&
     !(await canAccessKnowledgeBase(userId, dataset.knowledgeBaseId))
@@ -41,14 +43,12 @@ export async function assertRunAccess(runId: string, userId: string) {
 
 // Page-level list scoping matching assertDatasetAccess: a project sees datasets
 // anchored to its knowledge bases, datasets anchored directly to its
-// organization, and standalone material with no tenant anchor at all; runs
-// follow their dataset's scope.
+// organization; standalone datasets are scoped by creator in user queries.
 export function benchmarkDatasetScopedToProject(
   projectId: string,
 ): Prisma.BenchmarkDatasetWhereInput {
   return {
     OR: [
-      { knowledgeBaseId: null, organizationId: null },
       { knowledgeBase: { projectId } },
       { organization: { projects: { some: { id: projectId } } } },
     ],
@@ -62,7 +62,6 @@ export function benchmarkRunScopedToProject(
     status: "completed",
     dataset: {
       OR: [
-        { knowledgeBaseId: null, organizationId: null },
         { knowledgeBase: { projectId } },
         { organization: { projects: { some: { id: projectId } } } },
       ],

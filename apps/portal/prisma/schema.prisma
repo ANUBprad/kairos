@@ -39,6 +39,7 @@ model User {
   conversations    Conversation[]
   experiments      Experiment[]
   benchmarkRuns    BenchmarkRun[]
+  createdBenchmarkDatasets BenchmarkDataset[] @relation("BenchmarkDatasetCreator")
   learningArtifacts LearningArtifact[]
   quizAttempts     QuizAttempt[]
   flashcardReviews FlashcardReview[]
@@ -667,6 +668,9 @@ model BenchmarkDataset {
   version     Int     @default(1)
   contentHash String? @db.VarChar(64)
 
+  createdById String?
+  createdBy   User? @relation("BenchmarkDatasetCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
   knowledgeBaseId String?
   knowledgeBase   KnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: Restrict)
 
@@ -687,6 +691,7 @@ model BenchmarkDataset {
 
   @@index([knowledgeBaseId])
   @@index([organizationId])
+  @@index([createdById])
   @@index([parentVersionId])
   @@index([version])
   @@unique([parentVersionId, version])

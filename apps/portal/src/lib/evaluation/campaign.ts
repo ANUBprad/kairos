@@ -1,6 +1,7 @@
 import type { RetrievalConfig } from "@/lib/retrieval/types";
 import { DEFAULT_EMBEDDING_MODEL, defaultEmbeddingProvider } from "@/lib/retrieval/embedding-models";
 import { runRetrieval } from "@/lib/retrieval/service";
+import { prisma } from "@/lib/prisma";
 import { resolveRunDataset } from "./benchmark";
 import { assertCampaignExperimentCount, assertRunQuestionCount } from "./limits";
 import { calculateRetrievalMetrics } from "./metrics/retrieval";
@@ -59,6 +60,9 @@ export async function runBenchmarkCampaign(
     throw new Error("Dataset not found or empty");
   }
   assertRunQuestionCount(target.questions.length);
+  if (!target.questions.some((question) => question.referenceDocId)) {
+    throw new Error("Retrieval campaigns require at least one question with a reference document.");
+  }
 
   const experiments: Array<{
     strategyLabel: string;
@@ -122,16 +126,20 @@ export async function runBenchmarkCampaign(
       try {
         const retrievalResult = await runRetrieval(config.knowledgeBaseId, q.question, baseConfig, false);
         const allChunkIds = retrievalResult.chunks.map((c) => c.id);
-        const relevantChunkIds = q.referenceDocId
-          ? retrievalResult.chunks.filter((c) => c.documentId === q.referenceDocId).map((c) => c.id)
-          : allChunkIds.slice(0, Math.min(2, allChunkIds.length));
-
-        const metrics = calculateRetrievalMetrics(allChunkIds, relevantChunkIds, baseConfig.topK);
-        perQuestionRecall.push(metrics.recallAtK);
-        perQuestionPrecision.push(metrics.precisionAtK);
-        perQuestionMRR.push(metrics.meanReciprocalRank);
-        perQuestionNDCG.push(metrics.ndcg);
-        perQuestionHitRate.push(metrics.hitRate);
+        if (q.referenceDocId) {
+          const relevantChunks = await prisma.documentChunk.findMany({
+            where: { documentId: q.referenceDocId, document: { knowledgeBaseId: config.knowledgeBaseId } },
+            select: { id: true },
+          });
+          if (relevantChunks.length > 0) {
+            const metrics = calculateRetrievalMetrics(allChunkIds, relevantChunks.map((chunk) => chunk.id), baseConfig.topK);
+            perQuestionRecall.push(metrics.recallAtK);
+            perQuestionPrecision.push(metrics.precisionAtK);
+            perQuestionMRR.push(metrics.meanReciprocalRank);
+            perQuestionNDCG.push(metrics.ndcg);
+            perQuestionHitRate.push(metrics.hitRate);
+          }
+        }
         perQuestionLatency.push(retrievalResult.latencyMs);
       } catch {
         perQuestionRecall.push(0);
@@ -143,6 +151,9 @@ export async function runBenchmarkCampaign(
       }
     }
 
+    if (perQuestionRecall.length === 0) {
+      throw new Error("No reference-document chunks were found in the selected knowledge base.");
+    }
     const avgRecall = perQuestionRecall.reduce((s, v) => s + v, 0) / perQuestionRecall.length;
     const avgPrecision = perQuestionPrecision.reduce((s, v) => s + v, 0) / perQuestionPrecision.length;
     const avgMRR = perQuestionMRR.reduce((s, v) => s + v, 0) / perQuestionMRR.length;
