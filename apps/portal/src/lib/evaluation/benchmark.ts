@@ -573,8 +573,8 @@ export async function runBenchmark(
         retrievedChunkIds: allChunkIds.join(","),
         retrievedChunks: retrievalResult.chunks as never,
         generatedAnswer,
-        retrievalMetrics: retrievalMetrics as never,
-        generationMetrics: generationMetrics as never,
+        retrievalMetrics: (retrievalMetrics ?? undefined) as never,
+        generationMetrics: (generationMetrics ?? undefined) as never,
         latencyEmbeddingMs: retrievalResult.metrics?.embeddingMs ?? null,
         latencySearchMs: retrievalResult.metrics?.vectorSearchMs ?? null,
         totalLatencyMs: retrievalResult.latencyMs,
@@ -592,8 +592,8 @@ export async function runBenchmark(
         retrievedChunkIds: "",
         retrievedChunks: [],
         generatedAnswer: null,
-        retrievalMetrics: null,
-        generationMetrics: null,
+        retrievalMetrics: undefined,
+        generationMetrics: undefined,
         latencyEmbeddingMs: null,
         latencySearchMs: null,
         totalLatencyMs: null,
@@ -610,7 +610,7 @@ export async function runBenchmark(
 
   const allRetrievalMetrics = results
     .map((r) => r.retrievalMetrics as { recallAtK: number; precisionAtK: number; hitRate: number; meanReciprocalRank: number; ndcg: number; k: number } | null)
-    .filter((metric): metric is NonNullable<typeof metric> => metric !== null);
+    .filter((metric): metric is NonNullable<typeof metric> => metric != null);
   const allGenerationMetrics = results
     .map((r) => r.generationMetrics as { faithfulness: number; contextPrecision: number; contextRecall: number; answerRelevancy: number })
     .filter(Boolean);
