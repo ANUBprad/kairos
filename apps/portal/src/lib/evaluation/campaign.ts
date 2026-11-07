@@ -142,11 +142,6 @@ export async function runBenchmarkCampaign(
         }
         perQuestionLatency.push(retrievalResult.latencyMs);
       } catch {
-        perQuestionRecall.push(0);
-        perQuestionPrecision.push(0);
-        perQuestionMRR.push(0);
-        perQuestionNDCG.push(0);
-        perQuestionHitRate.push(0);
         perQuestionLatency.push(0);
       }
     }
