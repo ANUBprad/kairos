@@ -100,16 +100,14 @@ export function serializeRegressionComparison(result: RegressionComparisonResult
   };
 }
 
-// Runs anchored to a knowledge base or organization are scoped to the API
-// key's organization; standalone datasets (no anchor at all) remain global,
-// matching the shared access boundary. Foreign, fabricated, and deleted ids
-// resolve identically, so the API cannot probe another tenant's run existence.
-function regressionRunWhere(runId: string, organizationId: string) {
+// Tenant-anchored runs are scoped to the API key's organization. Standalone
+// datasets are visible only to the user who created them.
+function regressionRunWhere(runId: string, organizationId: string, userId: string) {
   return {
 id: runId,
     dataset: {
       OR: [
-        { knowledgeBaseId: null, organizationId: null },
+        { knowledgeBaseId: null, organizationId: null, createdById: userId },
         { knowledgeBase: { project: { organizationId } } },
         { organizationId },
       ],
@@ -117,9 +115,9 @@ id: runId,
   };
 }
 
-async function resolveRegressionRun(runId: string, organizationId: string) {
+async function resolveRegressionRun(runId: string, organizationId: string, userId: string) {
   return prisma.benchmarkRun.findFirst({
-    where: regressionRunWhere(runId, organizationId),
+    where: regressionRunWhere(runId, organizationId, userId),
     include: {
       dataset: { select: { id: true, name: true } },
       results: {
@@ -178,12 +176,13 @@ function regressionRecord(row: {
 export async function trackRegressionComparison(
   input: RegressionTrackingInput,
   organizationId: string,
+  userId: string,
 ): Promise<TrackedRegression> {
   const { baselineRunId, candidateRunId } = input;
 
   const [baseline, candidate] = await Promise.all([
-    resolveRegressionRun(baselineRunId, organizationId),
-    resolveRegressionRun(candidateRunId, organizationId),
+    resolveRegressionRun(baselineRunId, organizationId, userId),
+    resolveRegressionRun(candidateRunId, organizationId, userId),
   ]);
   if (!baseline || !candidate) throw new Error("Run not found");
 

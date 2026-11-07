@@ -544,6 +544,7 @@ export async function runBenchmark(
           maxTokens: 1024,
         });
         generatedAnswer = genResponse.content;
+        if (!generatedAnswer.trim()) throw new Error("The model returned an empty answer");
         if (genResponse.usage) {
           promptTokensTotal += genResponse.usage.promptTokens ?? 0;
           completionTokensTotal += genResponse.usage.completionTokens ?? 0;

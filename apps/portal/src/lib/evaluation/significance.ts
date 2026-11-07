@@ -171,7 +171,7 @@ function wilcoxonPValue(w: number, ranks: number[]): number {
   if (n === 0) return 1;
   const totalRank = ranks.reduce((sum, rank) => sum + rank, 0);
   const observed = Math.min(w, totalRank - w);
-  if (n <= 20) {
+  if (n <= 15) {
     const assignments = 2 ** n;
     let extreme = 0;
     for (let mask = 0; mask < assignments; mask++) {

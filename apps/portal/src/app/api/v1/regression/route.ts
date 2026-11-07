@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     const { record, machine } = await trackRegressionComparison(
       { baselineRunId, candidateRunId },
       auth.organizationId,
+      auth.userId,
     );
     return NextResponse.json({ ...record, result: machine });
   } catch (error) {

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
           OR: [
             { knowledgeBase: { project: { organizationId: auth.organizationId } } },
             { organizationId: auth.organizationId },
-            { knowledgeBaseId: null, organizationId: null },
+            { knowledgeBaseId: null, organizationId: null, createdById: auth.userId },
           ],
         },
         include: {
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
           OR: [
             { knowledgeBase: { project: { organizationId: auth.organizationId } } },
             { organizationId: auth.organizationId },
-            { knowledgeBaseId: null, organizationId: null },
+            { knowledgeBaseId: null, organizationId: null, createdById: auth.userId },
           ],
         },
       }),

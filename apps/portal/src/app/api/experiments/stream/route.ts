@@ -75,14 +75,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Verify the dataset belongs to the user's organization (or is a global
-    // dataset). Without this, an authenticated user could stream benchmark
-    // questions owned by another tenant.
+    // Verify the dataset belongs to the user's organization or was created
+    // by this user. Unanchored datasets are never globally shared.
     const dataset = await prisma.benchmarkDataset.findFirst({
       where: {
         id: datasetId,
         OR: [
-          { knowledgeBaseId: null, organizationId: null },
+          { knowledgeBaseId: null, organizationId: null, createdById: session.user.id },
           {
             knowledgeBase: {
               project: {
