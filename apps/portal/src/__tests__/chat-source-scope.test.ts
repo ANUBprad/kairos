@@ -61,11 +61,11 @@ describe("filterScopedSourceIds", () => {
   it("keeps only ids that exist in the owned set", () => {
     assert.deepEqual(filterScopedSourceIds([CUID_A, CUID_B], [CUID_A]), [CUID_A]);
   });
-  it("returns undefined when no requested id is owned", () => {
-    assert.equal(filterScopedSourceIds([CUID_B], [CUID_A]), undefined);
+  it("returns an empty scope when no requested id is owned", () => {
+    assert.deepEqual(filterScopedSourceIds([CUID_B], [CUID_A]), []);
   });
-  it("returns undefined for an empty requested set", () => {
-    assert.equal(filterScopedSourceIds([], []), undefined);
+  it("preserves an empty requested set", () => {
+    assert.deepEqual(filterScopedSourceIds([], []), []);
   });
 });
 
@@ -82,8 +82,9 @@ describe("sourceScopeKey", () => {
   it("is stable regardless of order", () => {
     assert.equal(sourceScopeKey([CUID_B, CUID_A]), sourceScopeKey([CUID_A, CUID_B]));
   });
-  it("uses \"all\" for empty or null scope", () => {
+  it("uses \"all\" only when no source scope was supplied", () => {
     assert.equal(sourceScopeKey(null), "all");
-    assert.equal(sourceScopeKey([]), "all");
+    assert.equal(sourceScopeKey(undefined), "all");
+    assert.equal(sourceScopeKey([]), "");
   });
 });
