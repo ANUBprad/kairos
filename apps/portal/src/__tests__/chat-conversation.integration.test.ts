@@ -192,7 +192,7 @@ describe("chat conversations against a real database", () => {
     const ownedIds = owned.map((d) => d.id);
 
     assert.deepEqual(filterScopedSourceIds([docA1Id, docB1Id], ownedIds), [docA1Id]);
-    assert.equal(filterScopedSourceIds([docB1Id], ownedIds), undefined);
+    assert.deepEqual(filterScopedSourceIds([docB1Id], ownedIds), []);
   });
 
   it("messages persist in order with role and content", async (t) => {
