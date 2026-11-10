@@ -68,7 +68,9 @@ git clone https://github.com/ANUBprad/kairos.git
 cd kairos
 
 cp .env.example .env
-# Edit .env: set at least BETTER_AUTH_SECRET and an AI provider key
+# Next.js loads environment files from apps/portal, not the repository root.
+cp .env apps/portal/.env.local
+# Edit both files as needed; set BETTER_AUTH_SECRET and GEMINI_API_KEY.
 docker compose up -d
 
 docker compose ps   # wait until all services report healthy
@@ -86,7 +88,7 @@ The compose stack provides the local database (PostgreSQL 16 with pgvector) at `
 | Intelligence | http://localhost:28080 | Python RAG engine, gRPC (legacy v1 stack) |
 | ChromaDB | http://localhost:7777 | Vector store for the v1 stack (legacy) |
 | Prometheus | http://localhost:9090 | Metrics collection |
-| Grafana | http://localhost:3000 | Metrics dashboards — conflicts with the Portal dev server; run them one at a time |
+| Grafana | http://localhost:3001 | Metrics dashboards |
 
 **Run the portal locally**
 
