@@ -10,7 +10,7 @@ Complete configuration reference for Kairos.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5432/kairos` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@localhost:5433/kairos` |
 | `OPENAI_API_KEY` | OpenAI API key (or GEMINI_API_KEY) | `sk-...` |
 | `BETTER_AUTH_SECRET` | Auth token signing secret | Base64-encoded 32-byte string |
 
@@ -83,6 +83,9 @@ what bounds which namespaces the shared credential may select; production
 requires it to be set.
 
 ### Service Ports
+
+`POSTGRES_PORT` controls the host port published by Docker Compose for PostgreSQL. It defaults to `5433` so Kairos can run alongside other local PostgreSQL projects that use `5432`.
+
 
 | Service | Default Port | Variable |
 |---------|--------------|----------|
@@ -315,14 +318,14 @@ The compose stack serves six services. The Portal is **not** part of it — run 
 
 | Service | Build / Image | Port | Notes |
 |---------|---------------|------|-------|
-| `postgres` | `pgvector/pgvector:pg16` | 5432 | App database and production vector store — matches the default `DATABASE_URL` |
+| `postgres` | `pgvector/pgvector:pg16` | 5433 (host) → 5432 (container) | App database and production vector store — matches the default `DATABASE_URL` |
 | `chromadb` | `chromadb/chroma:1.0.15` | 7777 → 8000 | v1 vector store (legacy) |
 | `intelligence` | `docker/intelligence.Dockerfile` | 28080, 8001 | gRPC engine + metrics (legacy) |
 | `gateway` | `docker/gateway.Dockerfile` | ${GATEWAY_PORT:-8080} | HTTP API gateway (legacy) |
 | `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Metrics collection |
 | `grafana` | `grafana/grafana:10.4.2` | 3001 (host) | Dashboards (container port 3000; provisioned from `docker/grafana/`) |
 
-The stack reads its environment from `.env` (see `.env.example`). The `postgres` service provides the local development database (`localhost:5432/kairos`, user `postgres`/`postgres`); point `DATABASE_URL`/`DIRECT_URL` at any other PostgreSQL to use it instead.
+The stack reads its environment from `.env` (see `.env.example`). The `postgres` service provides the local development database (`localhost:5433/kairos`, user `postgres`/`postgres`); point `DATABASE_URL`/`DIRECT_URL` at any other PostgreSQL to use it instead.
 
 ---
 
