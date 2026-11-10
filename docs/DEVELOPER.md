@@ -192,12 +192,12 @@ database: server actions like `ingestText` resolve their session user through
 demo user rather than on a missing fixture.
 
 ```bash
-docker run -d --name kairos-portal-test -p 5432:5432 \
+docker run -d --name kairos-portal-test -p 5434:5432 \
   -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=kairos_test pgvector/pgvector:pg16
 
 cd apps/portal
-export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kairos_test
+export DATABASE_URL=postgresql://postgres:postgres@localhost:5434/kairos_test
 export KAIROS_TEST_DATABASE_URL=$DATABASE_URL
 export KAIROS_DEMO_MODE=true
 export BETTER_AUTH_SECRET=local-dev-secret
