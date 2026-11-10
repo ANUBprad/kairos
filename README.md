@@ -76,13 +76,13 @@ docker compose up -d
 docker compose ps   # wait until all services report healthy
 ```
 
-The compose stack provides the local database (PostgreSQL 16 with pgvector) at `localhost:5432/kairos`, matching the default `DATABASE_URL` in `.env.example`.
+The compose stack provides the local database (PostgreSQL 16 with pgvector) at `localhost:5433/kairos`, matching the default `DATABASE_URL` in `.env.example`. The host port defaults to `5433` (`POSTGRES_PORT` can override it), leaving the common `5432` port free for other local PostgreSQL projects.
 
 **Default services**
 
 | Service | URL / Port | Purpose |
 |---------|------------|---------|
-| PostgreSQL | localhost:5432 | App database and production vector store (pgvector) — matches the default `DATABASE_URL` |
+| PostgreSQL | localhost:5433 | App database and production vector store (pgvector) — matches the default `DATABASE_URL` |
 | Portal (dev) | http://localhost:3000 | Web workspace — run via `npm run dev` in `apps/portal` |
 | Gateway | http://localhost:8080 | Go HTTP API gateway (legacy v1 stack) |
 | Intelligence | http://localhost:28080 | Python RAG engine, gRPC (legacy v1 stack) |
