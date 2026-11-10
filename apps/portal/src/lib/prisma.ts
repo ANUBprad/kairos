@@ -16,7 +16,7 @@ function getPrismaClient(): PrismaClient {
 
   if (!process.env.DATABASE_URL && process.env.NODE_ENV !== "production") {
     logger.warn(
-      "DATABASE_URL is not configured. Create apps/portal/.env.local with DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kairos?schema=public",
+      "DATABASE_URL is not configured. Create apps/portal/.env.local with DATABASE_URL=postgresql://postgres:postgres@localhost:5433/kairos?schema=public",
     );
   }
 
