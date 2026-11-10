@@ -128,8 +128,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Server-side source scope validation: keep only ids that point at documents
-  // inside THIS knowledge base. Invalid/cross-workspace ids are ignored so we
-  // never leak whether an inaccessible source exists.
+  // inside THIS knowledge base. If an explicit non-empty selection contains no
+  // accessible documents, keep it empty rather than widening to the whole KB.
   let scopedSourceIds: string[] | undefined;
   if (needsScopeCheck) {
     scopedSourceIds = filterScopedSourceIds(sourceIds, ownedDocs.map((d) => d.id));
