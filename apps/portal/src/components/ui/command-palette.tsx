@@ -20,7 +20,6 @@ interface CommandItem {
   label: string;
   description?: string;
   href?: string;
-  action?: string;
   icon: LucideIcon;
   category: string;
   keywords: string[];
@@ -40,13 +39,65 @@ const NAVIGATION_COMMANDS: CommandItem[] = FLAT_APP_NAV.map((item) => ({
 }));
 
 const ACTION_COMMANDS: CommandItem[] = [
-  { id: "upload", label: "Upload Document", description: "Add files to a workspace", href: "/app/knowledge-bases", action: "upload", icon: Upload, category: "Actions", keywords: ["upload", "file", "document", "add"], shortcut: "U" },
-  { id: "create-kb", label: "Create Workspace", description: "Start a new workspace", href: "/app/knowledge-bases", action: "create-kb", icon: Plus, category: "Actions", keywords: ["create", "workspace", "knowledge", "base", "new"], shortcut: "N" },
-  { id: "new-chat", label: "Open Chat", description: "Ask questions about your documents", href: "/app/knowledge-bases", action: "new-chat", icon: MessageSquare, category: "Actions", keywords: ["chat", "ask", "question", "rag"], shortcut: "R" },
-  { id: "new-experiment", label: "New Experiment", description: "Build and test a retrieval pipeline", href: "/app/experiment-builder", action: "new-experiment", icon: FlaskConical, category: "Actions", keywords: ["experiment", "new", "build", "test"] },
-  { id: "run-evaluation", label: "Run Evaluation", description: "Benchmark retrieval performance", href: "/app/evaluation", action: "run-evaluation", icon: BarChart3, category: "Actions", keywords: ["evaluation", "benchmark", "metrics"], shortcut: "E" },
-  { id: "open-lab", label: "Open Retrieval Lab", description: "Test retrieval configurations", href: "/app/retrieval-lab", action: "open-lab", icon: FlaskConical, category: "Actions", keywords: ["retrieval", "lab", "test"] },
-];
+  {
+    id: "upload",
+    label: "Go to Library to upload documents",
+    description: "Open the workspace library; choose Upload there",
+    href: "/app/knowledge-bases",
+    icon: Upload,
+    category: "Shortcuts",
+    keywords: ["upload", "file", "document", "add"],
+    shortcut: "U",
+  },
+  {
+    id: "create-kb",
+    label: "Go to Library to create a workspace",
+    description: "Open the library workspace list",
+    href: "/app/knowledge-bases",
+    icon: Plus,
+    category: "Shortcuts",
+    keywords: ["create", "workspace", "knowledge", "base", "new"],
+    shortcut: "N",
+  },
+  {
+    id: "new-chat",
+    label: "Open Library to start a chat",
+    description: "Choose a workspace before opening its chat",
+    href: "/app/knowledge-bases",
+    icon: MessageSquare,
+    category: "Shortcuts",
+    keywords: ["chat", "ask", "question", "rag"],
+    shortcut: "R",
+  },
+  {
+    id: "new-experiment",
+    label: "Open Experiment Builder",
+    description: "Build and configure a retrieval experiment",
+    href: "/app/experiment-builder",
+    icon: FlaskConical,
+    category: "Shortcuts",
+    keywords: ["experiment", "new", "build", "test"],
+  },
+  {
+    id: "run-evaluation",
+    label: "Open Evaluation",
+    description: "View evaluation tools and configure a run",
+    href: "/app/evaluation",
+    icon: BarChart3,
+    category: "Shortcuts",
+    keywords: ["evaluation", "benchmark", "metrics"],
+    shortcut: "E",
+  },
+  {
+    id: "open-lab",
+    label: "Open Retrieval Lab",
+    description: "Test retrieval configurations",
+    href: "/app/retrieval-lab",
+    icon: FlaskConical,
+    category: "Shortcuts",
+    keywords: ["retrieval", "lab", "test"],
+  },
+];;
 
 const ALL_COMMANDS = [...NAVIGATION_COMMANDS, ...ACTION_COMMANDS];
 
