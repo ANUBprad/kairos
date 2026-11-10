@@ -44,11 +44,13 @@ jobs:
           # `prisma validate` still resolves datasource env vars; CI has no
           # .env, so pass a placeholder like the build step does.
           DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+          DIRECT_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
       - name: Build
         run: npm run build
         env:
           DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+          DIRECT_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
           BETTER_AUTH_SECRET: "ci-placeholder-secret-for-build-only"
 
   portal-tests:
@@ -86,6 +88,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kairos_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/kairos_test
       KAIROS_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kairos_test
       # Embeddings are pinned to 768, so the suites use the Gemini provider.
       # Suites that assert OpenAI chat behavior set AI_PROVIDER=openai
