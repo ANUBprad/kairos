@@ -33,6 +33,6 @@ export function filterScopedSourceIds(requested: string[], ownedIds: string[]): 
 }
 
 export function sourceScopeKey(sourceIds: string[] | null | undefined): string {
-  if (!sourceIds || sourceIds.length === 0) return "all";
+  if (sourceIds === null || sourceIds === undefined) return "all";
   return [...sourceIds].sort().join(",");
 }
