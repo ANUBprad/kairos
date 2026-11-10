@@ -55,7 +55,7 @@ async function getRetrievalOptions(kbId: string, sourceIds?: string[]) {
   const config = await getRetrievalConfig(kbId);
   return {
     knowledgeBaseIds: [kbId],
-    documentIds: sourceIds?.length ? sourceIds : undefined,
+    documentIds: sourceIds !== undefined ? sourceIds : undefined,
     topK: config.topK,
     minSimilarity: config.similarityThreshold,
     // The knowledge base's embedding model, never request.providerType — that is
