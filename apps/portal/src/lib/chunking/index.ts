@@ -6,11 +6,22 @@ const DEFAULT_OPTIONS: ChunkingOptions = {
   strategy: "recursive",
 };
 
+function resolveOptions(options: Partial<ChunkingOptions>): ChunkingOptions {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  if (!Number.isInteger(opts.chunkSize) || opts.chunkSize < 1) {
+    throw new RangeError("chunkSize must be a positive integer");
+  }
+  if (!Number.isInteger(opts.overlap) || opts.overlap < 0 || opts.overlap >= opts.chunkSize) {
+    throw new RangeError("overlap must be a non-negative integer smaller than chunkSize");
+  }
+  return opts;
+}
+
 export function chunkText(
   text: string,
   options: Partial<ChunkingOptions> = {},
 ): Chunk[] {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const opts = resolveOptions(options);
   switch (opts.strategy) {
     case "sentence":
       return chunkBySentence(text, opts);
@@ -29,12 +40,9 @@ export function estimateChunkStats(
   text: string,
   options: Partial<ChunkingOptions> = {},
 ): ChunkStats {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const opts = resolveOptions(options);
   const totalChars = text.length;
   const effectiveSize = opts.chunkSize - opts.overlap;
-  if (effectiveSize <= 0) {
-    return { estimatedChunkCount: 1, averageChunkSize: totalChars, averageTokenCount: estimateTokens(text), totalCharacters: totalChars };
-  }
   const estimatedCount = Math.max(1, Math.ceil(totalChars / effectiveSize));
   const avgSize = Math.min(opts.chunkSize, Math.ceil(totalChars / estimatedCount));
   return {
