@@ -42,7 +42,7 @@ docker compose ps   # wait for services to become healthy
 
 | Service | Port | Description |
 |---------|------|-------------|
-| PostgreSQL | 5432 | App database and production vector store (pgvector) — matches the default `DATABASE_URL` |
+| PostgreSQL | 5433 | App database and production vector store (pgvector) — matches the default `DATABASE_URL` |
 | Gateway | 8080 | Go HTTP gateway (legacy v1) |
 | Intelligence | 28080 / 8001 | Python RAG engine, gRPC / metrics (legacy v1) |
 | ChromaDB | 7777 | Vector store for the v1 stack only (legacy) |
@@ -68,14 +68,15 @@ them. Its retrieval embeddings must be 768-dimensional (Gemini
 `text-embedding-004` or `embedding-001`); ingestion rejects a wider model before
 calling a provider.
 
-PostgreSQL is provided by the compose stack at `localhost:5432/kairos` (user `postgres`/`postgres`), matching the default `DATABASE_URL`. To point the Portal at a different database, set `DATABASE_URL`/`DIRECT_URL` in `.env` and run `npx prisma migrate deploy` against it instead.
+PostgreSQL is provided by the compose stack at `localhost:5433/kairos` (user `postgres`/`postgres`), matching the default `DATABASE_URL`. To point the Portal at a different database, set `DATABASE_URL`/`DIRECT_URL` in `.env` and run `npx prisma migrate deploy` against it instead.
 
 ### Environment Variables
 
 ```env
 # Database (Required)
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/kairos"
-DIRECT_URL="postgresql://postgres:postgres@localhost:5432/kairos"
+POSTGRES_PORT=5433  # Docker Compose host port; defaults to 5433
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/kairos"
+DIRECT_URL="postgresql://postgres:postgres@localhost:5433/kairos"
 
 # Auth (Required)
 BETTER_AUTH_SECRET="your-secret-here"     # openssl rand -base64 32
