@@ -92,7 +92,13 @@ export function ChunkingStudio() {
               <input
                 type="number"
                 value={chunkSize}
-                onChange={(e) => setChunkSize(Math.max(50, Math.min(4000, Number(e.target.value))))}
+                onChange={(e) => {
+                  const value = Number.parseInt(e.target.value, 10);
+                  if (!Number.isFinite(value)) return;
+                  const nextSize = Math.max(50, Math.min(4000, value));
+                  setChunkSize(nextSize);
+                  setOverlap((current) => Math.min(current, nextSize - 1));
+                }}
                 className="w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary font-mono focus:border-brand focus:outline-none"
               />
             </div>
@@ -101,7 +107,10 @@ export function ChunkingStudio() {
               <input
                 type="number"
                 value={overlap}
-                onChange={(e) => setOverlap(Math.max(0, Math.min(chunkSize, Number(e.target.value))))}
+                onChange={(e) => {
+                  const value = Number.parseInt(e.target.value, 10);
+                  if (Number.isFinite(value)) setOverlap(Math.max(0, Math.min(chunkSize - 1, value)));
+                }}
                 className="w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary font-mono focus:border-brand focus:outline-none"
               />
             </div>
