@@ -30,7 +30,9 @@ git clone https://github.com/ANUBprad/kairos.git
 cd kairos
 
 cp .env.example .env
-# Edit .env: set DATABASE_URL, BETTER_AUTH_SECRET and an AI provider key
+# Next.js loads env files from apps/portal, not the repository root.
+cp .env apps/portal/.env.local
+# Edit .env and apps/portal/.env.local; set BETTER_AUTH_SECRET and GEMINI_API_KEY.
 
 docker compose up -d
 docker compose ps   # wait for services to become healthy
@@ -45,9 +47,11 @@ docker compose ps   # wait for services to become healthy
 | Intelligence | 28080 / 8001 | Python RAG engine, gRPC / metrics (legacy v1) |
 | ChromaDB | 7777 | Vector store for the v1 stack only (legacy) |
 | Prometheus | 9090 | Metrics collection |
-| Grafana | 3000 | Metrics dashboards (conflicts with a locally-run Portal on 3000) |
+| Grafana | 3001 | Metrics dashboards (host port; container listens on 3000) |
 
-The **Portal** is not part of the compose stack; run it locally:
+The **Portal** is not part of the compose stack; run it locally. Ensure
+`apps/portal/.env.local` exists (copied from the root `.env` above) before
+starting Next.js:
 
 ```bash
 cd apps/portal
