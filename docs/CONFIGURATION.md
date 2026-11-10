@@ -92,7 +92,7 @@ requires it to be set.
 | Intelligence metrics (legacy v1) | 8001 | `KAIROS_METRICS_PORT` |
 | ChromaDB (legacy v1) | 7777 | `CHROMA_STORE_PORT` |
 | Prometheus | 9090 | `PROMETHEUS_PORT` |
-| Grafana | 3000 | (conflicts with Portal dev — run one at a time) |
+| Grafana | 3001 | Host port mapped to the container's 3000 |
 
 ---
 
@@ -320,7 +320,7 @@ The compose stack serves six services. The Portal is **not** part of it — run 
 | `intelligence` | `docker/intelligence.Dockerfile` | 28080, 8001 | gRPC engine + metrics (legacy) |
 | `gateway` | `docker/gateway.Dockerfile` | ${GATEWAY_PORT:-8080} | HTTP API gateway (legacy) |
 | `prometheus` | `prom/prometheus:v2.51.0` | 9090 | Metrics collection |
-| `grafana` | `grafana/grafana:10.4.2` | 3000 | Dashboards (provisioned from `docker/grafana/`) |
+| `grafana` | `grafana/grafana:10.4.2` | 3001 (host) | Dashboards (container port 3000; provisioned from `docker/grafana/`) |
 
 The stack reads its environment from `.env` (see `.env.example`). The `postgres` service provides the local development database (`localhost:5432/kairos`, user `postgres`/`postgres`); point `DATABASE_URL`/`DIRECT_URL` at any other PostgreSQL to use it instead.
 
