@@ -1150,6 +1150,9 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
 
     logger.info("[Extraction] Starting extraction", { docId, arrayBufferByteLength: arrayBuffer.byteLength });
     const extraction = await extractText(arrayBuffer, fileType);
+    if (!extraction.text.trim()) {
+      throw new Error("No readable text was extracted from this document. Scanned PDFs may require OCR before ingestion.");
+    }
     logger.info("[Extraction] Success", { docId, chars: extraction.metadata.characters, pages: extraction.metadata.pages });
 
     const existingMeta = doc.metadata as Record<string, unknown> | null;
@@ -1182,6 +1185,9 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       chunkSize: retrievalConfig.chunkSize ?? 1000,
       overlap: retrievalConfig.overlap ?? 200,
     });
+    if (chunks.length === 0) {
+      throw new Error("Document extraction produced no indexable chunks");
+    }
     logger.info("[Chunking] Complete", { docId, chunks: chunks.length, ms: Date.now() - tChunk });
 
     stage = "store";
