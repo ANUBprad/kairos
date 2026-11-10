@@ -7,7 +7,7 @@ import { ChevronDown, Command, X, Check, Plus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useTransition } from "react";
 import { switchWorkspaceOrganization } from "@/lib/actions/organization";
-import { APP_NAV, APP_SIDEBAR_OPEN_EVENT } from "@/lib/app-nav";
+import { APP_NAV, APP_SIDEBAR_OPEN_EVENT, FLAT_APP_NAV } from "@/lib/app-nav";
 
 interface SidebarProps {
   organization: {
@@ -29,6 +29,13 @@ interface SidebarProps {
 
 export function AppSidebar({ organization, organizations }: SidebarProps) {
   const pathname = usePathname();
+  const activeNavHref = FLAT_APP_NAV
+    .filter((item) =>
+      item.href === "/app"
+        ? pathname === "/app"
+        : pathname === item.href || pathname.startsWith(`${item.href}/`)
+    )
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
@@ -193,8 +200,8 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
         >
           <div className="space-y-6">
             {APP_NAV.map((section) => {
-              const sectionHasActive = section.items.some((item) =>
-                item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href)
+              const sectionHasActive = section.items.some(
+                (item) => item.href === activeNavHref
               );
               const isCollapsed =
                 Boolean(collapsedSections[section.label]) && !sectionHasActive;
@@ -227,10 +234,7 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
                     <div className="space-y-0.5">
                       {section.items.map((item) => {
                         const Icon = item.icon;
-                        const isActive =
-                          item.href === "/app"
-                            ? pathname === "/app"
-                            : pathname.startsWith(item.href);
+                        const isActive = item.href === activeNavHref;
                         return (
                           <Link
                             key={item.label}
