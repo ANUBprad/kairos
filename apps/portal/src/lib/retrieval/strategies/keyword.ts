@@ -23,7 +23,7 @@ export class KeywordStrategy implements RetrievalStrategy {
   readonly description = "BM25 keyword-based retrieval";
 
   async retrieve(ctx: RetrievalContext): Promise<RetrievalResult> {
-    const scopeKey = ctx.documentIds?.length ? [...ctx.documentIds].sort().join(",") : "all";
+    const scopeKey = ctx.documentIds !== undefined ? [...ctx.documentIds].sort().join(",") : "all";
     const cacheKey = `${ctx.kbId}:${scopeKey}`;
     let indexEntry = indexCache.get(cacheKey);
 
@@ -32,7 +32,7 @@ export class KeywordStrategy implements RetrievalStrategy {
         where: {
           document: {
             knowledgeBaseId: ctx.kbId,
-            ...(ctx.documentIds?.length ? { id: { in: ctx.documentIds } } : {}),
+            ...(ctx.documentIds !== undefined ? { id: { in: ctx.documentIds } } : {}),
             status: "INDEXED",
           },
         },
