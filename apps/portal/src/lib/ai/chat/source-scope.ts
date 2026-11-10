@@ -25,12 +25,11 @@ export function formatSourceScopeLabel(selectedCount: number): string {
 }
 
 // Keeps only requested ids that exist in the caller-provided owned set.
-// Returns undefined when nothing survives so the caller falls back to
-// all-sources retrieval instead of an empty (leaky) scope.
-export function filterScopedSourceIds(requested: string[], ownedIds: string[]): string[] | undefined {
+// An explicit selection that contains no accessible ids remains an empty
+// scope; it must never silently broaden into an all-sources query.
+export function filterScopedSourceIds(requested: string[], ownedIds: string[]): string[] {
   const owned = new Set(ownedIds);
-  const valid = requested.filter((id) => owned.has(id));
-  return valid.length > 0 ? valid : undefined;
+  return requested.filter((id) => owned.has(id));
 }
 
 export function sourceScopeKey(sourceIds: string[] | null | undefined): string {
