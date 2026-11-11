@@ -27,7 +27,7 @@ const settingsTabs = [
   { label: "Audit Logs", href: "/app/settings/audit", icon: Activity },
 ];
 
-export function SettingsLayout({ children }: SettingsLayoutProps) {
+export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const pathname = usePathname();
 
   return (
@@ -45,8 +45,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
           <div className="rounded-xl border border-border bg-surface p-2">
             {settingsTabs.map((tab) => {
               const isActive =
-                pathname === tab.href ||
-                (tab.href !== "/app/settings" && pathname.startsWith(tab.href));
+                pathname === tab.href || pathname.startsWith(`${tab.href}/`);
 
               return (
                 <Link
