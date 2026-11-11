@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Bot, CheckCircle2, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bot, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 
 interface ProviderInfo {
@@ -17,31 +17,32 @@ interface SettingsData {
 export function SettingsPage() {
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState<string>("openai");
-  const [selectedModel, setSelectedModel] = useState<string>("gpt-4o-mini");
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/ai/settings", { signal: controller.signal })
-      .then((res) => res.json())
-      .then((data: SettingsData) => {
-        setSettings(data);
-        setSelectedProvider(data.defaultProvider || "openai");
-      })
-      .catch((err) => {
-        if (err.name === "AbortError") return;
-        setSettings({ providers: {}, defaultProvider: "openai" });
-      })
-      .finally(() => setLoading(false));
 
+    async function loadSettings() {
+      try {
+        const response = await fetch("/api/ai/settings", {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(`Unable to load AI configuration (${response.status})`);
+        }
+        const data = (await response.json()) as SettingsData;
+        setSettings(data);
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setLoadError(true);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+
+    void loadSettings();
     return () => controller.abort();
   }, []);
-
-  useEffect(() => {
-    if (settings?.providers[selectedProvider]?.models?.length) {
-      setSelectedModel(settings.providers[selectedProvider].models[0]);
-    }
-  }, [selectedProvider, settings]);
 
   if (loading) {
     return (
@@ -51,122 +52,114 @@ export function SettingsPage() {
     );
   }
 
+  const activeProvider = settings?.defaultProvider || "openai";
+  const activeProviderInfo = settings?.providers[activeProvider];
+
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
       <PageHeader
-        title="Configuration"
-        description="Configure your AI provider and model preferences."
-        purpose="Manage your platform settings and API keys."
+        title="AI Configuration"
+        description="View the AI provider configured for this deployment."
+        purpose="Check runtime provider availability and supported models."
         relatedPages={[
           { label: "Architecture", href: "/app/architecture" },
           { label: "Project Guide", href: "/app/project-guide" },
         ]}
       />
 
-      <div className="space-y-6">
-        <div className="rounded-xl border border-border bg-surface p-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary mb-4">
-            <Bot size={20} />
-            AI Provider
-          </h2>
-
-          <div className="space-y-3">
-            {settings?.providers &&
-              Object.entries(settings.providers).map(([key, info]) => (
-                <label
-                  key={key}
-                  className={`flex items-center gap-3 rounded-lg border p-4 cursor-pointer transition-colors ${
-                    selectedProvider === key
-                      ? "border-brand bg-brand/5"
-                      : "border-border hover:bg-surface-hover"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="provider"
-                    value={key}
-                    checked={selectedProvider === key}
-                    onChange={() => setSelectedProvider(key)}
-                    className="sr-only"
-                  />
-                  <div
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                      selectedProvider === key
-                        ? "border-brand bg-brand"
-                        : "border-text-tertiary"
-                    }`}
-                  >
-                    {selectedProvider === key && (
-                      <CheckCircle2 size={14} className="text-white" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-text-primary capitalize">
-                      {key}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {info.available
-                        ? "Configured in environment"
-                        : "Not configured — add API key to .env.local"}
-                    </p>
-                  </div>
-                  {info.available && (
-                    <span className="text-xs text-success flex items-center gap-1">
-                      <CheckCircle2 size={12} />
-                      Ready
-                    </span>
-                  )}
-                </label>
-              ))}
-          </div>
-        </div>
-
-        {settings?.providers[selectedProvider]?.models && (
-          <div className="rounded-xl border border-border bg-surface p-6">
-            <h2 className="text-lg font-semibold text-text-primary mb-4">
-              Default Model
-            </h2>
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="w-full rounded-[10px] border border-border bg-bg px-3.5 py-2.5 text-sm text-text-primary focus:border-brand focus:outline-none"
-            >
-              {settings.providers[selectedProvider].models.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
-            <p className="mt-2 text-xs text-text-tertiary">
-              API keys are stored server-side in environment variables and are
-              never exposed to the browser.
+      {loadError || !settings ? (
+        <div className="rounded-xl border border-border bg-surface p-5 flex items-start gap-3">
+          <AlertCircle size={18} className="mt-0.5 text-text-tertiary" />
+          <div>
+            <p className="text-sm font-medium text-text-primary">
+              Configuration unavailable
+            </p>
+            <p className="mt-1 text-sm text-text-secondary">
+              The server configuration could not be loaded. Refresh the page or
+              contact the deployment administrator.
             </p>
           </div>
-        )}
-
-        <div className="rounded-xl border border-border bg-surface p-6">
-          <h2 className="text-lg font-semibold text-text-primary mb-4">
-            Environment Status
-          </h2>
-          <div className="space-y-2">
-            {Object.entries(settings?.providers || {}).map(([key, info]) => (
-              <div
-                key={key}
-                className="flex items-center justify-between py-1"
-              >
-                <span className="text-sm text-text-primary capitalize">{key}</span>
-                <span
-                  className={`text-xs font-medium ${
-                    info.available ? "text-success" : "text-text-tertiary"
-                  }`}
-                >
-                  {info.available ? "Configured" : "Not configured"}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-6">
+          <section className="rounded-xl border border-border bg-surface p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-text-primary">
+              <Bot size={20} />
+              Runtime provider
+            </h2>
+            <div className="rounded-lg border border-border bg-surface-hover p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium capitalize text-text-primary">
+                    {activeProvider}
+                  </p>
+                  <p className="mt-1 text-xs text-text-tertiary">
+                    Selected by the deployment's AI_PROVIDER environment
+                    variable.
+                  </p>
+                </div>
+                {activeProviderInfo?.available ? (
+                  <span className="flex items-center gap-1 text-xs font-medium text-success">
+                    <CheckCircle2 size={13} />
+                    Configured
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium text-text-tertiary">
+                    Not configured
+                  </span>
+                )}
+              </div>
+              {activeProviderInfo?.models.length ? (
+                <div className="mt-4 border-t border-border pt-3">
+                  <p className="mb-2 text-xs font-medium text-text-secondary">
+                    Supported models
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {activeProviderInfo.models.map((model) => (
+                      <span
+                        key={model}
+                        className="rounded-md border border-border px-2 py-1 text-xs text-text-secondary"
+                      >
+                        {model}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+            <p className="mt-3 text-xs text-text-tertiary">
+              Provider and model preferences are deployment-controlled here;
+              this page does not save per-user changes. API keys remain
+              server-side in environment variables.
+            </p>
+          </section>
+
+          <section className="rounded-xl border border-border bg-surface p-6">
+            <h2 className="mb-4 text-lg font-semibold text-text-primary">
+              Environment status
+            </h2>
+            <div className="space-y-3">
+              {Object.entries(settings.providers).map(([provider, info]) => (
+                <div
+                  key={provider}
+                  className="flex items-center justify-between gap-4"
+                >
+                  <span className="text-sm capitalize text-text-primary">
+                    {provider}
+                  </span>
+                  <span
+                    className={`text-xs font-medium ${
+                      info.available ? "text-success" : "text-text-tertiary"
+                    }`}
+                  >
+                    {info.available ? "API key configured" : "Not configured"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
