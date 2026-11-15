@@ -26,7 +26,7 @@ func (qHandler *QueryHandler) HandleUserQuery(w http.ResponseWriter, r *http.Req
 	}
 
 	// End-to-end request timeout (under the HTTP server's 60s WriteTimeout)
-	ctx, cancel := context.WithTimeout(ctx, 55*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, intelligence.ConfiguredRPCTimeout(55*time.Second))
 	defer cancel()
 
 	// Limit request body size
