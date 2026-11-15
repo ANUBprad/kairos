@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { PageHeader } from "@/components/app/page-header";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +13,6 @@ import {
   Brain,
   Gavel,
   BarChart3,
-  Play,
   RotateCcw,
   ChevronRight,
   Check,
@@ -146,10 +144,8 @@ export function ExperimentBuilderClient() {
             if (stage.id === "dataset") {
               return {
                 ...stage,
-                options: datasetOptions.length > 0 ? datasetOptions : [
-                  { id: "custom", label: "Custom Dataset", description: "Upload your own" },
-                ],
-                selected: datasetOptions.length > 0 ? datasetOptions[0].id : null,
+                options: datasetOptions,
+                selected: datasetOptions[0]?.id ?? null,
                 loading: false,
               };
             }
@@ -163,9 +159,7 @@ export function ExperimentBuilderClient() {
             if (stage.id === "dataset") {
               return {
                 ...stage,
-                options: [
-                  { id: "custom", label: "Custom Dataset", description: "Upload your own" },
-                ],
+                options: [],
                 selected: null,
                 loading: false,
               };
@@ -224,13 +218,9 @@ export function ExperimentBuilderClient() {
             <RotateCcw size={14} />
             Reset
           </button>
-          <Link
-            href="/app/evaluation"
-            className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-brand-hover"
-          >
-            <Play size={14} />
-            Run in Evaluation
-          </Link>
+          <span className="rounded-lg border border-border px-3 py-2 text-xs text-text-tertiary">
+            Preview only
+          </span>
         </div>
       </div>
 
@@ -310,6 +300,10 @@ export function ExperimentBuilderClient() {
                           <Skeleton key={n} className="h-20" />
                         ))}
                       </div>
+                    ) : stage.options.length === 0 ? (
+                      <p className="text-sm text-text-tertiary">
+                        No datasets yet. Create a dataset in Evaluation before previewing a pipeline.
+                      </p>
                     ) : (
                       <div className="grid gap-2 sm:grid-cols-2">
                         {stage.options.map((opt) => (
