@@ -122,7 +122,8 @@ describe("runBenchmark failure lifecycle against a real database", () => {
       });
       assert.equal(run.status, "failed", "an all-fail run must not be marked completed");
       assert.ok(run.completedAt, "a failed run records when it finalized");
-      assert.equal(run.results.length, 0, "no failed question persists a result row");
+      assert.equal(run.results.length, 2, "each failed question keeps a result row for diagnosis");
+      assert.ok(run.results.every((result) => result.error != null), "failed rows retain their error details");
       assert.equal(JSON.stringify(run.aggregatedMetrics), "{}", "no NaN avgLatencyMs leaks into aggregated metrics");
     } finally {
       await client.$disconnect();
