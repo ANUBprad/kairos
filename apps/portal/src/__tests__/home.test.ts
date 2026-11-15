@@ -12,6 +12,9 @@ const sidebar = source("../components/app/sidebar.tsx");
 const palette = source("../components/ui/command-palette.tsx");
 const layout = source("../app/app/layout.tsx");
 const sourceDialog = source("../components/app/source-add-dialog.tsx");
+const appNav = source("../lib/app-nav.ts");
+const tracePage = source("../app/app/observability/traces/page.tsx");
+const incidentPage = source("../app/app/observability/incidents/page.tsx");
 
 describe("home dashboard", () => {
   it("scopes every recent-activity read to the caller's project and user", () => {
@@ -59,6 +62,15 @@ describe("home dashboard", () => {
     assert.doesNotMatch(palette, /ACTION_COMMANDS|Upload Document|Create Workspace|Open Chat|Run Evaluation/);
     assert.match(palette, /cmd\.category === "Workspace"/);
     assert.match(palette, /Search pages/);
+  });
+
+  it("hides the non-persistent experiment builder from discoverable navigation", () => {
+    assert.doesNotMatch(appNav, /Experiment Builder|\/app\/experiment-builder/);
+  });
+
+  it("does not render links to trace or incident detail routes that do not exist", () => {
+    assert.doesNotMatch(tracePage, /\/app\/observability\/traces\/\$\{trace\.id\}/);
+    assert.doesNotMatch(incidentPage, /\/app\/observability\/incidents\/\$\{inc\.id\}/);
   });
 
   it("removes hidden shortcuts that duplicated navigation with misleading targets", () => {
