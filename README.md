@@ -71,6 +71,8 @@ cp .env.example .env
 # Next.js loads environment files from apps/portal, not the repository root.
 cp .env apps/portal/.env.local
 # Edit both files as needed; set BETTER_AUTH_SECRET and GEMINI_API_KEY.
+# Local development uses .kairos-storage automatically when Cloudinary is not configured.
+# For production, configure all three CLOUDINARY_* values for durable object storage.
 docker compose up -d
 
 docker compose ps   # wait until all services report healthy
@@ -112,6 +114,8 @@ npx prisma migrate deploy   # reports "No pending migrations to apply"
 ```
 
 Future schema changes then ship via normal `npx prisma migrate deploy` runs.
+
+**File storage:** local development does not require a Cloudinary account. If all three `CLOUDINARY_*` variables are empty, the Portal stores uploaded files and generated media under `apps/portal/.kairos-storage` (or `KAIROS_LOCAL_STORAGE_DIR`). That directory is git-ignored. This local provider serves objects through short-lived signed URLs and the same authenticated media routes. Production requires Cloudinary; do not rely on ephemeral application disks for user files. Set all three Cloudinary variables together — partial configuration is treated as an error.
 
 The full environment reference lives in [`.env.example`](.env.example); see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment notes.
 
