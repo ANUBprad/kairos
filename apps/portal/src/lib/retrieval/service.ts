@@ -5,6 +5,7 @@ import type { ProviderType } from "@/lib/ai/types";
 import type { RetrievalConfig, RetrievalResultDisplay, RetrievedChunkDisplay, PerformanceMetrics, RetrievalDebugInfo } from "./types";
 import { DEFAULT_RETRIEVAL_CONFIG } from "./types";
 import { assertIndexableEmbeddingModel, defaultEmbeddingProvider, resolveIndexableEmbeddingModel } from "./embedding-models";
+import { validateChunkingOptions } from "@/lib/chunking";
 import {
   executeRetrievalWithTrace,
   isSupportedStrategy,
@@ -66,6 +67,15 @@ export async function saveRetrievalConfig(
         `Supported: ${SUPPORTED_STRATEGIES.join(", ")}`,
     );
   }
+
+  // Chunking parameters are validated at the same boundary that persists them,
+  // so a stale or hand-edited config can never reach an ingestion worker and
+  // exhaust memory or spin forever.
+  validateChunkingOptions({
+    chunkSize: merged.chunkSize,
+    overlap: merged.chunkOverlap,
+    strategy: merged.chunkStrategy,
+  });
 
   await prisma.knowledgeBase.update({
     where: { id: kbId },

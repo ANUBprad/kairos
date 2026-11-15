@@ -1162,12 +1162,18 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
       where: { id: doc.knowledgeBaseId },
       select: { retrievalConfig: true },
     });
-    const retrievalConfig = (kb?.retrievalConfig as { chunkStrategy?: string; chunkSize?: number; overlap?: number } | null) || {};
+    const retrievalConfig = (kb?.retrievalConfig as {
+      chunkStrategy?: string;
+      chunkSize?: number;
+      chunkOverlap?: number;
+      // Legacy field name written by an older settings UI.
+      overlap?: number;
+    } | null) || {};
     const tChunk = Date.now();
     const chunks = chunkText(extraction.text, {
       strategy: (retrievalConfig.chunkStrategy as "recursive" | "sentence" | "fixed" | "markdown" | "semantic") || "recursive",
       chunkSize: retrievalConfig.chunkSize ?? 1000,
-      overlap: retrievalConfig.overlap ?? 200,
+      overlap: retrievalConfig.chunkOverlap ?? retrievalConfig.overlap ?? 200,
     });
     if (chunks.length === 0) {
       throw new Error("Document extraction produced no indexable chunks");
