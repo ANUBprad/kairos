@@ -17,33 +17,17 @@ import { sanitizeFilename } from "@/lib/validation";
 import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError, type FetchUrlOptions } from "@/lib/ingestion/url";
 import { buildYouTubeDocumentData, fetchYouTubeTranscript, youtubeIngestErrorMessage, YouTubeTranscriptError, type FetchYoutubeOptions } from "@/lib/ingestion/youtube";
 import { buildTextDocumentData, normalizeTextInput, textDocumentFileHash } from "@/lib/ingestion/text";
+import { ALLOWED_EXTENSIONS, assertFileContentMatchesType, getFileType, MAX_FILE_SIZE, partitionDuplicateUploads } from "@/lib/ingestion/upload-validation";
 import { assertSameKnowledgeBase, MAX_BULK_OPERATIONS, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
 import type { DocumentStatus, Prisma } from "@prisma/client";
-
-const ALLOWED_EXTENSIONS = ["pdf", "txt", "md", "markdown", "csv", "docx"];
 
 // Statuses a source must be in before a mutation (edit/repoint/reprocess) may
 // claim it. The claim itself is a compare-and-set transition IDLE -> QUEUED, so
 // concurrent mutations race on the database row and only one wins.
 const MUTATION_IDLE_STATUSES: DocumentStatus[] = ["STORED", "INDEXED", "READY", "ERROR"];
 
-const MIME_MAP: Record<string, string> = {
-  "application/pdf": "pdf",
-  "text/plain": "txt",
-  "text/markdown": "md",
-  "text/csv": "csv",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
-};
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_DOWNLOAD_SIZE = 15 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
-
-function getFileType(name: string, mime: string): string {
-  const ext = name.split(".").pop()?.toLowerCase() || "";
-  if (ALLOWED_EXTENSIONS.includes(ext)) return ext;
-  return MIME_MAP[mime] || ext;
-}
 
 function fileHash(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
@@ -153,35 +137,35 @@ export async function uploadDocument(kbId: string, formData: FormData) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    assertFileContentMatchesType(file.name, buffer, fileType);
     const hash = fileHash(buffer);
 
     fileEntries.push({ file, buffer, fileType, hash });
   }
 
-  // Dedup across the whole request in one query instead of one per file; the
-  // first entry (in request order) whose content already exists aborts the
-  // upload exactly like the per-file check did.
-  const existingByHash = new Map(
-    (
-      await prisma.document.findMany({
-        where: { knowledgeBaseId: kbId, fileHash: { in: fileEntries.map((e) => e.hash) } },
-        select: { fileHash: true, name: true },
-      })
-    ).map((d) => [d.fileHash, d] as const),
-  );
-
-  for (const file of fileEntries) {
-    const existing = existingByHash.get(file.hash);
-    if (existing) {
-      throw new Error(`"${file.file.name}" is a duplicate of "${existing.name}" (same content)`);
-    }
+  // Dedup across the whole request in one query instead of one per file. A
+  // duplicate is skipped individually: one already-known file must not reject
+  // the rest of a multi-file batch.
+  const existingByHash = new Map<string, { name: string }>();
+  for (const row of await prisma.document.findMany({
+    where: { knowledgeBaseId: kbId, fileHash: { in: fileEntries.map((e) => e.hash) } },
+    select: { fileHash: true, name: true },
+  })) {
+    if (row.fileHash) existingByHash.set(row.fileHash, { name: row.name });
   }
+
+  const skipped: { name: string; reason: string }[] = [];
+  const { pending: pendingEntries, skipped: duplicateSkips } = partitionDuplicateUploads(
+    fileEntries,
+    existingByHash,
+  );
+  skipped.push(...duplicateSkips);
 
   // Phase 2 — Upload and create records
   const storage = getStorageProvider();
   const results: Prisma.DocumentGetPayload<{ include: { uploadedBy: true } }>[] = [];
 
-  for (const { file, buffer, fileType, hash } of fileEntries) {
+  for (const { file, buffer, fileType, hash } of pendingEntries) {
     const ext = file.name.split(".").pop() || "";
     const safeName = sanitizeFilename(file.name.replace(`.${ext}`, ""));
     const storageKey = `${kbId}/${Date.now()}-${randomUUID()}-${safeName}.${fileType}`;
@@ -245,7 +229,7 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 
   serverTrackEvent("documents_uploaded", { count: results.length, kbId }, session.user.id);
   revalidatePath(`/app/knowledge-bases/${kbId}`);
-  return results;
+  return { documents: results, skipped };
 }
 
 function urlIngestErrorMessage(code: string): string {

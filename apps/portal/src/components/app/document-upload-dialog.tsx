@@ -313,8 +313,11 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         const formData = new FormData();
         formData.append("files", item.file);
 
-        const results = await uploadDocument(kbId, formData);
-        const created = results[0];
+        const result = await uploadDocument(kbId, formData);
+        const created = result.documents[0];
+        if (!created) {
+          throw new Error(result.skipped[0]?.reason ?? "Upload did not create a document");
+        }
 
         const failed = created.status === "ERROR";
         setUploadQueue((prev) =>
@@ -392,7 +395,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
           </button>
         </div>
 
-        <p id="upload-dialog-description" className="sr-only">Upload PDF, DOCX, TXT, MD, or CSV files up to 10MB each.</p>
+        <p id="upload-dialog-description" className="sr-only">Upload PDF, DOCX, TXT, MD, or CSV files up to 10MB each. Scanned PDFs are not supported.</p>
 
         <div className="flex-1 overflow-y-auto p-6">
           <div
@@ -415,6 +418,9 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
             </p>
             <p className="mt-1 text-xs text-text-tertiary">
               PDF, DOCX, TXT, MD, CSV &mdash; up to 10MB each
+            </p>
+            <p className="mt-2 max-w-sm text-center text-xs text-text-tertiary">
+              Text-based PDFs only. Scanned or image-only PDFs need OCR, which is not supported yet &mdash; paste their text instead.
             </p>
             <input
               ref={inputRef}

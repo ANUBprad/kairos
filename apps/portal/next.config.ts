@@ -72,6 +72,13 @@ const nextConfig: NextConfig = {
   ],
   poweredByHeader: false,
   experimental: {
+    // The upload dialog advertises a 10MB per-file limit. Next.js caps server
+    // action bodies at 1MB by default, which rejected valid files before our
+    // own validation could run. 12MB covers one 10MB file plus multipart
+    // overhead; the dialog submits files one at a time.
+    serverActions: {
+      bodySizeLimit: "12mb",
+    },
     optimizePackageImports: [
       'recharts',
       'lucide-react',

@@ -91,11 +91,14 @@ class PdfParser implements FileParser {
     try {
       const result = await pdf.getText();
 
-      if (result.text.length === 0) {
+      if (result.text.trim().length === 0) {
         logger.warn("[Extraction] pdf-parse returned empty text", {
           total: result.total,
           pagesRendered: result.pages?.length,
         });
+        throw new Error(
+          "This PDF contains no extractable text. Scanned or image-only PDFs are not supported yet — upload a text-based PDF or paste the text as a source instead.",
+        );
       }
 
       return {
