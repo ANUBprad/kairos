@@ -37,6 +37,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kairos_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/kairos_test
 
     defaults:
       run:
