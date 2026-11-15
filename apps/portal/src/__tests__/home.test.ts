@@ -15,6 +15,7 @@ const sourceDialog = source("../components/app/source-add-dialog.tsx");
 const appNav = source("../lib/app-nav.ts");
 const tracePage = source("../app/app/observability/traces/page.tsx");
 const incidentPage = source("../app/app/observability/incidents/page.tsx");
+const experimentBuilder = source("../app/app/experiment-builder/experiment-builder-client.tsx");
 
 describe("home dashboard", () => {
   it("scopes every recent-activity read to the caller's project and user", () => {
@@ -66,6 +67,12 @@ describe("home dashboard", () => {
 
   it("hides the non-persistent experiment builder from discoverable navigation", () => {
     assert.doesNotMatch(appNav, /Experiment Builder|\/app\/experiment-builder/);
+  });
+
+  it("does not offer to run preview-only experiment settings", () => {
+    assert.doesNotMatch(experimentBuilder, /Run in Evaluation/);
+    assert.match(experimentBuilder, /Preview only/);
+    assert.match(experimentBuilder, /not saved or applied to benchmark runs/);
   });
 
   it("does not render links to trace or incident detail routes that do not exist", () => {
