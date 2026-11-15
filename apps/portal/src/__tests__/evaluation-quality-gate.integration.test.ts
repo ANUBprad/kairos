@@ -175,7 +175,7 @@ describe("regression quality gate over persisted comparisons", () => {
       assert.equal(failing.criteria.find((c) => c.metric === "recallAtK")!.state, "fail");
 
       // A foreign organization cannot read this org's persisted regression.
-      assert.equal(await getBenchmarkRegressionForOrg(tracked.record.id, orgBId, foreignUserId), null);
+      assert.equal(await getBenchmarkRegressionForOrg(tracked.record.id, orgBId), null);
       // Nor can a fabricated id be probed by the owning org.
       assert.equal(await getBenchmarkRegressionForOrg(randomUUID(), orgAId), null);
 
@@ -184,6 +184,7 @@ describe("regression quality gate over persisted comparisons", () => {
       const globalTracked = await trackRegressionComparison(
         { baselineRunId: standaloneBaseline.id, candidateRunId: standaloneCandidate.id },
         orgBId,
+        foreignUserId,
       );
       const globalRead = await getBenchmarkRegressionForOrg(globalTracked.record.id, orgAId, memberUserId);
       assert.ok(globalRead);
