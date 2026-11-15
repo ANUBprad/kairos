@@ -236,10 +236,8 @@ export async function uploadDocument(kbId: string, formData: FormData) {
 
     results.push(doc);
 
-    // Fire-and-forget processing
-    processDocument(doc.id, fileType, buffer).catch((err) => {
-      logger.error(`Processing failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
-    });
+    // Keep the server action alive until the source reaches a terminal state.
+    await processDocument(doc.id, fileType, buffer);
   }
 
   serverTrackEvent("documents_uploaded", { count: results.length, kbId }, session.user.id);
@@ -344,9 +342,7 @@ export async function ingestYouTube(kbId: string, rawUrl: string) {
   logger.info("YouTube document created", { docId: doc.id, kbId, bytes: buffer.byteLength, chars: transcript.text.length });
 
   serverTrackEvent("youtube_transcript_added", { kbId }, session.user.id);
-  processDocument(doc.id, "txt", buffer).catch((err) => {
-    logger.error(`Processing failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
-  });
+  await processDocument(doc.id, "txt", buffer);
 
   revalidatePath(`/app/knowledge-bases/${kbId}`);
   return doc;
@@ -420,9 +416,7 @@ export async function ingestUrl(kbId: string, rawUrl: string) {
   logger.info("URL document created", { docId: doc.id, kbId, bytes: buffer.byteLength, chars: article.markdown.length });
 
   serverTrackEvent("document_url_added", { kbId }, session.user.id);
-  processDocument(doc.id, "txt", buffer).catch((err) => {
-    logger.error(`Processing failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
-  });
+  await processDocument(doc.id, "txt", buffer);
 
   revalidatePath(`/app/knowledge-bases/${kbId}`);
   return doc;
@@ -482,9 +476,7 @@ export async function ingestText(kbId: string, input: { title?: string; content:
   logger.info("Text document created", { docId: doc.id, kbId, bytes: buffer.byteLength, chars: normalized.content.length });
 
   serverTrackEvent("text_source_added", { kbId }, session.user.id);
-  processDocument(doc.id, "txt", buffer).catch((err) => {
-    logger.error(`Processing failed for ${doc.id}`, { error: err instanceof Error ? err.message : "unknown" });
-  });
+  await processDocument(doc.id, "txt", buffer);
 
   try {
     revalidatePath(`/app/knowledge-bases/${kbId}`);
@@ -593,9 +585,7 @@ export async function updateTextSource(docId: string, input: { title?: string; c
   logger.info("Text source update staged", { docId, kbId: doc.knowledgeBaseId, bytes: buffer.byteLength, chars: normalized.content.length });
   serverTrackEvent("text_source_updated", { kbId: doc.knowledgeBaseId }, session.user.id);
 
-  processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity }).catch((err) => {
-    logger.error(`Text source update processing failed for ${docId}`, { error: err instanceof Error ? err.message : "unknown" });
-  });
+  await processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity });
 
   try {
     revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
@@ -763,13 +753,7 @@ export async function repointUrlSource(
   });
   serverTrackEvent("document_url_repointed", { kbId: doc.knowledgeBaseId }, session.user.id);
 
-  processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity }).catch(
-    (err) => {
-      logger.error(`URL repoint processing failed for ${docId}`, {
-        error: err instanceof Error ? err.message : "unknown",
-      });
-    },
-  );
+  await processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity });
 
   try {
     revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
@@ -926,13 +910,7 @@ export async function repointYouTubeSource(
   });
   serverTrackEvent("youtube_source_repointed", { kbId: doc.knowledgeBaseId }, session.user.id);
 
-  processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity }).catch(
-    (err) => {
-      logger.error(`YouTube repoint processing failed for ${docId}`, {
-        error: err instanceof Error ? err.message : "unknown",
-      });
-    },
-  );
+  await processDocument(docId, "txt", buffer, { evictChunkIds: existingChunkIds, revertIdentity });
 
   try {
     revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
@@ -1221,54 +1199,17 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
     logger.info("[Database] Write complete", { docId, ms: Date.now() - tDb });
 
     stage = "embed";
-    logger.info("[Embedding] Queuing embedding generation (fire-and-forget)", { docId });
+    logger.info("[Embedding] Generating embeddings before completing the job", { docId });
     const stagedEvictIds = staged?.evictChunkIds;
-    generateEmbeddings(docId, undefined, stagedEvictIds).catch(async (embedErr) => {
-      const errMsg = embedErr instanceof Error ? embedErr.message : String(embedErr);
-      logger.error("[Embedding] Failed", {
-        docId,
-        error: errMsg,
-        stack: embedErr instanceof Error ? embedErr.stack : undefined,
-      });
-
-      try {
-        await rollbackOrError(
-          docId,
-          staged,
-          {
-            ...meta,
-            stage: "embed",
-            error: errMsg,
-            timestamp: new Date().toISOString(),
-            durationMs: Date.now() - pipelineStart,
-          },
-          errMsg,
-          "embed",
-        );
-      } catch (rollbackErr) {
-        logger.error("[Embedding] Recovery failed — forcing ERROR state", {
-          docId,
-          error: rollbackErr instanceof Error ? rollbackErr.message : "unknown",
-        });
-        const forcedRow = await prisma.document
-          .findUnique({
-            where: { id: docId },
-            select: { knowledgeBaseId: true },
-          })
-          .catch(() => null);
-        await prisma.document
-          .update({ where: { id: docId }, data: { status: "ERROR" } })
-          .catch(() => {});
-        revalidateSourcePage(forcedRow?.knowledgeBaseId);
-      }
-    });
+    const embeddingResult = await generateEmbeddings(docId, undefined, stagedEvictIds);
 
     meta.stage = "completed";
     meta.durationMs = Date.now() - pipelineStart;
     meta.extractedChars = extraction.metadata.characters;
     meta.pages = extraction.metadata.pages;
     meta.chunks = chunks.length;
-    logger.info("[Completed] Pipeline finished", { docId, ...meta });
+    meta.embeddedChunks = embeddingResult.chunkCount;
+    logger.info("[Completed] Ingestion and indexing finished", { docId, ...meta });
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     const errStack = err instanceof Error ? err.stack : undefined;
@@ -1290,6 +1231,7 @@ async function processDocument(docId: string, fileType: string, existingBuffer?:
     });
 
     await rollbackOrError(docId, staged, meta, errMsg, stage);
+    // Failure is now durable in the document row (ERROR + stage metadata).
   }
 }
 
@@ -1435,9 +1377,7 @@ export async function reprocessDocument(formData: FormData) {
 
   await logActivity(id, session.user.id, "REPROCESSED", { fileName: doc.name });
 
-  processDocument(id, doc.fileType, textBuffer, { evictChunkIds: existingChunkIds }).catch((err) => {
-    logger.error(`Reprocessing failed for ${id}`, { error: err instanceof Error ? err.message : "unknown" });
-  });
+  await processDocument(id, doc.fileType, textBuffer, { evictChunkIds: existingChunkIds });
 
   try {
     revalidatePath(`/app/knowledge-bases/${doc.knowledgeBaseId}`);
@@ -1538,9 +1478,7 @@ export async function bulkReprocessDocuments(formData: FormData) {
   });
 
   for (const { docId, fileType, buffer, chunkIds } of toProcess) {
-    processDocument(docId, fileType, buffer, { evictChunkIds: chunkIds }).catch((err) => {
-      logger.error(`Bulk reprocess failed for ${docId}`, { error: err instanceof Error ? err.message : "unknown" });
-    });
+    await processDocument(docId, fileType, buffer, { evictChunkIds: chunkIds });
   }
 
   try {
