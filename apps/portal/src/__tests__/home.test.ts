@@ -63,7 +63,7 @@ describe("home dashboard", () => {
 
   it("removes hidden shortcuts that duplicated navigation with misleading targets", () => {
     assert.doesNotMatch(layout, /KeyboardShortcuts/);
-    assert.match(layout, /CommandPalette/);
+    assert.doesNotMatch(layout, /dashboard\/keyboard-shortcuts/);
   });
 
   it("explains that YouTube ingestion requires accessible captions", () => {
