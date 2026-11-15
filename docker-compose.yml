@@ -72,6 +72,7 @@ services:
       # on the host loopback so the plaintext channel is not reachable from the
       # LAN; production runs with TLS or a loopback bind instead.
       - KAIROS_GRPC_BIND_HOST=0.0.0.0
+      - KAIROS_PROVIDER_TIMEOUT_SECONDS=${KAIROS_PROVIDER_TIMEOUT_SECONDS:-30}
     deploy:
       resources:
         limits:
@@ -101,6 +102,7 @@ services:
     environment:
       - INTELLIGENCE_HOST=intelligence
       - INTELLIGENCE_PORT=28080
+      - KAIROS_PROVIDER_TIMEOUT_SECONDS=${KAIROS_PROVIDER_TIMEOUT_SECONDS:-30}
     deploy:
       resources:
         limits:
