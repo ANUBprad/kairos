@@ -222,13 +222,15 @@ export async function trackRegressionComparison(
 export async function getBenchmarkRegressionForOrg(
   regressionId: string,
   organizationId: string,
+  userId: string,
 ): Promise<Pick<TrackedRegression, "record" | "machine"> | null> {
   const row = await prisma.benchmarkRegression.findFirst({
     where: {
       id: regressionId,
 dataset: {
         OR: [
-          { knowledgeBaseId: null, organizationId: null },
+          { knowledgeBaseId: null, organizationId: null, createdById: null },
+          { knowledgeBaseId: null, organizationId: null, createdById: userId },
           { knowledgeBase: { project: { organizationId } } },
           { organizationId },
         ],
