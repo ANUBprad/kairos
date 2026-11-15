@@ -1,6 +1,6 @@
 "use server";
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
@@ -184,7 +184,7 @@ export async function uploadDocument(kbId: string, formData: FormData) {
   for (const { file, buffer, fileType, hash } of fileEntries) {
     const ext = file.name.split(".").pop() || "";
     const safeName = sanitizeFilename(file.name.replace(`.${ext}`, ""));
-    const storageKey = `${kbId}/${Date.now()}-${safeName}`;
+    const storageKey = `${kbId}/${Date.now()}-${randomUUID()}-${safeName}.${fileType}`;
 
     // Stored objects are authenticated (signed delivery only), so a raw CDN
     // URL can never be used to fetch another document's object. Callers reach
