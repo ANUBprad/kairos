@@ -273,6 +273,7 @@ describe("regression comparison tracking against a real database", () => {
       const crossVersion = await trackRegressionComparison(
         { baselineRunId: baselineRun.id, candidateRunId: otherVersionRun.id },
         orgAId,
+        memberUserId,
       );
       assert.equal(crossVersion.machine.ok, false);
       assert.equal(crossVersion.machine.state, "incompatible");
@@ -314,6 +315,7 @@ describe("regression comparison tracking against a real database", () => {
       const global = await trackRegressionComparison(
         { baselineRunId: standaloneBaseline.id, candidateRunId: standaloneCandidate.id },
         orgBId,
+        foreignUserId,
       );
       assert.equal(global.machine.ok, true);
       assert.equal(global.machine.state, "compatible");
