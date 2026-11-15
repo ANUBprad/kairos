@@ -7,7 +7,7 @@ import { safeRevalidate as revalidatePath } from "@/lib/revalidation";
 import { getStorageProvider } from "@/lib/storage";
 import { extractText } from "@/lib/extraction";
 import { chunkText } from "@/lib/chunking";
-import { generateEmbeddings } from "@/lib/ai/embeddings";
+import { generateEmbeddings, recoverStaleEmbeddingDocuments } from "@/lib/ai/embeddings";
 import { logger } from "@/lib/logger";
 import { serverTrackEvent } from "@/lib/telemetry/analytics-server";
 import { revalidateSourcePage } from "@/lib/revalidation";
@@ -1240,6 +1240,15 @@ export async function listDocuments(kbId: string, filters?: SourceListFilters): 
   if (!session) return [];
 
   await getOrgFromKb(kbId, session.user.id, "view");
+
+  // Listing is also the recovery heartbeat: sources abandoned by a terminated
+  // request are moved to ERROR so the existing Retry action can recover them.
+  await recoverStaleEmbeddingDocuments(kbId, new Date(Date.now() - 30 * 60 * 1000)).catch((error) => {
+    logger.warn("Stale document recovery check failed", {
+      kbId,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+  });
 
   return prisma.document.findMany({
     where: resolveSourceWhere(kbId, filters),
