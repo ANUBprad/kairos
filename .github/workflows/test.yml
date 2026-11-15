@@ -43,6 +43,25 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
+  gateway-tests:
+    name: Go gateway tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: gateway/go.mod
+          cache: true
+          cache-dependency-path: gateway/go.sum
+
+      - name: Run gateway tests
+        run: go test ./...
+
   docker-e2e:
     name: Docker end-to-end
     runs-on: ubuntu-latest
