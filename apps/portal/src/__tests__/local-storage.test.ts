@@ -41,6 +41,7 @@ describe("local development storage", () => {
 
       const served = await serveLocalStorage(new NextRequest(signedUrl));
       assert.equal(served.status, 200);
+      assert.equal(served.headers.get("content-type"), "application/pdf");
       assert.equal(await served.text(), "private pdf bytes");
 
       const rangeRequest = new NextRequest(signedUrl, { headers: { Range: "bytes=0-6" } });
