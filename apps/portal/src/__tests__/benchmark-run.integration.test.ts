@@ -124,7 +124,11 @@ describe("runBenchmark failure lifecycle against a real database", () => {
       assert.ok(run.completedAt, "a failed run records when it finalized");
       assert.equal(run.results.length, 2, "each failed question keeps a result row for diagnosis");
       assert.ok(run.results.every((result) => result.error != null), "failed rows retain their error details");
-      assert.equal(JSON.stringify(run.aggregatedMetrics), "{}", "no NaN avgLatencyMs leaks into aggregated metrics");
+      const metrics = run.aggregatedMetrics as Record<string, unknown>;
+      assert.equal(metrics.avgLatencyMs, 0, "all-failed runs use a finite zero latency");
+      assert.equal(Number.isNaN(Number(metrics.avgLatencyMs)), false, "no NaN avgLatencyMs leaks into aggregated metrics");
+      assert.equal(metrics.failedQuestions, 2);
+      assert.equal(metrics.completedQuestions, 0);
     } finally {
       await client.$disconnect();
     }
