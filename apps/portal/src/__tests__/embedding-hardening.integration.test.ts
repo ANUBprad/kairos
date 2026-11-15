@@ -421,6 +421,47 @@ describe("embedding production hardening against a real database", () => {
     assert.equal(settled.status, "INDEXED");
   });
 
+  it("retries a YouTube snapshot from stored chunks without refetching the video", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
+      return;
+    }
+    stub.mode = "ok";
+    stub.dim = DIM;
+    const clientRef = client as PrismaClient;
+    const demoUser = await ensureDemoUser();
+    const kbId = await makeKbForDemo(demoUser);
+    const doc = await clientRef.document.create({
+      data: {
+        name: `saved-youtube-${randomUUID()}`.slice(0, 255),
+        fileType: "txt",
+        sourceType: "YOUTUBE",
+        sourceUrl: "https://www.youtube.com/watch?v=AbCdEfGhIjK",
+        status: "ERROR",
+        knowledgeBaseId: kbId,
+        uploadedById: demoUser,
+        metadata: { title: "Saved transcript snapshot" },
+      },
+      select: { id: true },
+    });
+    docIds.push(doc.id);
+    const originalText = "This is the saved transcript snapshot. It must be used for retry.";
+    await clientRef.documentChunk.create({
+      data: { documentId: doc.id, index: 0, content: originalText, tokenCount: 13 },
+    });
+
+    const result = await reprocessDocument(reprocessFormData(doc.id));
+    assert.equal(result.status, "INDEXED");
+    const indexed = await clientRef.document.findUnique({ where: { id: doc.id }, select: { status: true } });
+    assert.equal(indexed?.status, "INDEXED");
+    const chunks = await clientRef.documentChunk.findMany({
+      where: { documentId: doc.id },
+      select: { content: true },
+    });
+    assert.ok(chunks.length > 0);
+    assert.match(chunks.map((chunk) => chunk.content).join(" "), /saved transcript snapshot/);
+  });
+
   it("stale EMBEDDING and EMBEDDING_PENDING documents recover to ERROR idempotently", async (t) => {
     if (!testDbUrl) {
       t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
