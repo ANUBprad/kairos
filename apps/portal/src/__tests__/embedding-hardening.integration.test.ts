@@ -454,6 +454,28 @@ describe("embedding production hardening against a real database", () => {
       select: { id: true },
     });
     docIds.push(stalePending.id);
+    const staleStored = await clientRef.document.create({
+      data: {
+        name: `stale-stored-${randomUUID()}.txt`,
+        fileType: "txt",
+        status: "STORED",
+        knowledgeBaseId: kbId,
+        updatedAt: new Date(Date.now() - 40 * 60 * 1000),
+      },
+      select: { id: true },
+    });
+    docIds.push(staleStored.id);
+    const staleExtracting = await clientRef.document.create({
+      data: {
+        name: `stale-extracting-${randomUUID()}.txt`,
+        fileType: "txt",
+        status: "EXTRACTING",
+        knowledgeBaseId: kbId,
+        updatedAt: new Date(Date.now() - 40 * 60 * 1000),
+      },
+      select: { id: true },
+    });
+    docIds.push(staleExtracting.id);
     const fresh = await clientRef.document.create({
       data: {
         name: `fresh-${randomUUID()}.txt`,
@@ -467,17 +489,21 @@ describe("embedding production hardening against a real database", () => {
 
     const cutoff = new Date(Date.now() - STALE_EMBEDDING_MS);
     const first = await recoverStaleEmbeddingDocuments(kbId, cutoff);
-    assert.equal(first, 2, "both stale rows must recover");
+    assert.equal(first, 4, "stale rows from embedding and pre-embedding stages must recover");
     const second = await recoverStaleEmbeddingDocuments(kbId, cutoff);
     assert.equal(second, 0, "recovery must be idempotent");
 
-    const [staleEmbedRow, stalePendingRow, freshRow] = await Promise.all([
+    const [staleEmbedRow, stalePendingRow, staleStoredRow, staleExtractingRow, freshRow] = await Promise.all([
       clientRef.document.findUnique({ where: { id: staleEmbed.id }, select: { status: true } }),
       clientRef.document.findUnique({ where: { id: stalePending.id }, select: { status: true } }),
+      clientRef.document.findUnique({ where: { id: staleStored.id }, select: { status: true } }),
+      clientRef.document.findUnique({ where: { id: staleExtracting.id }, select: { status: true } }),
       clientRef.document.findUnique({ where: { id: fresh.id }, select: { status: true } }),
     ]);
     assert.equal(staleEmbedRow?.status, "ERROR");
     assert.equal(stalePendingRow?.status, "ERROR");
+    assert.equal(staleStoredRow?.status, "ERROR");
+    assert.equal(staleExtractingRow?.status, "ERROR");
     assert.equal(freshRow?.status, "EMBEDDING", "a live (fresh) row must never be recovered");
   });
 
