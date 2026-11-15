@@ -210,7 +210,7 @@ describe("regression comparison tracking against a real database", () => {
 
       // Member on the pinned immutable version row: a real comparison is
       // recorded against the version's dataset id.
-      const tracked = await trackRegressionComparison({ baselineRunId: baselineRun.id, candidateRunId: candidateRun.id }, orgAId);
+      const tracked = await trackRegressionComparison({ baselineRunId: baselineRun.id, candidateRunId: candidateRun.id }, orgAId, memberUserId);
       assert.equal(tracked.record.datasetId, versionV1.id);
       assert.equal(tracked.record.overallVerdict, "improvement");
       assert.equal(tracked.machine.ok, true);
@@ -229,7 +229,7 @@ describe("regression comparison tracking against a real database", () => {
       assert.equal(persisted.overallVerdict, "improvement");
 
       // Idempotent: repeating the same ordered pair rewrites one row.
-      const repeated = await trackRegressionComparison({ baselineRunId: baselineRun.id, candidateRunId: candidateRun.id }, orgAId);
+      const repeated = await trackRegressionComparison({ baselineRunId: baselineRun.id, candidateRunId: candidateRun.id }, orgAId, memberUserId);
       assert.equal(repeated.record.id, tracked.record.id);
       assert.equal(repeated.record.overallVerdict, "improvement");
 
@@ -282,22 +282,22 @@ describe("regression comparison tracking against a real database", () => {
 
       // Foreign, out-of-org, and fabricated run ids fail identically.
       await assert.rejects(
-        trackRegressionComparison({ baselineRunId: baselineRun.id, candidateRunId: foreignRun.id }, orgAId),
+        trackRegressionComparison({ baselineRunId: baselineRun.id, candidateRunId: foreignRun.id }, orgAId, memberUserId),
         /Run not found/,
         "foreign candidate must be indistinguishable from not-found",
       );
       await assert.rejects(
-        trackRegressionComparison({ baselineRunId: foreignRun.id, candidateRunId: candidateRun.id }, orgAId),
+        trackRegressionComparison({ baselineRunId: foreignRun.id, candidateRunId: candidateRun.id }, orgAId, memberUserId),
         /Run not found/,
         "foreign baseline must be indistinguishable from not-found",
       );
       await assert.rejects(
-        trackRegressionComparison({ baselineRunId: baselineRun.id, candidateRunId: candidateRun.id }, orgBId),
+        trackRegressionComparison({ baselineRunId: baselineRun.id, candidateRunId: candidateRun.id }, orgBId, foreignUserId),
         /Run not found/,
         "another organization must not read org A's runs",
       );
       await assert.rejects(
-        trackRegressionComparison({ baselineRunId: randomUUID(), candidateRunId: candidateRun.id }, orgAId),
+        trackRegressionComparison({ baselineRunId: randomUUID(), candidateRunId: candidateRun.id }, orgAId, memberUserId),
         /Run not found/,
         "fabricated ids must fail identically",
       );
@@ -305,7 +305,7 @@ describe("regression comparison tracking against a real database", () => {
       // A run shared into another dataset still resolves only through the
       // version row the caller can see; an exported run is still org-scoped.
       await assert.rejects(
-        trackRegressionComparison({ baselineRunId: exportedRun.id, candidateRunId: candidateRun.id }, orgBId),
+        trackRegressionComparison({ baselineRunId: exportedRun.id, candidateRunId: candidateRun.id }, orgBId, foreignUserId),
         /Run not found/,
       );
 
