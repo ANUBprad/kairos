@@ -136,6 +136,14 @@ test("dialog wires retry to the existing reprocess action", () => {
   assert.ok(dialogSource.includes('formData.append("id", id)'), "retry must reprocess the exact source id");
   assert.ok(dialogSource.includes("reprocessDocument(formData)"), "retry must call the existing reprocessDocument action");
   assert.ok(dialogSource.includes("retrySubmission"), "rejected uploads keep a re-submit path");
+  assert.ok(
+    dialogSource.includes("retryProcessing(item.docId)"),
+    "retry must pass the persisted document id, not the local queue id",
+  );
+  assert.ok(
+    !dialogSource.includes("retryProcessing(item.id)"),
+    "queue item id is not a document id and must never be sent to reprocess",
+  );
 });
 
 // Tenancy: status refreshes go through the KB-scoped, session-authorized

@@ -506,7 +506,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
                       {item.status === "error" && !isUploading && (
                         <button
                           onClick={() =>
-                            item.docId === undefined ? retrySubmission(item.id) : retryProcessing(item.id)
+                            item.docId === undefined ? retrySubmission(item.id) : retryProcessing(item.docId)
                           }
                           className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary transition-colors hover:bg-surface-hover hover:text-text-primary"
                           title="Retry"
