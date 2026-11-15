@@ -101,6 +101,32 @@ func dialWithAuth(t *testing.T, addr, secret string) *grpc.ClientConn {
 	return conn
 }
 
+func TestConfiguredRPCTimeoutUsesDefaultWhenUnset(t *testing.T) {
+	t.Setenv("KAIROS_PROVIDER_TIMEOUT_SECONDS", "")
+	if got := configuredRPCTimeout(30 * time.Second); got != 30*time.Second {
+		t.Fatalf("expected default 30s timeout, got %s", got)
+	}
+}
+
+func TestConfiguredRPCTimeoutUsesProviderSetting(t *testing.T) {
+	t.Setenv("KAIROS_PROVIDER_TIMEOUT_SECONDS", "180")
+	if got := configuredRPCTimeout(30 * time.Second); got != 180*time.Second {
+		t.Fatalf("expected configured 180s timeout, got %s", got)
+	}
+}
+
+func TestConfiguredRPCTimeoutRejectsInvalidAndCapsLargeValues(t *testing.T) {
+	t.Setenv("KAIROS_PROVIDER_TIMEOUT_SECONDS", "not-a-number")
+	if got := configuredRPCTimeout(90 * time.Second); got != 90*time.Second {
+		t.Fatalf("expected default after invalid value, got %s", got)
+	}
+
+	t.Setenv("KAIROS_PROVIDER_TIMEOUT_SECONDS", "900")
+	if got := configuredRPCTimeout(30 * time.Second); got != 600*time.Second {
+		t.Fatalf("expected 600s safety cap, got %s", got)
+	}
+}
+
 func TestServiceAuthAttachesServiceCredential(t *testing.T) {
 	addr, capture := startAuthServer(t)
 	conn := dialWithAuth(t, addr, "test-service-secret")
