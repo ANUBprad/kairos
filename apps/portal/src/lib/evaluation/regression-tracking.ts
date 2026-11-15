@@ -215,10 +215,9 @@ export async function trackRegressionComparison(
 
 // Reads a persisted regression comparison through the same shared access
 // boundary as tracking: datasets anchored to a knowledge base or organization
-// resolve only inside the caller's organization, standalone (unanchored)
-// datasets stay global, and a foreign, fabricated, or deleted id resolves
-// identically to null so the caller cannot probe another tenant's record
-// existence.
+// resolve only inside the caller's organization; unowned standalone datasets are
+// global, while creator-owned standalone datasets are private to userId. A
+// foreign, fabricated, or deleted id resolves identically to null.
 export async function getBenchmarkRegressionForOrg(
   regressionId: string,
   organizationId: string,
@@ -227,7 +226,7 @@ export async function getBenchmarkRegressionForOrg(
   const row = await prisma.benchmarkRegression.findFirst({
     where: {
       id: regressionId,
-dataset: {
+      dataset: {
         OR: [
           { knowledgeBaseId: null, organizationId: null, createdById: null },
           { knowledgeBaseId: null, organizationId: null, createdById: userId },
