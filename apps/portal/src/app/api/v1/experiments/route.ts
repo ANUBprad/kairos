@@ -98,8 +98,8 @@ export async function POST(request: NextRequest) {
 
     // datasetId must not attach this experiment to another tenant's dataset:
     // only datasets anchored to the caller's organization or knowledge base are
-    // bindable, plus standalone datasets created by the API-key owner. A foreign
-    // or fabricated id resolves to 404 so its existence cannot be probed.
+    // bindable, plus unowned global standalone datasets and standalone datasets
+    // created by the API-key owner. A foreign or fabricated id resolves to 404.
     let datasetId: string | undefined;
     if (typeof body.datasetId === "string" && body.datasetId.trim() !== "") {
       datasetId = body.datasetId.trim();
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
           OR: [
             { organizationId: auth.organizationId },
             { knowledgeBase: { project: { organizationId: auth.organizationId } } },
+            { organizationId: null, knowledgeBaseId: null, createdById: null },
             { organizationId: null, knowledgeBaseId: null, createdById: auth.userId },
           ],
         },
