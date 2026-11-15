@@ -167,7 +167,7 @@ describe("v1 experiments dataset tenancy against a real database", () => {
     assert.equal(fetched.dataset.name, "Own Dataset");
   });
 
-  it("accepts an unanchored standalone dataset, matching the UI's dataset access boundary", async (t) => {
+  it("accepts an unowned standalone dataset shared across tenants", async (t) => {
     if (!requireEnvironment(t)) return;
 
     const res = await postExperiment({ name: `unanchored-${randomUUID()}`, knowledgeBaseId: kbA, datasetId: unanchoredDatasetId });
