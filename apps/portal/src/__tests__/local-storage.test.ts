@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { NextRequest } from "next/server";
+import { GET as serveLocalStorage } from "@/app/api/storage/local/route";
 import { LocalStorageProvider, verifyLocalStorageSignature } from "@/lib/storage/local";
 
 describe("local development storage", () => {
@@ -36,6 +38,20 @@ describe("local development storage", () => {
       assert.equal(signedUrl.searchParams.get("key"), uploaded.key);
       assert.equal(verifyLocalStorageSignature(uploaded.key, expires, signature), true);
       assert.equal(verifyLocalStorageSignature("../secrets", expires, signature), false);
+
+      const served = await serveLocalStorage(new NextRequest(signedUrl));
+      assert.equal(served.status, 200);
+      assert.equal(await served.text(), "private pdf bytes");
+
+      const rangeRequest = new NextRequest(signedUrl, { headers: { Range: "bytes=0-6" } });
+      const partial = await serveLocalStorage(rangeRequest);
+      assert.equal(partial.status, 206);
+      assert.equal(await partial.text(), "private");
+
+      const expiredUrl = new URL(signedUrl);
+      expiredUrl.searchParams.set("expires", String(Math.floor(Date.now() / 1000) - 1));
+      const expired = await serveLocalStorage(new NextRequest(expiredUrl));
+      assert.equal(expired.status, 401);
 
       await storage.delete(uploaded.key);
       await assert.rejects(storage.read(uploaded.key));
