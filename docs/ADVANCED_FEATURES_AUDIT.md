@@ -51,6 +51,7 @@ The previously failing CI run showed these issues; the branch includes targeted 
 6. Benchmark chat generation uses the configured chat provider, independently of the embedding provider.
 7. The experiments API accepts unowned global standalone datasets while continuing to reject foreign and fabricated dataset IDs.
 8. Gateway gRPC deadlines now honor `KAIROS_PROVIDER_TIMEOUT_SECONDS` (with per-RPC defaults and a 600-second cap), matching the Docker E2E model timeout; a Go gateway test job now exercises this behavior.
+9. Both Ollama CI workflows retry transient registry failures while pulling the `llama3` model and capture container logs if all attempts fail.
 
 CI on this branch is still the source of truth for whether these changes pass. Do not describe the suite as green until the latest branch run completes successfully.
 
