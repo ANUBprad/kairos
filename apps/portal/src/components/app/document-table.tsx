@@ -197,8 +197,9 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
     try {
       const formData = new FormData();
       formData.set("id", doc.id);
-      await reprocessDocument(formData);
-      toast.success("Reprocessing started");
+      const result = await reprocessDocument(formData);
+      if (result.status === "ERROR") toast.error("Reprocessing failed. Open the source to inspect the error.");
+      else toast.success("Source reprocessed");
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to reprocess");
@@ -233,7 +234,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
       const formData = new FormData();
       selected.forEach((id) => formData.append("ids", id));
       await bulkReprocessDocuments(formData);
-      toast.success(`Reprocessing ${selected.size} source${selected.size !== 1 ? "s" : ""}`);
+      toast.success(`Finished retrying ${selected.size} source${selected.size !== 1 ? "s" : ""}`);
       clearSelection();
       router.refresh();
     } catch (err) {
