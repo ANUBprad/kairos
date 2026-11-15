@@ -152,7 +152,9 @@ function runMigrateDeploy(dbUrl: string): void {
   );
   execFileSync(process.execPath, [prismaCli, "migrate", "deploy"], {
     cwd: process.cwd(),
-    env: { ...process.env, DATABASE_URL: dbUrl },
+    // Prisma migrations use directUrl when configured; override both so the
+    // isolated empty database is actually the migration target.
+    env: { ...process.env, DATABASE_URL: dbUrl, DIRECT_URL: dbUrl },
     stdio: "pipe",
   });
 }
