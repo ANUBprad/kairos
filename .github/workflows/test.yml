@@ -46,18 +46,15 @@ jobs:
   gateway-tests:
     name: Go gateway tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: gateway
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: gateway/go.mod
+          go-version-file: go.mod
           cache: true
-          cache-dependency-path: gateway/go.sum
+          cache-dependency-path: go.sum
 
       - name: Run gateway tests
         run: go test ./...
