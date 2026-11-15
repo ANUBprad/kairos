@@ -89,6 +89,10 @@ func ConnectToPython(envVar *config.Config) (pb.IntelligenceServiceClient, *grpc
 // configuredRPCTimeout uses the same timeout setting as the Intelligence
 // provider so the gateway's gRPC deadline does not expire before the model
 // request itself. Each RPC keeps its own default when the variable is unset.
+func ConfiguredRPCTimeout(defaultTimeout time.Duration) time.Duration {
+	return configuredRPCTimeout(defaultTimeout)
+}
+
 func configuredRPCTimeout(defaultTimeout time.Duration) time.Duration {
 	raw := strings.TrimSpace(os.Getenv("KAIROS_PROVIDER_TIMEOUT_SECONDS"))
 	if raw == "" {
@@ -142,7 +146,7 @@ func ComputeEmbeddings(ctx context.Context, client pb.IntelligenceServiceClient,
 }
 
 func ExecuteRetrieval(ctx context.Context, client pb.IntelligenceServiceClient, query string, config *pb.RetrievalConfig, namespace string) (*pb.ExecuteRetrievalResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, configuredRPCTimeout(30*time.Second))
 	defer cancel()
 	ctx = injectTraceContext(ctx)
 
