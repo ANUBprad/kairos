@@ -140,7 +140,7 @@ export async function recoverStaleEmbeddingDocuments(
   const result = await prisma.document.updateMany({
     where: {
       knowledgeBaseId,
-      status: { in: ["EMBEDDING", "EMBEDDING_PENDING"] },
+      status: { in: ["QUEUED", "UPLOADING", "STORED", "EXTRACTING", "CHUNKING", "EMBEDDING", "EMBEDDING_PENDING"] },
       updatedAt: { lt: staleBefore },
     },
     data: { status: "ERROR" },
