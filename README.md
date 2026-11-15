@@ -96,7 +96,7 @@ The compose stack provides the local database (PostgreSQL 16 with pgvector) at `
 
 ```bash
 cd apps/portal
-npm install
+npm ci
 npx prisma migrate deploy   # applies all migrations to the compose-provided database
 npm run dev
 ```
