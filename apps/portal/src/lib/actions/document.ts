@@ -18,6 +18,7 @@ import { buildUrlDocumentData, fetchArticle, urlDocumentFileHash, UrlSourceError
 import { buildYouTubeDocumentData, fetchYouTubeTranscript, youtubeIngestErrorMessage, YouTubeTranscriptError, type FetchYoutubeOptions } from "@/lib/ingestion/youtube";
 import { buildTextDocumentData, normalizeTextInput, textDocumentFileHash } from "@/lib/ingestion/text";
 import { ALLOWED_EXTENSIONS, assertFileContentMatchesType, getFileType, MAX_FILE_SIZE, partitionDuplicateUploads } from "@/lib/ingestion/upload-validation";
+import { mergeFailureMetadata } from "@/lib/ingestion/processing-metadata";
 import { assertSameKnowledgeBase, MAX_BULK_OPERATIONS, resolveSourceListOrder, resolveSourceWhere, type SourceListFilters, type SourceListItem } from "@/lib/source-contract";
 import type { DocumentStatus, Prisma } from "@prisma/client";
 
@@ -1007,7 +1008,14 @@ async function rollbackOrError(
   await prisma.document
     .update({
       where: { id: docId },
-      data: { status: "ERROR", metadata: meta as never },
+      data: {
+        status: "ERROR",
+        metadata: mergeFailureMetadata(
+          docRow?.metadata as Record<string, unknown> | null,
+          meta,
+          errMsg,
+        ) as never,
+      },
     })
     .catch(() => {});
   revalidateSourcePage(docRow?.knowledgeBaseId);
