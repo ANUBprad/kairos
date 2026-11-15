@@ -494,16 +494,21 @@ describe("embedding production hardening against a real database", () => {
     assert.equal(second, 0, "recovery must be idempotent");
 
     const [staleEmbedRow, stalePendingRow, staleStoredRow, staleExtractingRow, freshRow] = await Promise.all([
-      clientRef.document.findUnique({ where: { id: staleEmbed.id }, select: { status: true } }),
-      clientRef.document.findUnique({ where: { id: stalePending.id }, select: { status: true } }),
-      clientRef.document.findUnique({ where: { id: staleStored.id }, select: { status: true } }),
-      clientRef.document.findUnique({ where: { id: staleExtracting.id }, select: { status: true } }),
-      clientRef.document.findUnique({ where: { id: fresh.id }, select: { status: true } }),
+      clientRef.document.findUnique({ where: { id: staleEmbed.id }, select: { status: true, metadata: true } }),
+      clientRef.document.findUnique({ where: { id: stalePending.id }, select: { status: true, metadata: true } }),
+      clientRef.document.findUnique({ where: { id: staleStored.id }, select: { status: true, metadata: true } }),
+      clientRef.document.findUnique({ where: { id: staleExtracting.id }, select: { status: true, metadata: true } }),
+      clientRef.document.findUnique({ where: { id: fresh.id }, select: { status: true, metadata: true } }),
     ]);
     assert.equal(staleEmbedRow?.status, "ERROR");
     assert.equal(stalePendingRow?.status, "ERROR");
     assert.equal(staleStoredRow?.status, "ERROR");
     assert.equal(staleExtractingRow?.status, "ERROR");
+    for (const recovered of [staleEmbedRow, stalePendingRow, staleStoredRow, staleExtractingRow]) {
+      const metadata = recovered?.metadata as Record<string, unknown> | null;
+      assert.equal(metadata?.stage, "recovery");
+      assert.match(String(metadata?.error), /Retry this source to resume/);
+    }
     assert.equal(freshRow?.status, "EMBEDDING", "a live (fresh) row must never be recovered");
   });
 
