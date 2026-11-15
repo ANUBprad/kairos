@@ -16,6 +16,6 @@ describe("PDF text extraction", () => {
 
     assert.match(result.text, /Kairos PDF ingestion fixture/);
     assert.equal(result.metadata.pages, 1);
-    assert.ok(result.metadata.characters > 0);
+    assert.ok(Number(result.metadata.characters) > 0);
   });
 });
