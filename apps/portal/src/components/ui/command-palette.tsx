@@ -12,11 +12,9 @@ interface CommandItem {
   label: string;
   description?: string;
   href?: string;
-  action?: string;
   icon: LucideIcon;
   category: string;
   keywords: string[];
-  shortcut?: string;
 }
 
 // The palette opens pages; it does not pretend that navigation is an action.
