@@ -348,7 +348,8 @@ export async function ingestYouTube(kbId: string, rawUrl: string) {
   await processDocument(doc.id, "txt", buffer);
 
   revalidatePath(`/app/knowledge-bases/${kbId}`);
-  return doc;
+  const processed = await prisma.document.findUnique({ where: { id: doc.id }, select: { status: true } });
+  return { ...doc, status: processed?.status ?? "ERROR" };
 }
 
 export async function ingestUrl(kbId: string, rawUrl: string) {
@@ -422,7 +423,8 @@ export async function ingestUrl(kbId: string, rawUrl: string) {
   await processDocument(doc.id, "txt", buffer);
 
   revalidatePath(`/app/knowledge-bases/${kbId}`);
-  return doc;
+  const processed = await prisma.document.findUnique({ where: { id: doc.id }, select: { status: true } });
+  return { ...doc, status: processed?.status ?? "ERROR" };
 }
 
 export async function ingestText(kbId: string, input: { title?: string; content: string }) {
@@ -490,7 +492,8 @@ export async function ingestText(kbId: string, input: { title?: string; content:
     });
   }
 
-  return doc;
+  const processed = await prisma.document.findUnique({ where: { id: doc.id }, select: { status: true } });
+  return { ...doc, status: processed?.status ?? "ERROR" };
 }
 
 export async function updateTextSource(docId: string, input: { title?: string; content: string }) {
@@ -1370,7 +1373,10 @@ export async function reprocessDocument(formData: FormData) {
   if (!doc) throw new Error("Document not found");
   await getOrgFromKb(doc.knowledgeBaseId, session.user.id);
 
-  const textBuffer = (await reconstructTextSourceBuffers(doc.sourceType === "TEXT" ? [id] : [])).get(id);
+  // URL, YouTube, and pasted-text sources are immutable snapshots once
+  // ingested. Rebuild from their stored chunks first so retry does not depend
+  // on a third-party page or caption track still being available.
+  const textBuffer = (await reconstructTextSourceBuffers(doc.sourceType !== "FILE" ? [id] : [])).get(id);
   if (doc.sourceType === "TEXT" && !textBuffer) {
     throw new Error("Text source has no stored content to reprocess");
   }
@@ -1459,8 +1465,10 @@ export async function bulkReprocessDocuments(formData: FormData) {
   const bulkKbId = assertSameKnowledgeBase(docs);
   await getOrgFromKb(bulkKbId, session.user.id);
 
+  // Reprocess stored snapshots for all non-file sources. This avoids
+  // changing content (or failing) when an external URL/video changes later.
   const textBuffers = await reconstructTextSourceBuffers(
-    docs.filter((d) => d.sourceType === "TEXT").map((d) => d.id),
+    docs.filter((d) => d.sourceType !== "FILE").map((d) => d.id),
   );
 
   const toProcess: { docId: string; fileType: string; buffer: Buffer | undefined; chunkIds: string[] }[] = [];
