@@ -152,7 +152,7 @@ describe("regression quality gate over persisted comparisons", () => {
 
       // The owning org reads the persisted snapshot back and the gate is a pure
       // function of it: deterministic, PASS under the explicit default policy.
-      const persisted = await getBenchmarkRegressionForOrg(tracked.record.id, orgAId);
+      const persisted = await getBenchmarkRegressionForOrg(tracked.record.id, orgAId, memberUserId);
       assert.ok(persisted);
       assert.equal(persisted.record.id, tracked.record.id);
       assert.deepEqual(persisted.machine, tracked.machine);
@@ -175,9 +175,9 @@ describe("regression quality gate over persisted comparisons", () => {
       assert.equal(failing.criteria.find((c) => c.metric === "recallAtK")!.state, "fail");
 
       // A foreign organization cannot read this org's persisted regression.
-      assert.equal(await getBenchmarkRegressionForOrg(tracked.record.id, orgBId), null);
+      assert.equal(await getBenchmarkRegressionForOrg(tracked.record.id, orgBId, foreignUserId), null);
       // Nor can a fabricated id be probed by the owning org.
-      assert.equal(await getBenchmarkRegressionForOrg(randomUUID(), orgAId), null);
+      assert.equal(await getBenchmarkRegressionForOrg(randomUUID(), orgAId, memberUserId), null);
 
       // Standalone (unanchored) regressions stay global, in line with the
       // shared access boundary: another org tracks it and a third reads it.
@@ -186,7 +186,7 @@ describe("regression quality gate over persisted comparisons", () => {
         orgBId,
         foreignUserId,
       );
-      const globalRead = await getBenchmarkRegressionForOrg(globalTracked.record.id, orgAId);
+      const globalRead = await getBenchmarkRegressionForOrg(globalTracked.record.id, orgAId, memberUserId);
       assert.ok(globalRead);
       const globalGate = evaluateQualityGate(globalRead.machine, DEFAULT_QUALITY_GATE_POLICY);
       assert.equal(globalGate.outcome, "PASS");
