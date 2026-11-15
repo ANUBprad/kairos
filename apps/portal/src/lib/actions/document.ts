@@ -234,10 +234,13 @@ export async function uploadDocument(kbId: string, formData: FormData) {
       return created;
     });
 
-    results.push(doc);
-
     // Keep the server action alive until the source reaches a terminal state.
     await processDocument(doc.id, fileType, buffer);
+    const finalStatus = await prisma.document.findUnique({
+      where: { id: doc.id },
+      select: { status: true },
+    });
+    results.push({ ...doc, status: finalStatus?.status ?? "ERROR" });
   }
 
   serverTrackEvent("documents_uploaded", { count: results.length, kbId }, session.user.id);
