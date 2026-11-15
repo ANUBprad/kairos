@@ -156,7 +156,7 @@ async function main() {
     // 4. The persisted comparison is readable through the org boundary and the
     //    quality gate passes under the configured policy.
     const policy = loadPolicy();
-    const persisted = await getBenchmarkRegressionForOrg(tracked.record.id, orgId, memberUserId);
+    const persisted = await getBenchmarkRegressionForOrg(tracked.record.id, orgId);
     if (!persisted) throw new Error("persisted regression not readable by the owning org");
     const gate = evaluateQualityGate(persisted.machine, policy);
     if (gate.outcome !== "PASS") {
