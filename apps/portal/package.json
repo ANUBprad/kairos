@@ -7,7 +7,7 @@
     "postinstall": "prisma generate",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint src"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
