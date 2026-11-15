@@ -1387,7 +1387,8 @@ export async function reprocessDocument(formData: FormData) {
       error: revalidateErr instanceof Error ? revalidateErr.message : "unknown",
     });
   }
-  return { ...doc, status: "QUEUED" as const };
+  const processed = await prisma.document.findUnique({ where: { id }, select: { status: true } });
+  return { ...doc, status: processed?.status ?? "ERROR" };
 }
 
 export async function bulkDeleteDocuments(formData: FormData) {
