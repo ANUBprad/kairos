@@ -198,9 +198,9 @@ export function ExperimentBuilderClient() {
     <div className="animate-fade-in">
       <PageHeader
         title="Experiment Builder"
-        description="Visually assemble your RAG experiment pipeline by selecting configuration for each stage."
-        purpose="Build reproducible experiments by chaining pipeline stages together in a visual workflow."
-        nextAction={{ label: "View Results", href: "/app/evaluation" }}
+        description="Preview retrieval pipeline settings. These selections are not saved or applied to benchmark runs yet."
+        purpose="Explore available pipeline settings before configuring a benchmark in Evaluation."
+        nextAction={{ label: "Open Evaluation", href: "/app/evaluation" }}
         relatedPages={[
           { label: "Retrieval Lab", href: "/app/retrieval-lab" },
           { label: "Experiment Lineage", href: "/app/lineage" },
