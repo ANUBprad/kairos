@@ -7,6 +7,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"google.golang.org/grpc"
@@ -82,8 +86,27 @@ func ConnectToPython(envVar *config.Config) (pb.IntelligenceServiceClient, *grpc
 	return client, conn, nil
 }
 
+// configuredRPCTimeout uses the same timeout setting as the Intelligence
+// provider so the gateway's gRPC deadline does not expire before the model
+// request itself. Each RPC keeps its own default when the variable is unset.
+func configuredRPCTimeout(defaultTimeout time.Duration) time.Duration {
+	raw := strings.TrimSpace(os.Getenv("KAIROS_PROVIDER_TIMEOUT_SECONDS"))
+	if raw == "" {
+		return defaultTimeout
+	}
+	seconds, err := strconv.ParseFloat(raw, 64)
+	if err != nil || seconds <= 0 || math.IsNaN(seconds) || math.IsInf(seconds, 0) {
+		slog.Warn("Invalid KAIROS_PROVIDER_TIMEOUT_SECONDS; using RPC default", "value", raw)
+		return defaultTimeout
+	}
+	if seconds > 600 {
+		seconds = 600
+	}
+	return time.Duration(seconds * float64(time.Second))
+}
+
 func ClassifyQuery(ctx context.Context, client pb.IntelligenceServiceClient, query string, namespace string) (*pb.ClassifyQueryResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, configuredRPCTimeout(30*time.Second))
 	defer cancel()
 	ctx = injectTraceContext(ctx)
 
@@ -101,7 +124,7 @@ func ClassifyQuery(ctx context.Context, client pb.IntelligenceServiceClient, que
 }
 
 func ComputeEmbeddings(ctx context.Context, client pb.IntelligenceServiceClient, query string) ([]float32, error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, configuredRPCTimeout(30*time.Second))
 	defer cancel()
 	ctx = injectTraceContext(ctx)
 
@@ -139,7 +162,7 @@ func ExecuteRetrieval(ctx context.Context, client pb.IntelligenceServiceClient, 
 }
 
 func GenerateResponse(ctx context.Context, client pb.IntelligenceServiceClient, namespace string, query string, retrieved_chunk []*pb.RetrievedChunk) (*pb.GeneratedResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, configuredRPCTimeout(90*time.Second))
 	defer cancel()
 	ctx = injectTraceContext(ctx)
 
