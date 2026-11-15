@@ -19,6 +19,9 @@ htmlcov/
 .env.*
 !.env.example
 
+# Local development object storage (never commit uploaded documents)
+.kairos-storage/
+
 # Logs / scratch
 *.log
 logs/
