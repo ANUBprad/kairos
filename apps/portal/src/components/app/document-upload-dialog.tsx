@@ -272,7 +272,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
               : f,
           ),
         );
-        toast.info("Reprocessing started");
+        toast.info("Retry submitted — refreshing source status");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not restart processing");
       }
@@ -336,7 +336,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
     setIsUploading(false);
 
     if (successCount > 0) {
-      toast.info(`${successCount} file${successCount !== 1 ? "s" : ""} accepted — processing in the background`);
+      toast.info(`${successCount} file${successCount !== 1 ? "s" : ""} uploaded — indexing status is shown below`);
     }
     if (failCount > 0) {
       toast.error(`${failCount} file${failCount !== 1 ? "s" : ""} failed to upload`);
