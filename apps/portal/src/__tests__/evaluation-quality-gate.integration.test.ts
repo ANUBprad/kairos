@@ -186,7 +186,7 @@ describe("regression quality gate over persisted comparisons", () => {
         orgBId,
         foreignUserId,
       );
-      const globalRead = await getBenchmarkRegressionForOrg(globalTracked.record.id, orgAId, memberUserId);
+      const globalRead = await getBenchmarkRegressionForOrg(globalTracked.record.id, orgAId);
       assert.ok(globalRead);
       const globalGate = evaluateQualityGate(globalRead.machine, DEFAULT_QUALITY_GATE_POLICY);
       assert.equal(globalGate.outcome, "PASS");
