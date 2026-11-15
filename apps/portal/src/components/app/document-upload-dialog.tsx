@@ -264,15 +264,22 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
       try {
         const formData = new FormData();
         formData.append("id", id);
-        await reprocessDocument(formData);
+        const result = await reprocessDocument(formData);
+        const failed = result.status === "ERROR";
         setUploadQueue((prev) =>
           prev.map((f) =>
             f.id === id
-              ? { ...f, status: "processing" as const, backendStatus: "QUEUED" as DocumentStatus, error: undefined }
+              ? {
+                  ...f,
+                  status: failed ? "error" as const : "done" as const,
+                  backendStatus: result.status as DocumentStatus,
+                  error: failed ? "Indexing failed again. Review the source error and retry after fixing its cause." : undefined,
+                }
               : f,
           ),
         );
-        toast.info("Retry submitted — refreshing source status");
+        if (failed) toast.error("Reprocessing failed");
+        else toast.success("Source reprocessed");
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not restart processing");
       }
@@ -309,14 +316,22 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         const results = await uploadDocument(kbId, formData);
         const created = results[0];
 
+        const failed = created.status === "ERROR";
         setUploadQueue((prev) =>
           prev.map((f) =>
             f.id === item.id
-              ? { ...f, status: "processing" as const, docId: created.id, backendStatus: created.status as DocumentStatus }
+              ? {
+                  ...f,
+                  status: failed ? "error" as const : "done" as const,
+                  docId: created.id,
+                  backendStatus: created.status as DocumentStatus,
+                  error: failed ? "File uploaded, but indexing failed. Use Retry after reviewing the source error." : undefined,
+                }
               : f,
           ),
         );
-        successCount++;
+        if (failed) failCount++;
+        else successCount++;
       } catch (err) {
         setUploadQueue((prev) =>
           prev.map((f) =>
