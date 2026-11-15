@@ -100,13 +100,14 @@ export function serializeRegressionComparison(result: RegressionComparisonResult
   };
 }
 
-// Tenant-anchored runs are scoped to the API key's organization. Standalone
-// datasets are visible only to the user who created them.
+// Tenant-anchored runs are scoped to the API key's organization. Unowned
+// standalone datasets are global; creator-owned standalone datasets are private.
 function regressionRunWhere(runId: string, organizationId: string, userId: string) {
   return {
 id: runId,
     dataset: {
       OR: [
+        { knowledgeBaseId: null, organizationId: null, createdById: null },
         { knowledgeBaseId: null, organizationId: null, createdById: userId },
         { knowledgeBase: { project: { organizationId } } },
         { organizationId },
