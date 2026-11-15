@@ -54,7 +54,21 @@ jobs:
             fi
             sleep 5
           done
-          docker exec ollama ollama pull llama3
+          pulled=false
+          for attempt in 1 2 3; do
+            if docker exec ollama ollama pull llama3; then
+              pulled=true
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Ollama model pull failed (attempt $attempt/3); retrying in $((attempt * 15))s"
+              sleep $((attempt * 15))
+            fi
+          done
+          if [ "$pulled" != "true" ]; then
+            docker logs ollama --tail 100
+            exit 1
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
