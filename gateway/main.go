@@ -61,7 +61,8 @@ func main() {
 		Handler:      mainRouter,
 		Addr:         address,
 		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 60 * time.Second,
+		// Keep the HTTP writer alive beyond the configured end-to-end query deadline.
+		WriteTimeout: intelligence.ConfiguredRPCTimeout(55*time.Second) + 30*time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
 
