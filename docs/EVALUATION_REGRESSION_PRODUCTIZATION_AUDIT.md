@@ -1,3 +1,5 @@
+> **Historical snapshot:** several findings in this audit were superseded by later implementation and migrations. In particular, the mock-surface and migration-orphan lists below are not current. See [ADVANCED_FEATURES_AUDIT.md](./ADVANCED_FEATURES_AUDIT.md) for the verified current state before acting on this document.
+
 # Kairos Evaluation & Regression Productization Audit
 
 ## Executive Summary
