@@ -13,7 +13,7 @@ export function localStoragePath(key: string): string {
   const segments = key.split("/");
   if (
     !key ||
-    segments.some((segment) => !segment || segment === "." || segment === ".." || segment.includes("\\"))
+    segments.some((segment) => !/^[a-zA-Z0-9._-]+$/.test(segment) || segment === "." || segment === "..")
   ) {
     throw new Error("Invalid local storage key");
   }
