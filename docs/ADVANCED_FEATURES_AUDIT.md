@@ -52,3 +52,7 @@ The previously failing CI run showed these issues; the branch includes targeted 
 7. The experiments API accepts unowned global standalone datasets while continuing to reject foreign and fabricated dataset IDs.
 
 CI on this branch is still the source of truth for whether these changes pass. Do not describe the suite as green until the latest branch run completes successfully.
+
+## Remaining dependency risk
+
+A previous install/audit report flagged 20 dependency vulnerabilities, including 3 critical. They have not been force-upgraded in this branch: dependency remediation needs a separate package-by-package review and regression run rather than an unreviewed `npm audit fix --force`.
