@@ -353,7 +353,7 @@ function parseTimedText(body: string): CaptionCue[] {
       throw new YouTubeTranscriptError("transcript_malformed", "timedtext JSON did not contain caption events");
     }
     return payload.events.flatMap((event) => {
-      const text = (event.segs || []).map((segment) => segment.utf8 || "").join("").replace(/\\s+/g, " ").trim();
+      const text = (event.segs || []).map((segment) => segment.utf8 || "").join("").replace(/\s+/g, " ").trim();
       if (!text) return [];
       return [{
         start: Number(event.tStartMs || 0) / 1000,
@@ -365,14 +365,14 @@ function parseTimedText(body: string): CaptionCue[] {
 
   // Legacy srv1 XML uses <text start="..." dur="...">. Some tracks use srv3
   // <p t="..." d="..."><s>...</s></p>; normalize both to the same cue shape.
-  const hasLegacyCues = /<text\\b/i.test(body) || /<transcript\\b/i.test(body);
-  const hasSrv3Cues = /<p\\b[^>]*>/i.test(body);
+  const hasLegacyCues = /<text\b/i.test(body) || /<transcript\b/i.test(body);
+  const hasSrv3Cues = /<p\b[^>]*>/i.test(body);
   if (!hasLegacyCues && !hasSrv3Cues) {
     throw new YouTubeTranscriptError("transcript_malformed", "timedtext response is not a supported caption format");
   }
 
   const cues: CaptionCue[] = [];
-  for (const match of body.matchAll(/<text\\b([^>]*)>([\\s\\S]*?)<\\/text>/gi)) {
+  for (const match of body.matchAll(/<text\b([^>]*)>([\s\S]*?)<\/text>/gi)) {
     const attrs = match[1] ?? "";
     const start = parseFloat(/start="([^"]*)"/i.exec(attrs)?.[1] ?? "");
     const duration = parseFloat(/dur="([^"]*)"/i.exec(attrs)?.[1] ?? "0");
@@ -382,11 +382,11 @@ function parseTimedText(body: string): CaptionCue[] {
   }
 
   if (cues.length === 0 && hasSrv3Cues) {
-    for (const match of body.matchAll(/<p\\b([^>]*)>([\\s\\S]*?)<\\/p>/gi)) {
+    for (const match of body.matchAll(/<p\b([^>]*)>([\s\S]*?)<\/p>/gi)) {
       const attrs = match[1] ?? "";
-      const start = parseFloat(/\\bt="([^"]*)"/i.exec(attrs)?.[1] ?? "");
-      const duration = parseFloat(/\\bd="([^"]*)"/i.exec(attrs)?.[1] ?? "0");
-      const text = normalizeCueText((match[2] ?? "").replace(/<s\\b[^>]*>/gi, "").replace(/<\\/s>/gi, ""));
+      const start = parseFloat(/\bt="([^"]*)"/i.exec(attrs)?.[1] ?? "");
+      const duration = parseFloat(/\bd="([^"]*)"/i.exec(attrs)?.[1] ?? "0");
+      const text = normalizeCueText((match[2] ?? "").replace(/<s\b[^>]*>/gi, "").replace(/<\/s>/gi, ""));
       if (!text) continue;
       cues.push({
         start: Number.isFinite(start) ? start / 1000 : 0,
