@@ -184,11 +184,6 @@ export function CommandPalette() {
                         </p>
                       )}
                     </div>
-                    {cmd.shortcut && (
-                      <kbd className="rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] font-mono text-text-tertiary shrink-0">
-                        {cmd.shortcut}
-                      </kbd>
-                    )}
                   </button>
                 );
               })}
