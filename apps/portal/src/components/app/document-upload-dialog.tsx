@@ -354,7 +354,7 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
       toast.info(`${successCount} file${successCount !== 1 ? "s" : ""} uploaded — indexing status is shown below`);
     }
     if (failCount > 0) {
-      toast.error(`${failCount} file${failCount !== 1 ? "s" : ""} failed to upload`);
+      toast.error(`${failCount} file${failCount !== 1 ? "s" : ""} failed during upload or indexing`);
     }
   };
 
