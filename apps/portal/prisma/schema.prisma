@@ -452,6 +452,7 @@ model Document {
   chunks         DocumentChunk[]
   versions       DocumentVersion[]
   activities     DocumentActivity[]
+  processingJobs ProcessingJob[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -542,6 +543,41 @@ enum DocumentStatus {
   INDEXED
   READY
   ERROR
+}
+
+enum ProcessingJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// Durable document-processing queue. A row is the source of truth for pending
+// work: the browser request only enqueues, and any worker (or a later recovery
+// pass) can claim and finish it. `activeKey` is the document id while the job is
+// PENDING/RUNNING and NULL once terminal, so Postgres enforces at most one
+// active job per document while still keeping completed history.
+model ProcessingJob {
+  id          String              @id @default(cuid())
+  documentId  String
+  document    Document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  status      ProcessingJobStatus @default(PENDING)
+  reason      String              @default("upload")
+  activeKey   String?             @unique
+  attempts    Int                 @default(0)
+  maxAttempts Int                 @default(3)
+  runAfter    DateTime            @default(now())
+  lockedAt    DateTime?
+  lockedBy    String?
+  lastError   String?             @db.Text
+  payload     Json?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, runAfter])
+  @@index([documentId, status])
 }
 
 enum DocumentSourceType {

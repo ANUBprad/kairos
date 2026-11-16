@@ -142,6 +142,9 @@ export async function recoverStaleEmbeddingDocuments(
       knowledgeBaseId,
       status: { in: ["QUEUED", "UPLOADING", "STORED", "EXTRACTING", "CHUNKING", "EMBEDDING", "EMBEDDING_PENDING"] },
       updatedAt: { lt: staleBefore },
+      // A live queue job owns this document even if the pipeline has been quiet
+      // for a while; the queue's own lock/heartbeat decides its fate.
+      processingJobs: { none: { status: { in: ["PENDING", "RUNNING"] } } },
     },
     select: { id: true, status: true, metadata: true },
   });
