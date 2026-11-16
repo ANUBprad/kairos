@@ -76,13 +76,13 @@ export function CommandPalette() {
     [router]
   );
 
+  // Ctrl/Cmd+K is owned by WorkspaceProvider's shortcut registry. Handling it
+  // here as well made one keypress toggle the palette twice (net: it never
+  // opened), so this listener only handles Escape.
   useEffect(() => {
+    if (!open) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setOpen((prev) => !prev);
-      }
-      if (e.key === "Escape" && open) {
+      if (e.key === "Escape") {
         setOpen(false);
         setQuery("");
       }

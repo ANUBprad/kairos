@@ -10,6 +10,7 @@ const page = source("../app/app/page.tsx");
 const view = source("../components/app/home/home-view.tsx");
 const sidebar = source("../components/app/sidebar.tsx");
 const palette = source("../components/ui/command-palette.tsx");
+const workspaceContext = source("../lib/workspace-context.tsx");
 const layout = source("../app/app/layout.tsx");
 const sourceDialog = source("../components/app/source-add-dialog.tsx");
 const appNav = source("../lib/app-nav.ts");
@@ -63,6 +64,12 @@ describe("home dashboard", () => {
     assert.doesNotMatch(palette, /ACTION_COMMANDS|Upload Document|Create Workspace|Open Chat|Run Evaluation/);
     assert.match(palette, /cmd\.category === "Workspace"/);
     assert.match(palette, /Search pages/);
+  });
+
+  it("toggles the command palette from one keyboard handler only", () => {
+    assert.doesNotMatch(palette, /e\.key === "k"/, "palette must not re-handle Ctrl/Cmd+K");
+    assert.match(workspaceContext, /shortcutsRef\.get\("command-palette"\)/);
+    assert.match(palette, /registerShortcut\("command-palette"/);
   });
 
   it("hides the non-persistent experiment builder from discoverable navigation", () => {
