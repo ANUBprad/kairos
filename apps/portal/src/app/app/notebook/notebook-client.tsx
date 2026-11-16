@@ -133,9 +133,8 @@ export function NotebookPageClient() {
     <div className="animate-fade-in">
       <PageHeader
         title="Research Notebook"
-        description="Create, organize, and export research notes with charts, tables, and experiment references. Notes are saved in this browser only."
+        description="Write, tag, search, and export plain-text research notes. Notes are saved in this browser only."
         purpose="Capture insights, observations, and findings during your RAG research experiments."
-        nextAction={{ label: "New Note", href: "#" }}
         relatedPages={[
           { label: "Research Analytics", href: "/app/research/analytics" },
           { label: "Publication Mode", href: "/app/publication" },
@@ -228,10 +227,15 @@ export function NotebookPageClient() {
                           onBlur={(e) => {
                             setEntries(
                               entries.map((en) =>
-                                en.id === entry.id ? { ...en, title: e.target.value } : en
+                                en.id === entry.id
+                                  ? {
+                                      ...en,
+                                      title: e.target.value || "Untitled note",
+                                      updatedAt: new Date().toISOString(),
+                                    }
+                                  : en
                               )
                             );
-                            setEditingId(null);
                           }}
                           className="w-full bg-transparent text-sm font-semibold text-text-primary outline-none border-b border-brand"
                         />
@@ -243,9 +247,57 @@ export function NotebookPageClient() {
                           {entry.title}
                         </h3>
                       )}
-                      <p className="mt-1 text-xs text-text-secondary line-clamp-2">
-                        {entry.content || "No content"}
-                      </p>
+                      {editingId === entry.id ? (
+                        <div className="mt-2 space-y-1.5">
+                          <textarea
+                            defaultValue={entry.content}
+                            rows={4}
+                            placeholder="Write your note…"
+                            onBlur={(e) => {
+                              setEntries(
+                                entries.map((en) =>
+                                  en.id === entry.id
+                                    ? {
+                                        ...en,
+                                        content: e.target.value,
+                                        updatedAt: new Date().toISOString(),
+                                      }
+                                    : en
+                                )
+                              );
+                            }}
+                            className="w-full resize-y rounded border border-border bg-bg px-2 py-1.5 text-xs text-text-primary outline-none focus:border-brand"
+                          />
+                          <input
+                            defaultValue={entry.tags.join(", ")}
+                            placeholder="tags, comma separated"
+                            onBlur={(e) => {
+                              const tags = e.target.value
+                                .split(",")
+                                .map((tag) => tag.trim())
+                                .filter(Boolean);
+                              setEntries(
+                                entries.map((en) =>
+                                  en.id === entry.id
+                                    ? { ...en, tags, updatedAt: new Date().toISOString() }
+                                    : en
+                                )
+                              );
+                            }}
+                            className="w-full rounded border border-border bg-bg px-2 py-1 text-[10px] text-text-primary outline-none focus:border-brand"
+                          />
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="text-[10px] font-medium text-brand hover:text-brand-hover"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-text-secondary line-clamp-2">
+                          {entry.content || "No content"}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button

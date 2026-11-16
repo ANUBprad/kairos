@@ -98,7 +98,6 @@ export default async function ResearchAnalyticsPage() {
     if (benchmarkRuns.length < 2) {
       return {
         significantImprovements: [],
-        equivalentConfigurations: [],
         confidenceIntervals: [],
         summary: { totalComparisons: 0, significantCount: 0 },
       };
@@ -112,11 +111,6 @@ export default async function ResearchAnalyticsPage() {
       pValue: number;
       effectSize: string;
       ci: [number, number];
-    }> = [];
-
-    const equivalentConfigurations: Array<{
-      metric: string;
-      configs: string[];
     }> = [];
 
     const confidenceIntervals: Array<{
@@ -226,25 +220,8 @@ export default async function ResearchAnalyticsPage() {
       }
     }
 
-    const configGroups = new Map<string, Set<string>>();
-    for (const ci of confidenceIntervals) {
-      const key = ci.metric;
-      if (!configGroups.has(key)) configGroups.set(key, new Set());
-      configGroups.get(key)!.add(ci.config);
-    }
-
-    for (const [metric, configs] of configGroups) {
-      if (configs.size >= 2) {
-        equivalentConfigurations.push({
-          metric,
-          configs: Array.from(configs),
-        });
-      }
-    }
-
     return {
       significantImprovements: significantImprovements.slice(0, 10),
-      equivalentConfigurations: equivalentConfigurations.slice(0, 10),
       confidenceIntervals: confidenceIntervals.slice(0, 20),
       summary: { totalComparisons, significantCount },
     };
