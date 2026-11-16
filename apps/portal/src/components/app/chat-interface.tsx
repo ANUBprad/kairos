@@ -516,20 +516,37 @@ export function ChatInterface({ kbId, kbName, documents, initialConversationId =
             aria-live="polite"
           >
             {messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-                <BookOpen size={24} className="mb-3 text-text-tertiary" />
-                <h3 className="section-title">Ask your first question</h3>
-                <p className="reading-measure page-description mt-2">
-                  Every answer is grounded in your sources and cites the exact chunks it draws
-                  from, so you can verify each claim against your documents.
-                </p>
-                {!activeConversation && (
-                  <Button variant="primary" className="mt-6" onClick={createConversation}>
-                    <Plus size={16} />
-                    Start a research session
+              documents.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                  <BookOpen size={24} className="mb-3 text-text-tertiary" />
+                  <h3 className="section-title">Add a source first</h3>
+                  <p className="reading-measure page-description mt-2">
+                    This workspace has no indexed sources yet, so there is nothing to ground an
+                    answer in. Add a source and wait for it to finish indexing.
+                  </p>
+                  <Button variant="primary" className="mt-6" asChild>
+                    <Link href={`/app/knowledge-bases/${kbId}`}>
+                      <Plus size={16} />
+                      Add a source
+                    </Link>
                   </Button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                  <BookOpen size={24} className="mb-3 text-text-tertiary" />
+                  <h3 className="section-title">Ask your first question</h3>
+                  <p className="reading-measure page-description mt-2">
+                    Every answer is grounded in your sources and cites the exact chunks it draws
+                    from, so you can verify each claim against your documents.
+                  </p>
+                  {!activeConversation && (
+                    <Button variant="primary" className="mt-6" onClick={createConversation}>
+                      <Plus size={16} />
+                      Start a research session
+                    </Button>
+                  )}
+                </div>
+              )
             ) : (
               <div className="reading-measure mx-auto space-y-8 px-4 py-5">
                 {messages.map((msg) =>

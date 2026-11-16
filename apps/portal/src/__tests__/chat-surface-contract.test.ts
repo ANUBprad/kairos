@@ -94,8 +94,22 @@ describe("single canonical chat surface contract", () => {
     );
   });
 
-  it("rate-limits conversation list/read and write routes", () => {
-    const listSource = readFileSync(join(APP, "api/ai/conversations/route.ts"), "utf8");
+  it("points an empty workspace at adding a source instead of asking", () => {
+    const source = readFileSync(join(SRC, "components/app/chat-interface.tsx"), "utf8");
+    assert.match(source, /documents\.length === 0/);
+    assert.match(source, /Add a source first/);
+    assert.ok(
+      source.includes("href={`/app/knowledge-bases/${kbId}`}"),
+      "the empty-chat CTA must link to the workspace sources page",
+    );
+    assert.doesNotMatch(
+      source,
+      /Add a source first[\s\S]{0,600}Start a research session/,
+      "an empty workspace must not invite a question before any source is indexed",
+    );
+  });
+
+  it("rate-limits conversation list/read and write routes", () => {    const listSource = readFileSync(join(APP, "api/ai/conversations/route.ts"), "utf8");
     assert.match(
       listSource,
       /rateLimit\(`conversation:read:\$\{session\.user\.id\}`, RATE_LIMITS\.conversation\)/,
