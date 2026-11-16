@@ -20,9 +20,11 @@ import { cn } from "@/lib/utils";
 import { uploadDocument, listDocuments, reprocessDocument } from "@/lib/actions/document";
 import {
   POLL_INTERVAL_MS,
+  POLL_MAX_TICKS,
+  POLL_SLOW_INTERVAL_MS,
   allTerminal,
   anyLiveTracking,
-  tickBudget,
+  isTerminalTrackingStatus,
   processingPresentation,
 } from "@/lib/upload-progress";
 
@@ -73,7 +75,6 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
   const [isUploading, setIsUploading] = useState(false);
   const [pollExpired, setPollExpired] = useState(false);
   const queueRef = useRef<UploadFile[]>(uploadQueue);
-  const ticksRef = useRef(0);
   const autoClosedRef = useRef(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -87,53 +88,61 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
       setUploadQueue([]);
       setIsUploading(false);
       setPollExpired(false);
-      ticksRef.current = 0;
       autoClosedRef.current = false;
     }
   }, [open]);
 
-  // Bounded polling: while any accepted source is non-terminal, read its real
-  // status from the KB-scoped (session-authorized) listDocuments action and
-  // stop at terminal success/error, dialog close, or the tick budget.
+  // Poll while any accepted source is non-terminal. After the fast window the
+  // dialog keeps checking at a slower cadence instead of abandoning a large
+  // source that is legitimately still embedding.
   useEffect(() => {
     if (!open) return;
-    ticksRef.current = 0;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let ticks = 0;
     setPollExpired(false);
 
-    const timer = setInterval(async () => {
+    const tick = async () => {
+      if (cancelled) return;
       const tracked = queueRef.current.filter((f) => f.docId !== undefined);
-      if (tracked.length === 0) return;
-      if (allTerminal(tracked.map((f) => f.backendStatus))) return;
+      if (tracked.length > 0 && !allTerminal(tracked.map((f) => f.backendStatus))) {
+        ticks += 1;
+        if (ticks >= POLL_MAX_TICKS) setPollExpired(true);
 
-      ticksRef.current += 1;
-      if (tickBudget(ticksRef.current) === "expired") {
-        setPollExpired(true);
-        return;
+        try {
+          const docs = await listDocuments(kbId);
+          const byId = new Map(docs.map((d) => [d.id, d.status]));
+          if (cancelled) return;
+          setUploadQueue((prev) =>
+            prev.map((f) => {
+              if (f.docId === undefined) return f;
+              const status = byId.get(f.docId);
+              if (status === undefined) return f;
+              if (status === "INDEXED" || status === "READY") {
+                return { ...f, backendStatus: status, status: "done" };
+              }
+              if (status === "ERROR") {
+                return { ...f, backendStatus: status, status: "error", error: "Processing failed" };
+              }
+              return { ...f, backendStatus: status as DocumentStatus, status: "processing" };
+            }),
+          );
+        } catch {
+          // transient failure; the next tick retries
+        }
       }
+      if (cancelled) return;
+      timer = setTimeout(
+        tick,
+        ticks >= POLL_MAX_TICKS ? POLL_SLOW_INTERVAL_MS : POLL_INTERVAL_MS,
+      );
+    };
 
-      try {
-        const docs = await listDocuments(kbId);
-        const byId = new Map(docs.map((d) => [d.id, d.status]));
-        setUploadQueue((prev) =>
-          prev.map((f) => {
-            if (f.docId === undefined) return f;
-            const status = byId.get(f.docId);
-            if (status === undefined) return f;
-            if (status === "INDEXED" || status === "READY") {
-              return { ...f, backendStatus: status, status: "done" };
-            }
-            if (status === "ERROR") {
-              return { ...f, backendStatus: status, status: "error", error: "Processing failed" };
-            }
-            return { ...f, backendStatus: status as DocumentStatus, status: "processing" };
-          }),
-        );
-      } catch {
-        // transient failure; the next tick retries
-      }
-    }, POLL_INTERVAL_MS);
-
-    return () => clearInterval(timer);
+    timer = setTimeout(tick, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [open, kbId]);
 
   // Auto-close only once every submitted source has reached a terminal state;
@@ -266,12 +275,13 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         formData.append("id", id);
         const result = await reprocessDocument(formData);
         const failed = result.status === "ERROR";
+        const terminal = isTerminalTrackingStatus(result.status);
         setUploadQueue((prev) =>
           prev.map((f) =>
             f.id === id
               ? {
                   ...f,
-                  status: failed ? "error" as const : "done" as const,
+                  status: failed ? "error" as const : terminal ? "done" as const : "processing" as const,
                   backendStatus: result.status as DocumentStatus,
                   error: failed ? "Indexing failed again. Review the source error and retry after fixing its cause." : undefined,
                 }
@@ -320,12 +330,13 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
         }
 
         const failed = created.status === "ERROR";
+        const terminal = isTerminalTrackingStatus(created.status);
         setUploadQueue((prev) =>
           prev.map((f) =>
             f.id === item.id
               ? {
                   ...f,
-                  status: failed ? "error" as const : "done" as const,
+                  status: failed ? "error" as const : terminal ? "done" as const : "processing" as const,
                   docId: created.id,
                   backendStatus: created.status as DocumentStatus,
                   error: failed ? "File uploaded, but indexing failed. Use Retry after reviewing the source error." : undefined,
@@ -530,7 +541,8 @@ export function DocumentUploadDialog({ kbId, open, onOpenChange, existingFiles }
 
               {pollExpired && (
                 <p className="text-xs text-text-tertiary">
-                  Sources are still processing — they continue in the background and will appear in the table when done.
+                  Still checking every 15 seconds &mdash; large sources can take a few minutes. Closing this
+                  dialog does not stop processing.
                 </p>
               )}
             </div>

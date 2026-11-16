@@ -4,8 +4,10 @@ import { readFileSync } from "node:fs";
 import {
   POLL_INTERVAL_MS,
   POLL_MAX_TICKS,
+  POLL_SLOW_INTERVAL_MS,
   allTerminal,
   anyLiveTracking,
+  isActiveTrackingStatus,
   isTerminalTrackingStatus,
   processingPresentation,
   tickBudget,
@@ -105,6 +107,25 @@ test("polling bound: terminal stop and tick budget", () => {
   assert.equal(tickBudget(POLL_MAX_TICKS), "expired");
   assert.equal(POLL_INTERVAL_MS > 0, true);
   assert.equal(tickBudget(9999), "expired");
+});
+
+// 7b. The table counts every in-flight state, including STORED, and the dialog
+// keeps checking slowly instead of dropping a source that is still processing.
+test("in-flight grouping covers STORED and slow polling continues", () => {
+  assert.equal(isActiveTrackingStatus("STORED"), true);
+  assert.equal(isActiveTrackingStatus("QUEUED"), true);
+  assert.equal(isActiveTrackingStatus("EMBEDDING"), true);
+  assert.equal(isActiveTrackingStatus("INDEXED"), false);
+  assert.equal(isActiveTrackingStatus("ERROR"), false);
+  assert.equal(isActiveTrackingStatus(undefined), false);
+  assert.ok(POLL_SLOW_INTERVAL_MS > POLL_INTERVAL_MS);
+  assert.ok(dialogSource.includes("POLL_SLOW_INTERVAL_MS"), "expired polling must slow down, not stop");
+  assert.ok(
+    !/const PROCESSING = new Set/.test(
+      readFileSync(new URL("../components/app/document-table.tsx", import.meta.url), "utf8"),
+    ),
+    "the table must use the shared in-flight predicate instead of its own status list",
+  );
 });
 
 // 8. Multiple sources stay independent; no single collapsing global status.

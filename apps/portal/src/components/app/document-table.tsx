@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -55,6 +55,7 @@ import {
   canAddToBulkSelection,
 } from "@/lib/source-library";
 import { MAX_BULK_OPERATIONS } from "@/lib/source-contract";
+import { isActiveTrackingStatus, isTerminalTrackingStatus } from "@/lib/upload-progress";
 import type { DocumentSourceType } from "@prisma/client";
 
 interface DocumentItem {
@@ -100,11 +101,20 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
   const [bulkBusy, setBulkBusy] = useState(false);
   const pageSize = 10;
 
-  const PROCESSING = new Set(["QUEUED", "UPLOADING", "EXTRACTING", "CHUNKING", "EMBEDDING_PENDING", "EMBEDDING"]);
   const indexedCount = items.filter((d) => d.status === "INDEXED" || d.status === "READY").length;
-  const processingCount = items.filter((d) => PROCESSING.has(d.status)).length;
+  const processingCount = items.filter((d) => isActiveTrackingStatus(d.status)).length;
   const errorCount = items.filter((d) => d.status === "ERROR").length;
   const totalChunks = items.reduce((sum, d) => sum + d._count.chunks, 0);
+
+  // The table is server-rendered, so a source finishing in the background would
+  // leave the counts and badges stale until a manual reload. Refresh while any
+  // source is still non-terminal and stop as soon as everything is settled.
+  const hasActiveSources = items.some((d) => !isTerminalTrackingStatus(d.status));
+  useEffect(() => {
+    if (!hasActiveSources) return;
+    const timer = setInterval(() => router.refresh(), 5_000);
+    return () => clearInterval(timer);
+  }, [hasActiveSources, router]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
@@ -617,11 +627,7 @@ export function DocumentTable({ items, kbId, kbName }: Props) {
                   </span>
                 </td>
                 <td className="px-3 py-3.5">
-                  {doc.status === "INDEXED" ? (
-                    <span className="text-xs text-text-tertiary">Indexed</span>
-                  ) : (
-                    <ProcessingBadge status={doc.status} />
-                  )}
+                  <ProcessingBadge status={doc.status} />
                 </td>
                 <td className="px-3 py-3.5 text-right">
                   <div className="relative inline-flex">

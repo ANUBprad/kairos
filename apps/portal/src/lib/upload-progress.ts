@@ -2,6 +2,9 @@ import type { DocumentStatus } from "@prisma/client";
 
 export const POLL_INTERVAL_MS = 3_000;
 export const POLL_MAX_TICKS = 40;
+// After the fast window, keep checking at a slower cadence instead of
+// abandoning a source that is legitimately still embedding.
+export const POLL_SLOW_INTERVAL_MS = 15_000;
 
 export const TERMINAL_TRACKING_STATUSES: ReadonlySet<DocumentStatus> = new Set([
   "INDEXED",
@@ -15,6 +18,10 @@ export function isTerminalTrackingStatus(status: string | undefined): status is 
 
 export function anyLiveTracking(statuses: ReadonlyArray<string | undefined>): boolean {
   return statuses.some((s) => s !== undefined);
+}
+
+export function isActiveTrackingStatus(status: string | undefined): boolean {
+  return status !== undefined && !isTerminalTrackingStatus(status);
 }
 
 export function allTerminal(statuses: ReadonlyArray<string | undefined>): boolean {
