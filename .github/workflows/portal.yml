@@ -123,4 +123,4 @@ jobs:
         run: node --import tsx scripts/verify-test-database.ts
 
       - name: Run the Portal test suite
-        run: node --import tsx --test src/__tests__/*.test.ts
+        run: npm test

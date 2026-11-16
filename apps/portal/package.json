@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
+    "test": "node --import tsx --test src/__tests__/*.test.ts",
     "worker": "node --env-file-if-exists=.env --import tsx scripts/worker.ts"
   },
   "dependencies": {
