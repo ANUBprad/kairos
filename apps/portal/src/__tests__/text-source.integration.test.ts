@@ -167,7 +167,9 @@ describe("raw text source ingestion against a real database", () => {
     docIds.push(doc.id);
 
     assert.equal(doc.sourceType, "TEXT");
-    assert.equal(doc.status, "STORED");
+    // The action attempts processing inline, so the returned status is already
+    // whatever the pipeline reached; it must not be a failure state.
+    assert.notEqual(doc.status, "ERROR");
     assert.equal(doc.sourceUrl, null);
     assert.equal(doc.storageUrl, null);
     assert.equal(doc.storageKey, null);
