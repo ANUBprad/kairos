@@ -99,6 +99,11 @@ gateway/main.exe
 # apps/portal (whose package-lock.json is tracked and stays tracked)
 /package-lock.json
 
+# Playwright output (browser smoke tests under apps/portal/e2e)
+apps/portal/test-results/
+apps/portal/playwright-report/
+apps/portal/blob-report/
+
 # Docker
 docker-compose.override.yml
 
