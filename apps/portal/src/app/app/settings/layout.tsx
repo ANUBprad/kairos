@@ -27,7 +27,7 @@ const settingsTabs = [
   { label: "Audit Logs", href: "/app/settings/audit", icon: Activity },
 ];
 
-export function SettingsLayout({ children }: SettingsLayoutProps) {
+export default function SettingsLayout({ children }: SettingsLayoutProps) {
   const pathname = usePathname();
 
   return (

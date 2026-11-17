@@ -127,4 +127,40 @@ describe("workspace context against a real database", () => {
     assert.equal(await memberRole(resolved.selectedOrganization.id, bobId), "OWNER");
     assert.equal(resolved.organizations.length, 1);
   });
+
+  it("provisions a default project for an organization that has none", async (t) => {
+    if (!testDbUrl) { t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres)"); return; }
+
+    const projectlessId = randomUUID();
+    const projectlessOwnerId = randomUUID();
+    await client.user.create({
+      data: { id: projectlessOwnerId, email: `ws-owner-p-${randomUUID()}@test.local`, name: "Owner P" },
+    });
+    await client.organization.create({
+      data: {
+        id: projectlessId,
+        name: "Projectless",
+        slug: `ws-p-${randomUUID()}`,
+        ownerId: projectlessOwnerId,
+        members: { create: { userId: projectlessOwnerId, role: "OWNER" } },
+      },
+    });
+
+    try {
+      const resolved = await resolveUserWorkspace(projectlessOwnerId, { name: "Owner P" }, null);
+      assert.equal(resolved?.selectedOrganization?.id, projectlessId);
+      assert.equal(resolved?.selectedOrganization?.projects.length, 1);
+
+      const projects = await client.project.findMany({ where: { organizationId: projectlessId } });
+      assert.equal(projects.length, 1, "exactly one default project should be provisioned");
+      assert.equal(projects[0].name, "Default Project");
+
+      // Resolution is repeatable: a second call must not add another project.
+      await resolveUserWorkspace(projectlessOwnerId, { name: "Owner P" }, null);
+      assert.equal(await client.project.count({ where: { organizationId: projectlessId } }), 1);
+    } finally {
+      await client.organization.delete({ where: { id: projectlessId } }).catch(() => {});
+      await client.user.delete({ where: { id: projectlessOwnerId } }).catch(() => {});
+    }
+  });
 });

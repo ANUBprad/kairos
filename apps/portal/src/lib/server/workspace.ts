@@ -132,6 +132,24 @@ export async function resolveUserWorkspace(
 
   if (!selectedOrganization) return null;
 
+  // Every workspace surface resolves a project, and a knowledge base cannot
+  // exist without one. An organization can end up project-less (a project was
+  // deleted, or an org was created outside createOrganization), which used to
+  // make the whole app answer "No workspace available". Provision the same
+  // Default Project that createOrganization would have made instead.
+  if (selectedOrganization.projects.length === 0) {
+    const project = await prisma.project.create({
+      data: {
+        name: "Default Project",
+        slug: `default-${randomBytes(3).toString("hex")}`,
+        description: "Default project for the organization",
+        organizationId: selectedOrganization.id,
+      },
+      select: { id: true, name: true },
+    });
+    selectedOrganization.projects.push({ ...project, _count: { knowledgeBases: 0 } });
+  }
+
   return { organizations, selectedOrganization };
 }
 
