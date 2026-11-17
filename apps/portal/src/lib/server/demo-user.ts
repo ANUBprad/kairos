@@ -107,7 +107,11 @@ export async function getDemoUserId(): Promise<string | null> {
 export async function getDemoSession(): Promise<DemoSession | null> {
   if (!isDemoModeEnabled()) return null;
 
-  const userId = await getDemoUserId();
+  // A fresh database has no demo user yet, and an empty id made the /app layout
+  // treat demo mode as signed out and bounce to anonymous bootstrap. Create the
+  // demo user on first use (as documented); if the database is unreachable,
+  // fall back to the id-less session and let the caller bootstrap instead.
+  const userId = (await getDemoUserId()) ?? (await ensureDemoUser().catch(() => null));
   return {
     user: {
       id: userId ?? "",

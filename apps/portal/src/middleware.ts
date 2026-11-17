@@ -28,7 +28,12 @@ function validateOrigin(request: NextRequest): boolean {
 }
 
 export function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+  // App Router layouts cannot read the pathname, so forward it as a request
+  // header. The /app layout uses it to return a first-time visitor to the page
+  // they asked for after bootstrapping an anonymous session.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-kairos-pathname", request.nextUrl.pathname);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
   const requestId = generateRequestId();
 
   response.headers.set("x-request-id", requestId);

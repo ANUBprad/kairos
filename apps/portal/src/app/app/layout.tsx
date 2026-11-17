@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { getWorkspaceContext } from "@/lib/server/workspace";
 import { AppSidebar } from "@/components/app/sidebar";
@@ -18,8 +19,11 @@ export default async function AppLayout({
   const session = await getServerSession();
   if (!session?.user?.id) {
     // No account required: bootstrap an isolated anonymous session instead of
-    // gating the workspace behind a sign-in screen.
-    redirect("/api/session");
+    // gating the workspace behind a sign-in screen. Carry the requested page so
+    // a deep link survives the bootstrap instead of dropping the visitor on
+    // Home.
+    const pathname = (await headers()).get("x-kairos-pathname") ?? "/app";
+    redirect(`/api/session?next=${encodeURIComponent(pathname)}`);
   }
 
   const workspace = await getWorkspaceContext();

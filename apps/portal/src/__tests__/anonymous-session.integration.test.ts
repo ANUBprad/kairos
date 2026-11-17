@@ -38,11 +38,15 @@ function authRequest(path: string, method: "GET" | "POST", body?: unknown, cooki
   });
 }
 
-function bootstrapRequest() {
-  return new NextRequest("http://localhost:3000/api/session", {
+function bootstrapRequest(path = "/api/session") {
+  return new NextRequest(`http://localhost:3000${path}`, {
     method: "GET",
     headers: { origin: "http://localhost:3000" },
   });
+}
+
+function redirectPath(response: Response): string {
+  return new URL(response.headers.get("location")!, "http://localhost:3000").pathname;
 }
 
 function sessionCookie(response: Response): string | null {
@@ -83,7 +87,7 @@ describe("anonymous access bootstrap against a live database", () => {
       "bootstrap must redirect (302/307)",
     );
     assert.equal(
-      new URL(response.headers.get("location")!).pathname,
+      redirectPath(response),
       "/app",
       "bootstrap must hand the visitor back to /app",
     );
@@ -106,6 +110,41 @@ describe("anonymous access bootstrap against a live database", () => {
     ).json();
     assert.equal(body?.user?.id, id);
     assert.equal(body?.user?.isAnonymous, true, "the visitor must be marked anonymous");
+  });
+
+  it("keeps the requested /app page across the bootstrap and refuses foreign targets", async (t) => {
+    if (!bootstrapGET) { t.skip("requires DATABASE_URL (live Postgres)"); return; }
+
+    const deepLink = await bootstrapGET(
+      bootstrapRequest("/api/session?next=%2Fapp%2Fknowledge-bases%2Fabc"),
+    );
+    assert.equal(redirectPath(deepLink), "/app/knowledge-bases/abc");
+    const cookie = sessionCookie(deepLink);
+    assert.ok(cookie, "the deep-link bootstrap must still issue a session");
+    if (cookie) {
+      const body = await (
+        await authGET!(authRequest("get-session", "GET", undefined, cookie))
+      ).json();
+      if (body?.user?.id) created.push(body.user.id);
+    }
+
+    for (const hostile of ["https://evil.example/app", "/appx"]) {
+      const response = await bootstrapGET(
+        bootstrapRequest(`/api/session?next=${encodeURIComponent(hostile)}`),
+      );
+      assert.equal(
+        redirectPath(response),
+        "/app",
+        `a foreign return target (${hostile}) must fall back to /app`,
+      );
+      const issued = sessionCookie(response);
+      if (issued) {
+        const body = await (
+          await authGET!(authRequest("get-session", "GET", undefined, issued))
+        ).json();
+        if (body?.user?.id) created.push(body.user.id);
+      }
+    }
   });
 
   it("two visitors receive distinct, isolated anonymous identities", async (t) => {
