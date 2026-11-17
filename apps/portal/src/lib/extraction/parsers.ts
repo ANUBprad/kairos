@@ -72,7 +72,10 @@ class PdfParser implements FileParser {
       throw new Error("Cannot parse empty PDF (0 bytes)");
     }
 
-    let PDFParse: new (opts: { data: ArrayBuffer }) => { getText(): Promise<{ text: string; total: number; pages: unknown[] }> };
+    let PDFParse: new (opts: { data: ArrayBuffer }) => {
+      getText(): Promise<{ text: string; total: number; pages: unknown[] }>;
+      destroy?: () => Promise<void> | void;
+    };
     try {
       const mod = await import("pdf-parse");
       PDFParse = mod.PDFParse as typeof PDFParse;
@@ -85,23 +88,32 @@ class PdfParser implements FileParser {
     }
 
     const pdf = new PDFParse({ data: buffer });
-    const result = await pdf.getText();
+    try {
+      const result = await pdf.getText();
 
-    if (result.text.length === 0) {
-      logger.warn("[Extraction] pdf-parse returned empty text", {
-        total: result.total,
-        pagesRendered: result.pages?.length,
-      });
+      if (result.text.trim().length === 0) {
+        logger.warn("[Extraction] pdf-parse returned empty text", {
+          total: result.total,
+          pagesRendered: result.pages?.length,
+        });
+        throw new Error(
+          "This PDF contains no extractable text. Scanned or image-only PDFs are not supported yet — upload a text-based PDF or paste the text as a source instead.",
+        );
+      }
+
+      return {
+        text: result.text,
+        metadata: {
+          pages: result.total,
+          characters: result.text.length,
+          language: "en",
+        },
+      };
+    } finally {
+      // pdf-parse v2 owns worker/resources; release them after both successful
+      // extraction and parser errors so repeated uploads do not leak workers.
+      await pdf.destroy?.();
     }
-
-    return {
-      text: result.text,
-      metadata: {
-        pages: result.total,
-        characters: result.text.length,
-        language: "en",
-      },
-    };
   }
 }
 

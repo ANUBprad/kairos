@@ -4,8 +4,10 @@ import { readFileSync } from "node:fs";
 import {
   POLL_INTERVAL_MS,
   POLL_MAX_TICKS,
+  POLL_SLOW_INTERVAL_MS,
   allTerminal,
   anyLiveTracking,
+  isActiveTrackingStatus,
   isTerminalTrackingStatus,
   processingPresentation,
   tickBudget,
@@ -107,6 +109,25 @@ test("polling bound: terminal stop and tick budget", () => {
   assert.equal(tickBudget(9999), "expired");
 });
 
+// 7b. The table counts every in-flight state, including STORED, and the dialog
+// keeps checking slowly instead of dropping a source that is still processing.
+test("in-flight grouping covers STORED and slow polling continues", () => {
+  assert.equal(isActiveTrackingStatus("STORED"), true);
+  assert.equal(isActiveTrackingStatus("QUEUED"), true);
+  assert.equal(isActiveTrackingStatus("EMBEDDING"), true);
+  assert.equal(isActiveTrackingStatus("INDEXED"), false);
+  assert.equal(isActiveTrackingStatus("ERROR"), false);
+  assert.equal(isActiveTrackingStatus(undefined), false);
+  assert.ok(POLL_SLOW_INTERVAL_MS > POLL_INTERVAL_MS);
+  assert.ok(dialogSource.includes("POLL_SLOW_INTERVAL_MS"), "expired polling must slow down, not stop");
+  assert.ok(
+    !/const PROCESSING = new Set/.test(
+      readFileSync(new URL("../components/app/document-table.tsx", import.meta.url), "utf8"),
+    ),
+    "the table must use the shared in-flight predicate instead of its own status list",
+  );
+});
+
 // 8. Multiple sources stay independent; no single collapsing global status.
 test("per-source statuses never collapse into a global one", () => {
   const mixed = ["INDEXED", "STORED", "INDEXED", "ERROR", "INDEXED", "STORED", "INDEXED"];
@@ -136,6 +157,14 @@ test("dialog wires retry to the existing reprocess action", () => {
   assert.ok(dialogSource.includes('formData.append("id", id)'), "retry must reprocess the exact source id");
   assert.ok(dialogSource.includes("reprocessDocument(formData)"), "retry must call the existing reprocessDocument action");
   assert.ok(dialogSource.includes("retrySubmission"), "rejected uploads keep a re-submit path");
+  assert.ok(
+    dialogSource.includes("retryProcessing(item.docId)"),
+    "retry must pass the persisted document id, not the local queue id",
+  );
+  assert.ok(
+    !dialogSource.includes("retryProcessing(item.id)"),
+    "queue item id is not a document id and must never be sent to reprocess",
+  );
 });
 
 // Tenancy: status refreshes go through the KB-scoped, session-authorized

@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getServerSession } from "@/lib/server/auth-utils";
 import { getWorkspaceContext } from "@/lib/server/workspace";
 import { AppSidebar } from "@/components/app/sidebar";
 import { AppHeader } from "@/components/app/app-header";
 import { PageTransition } from "@/components/shared/page-transition";
-import { KeyboardShortcuts } from "@/components/app/dashboard/keyboard-shortcuts";
 
 export const metadata = {
   title: { template: "%s | Kairos", default: "Kairos" },
@@ -19,8 +19,11 @@ export default async function AppLayout({
   const session = await getServerSession();
   if (!session?.user?.id) {
     // No account required: bootstrap an isolated anonymous session instead of
-    // gating the workspace behind a sign-in screen.
-    redirect("/api/session");
+    // gating the workspace behind a sign-in screen. Carry the requested page so
+    // a deep link survives the bootstrap instead of dropping the visitor on
+    // Home.
+    const pathname = (await headers()).get("x-kairos-pathname") ?? "/app";
+    redirect(`/api/session?next=${encodeURIComponent(pathname)}`);
   }
 
   const workspace = await getWorkspaceContext();
@@ -28,7 +31,6 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen bg-bg">
-      <KeyboardShortcuts />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-lg focus:border focus:border-border focus:bg-surface focus:px-4 focus:py-2 focus:text-text-primary"

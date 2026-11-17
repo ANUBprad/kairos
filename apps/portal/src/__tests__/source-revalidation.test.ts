@@ -5,6 +5,7 @@ import { revalidateSourcePage } from "@/lib/revalidation";
 
 const serviceSource = readFileSync(new URL("../lib/ai/embeddings/service.ts", import.meta.url), "utf8");
 const documentSource = readFileSync(new URL("../lib/actions/document.ts", import.meta.url), "utf8");
+const pipelineSource = readFileSync(new URL("../lib/ingestion/pipeline.ts", import.meta.url), "utf8");
 const revalidationSource = readFileSync(new URL("../lib/revalidation.ts", import.meta.url), "utf8");
 
 // 1. Best-effort revalidation never breaks the pipeline: with no active request
@@ -38,14 +39,14 @@ test("INDEXED success transitions revalidate the source page", () => {
 // 3. Failed processing reaches ERROR (or revert-to-INDEXED) and revalidates the
 // same KB-scoped source page.
 test("terminal ERROR and revert-to-INDEXED revalidate the source page", () => {
-  assert.ok(documentSource.includes("revalidateSourcePage(docRow?.knowledgeBaseId)"), "rollback must revalidate after a failure terminal state");
+  assert.ok(pipelineSource.includes("revalidateSourcePage(docRow?.knowledgeBaseId)"), "rollback must revalidate after a failure terminal state");
   assert.equal(
-    (documentSource.match(/revalidateSourcePage\(docRow\?\.knowledgeBaseId\)/g) ?? []).length,
+    (pipelineSource.match(/revalidateSourcePage\(docRow\?\.knowledgeBaseId\)/g) ?? []).length,
     2,
     "both the revert-to-INDEXED and the plain ERROR paths must revalidate",
   );
   assert.ok(
-    documentSource.indexOf('data: { status: "ERROR" }') < documentSource.lastIndexOf("revalidateSourcePage("),
+    pipelineSource.indexOf('status: "ERROR"') < pipelineSource.lastIndexOf("revalidateSourcePage("),
     "revalidation must run after the ERROR state commits",
   );
 });

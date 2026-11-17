@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Eye } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { listTraces } from '@/lib/actions/observability';
-import Link from 'next/link';
 
 export default function TracesPage() {
   const [traces, setTraces] = useState<any[]>([]);
@@ -110,19 +109,18 @@ export default function TracesPage() {
                 <TableHead>Tokens</TableHead>
                 <TableHead>Cost</TableHead>
                 <TableHead>Time</TableHead>
-                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
+                  <TableCell colSpan={8} className="text-center py-8">
                     Loading traces...
                   </TableCell>
                 </TableRow>
               ) : traces.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No traces found
                   </TableCell>
                 </TableRow>
@@ -147,13 +145,6 @@ export default function TracesPage() {
                     <TableCell>{trace.cost ? `$${trace.cost.toFixed(4)}` : '-'}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(trace.startTime).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/app/observability/traces/${trace.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </Link>
                     </TableCell>
                   </TableRow>
                 ))

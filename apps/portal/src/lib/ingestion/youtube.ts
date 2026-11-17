@@ -130,7 +130,11 @@ export function parseYouTubeUrl(rawUrl: string): { videoId: string; canonicalUrl
     videoId = url.searchParams.get("v");
   } else {
     const segment = url.pathname.split("/")[2] ?? null;
-    if (url.pathname.startsWith("/shorts/") || url.pathname.startsWith("/embed/")) videoId = segment;
+    if (
+      url.pathname.startsWith("/shorts/") ||
+      url.pathname.startsWith("/embed/") ||
+      url.pathname.startsWith("/live/")
+    ) videoId = segment;
   }
 
   if (!videoId || !VIDEO_ID_RE.test(videoId)) {
@@ -333,10 +337,40 @@ interface CaptionCue {
 }
 
 function parseTimedText(body: string): CaptionCue[] {
-  // A page body (or JSON blob) is not caption XML even if it contains <text>.
-  if (!/<text\b/i.test(body) && !/<transcript\b/i.test(body)) {
-    throw new YouTubeTranscriptError("transcript_malformed", "timedtext response is not caption XML");
+  const trimmed = body.trim();
+
+  // YouTube's timedtext endpoint can return JSON3 for some caption tracks.
+  // Accept it alongside legacy XML instead of rejecting a valid transcript
+  // because the response format changed.
+  if (trimmed.startsWith("{")) {
+    let payload: { events?: Array<{ tStartMs?: number; dDurationMs?: number; segs?: Array<{ utf8?: string }> }> };
+    try {
+      payload = JSON.parse(trimmed) as typeof payload;
+    } catch (err) {
+      throw new YouTubeTranscriptError("transcript_malformed", "timedtext JSON was invalid", { cause: err });
+    }
+    if (!Array.isArray(payload.events)) {
+      throw new YouTubeTranscriptError("transcript_malformed", "timedtext JSON did not contain caption events");
+    }
+    return payload.events.flatMap((event) => {
+      const text = (event.segs || []).map((segment) => segment.utf8 || "").join("").replace(/\s+/g, " ").trim();
+      if (!text) return [];
+      return [{
+        start: Number(event.tStartMs || 0) / 1000,
+        duration: Number(event.dDurationMs || 0) / 1000,
+        text: decodeEntities(text),
+      }];
+    });
   }
+
+  // Legacy srv1 XML uses <text start="..." dur="...">. Some tracks use srv3
+  // <p t="..." d="..."><s>...</s></p>; normalize both to the same cue shape.
+  const hasLegacyCues = /<text\b/i.test(body) || /<transcript\b/i.test(body);
+  const hasSrv3Cues = /<p\b[^>]*>/i.test(body);
+  if (!hasLegacyCues && !hasSrv3Cues) {
+    throw new YouTubeTranscriptError("transcript_malformed", "timedtext response is not a supported caption format");
+  }
+
   const cues: CaptionCue[] = [];
   for (const match of body.matchAll(/<text\b([^>]*)>([\s\S]*?)<\/text>/gi)) {
     const attrs = match[1] ?? "";
@@ -344,15 +378,25 @@ function parseTimedText(body: string): CaptionCue[] {
     const duration = parseFloat(/dur="([^"]*)"/i.exec(attrs)?.[1] ?? "0");
     const text = normalizeCueText(match[2] ?? "");
     if (!text) continue;
-    cues.push({
-      start: Number.isFinite(start) ? start : 0,
-      duration: Number.isFinite(duration) ? duration : 0,
-      text,
-    });
+    cues.push({ start: Number.isFinite(start) ? start : 0, duration: Number.isFinite(duration) ? duration : 0, text });
+  }
+
+  if (cues.length === 0 && hasSrv3Cues) {
+    for (const match of body.matchAll(/<p\b([^>]*)>([\s\S]*?)<\/p>/gi)) {
+      const attrs = match[1] ?? "";
+      const start = parseFloat(/\bt="([^"]*)"/i.exec(attrs)?.[1] ?? "");
+      const duration = parseFloat(/\bd="([^"]*)"/i.exec(attrs)?.[1] ?? "0");
+      const text = normalizeCueText((match[2] ?? "").replace(/<s\b[^>]*>/gi, "").replace(/<\/s>/gi, ""));
+      if (!text) continue;
+      cues.push({
+        start: Number.isFinite(start) ? start / 1000 : 0,
+        duration: Number.isFinite(duration) ? duration / 1000 : 0,
+        text,
+      });
+    }
   }
   return cues;
 }
-
 function normalizeCueText(raw: string): string {
   const plain = raw.replace(/<[^>]+>/g, "");
   return decodeEntities(plain).replace(/\s+/g, " ").trim();

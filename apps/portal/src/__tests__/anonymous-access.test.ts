@@ -39,7 +39,11 @@ function anonymousMigrationSql(): string {
 describe("no mandatory accounts", () => {
   it("the /app layout bootstraps an anonymous session instead of a login gate", () => {
     assert.match(appLayout, /getServerSession/);
-    assert.match(appLayout, /redirect\(\s*["']\/api\/session["']\s*\)/);
+    assert.match(
+      appLayout,
+      /redirect\(\s*`\/api\/session\?next=\$\{encodeURIComponent\(pathname\)\}`\s*\)/,
+      "the layout must carry the requested page through the bootstrap",
+    );
     assert.ok(
       !/redirect\(\s*["']\/login["']\s*\)/.test(appLayout),
       "/app must not redirect to /login",
@@ -64,7 +68,12 @@ describe("no mandatory accounts", () => {
     assert.match(sessionRoute, /rateLimit\(/);
     assert.match(sessionRoute, /RATE_LIMITS\.auth/);
     assert.match(sessionRoute, /getSetCookie\(\)/, "must forward the session cookie");
-    assert.match(sessionRoute, /NextResponse\.redirect\(new URL\("\/app"/);
+    assert.match(
+      sessionRoute,
+      /\/\^\\\/app/,
+      "the return target must be restricted to same-origin /app paths",
+    );
+    assert.match(sessionRoute, /:\s*"\/app"/, "the return target must default to /app");
   });
 
   it("enables the anonymous plugin and never deletes anonymous work", () => {

@@ -43,6 +43,25 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
+  gateway-tests:
+    name: Go gateway tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          # Latest patch of the go.mod minor version so tests run on a toolchain
+          # with the standard-library security fixes.
+          go-version: "1.26.x"
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run gateway tests
+        run: go test ./...
+
   docker-e2e:
     name: Docker end-to-end
     runs-on: ubuntu-latest
@@ -98,7 +117,21 @@ jobs:
             fi
             sleep 2
           done
-          docker exec ollama ollama pull llama3
+          pulled=false
+          for attempt in 1 2 3; do
+            if docker exec ollama ollama pull llama3; then
+              pulled=true
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Ollama model pull failed (attempt $attempt/3); retrying in $((attempt * 15))s"
+              sleep $((attempt * 15))
+            fi
+          done
+          if [ "$pulled" != "true" ]; then
+            docker logs ollama --tail 100
+            exit 1
+          fi
 
       - name: Start core stack
         run: |

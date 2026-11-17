@@ -63,8 +63,8 @@ describe("auth UX wiring", () => {
     assert.match(appLayout, /getServerSession/);
     assert.match(
       appLayout,
-      /redirect\(\s*["']\/api\/session["']\s*\)/,
-      "unauthenticated /app must bootstrap an anonymous session",
+      /redirect\(\s*`\/api\/session\?next=\$\{encodeURIComponent\(pathname\)\}`\s*\)/,
+      "unauthenticated /app must bootstrap an anonymous session and keep the requested page",
     );
     assert.ok(
       !/redirect\(\s*["']\/login["']\s*\)/.test(appLayout),

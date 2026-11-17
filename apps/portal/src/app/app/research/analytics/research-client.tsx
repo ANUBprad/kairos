@@ -60,10 +60,6 @@ interface ResearchDashboardProps {
       effectSize: string;
       ci: [number, number];
     }>;
-    equivalentConfigurations: Array<{
-      metric: string;
-      configs: string[];
-    }>;
     confidenceIntervals: Array<{
       config: string;
       metric: string;
@@ -132,9 +128,15 @@ export function ResearchDashboard({
 
   const hasKb = currentKbName !== null;
   const hasBenchmark = benchmarkRuns.length > 0;
-  const healthScore = Math.round(
-    (hasKb ? 30 : 0) + (totalDocuments > 0 ? 20 : 0) + (totalExperiments > 0 ? 20 : 0) + (hasBenchmark ? 30 : 0)
-  );
+  // A weighted percentage here was invented: 30/20/20/30 has no meaning. Count
+  // the setup steps that are actually done and label them as a checklist.
+  const readinessSteps = [
+    { label: "Workspace created", done: hasKb },
+    { label: "Documents indexed", done: totalDocuments > 0 },
+    { label: "Experiment created", done: totalExperiments > 0 },
+    { label: "Benchmark completed", done: hasBenchmark },
+  ];
+  const readinessDone = readinessSteps.filter((step) => step.done).length;
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -167,9 +169,11 @@ export function ResearchDashboard({
               status={hasBenchmark ? "success" : hasKb ? "warning" : "error"}
               label={hasBenchmark ? "Benchmarked" : hasKb ? "No Benchmarks" : "No Data"}
             />
-            <div className="text-right">
-              <p className="text-2xl font-bold text-text-primary">{healthScore}%</p>
-              <p className="text-[11px] text-text-tertiary uppercase tracking-wider">Research Health</p>
+            <div className="text-right" title={readinessSteps.map((step) => `${step.done ? "✓" : "○"} ${step.label}`).join("\n")}>
+              <p className="text-2xl font-bold text-text-primary">
+                {readinessDone}/{readinessSteps.length}
+              </p>
+              <p className="text-[11px] text-text-tertiary uppercase tracking-wider">Setup steps</p>
             </div>
           </div>
         </div>
@@ -359,7 +363,6 @@ export function ResearchDashboard({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
             <MetricCard label="Total Comparisons" value={String(scientificAnalysis.summary.totalComparisons)} icon="FlaskConical" />
             <MetricCard label="Significant Results" value={String(scientificAnalysis.summary.significantCount)} icon="TrendingUp" />
-            <MetricCard label="Equivalent Groups" value={String(scientificAnalysis.equivalentConfigurations.length)} icon="Layers" />
             <MetricCard label="CI Entries" value={String(scientificAnalysis.confidenceIntervals.length)} icon="BarChart3" />
           </div>
 
@@ -403,23 +406,6 @@ export function ResearchDashboard({
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          )}
-
-          {/* Equivalent Configurations */}
-          {scientificAnalysis.equivalentConfigurations.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-text-primary mb-3">Equivalent Configurations</h3>
-              <div className="space-y-2">
-                {scientificAnalysis.equivalentConfigurations.map((eq) => (
-                  <div key={eq.metric} className="flex items-center justify-between p-2 rounded-lg bg-bg-secondary text-sm">
-                    <span className="font-medium text-text-primary">{eq.metric}</span>
-                    <span className="text-text-secondary">
-                      {eq.configs.length} configs (no significant differences)
-                    </span>
-                  </div>
-                ))}
               </div>
             </div>
           )}

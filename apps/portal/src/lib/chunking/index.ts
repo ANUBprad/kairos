@@ -1,3 +1,4 @@
+import { CHUNK_STRATEGIES } from "./types";
 import type { Chunk, ChunkingOptions, ChunkStats } from "./types";
 
 const DEFAULT_OPTIONS: ChunkingOptions = {
@@ -6,7 +7,9 @@ const DEFAULT_OPTIONS: ChunkingOptions = {
   strategy: "recursive",
 };
 
-function resolveOptions(options: Partial<ChunkingOptions>): ChunkingOptions {
+const VALID_STRATEGIES = new Set<string>(CHUNK_STRATEGIES.map((s) => s.value));
+
+export function validateChunkingOptions(options: Partial<ChunkingOptions>): ChunkingOptions {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   if (!Number.isInteger(opts.chunkSize) || opts.chunkSize < 1) {
     throw new RangeError("chunkSize must be a positive integer");
@@ -14,7 +17,14 @@ function resolveOptions(options: Partial<ChunkingOptions>): ChunkingOptions {
   if (!Number.isInteger(opts.overlap) || opts.overlap < 0 || opts.overlap >= opts.chunkSize) {
     throw new RangeError("overlap must be a non-negative integer smaller than chunkSize");
   }
+  if (!VALID_STRATEGIES.has(opts.strategy)) {
+    throw new RangeError(`Unknown chunking strategy: ${String(opts.strategy)}`);
+  }
   return opts;
+}
+
+function resolveOptions(options: Partial<ChunkingOptions>): ChunkingOptions {
+  return validateChunkingOptions(options);
 }
 
 export function chunkText(
@@ -74,11 +84,15 @@ function chunkRecursive(text: string, opts: ChunkingOptions): Chunk[] {
       const slice = text.slice(searchStart, Math.min(searchEnd, text.length));
       const sepIdx = sep ? slice.lastIndexOf(sep) : -1;
       if (sepIdx !== -1) {
-        end = searchStart + sepIdx + sep.length;
+        const candidate = searchStart + sepIdx + sep.length;
+        if (candidate > start) end = candidate;
       }
+      // Forward progress is guaranteed: a separator can resolve to the current
+      // position and an extreme overlap can rewind the next start. Both would
+      // otherwise emit empty slices forever and hang ingestion.
+      end = Math.max(end, start + 1);
       parts.push(text.slice(start, Math.min(end, text.length)));
-      start = end - overlap;
-      if (start < 0) start = 0;
+      start = Math.max(end - overlap, start + 1);
     }
     return parts;
   }

@@ -529,7 +529,10 @@ export async function runBenchmark(
       let generatedAnswer = "";
       let generationFailed = false;
       try {
-        const provider = getAIProvider((config.embeddingProvider as "openai" | "gemini") || "openai");
+        // Chat generation follows the configured chat provider (AI_PROVIDER).
+        // Embeddings are configured independently per knowledge base; using
+        // embeddingProvider here accidentally couples chat to the vector model.
+        const provider = getAIProvider();
         const contextStr = contexts.map((c, i) => `[Source ${i + 1}] ${c}`).join("\n\n");
         const genResponse = await provider.generateChat({
           model: (config as unknown as Record<string, unknown>).chatModel as string || provider.getDefaultModel(),

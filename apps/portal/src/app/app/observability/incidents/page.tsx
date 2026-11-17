@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus } from 'lucide-react';
 import { listIncidents, incidentStats } from '@/lib/actions/incidents';
 import { CreateIncidentDialog } from '@/components/observability/create-incident-dialog';
-import Link from 'next/link';
 
 export default function IncidentsPage() {
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -118,9 +117,7 @@ export default function IncidentsPage() {
                 incidents.map((inc) => (
                   <TableRow key={inc.id}>
                     <TableCell>
-                      <Link href={`/app/observability/incidents/${inc.id}`} className="font-medium hover:underline">
-                        {inc.title}
-                      </Link>
+                      <span className="font-medium">{inc.title}</span>
                     </TableCell>
                     <TableCell>
                       <Badge variant={

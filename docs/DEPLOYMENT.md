@@ -43,22 +43,33 @@ docker compose ps   # wait for services to become healthy
 | Service | Port | Description |
 |---------|------|-------------|
 | PostgreSQL | 5433 | App database and production vector store (pgvector) — matches the default `DATABASE_URL` |
+| Portal | 3000 (host loopback) | Production Next.js build of the portal, built from `docker/portal.Dockerfile` |
+| Worker | — | Durable ingestion worker (`scripts/worker.ts`); drains the `ProcessingJob` queue |
+| migrate | — | One-shot `prisma migrate deploy`; portal and worker wait for it to succeed |
 | Gateway | 8080 | Go HTTP gateway (legacy v1) |
 | Intelligence | 28080 / 8001 | Python RAG engine, gRPC / metrics (legacy v1) |
 | ChromaDB | 7777 | Vector store for the v1 stack only (legacy) |
 | Prometheus | 9090 | Metrics collection |
 | Grafana | 3001 | Metrics dashboards (host port; container listens on 3000) |
 
-The **Portal** is not part of the compose stack; run it locally. Ensure
-`apps/portal/.env.local` exists (copied from the root `.env` above) before
-starting Next.js:
+`docker/portal.Dockerfile` has three targets that share one dependency install:
 
-```bash
-cd apps/portal
-npm install
-npx prisma migrate deploy
-npm run dev
-```
+| Target | Used by | Contents |
+|--------|---------|----------|
+| `builder` | `migrate` | Full install + generated Prisma client, for `prisma migrate deploy` |
+| `portal` | `portal` | Next.js standalone server (`server.js`) with the Prisma engine |
+| `worker` | `worker` | Same standalone tree, running `scripts/worker.ts` |
+
+The compose services read `.env`, but override `DATABASE_URL`/`DIRECT_URL` with
+`PORTAL_DATABASE_URL` (default: the compose `postgres` service). Set
+`NEXT_PUBLIC_BETTER_AUTH_URL` to the URL users actually visit; it is baked in at
+build time.
+
+> **Production semantics.** The container sets `NODE_ENV=production`, which
+> disables demo mode — real sign-in is required. Object storage must be
+> Cloudinary: set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and
+> `CLOUDINARY_API_SECRET`, or artifact media uploads fail (the local-disk
+> fallback refuses to run in production).
 
 The Portal is self-contained: it calls neither the gateway nor the intelligence
 engine, and it stores its vectors in PostgreSQL via pgvector. `npx prisma
@@ -67,6 +78,16 @@ migrate deploy` is what creates the pgvector extension, the pinned
 them. Its retrieval embeddings must be 768-dimensional (Gemini
 `text-embedding-004` or `embedding-001`); ingestion rejects a wider model before
 calling a provider.
+
+For local development, run the portal from source instead of the container:
+
+```bash
+cd apps/portal
+npm install
+npx prisma migrate deploy
+npm run dev          # portal
+npm run worker       # durable ingestion worker, in a second terminal
+```
 
 PostgreSQL is provided by the compose stack at `localhost:5433/kairos` (user `postgres`/`postgres`), matching the default `DATABASE_URL`. To point the Portal at a different database, set `DATABASE_URL`/`DIRECT_URL` in `.env` and run `npx prisma migrate deploy` against it instead.
 

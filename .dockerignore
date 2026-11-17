@@ -20,6 +20,13 @@ dist/
 build/
 node_modules/
 .next/
+# Patterns without a leading **/ only match the context root, and the portal
+# lives under apps/portal. Keep host installs and build output out of the
+# image, and never send env files into the build context.
+**/node_modules/
+**/.next/
+**/.env
+**/.env.*
 test/
 tests/
 *_test.py

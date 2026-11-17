@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, Command, X, Check, Plus, Sparkles } from "lucide-react";
+import { ChevronDown, Command, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useTransition } from "react";
 import { switchWorkspaceOrganization } from "@/lib/actions/organization";
@@ -123,64 +123,49 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
             <p className="px-1 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
               Workspace
             </p>
-            <button
-              onClick={() => setWorkspaceMenuOpen(!workspaceMenuOpen)}
-              aria-expanded={workspaceMenuOpen}
-              className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-surface-hover"
-            >
-              <span className="truncate text-sm font-medium text-text-primary">
+            {organizations.length > 1 ? (
+              <button
+                onClick={() => setWorkspaceMenuOpen(!workspaceMenuOpen)}
+                aria-expanded={workspaceMenuOpen}
+                className="flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-surface-hover"
+              >
+                <span className="truncate text-sm font-medium text-text-primary">
+                  {organization.name}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={cn(
+                    "shrink-0 text-text-tertiary transition-transform",
+                    workspaceMenuOpen && "rotate-180"
+                  )}
+                />
+              </button>
+            ) : (
+              <div className="truncate rounded-md px-2.5 py-2 text-sm font-medium text-text-primary">
                 {organization.name}
-              </span>
-              <ChevronDown
-                size={14}
-                className={cn(
-                  "shrink-0 text-text-tertiary transition-transform",
-                  workspaceMenuOpen && "rotate-180"
-                )}
-              />
-            </button>
-            {workspaceMenuOpen && (
+              </div>
+            )}
+            {workspaceMenuOpen && organizations.length > 1 && (
               <div className="mt-1 rounded-md border border-border bg-bg/60 p-1.5">
-                {organizations.length > 1 && (
-                  <div className="mb-1">
-                    <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
-                      Switch workspace
-                    </p>
-                    {organizations.map((org) => (
-                      <button
-                        key={org.id}
-                        onClick={() => handleSwitchOrganization(org.id)}
-                        disabled={org.id === organization.id || isPending}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
-                          org.id === organization.id
-                            ? "bg-brand-muted text-brand"
-                            : "text-text-secondary hover:bg-surface-hover hover:text-text-primary disabled:opacity-50"
-                        )}
-                      >
-                        <span className="flex-1 truncate text-left">{org.name}</span>
-                        {org.id === organization.id && <Check size={12} className="shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
                 <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
-                  Quick Actions
+                  Switch workspace
                 </p>
-                <Link
-                  href="/app/knowledge-bases"
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                >
-                  <Plus size={12} />
-                  New workspace
-                </Link>
-                <Link
-                  href="/app/studio"
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                >
-                  <Sparkles size={12} />
-                  Open Studio
-                </Link>
+                {organizations.map((org) => (
+                  <button
+                    key={org.id}
+                    onClick={() => handleSwitchOrganization(org.id)}
+                    disabled={org.id === organization.id || isPending}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                      org.id === organization.id
+                        ? "bg-brand-muted text-brand"
+                        : "text-text-secondary hover:bg-surface-hover hover:text-text-primary disabled:opacity-50"
+                    )}
+                  >
+                    <span className="flex-1 truncate text-left">{org.name}</span>
+                    {org.id === organization.id && <Check size={12} className="shrink-0" />}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -193,9 +178,14 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
         >
           <div className="space-y-6">
             {APP_NAV.map((section) => {
-              const sectionHasActive = section.items.some((item) =>
-                item.href === "/app" ? pathname === "/app" : pathname.startsWith(item.href)
-              );
+              const activeHref = section.items
+                .filter((item) =>
+                  item.href === "/app"
+                    ? pathname === "/app"
+                    : pathname === item.href || pathname.startsWith(`${item.href}/`)
+                )
+                .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+              const sectionHasActive = Boolean(activeHref);
               const isCollapsed =
                 Boolean(collapsedSections[section.label]) && !sectionHasActive;
               return (
@@ -227,10 +217,7 @@ export function AppSidebar({ organization, organizations }: SidebarProps) {
                     <div className="space-y-0.5">
                       {section.items.map((item) => {
                         const Icon = item.icon;
-                        const isActive =
-                          item.href === "/app"
-                            ? pathname === "/app"
-                            : pathname.startsWith(item.href);
+                        const isActive = item.href === activeHref;
                         return (
                           <Link
                             key={item.label}

@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     )
 
     # --- API (FastAPI management) ------------------------------------
-    api_host: str = Field(default="0.0.0.0", description="REST API bind host")
+    api_host: str = Field(default="0.0.0.0", description="REST API bind host")  # nosec B104 - container service binds all interfaces
     api_port: int = Field(default=8000, description="REST API bind port")
     api_workers: int = Field(default=1, description="Number of API worker processes")
     api_cors_origins: Annotated[list[str], NoDecode] = Field(

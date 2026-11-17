@@ -39,7 +39,18 @@ export async function GET(request: NextRequest) {
       asResponse: true,
     });
 
-    const response = NextResponse.redirect(new URL("/app", request.url));
+    // Only same-origin /app paths are accepted as the return target, so the
+    // bootstrap endpoint cannot be used as an open redirect. The Location stays
+    // relative so the visitor remains on the host they arrived on (in dev the
+    // server's own request URL can report a different origin than the browser's,
+    // which would silently drop the session cookie to another host).
+    const requested = request.nextUrl.searchParams.get("next");
+    const destination = requested && /^\/app(\/|$)/.test(requested) ? requested : "/app";
+
+    const response = new NextResponse(null, {
+      status: 307,
+      headers: { location: destination },
+    });
     for (const cookie of issued.headers.getSetCookie()) {
       response.headers.append("set-cookie", cookie);
     }
@@ -50,6 +61,6 @@ export async function GET(request: NextRequest) {
     });
     // Fail closed to the (public, account-optional) sign-in page rather than
     // looping back into /app with no session.
-    return NextResponse.redirect(new URL("/login", request.url));
+    return new NextResponse(null, { status: 307, headers: { location: "/login" } });
   }
 }

@@ -100,13 +100,14 @@ export function serializeRegressionComparison(result: RegressionComparisonResult
   };
 }
 
-// Tenant-anchored runs are scoped to the API key's organization. Standalone
-// datasets are visible only to the user who created them.
+// Tenant-anchored runs are scoped to the API key's organization. Unowned
+// standalone datasets are global; creator-owned standalone datasets are private.
 function regressionRunWhere(runId: string, organizationId: string, userId: string) {
   return {
 id: runId,
     dataset: {
       OR: [
+        { knowledgeBaseId: null, organizationId: null, createdById: null },
         { knowledgeBaseId: null, organizationId: null, createdById: userId },
         { knowledgeBase: { project: { organizationId } } },
         { organizationId },
@@ -214,20 +215,21 @@ export async function trackRegressionComparison(
 
 // Reads a persisted regression comparison through the same shared access
 // boundary as tracking: datasets anchored to a knowledge base or organization
-// resolve only inside the caller's organization, standalone (unanchored)
-// datasets stay global, and a foreign, fabricated, or deleted id resolves
-// identically to null so the caller cannot probe another tenant's record
-// existence.
+// resolve only inside the caller's organization; unowned standalone datasets are
+// global, while creator-owned standalone datasets are private to userId. A
+// foreign, fabricated, or deleted id resolves identically to null.
 export async function getBenchmarkRegressionForOrg(
   regressionId: string,
   organizationId: string,
+  userId: string,
 ): Promise<Pick<TrackedRegression, "record" | "machine"> | null> {
   const row = await prisma.benchmarkRegression.findFirst({
     where: {
       id: regressionId,
-dataset: {
+      dataset: {
         OR: [
-          { knowledgeBaseId: null, organizationId: null },
+          { knowledgeBaseId: null, organizationId: null, createdById: null },
+          { knowledgeBaseId: null, organizationId: null, createdById: userId },
           { knowledgeBase: { project: { organizationId } } },
           { organizationId },
         ],

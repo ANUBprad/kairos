@@ -7,14 +7,20 @@ import { getMembership } from "@/lib/rbac";
 // a dataset's knowledge base anchors it to a project/org whose members may
 // access it. Foreign, forged, or unauthorized ids all fail as "not found" so
 // the existence of another tenant's resources cannot be probed.
-// Standalone datasets are private to their creator.
+// Standalone datasets with an explicit creator are private to that creator;
+// unowned standalone datasets are shared/global and may be used by any tenant.
 export async function assertDatasetAccess(datasetId: string, userId: string) {
   const dataset = await prisma.benchmarkDataset.findUnique({
     where: { id: datasetId },
     select: { id: true, knowledgeBaseId: true, organizationId: true, createdById: true },
   });
   if (!dataset) throw new Error("Dataset not found");
-  if (!dataset.knowledgeBaseId && !dataset.organizationId && dataset.createdById !== userId) {
+  if (
+    !dataset.knowledgeBaseId &&
+    !dataset.organizationId &&
+    dataset.createdById !== null &&
+    dataset.createdById !== userId
+  ) {
     throw new Error("Dataset not found");
   }
   if (

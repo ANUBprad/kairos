@@ -71,6 +71,8 @@ cp .env.example .env
 # Next.js loads environment files from apps/portal, not the repository root.
 cp .env apps/portal/.env.local
 # Edit both files as needed; set BETTER_AUTH_SECRET and GEMINI_API_KEY.
+# Local development uses .kairos-storage automatically when Cloudinary is not configured.
+# For production, configure all three CLOUDINARY_* values for durable object storage.
 docker compose up -d
 
 docker compose ps   # wait until all services report healthy
@@ -94,10 +96,16 @@ The compose stack provides the local database (PostgreSQL 16 with pgvector) at `
 
 ```bash
 cd apps/portal
-npm install
+npm ci
 npx prisma migrate deploy   # applies all migrations to the compose-provided database
-npm run dev
+npm run dev                 # portal
+npm run worker              # second terminal — drains the durable ingestion queue
 ```
+
+Ingestion is durable: every upload enqueues a `ProcessingJob`, the request
+attempts it inline for latency, and the worker finishes anything the request did
+not. Run the worker in any environment where uploads must complete after the
+request returns.
 
 `npx prisma migrate deploy` is non-destructive: it only applies migrations that have not been recorded yet and never drops data. If you use the default compose Postgres, the schema is applied in one command.
 
@@ -112,6 +120,8 @@ npx prisma migrate deploy   # reports "No pending migrations to apply"
 ```
 
 Future schema changes then ship via normal `npx prisma migrate deploy` runs.
+
+**File storage:** local development does not require a Cloudinary account. If all three `CLOUDINARY_*` variables are empty, the Portal stores uploaded files and generated media under `apps/portal/.kairos-storage` (or `KAIROS_LOCAL_STORAGE_DIR`). That directory is git-ignored. This local provider serves objects through short-lived signed URLs and the same authenticated media routes. Production requires Cloudinary; do not rely on ephemeral application disks for user files. Set all three Cloudinary variables together — partial configuration is treated as an error.
 
 The full environment reference lives in [`.env.example`](.env.example); see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment notes.
 

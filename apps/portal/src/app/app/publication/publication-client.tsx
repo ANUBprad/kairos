@@ -19,30 +19,43 @@ import {
 import { cn } from "@/lib/utils";
 import { getBaselines } from "@/lib/actions/evaluation";
 import { logger } from "@/lib/logger";
+import { toast } from "sonner";
+import {
+  filterMarkdownSections,
+  publicationExport,
+  toStandaloneHtml,
+  type PublicationFormat,
+} from "@/lib/publication-export";
 
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
-type ExportFormat = "markdown" | "html" | "latex" | "pdf";
-
 const FORMAT_OPTIONS = [
-  { id: "markdown" as ExportFormat, label: "Markdown", icon: FileText, description: "Plain text with formatting" },
-  { id: "html" as ExportFormat, label: "HTML", icon: FileCode2, description: "Web page with styling" },
-  { id: "latex" as ExportFormat, label: "LaTeX", icon: FileType, description: "Academic paper format" },
-  { id: "pdf" as ExportFormat, label: "PDF", icon: BookOpen, description: "Printable document" },
+  { id: "markdown" as PublicationFormat, label: "Markdown", icon: FileText, description: "Plain text with formatting" },
+  { id: "html" as PublicationFormat, label: "HTML", icon: FileCode2, description: "Self-contained web page" },
+  { id: "latex" as PublicationFormat, label: "LaTeX", icon: FileType, description: "Compilable LaTeX source" },
+  { id: "pdf" as PublicationFormat, label: "PDF", icon: BookOpen, description: "Print dialog — save as PDF" },
 ];
 
 const SECTIONS = [
   { id: "abstract", label: "Abstract", required: true },
   { id: "methodology", label: "Methodology", required: true },
   { id: "results", label: "Results", required: true },
-  { id: "figures", label: "Figures & Charts", required: false },
   { id: "statistical-analysis", label: "Statistical Analysis", required: false },
   { id: "threats", label: "Threats to Validity", required: false },
-  { id: "future-work", label: "Future Work", required: false },
-  { id: "appendix", label: "Appendix", required: false },
-  { id: "references", label: "References", required: false },
   { id: "reproducibility", label: "Reproducibility Manifest", required: true },
 ];
+
+function formatMetric(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "n/a";
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(3) : "n/a";
+}
+
+function metricsOf(aggregatedMetrics: unknown): Record<string, unknown> {
+  return aggregatedMetrics && typeof aggregatedMetrics === "object" && !Array.isArray(aggregatedMetrics)
+    ? (aggregatedMetrics as Record<string, unknown>)
+    : {};
+}
 
 function generatePaperContent(baselines: Array<{ name: string | null; aggregatedMetrics: unknown }>): string {
   if (baselines.length === 0) {
@@ -50,7 +63,7 @@ function generatePaperContent(baselines: Array<{ name: string | null; aggregated
 
 ## Abstract
 
-We present Kairos, an open-source research platform for systematic evaluation of Retrieval-Augmented Generation (RAG) pipelines. No benchmark data is currently available. Run benchmarks to generate research content.
+No benchmark data is currently available. Run benchmarks to generate research content.
 
 ## Methodology
 
@@ -63,9 +76,7 @@ No results to display. Run benchmarks from the Evaluation page to generate resea
   }
 
   const configRows = baselines.map((run, i) => {
-    const m = (run.aggregatedMetrics && typeof run.aggregatedMetrics === "object" && !Array.isArray(run.aggregatedMetrics))
-      ? run.aggregatedMetrics as Record<string, unknown>
-      : {};
+    const m = metricsOf(run.aggregatedMetrics);
     const embedding = String(m.embedding || "unknown");
     const chunking = String(m.chunking || "unknown");
     const retriever = String(m.retriever || "unknown");
@@ -73,28 +84,21 @@ No results to display. Run benchmarks from the Evaluation page to generate resea
   }).join("\n");
 
   const metricRows = baselines.map((run) => {
-    const m = (run.aggregatedMetrics && typeof run.aggregatedMetrics === "object" && !Array.isArray(run.aggregatedMetrics))
-      ? run.aggregatedMetrics as Record<string, unknown>
-      : {};
-    const recall = (Number(m.avgRecallAtK) || 0).toFixed(3);
-    const precision = (Number(m.avgPrecisionAtK) || 0).toFixed(3);
-    const mrr = (Number(m.avgMRR) || 0).toFixed(3);
-    const ndcg = (Number(m.avgNDCG) || 0).toFixed(3);
-    const faithfulness = (Number(m.avgFaithfulness) || 0).toFixed(3);
-    return `| ${run.name || "Unnamed"} | ${recall} | ${precision} | ${mrr} | ${ndcg} | ${faithfulness} |`;
+    const m = metricsOf(run.aggregatedMetrics);
+    return `| ${run.name || "Unnamed"} | ${formatMetric(m.avgRecallAtK)} | ${formatMetric(m.avgPrecisionAtK)} | ${formatMetric(m.avgMRR)} | ${formatMetric(m.avgNDCG)} | ${formatMetric(m.avgFaithfulness)} |`;
   }).join("\n");
 
   return `# Kairos: An Explainable RAG Research Workbench
 
 ## Abstract
 
-We present Kairos, an open-source research platform for systematic evaluation of Retrieval-Augmented Generation (RAG) pipelines. Unlike traditional RAG frameworks that focus solely on answer quality, Kairos provides full pipeline visibility, statistical evaluation with confidence intervals, and automated research intelligence. We demonstrate that transparent, statistically rigorous evaluation reveals meaningful differences between retrieval configurations that single-metric comparisons miss.
+Kairos is an open-source research platform for systematic evaluation of Retrieval-Augmented Generation (RAG) pipelines. This document was generated from ${baselines.length} stored benchmark run${baselines.length !== 1 ? "s" : ""}. It reports the retrieval configuration and aggregated metrics recorded by the evaluation pipeline; it does not assert statistical significance.
 
 ## Methodology
 
 ### Experimental Design
 
-We evaluated ${baselines.length} retrieval configurations across benchmark datasets. Each configuration was tested with multiple queries. We used Recall@3, Precision@3, MRR, nDCG@3, and Faithfulness as primary metrics.
+We report ${baselines.length} benchmark run${baselines.length !== 1 ? "s" : ""} as stored by Kairos. Recall@3, Precision@3, MRR, nDCG@3, and Faithfulness are shown exactly as recorded; a metric the run did not evaluate is shown as \`n/a\` rather than zero.
 
 ### Configurations
 
@@ -112,11 +116,11 @@ ${metricRows}
 
 ### Key Findings
 
-${baselines.length > 1 ? `1. **Performance varies across configurations.** Analysis of ${baselines.length} runs reveals significant differences in retrieval quality.` : "Insufficient data for comparative analysis. Run additional benchmarks to generate findings."}
+${baselines.length > 1 ? `Metrics vary across the ${baselines.length} recorded configurations. Compare confidence intervals and significance in Research Analytics before drawing conclusions.` : "Only one run is available, so no comparative claim can be made. Run additional benchmarks to compare configurations."}
 
 ## Statistical Analysis
 
-All results include 95% bootstrap confidence intervals (1000 resamples). Effect sizes measured using Cohen's d. Statistical significance assessed using paired t-tests with Bonferroni correction.
+This export reports the aggregated metrics stored with each run. Confidence intervals and significance tests are not computed in this document; use Research Analytics for those comparisons.
 
 ## Threats to Validity
 
@@ -128,9 +132,8 @@ All results include 95% bootstrap confidence intervals (1000 resamples). Effect 
 
 \`\`\`json
 {
-  "platform": "Kairos v1.0.0",
+  "platform": "Kairos",
   "total_runs": ${baselines.length},
-  "random_seed": 42,
   "evaluation_metrics": ["recall", "precision", "mrr", "ndcg", "hit_rate", "faithfulness"]
 }
 \`\`\`
@@ -138,7 +141,7 @@ All results include 95% bootstrap confidence intervals (1000 resamples). Effect 
 }
 
 export function PublicationModeClient() {
-  const [format, setFormat] = useState<ExportFormat>("markdown");
+  const [format, setFormat] = useState<PublicationFormat>("markdown");
   const [enabledSections, setEnabledSections] = useState<Record<string, boolean>>(
     Object.fromEntries(SECTIONS.map((s) => [s.id, true]))
   );
@@ -167,18 +170,41 @@ export function PublicationModeClient() {
     setEnabledSections((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
-  function handleCopy() {
-    navigator.clipboard.writeText(paperContent);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // The preview, clipboard, and file exports all use the same filtered text so
+  // a section toggle changes exactly what the user sees and downloads.
+  const visiblePaper = filterMarkdownSections(paperContent, enabledSections, SECTIONS);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(visiblePaper);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Could not copy — your browser blocked clipboard access");
+    }
   }
 
   function handleExport() {
-    const blob = new Blob([paperContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
+    if (format === "pdf") {
+      // A real PDF comes from the browser's print dialog; renaming a Markdown
+      // file to .pdf would produce a file no reader can open.
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        toast.error("Allow pop-ups to open the print dialog and save as PDF");
+        return;
+      }
+      printWindow.document.write(toStandaloneHtml(visiblePaper));
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      return;
+    }
+
+    const file = publicationExport(format, visiblePaper);
+    const url = URL.createObjectURL(new Blob([file.content], { type: file.mime }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `kairos-paper.${format === "latex" ? "tex" : format === "pdf" ? "pdf" : format === "html" ? "html" : "md"}`;
+    a.download = file.filename;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -188,8 +214,8 @@ export function PublicationModeClient() {
       <div className="animate-fade-in">
         <PageHeader
           title="Publication Mode"
-          description="Generate publication-ready research outputs from your experiments with embedded charts and statistical analysis."
-          purpose="Transform experiment results into professional research papers suitable for sharing, publishing, or archival."
+          description="Generate a research write-up from your benchmark runs. Enabled sections are included in the preview, copy, and export."
+          purpose="Transform recorded experiment results into a shareable research document without inventing statistics the data does not contain."
           nextAction={{ label: "Research Notebook", href: "/app/notebook" }}
           relatedPages={[
             { label: "Research Analytics", href: "/app/research/analytics" },
@@ -213,7 +239,7 @@ export function PublicationModeClient() {
       <PageHeader
         title="Publication Mode"
         description="Generate publication-ready research outputs from your experiments with embedded charts and statistical analysis."
-        purpose="Transform experiment results into professional research papers suitable for sharing, publishing, or archival."
+        purpose="Transform recorded experiment results into a shareable research document without inventing statistics the data does not contain."
         nextAction={{ label: "Research Notebook", href: "/app/notebook" }}
         relatedPages={[
             { label: "Research Analytics", href: "/app/research/analytics" },
@@ -315,7 +341,7 @@ export function PublicationModeClient() {
             {showPreview && (
               <div className="rounded-lg border border-border bg-bg p-6 max-h-[600px] overflow-y-auto">
                 <div className="prose prose-invert prose-sm max-w-none">
-                  <ReactMarkdown>{paperContent}</ReactMarkdown>
+                  <ReactMarkdown>{visiblePaper}</ReactMarkdown>
                 </div>
               </div>
             )}

@@ -153,6 +153,7 @@ export function SourceAddDialog({ kbId, open, onOpenChange, onOpenFileUpload }: 
             </p>
           </div>
         ) : (
+          <>
           <input
             ref={inputRef}
             type="url"
@@ -164,6 +165,12 @@ export function SourceAddDialog({ kbId, open, onOpenChange, onOpenFileUpload }: 
             disabled={isLoading}
             className="mt-4 w-full rounded-[10px] border border-border bg-bg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none"
           />
+          {mode === "youtube" && (
+            <p className="mt-2 text-xs leading-relaxed text-text-tertiary">
+              Kairos imports the video&apos;s available captions. Videos without accessible captions cannot be indexed.
+            </p>
+          )}
+          </>
         )}
 
         <div className="mt-4 flex items-center justify-between">

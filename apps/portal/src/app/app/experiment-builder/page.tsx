@@ -15,7 +15,7 @@ const ExperimentBuilderClient = dynamic(
 
 export const metadata = {
   title: "Experiment Builder",
-  description: "Visually assemble RAG experiment pipelines with drag-and-drop stages.",
+  description: "Preview retrieval pipeline settings; selections are not saved or applied to benchmark runs.",
 };
 
 export default async function ExperimentBuilderPage() {

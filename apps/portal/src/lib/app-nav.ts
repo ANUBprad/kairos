@@ -53,9 +53,8 @@ export interface AppNavSection {
 // Observe — operational telemetry for operators, not the default experience.
 // Settings — configuration and reference material.
 //
-// Only grouping and ordering are expressed here; every route below predates
-// this file, so deep links keep working and the command palette (FLAT_APP_NAV)
-// still indexes everything.
+// Only grouping and ordering are expressed here. Advanced routes remain
+// reachable through search and direct links without crowding the core journey.
 export const APP_NAV: AppNavSection[] = [
   {
     label: "Workspace",
@@ -177,13 +176,6 @@ export const APP_NAV: AppNavSection[] = [
         icon: Code2,
         description: "Split and inspect text chunks",
         keywords: ["chunking", "split", "text", "chunks"],
-      },
-      {
-        label: "Experiment Builder",
-        href: "/app/experiment-builder",
-        icon: FlaskConical,
-        description: "Build a retrieval experiment",
-        keywords: ["experiment", "builder", "workflow", "pipeline"],
       },
       {
         label: "Experiment Planner",

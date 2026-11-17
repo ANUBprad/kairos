@@ -137,15 +137,43 @@ export async function recoverStaleEmbeddingDocuments(
   knowledgeBaseId: string,
   staleBefore: Date,
 ): Promise<number> {
-  const result = await prisma.document.updateMany({
+  const staleRows = await prisma.document.findMany({
     where: {
       knowledgeBaseId,
-      status: { in: ["EMBEDDING", "EMBEDDING_PENDING"] },
+      status: { in: ["QUEUED", "UPLOADING", "STORED", "EXTRACTING", "CHUNKING", "EMBEDDING", "EMBEDDING_PENDING"] },
       updatedAt: { lt: staleBefore },
+      // A live queue job owns this document even if the pipeline has been quiet
+      // for a while; the queue's own lock/heartbeat decides its fate.
+      processingJobs: { none: { status: { in: ["PENDING", "RUNNING"] } } },
     },
-    data: { status: "ERROR" },
+    select: { id: true, status: true, metadata: true },
   });
-  return result.count;
+
+  let recovered = 0;
+  const recoveredAt = new Date().toISOString();
+  for (const row of staleRows) {
+    const previousMetadata =
+      row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+    const result = await prisma.document.updateMany({
+      // Compare-and-set prevents recovery from overwriting a job that resumed
+      // after the stale-row scan.
+      where: { id: row.id, status: row.status, updatedAt: { lt: staleBefore } },
+      data: {
+        status: "ERROR",
+        metadata: {
+          ...previousMetadata,
+          stage: "recovery",
+          previousStage: row.status,
+          error: "Processing stopped before completion. Retry this source to resume.",
+          recoveredAt,
+        } as never,
+      },
+    });
+    recovered += result.count;
+  }
+  return recovered;
 }
 
 export interface EmbeddingResult {

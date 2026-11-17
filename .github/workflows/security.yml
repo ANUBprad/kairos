@@ -2,6 +2,8 @@ name: Security
 
 on:
   push:
+    branches: [main, develop]
+  pull_request:
     branches: [main]
   schedule:
     - cron: "0 6 * * 1"
@@ -10,8 +12,12 @@ concurrency:
   group: security-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
-  security:
+  python-security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,19 +28,76 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install dependencies
+      - name: Install scanners
         run: |
           python -m pip install --upgrade pip
-          pip install bandit safety
+          # bandit's SARIF formatter lives in the `sarif` extra; without it
+          # `-f sarif` is an invalid formatter choice.
+          pip install "bandit[sarif]" pip-audit
 
+      # Medium and high findings fail the job. Low-severity style findings are
+      # reported in the SARIF file but do not block a merge.
       - name: Run bandit (SAST)
-        run: bandit -r intelligence/ -f sarif -o bandit-results.sarif || true
-
-      - name: Run safety (dependency scan)
-        run: safety check -r requirements.txt --full-report || true
+        run: bandit -r intelligence/ -ll -f sarif -o bandit-results.sarif
 
       - name: Upload bandit results
+        if: always() && hashFiles('bandit-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: bandit-results.sarif
-        continue-on-error: true
+
+      # PYSEC-2026-311/3813/3814/3815 have no fixed chromadb release yet.
+      # Remove these ignores as soon as pip-audit reports a fix version; any
+      # other advisory fails the job.
+      - name: Audit Python dependencies
+        run: |
+          pip-audit -r requirements.txt \
+            --ignore-vuln PYSEC-2026-311 \
+            --ignore-vuln PYSEC-2026-3813 \
+            --ignore-vuln PYSEC-2026-3814 \
+            --ignore-vuln PYSEC-2026-3815
+
+  portal-security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/portal
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/portal/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Existing advisories are listed in scripts/security-audit-baseline.json
+      # so this gate fails on a *new* advisory, not on the known backlog.
+      - name: Audit npm dependencies
+        run: node scripts/audit-gate.mjs
+
+  go-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          # The latest patch of the minor version in go.mod, not the exact
+          # version pinned there: standard-library vulnerabilities are fixed in
+          # patch releases, and `go-version-file` would otherwise pin the
+          # security scan to the oldest patch the module graph allows.
+          go-version: "1.26.x"
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...

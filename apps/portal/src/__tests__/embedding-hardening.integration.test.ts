@@ -421,6 +421,47 @@ describe("embedding production hardening against a real database", () => {
     assert.equal(settled.status, "INDEXED");
   });
 
+  it("retries a YouTube snapshot from stored chunks without refetching the video", async (t) => {
+    if (!testDbUrl) {
+      t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
+      return;
+    }
+    stub.mode = "ok";
+    stub.dim = DIM;
+    const clientRef = client as PrismaClient;
+    const demoUser = await ensureDemoUser();
+    const kbId = await makeKbForDemo(demoUser);
+    const doc = await clientRef.document.create({
+      data: {
+        name: `saved-youtube-${randomUUID()}`.slice(0, 255),
+        fileType: "txt",
+        sourceType: "YOUTUBE",
+        sourceUrl: "https://www.youtube.com/watch?v=AbCdEfGhIjK",
+        status: "ERROR",
+        knowledgeBaseId: kbId,
+        uploadedById: demoUser,
+        metadata: { title: "Saved transcript snapshot" },
+      },
+      select: { id: true },
+    });
+    docIds.push(doc.id);
+    const originalText = "This is the saved transcript snapshot. It must be used for retry.";
+    await clientRef.documentChunk.create({
+      data: { documentId: doc.id, index: 0, content: originalText, tokenCount: 13 },
+    });
+
+    const result = await reprocessDocument(reprocessFormData(doc.id));
+    assert.equal(result.status, "INDEXED");
+    const indexed = await clientRef.document.findUnique({ where: { id: doc.id }, select: { status: true } });
+    assert.equal(indexed?.status, "INDEXED");
+    const chunks = await clientRef.documentChunk.findMany({
+      where: { documentId: doc.id },
+      select: { content: true },
+    });
+    assert.ok(chunks.length > 0);
+    assert.match(chunks.map((chunk) => chunk.content).join(" "), /saved transcript snapshot/);
+  });
+
   it("stale EMBEDDING and EMBEDDING_PENDING documents recover to ERROR idempotently", async (t) => {
     if (!testDbUrl) {
       t.skip("KAIROS_TEST_DATABASE_URL is not set (requires Postgres + pgvector)");
@@ -454,6 +495,28 @@ describe("embedding production hardening against a real database", () => {
       select: { id: true },
     });
     docIds.push(stalePending.id);
+    const staleStored = await clientRef.document.create({
+      data: {
+        name: `stale-stored-${randomUUID()}.txt`,
+        fileType: "txt",
+        status: "STORED",
+        knowledgeBaseId: kbId,
+        updatedAt: new Date(Date.now() - 40 * 60 * 1000),
+      },
+      select: { id: true },
+    });
+    docIds.push(staleStored.id);
+    const staleExtracting = await clientRef.document.create({
+      data: {
+        name: `stale-extracting-${randomUUID()}.txt`,
+        fileType: "txt",
+        status: "EXTRACTING",
+        knowledgeBaseId: kbId,
+        updatedAt: new Date(Date.now() - 40 * 60 * 1000),
+      },
+      select: { id: true },
+    });
+    docIds.push(staleExtracting.id);
     const fresh = await clientRef.document.create({
       data: {
         name: `fresh-${randomUUID()}.txt`,
@@ -467,17 +530,26 @@ describe("embedding production hardening against a real database", () => {
 
     const cutoff = new Date(Date.now() - STALE_EMBEDDING_MS);
     const first = await recoverStaleEmbeddingDocuments(kbId, cutoff);
-    assert.equal(first, 2, "both stale rows must recover");
+    assert.equal(first, 4, "stale rows from embedding and pre-embedding stages must recover");
     const second = await recoverStaleEmbeddingDocuments(kbId, cutoff);
     assert.equal(second, 0, "recovery must be idempotent");
 
-    const [staleEmbedRow, stalePendingRow, freshRow] = await Promise.all([
-      clientRef.document.findUnique({ where: { id: staleEmbed.id }, select: { status: true } }),
-      clientRef.document.findUnique({ where: { id: stalePending.id }, select: { status: true } }),
-      clientRef.document.findUnique({ where: { id: fresh.id }, select: { status: true } }),
+    const [staleEmbedRow, stalePendingRow, staleStoredRow, staleExtractingRow, freshRow] = await Promise.all([
+      clientRef.document.findUnique({ where: { id: staleEmbed.id }, select: { status: true, metadata: true } }),
+      clientRef.document.findUnique({ where: { id: stalePending.id }, select: { status: true, metadata: true } }),
+      clientRef.document.findUnique({ where: { id: staleStored.id }, select: { status: true, metadata: true } }),
+      clientRef.document.findUnique({ where: { id: staleExtracting.id }, select: { status: true, metadata: true } }),
+      clientRef.document.findUnique({ where: { id: fresh.id }, select: { status: true, metadata: true } }),
     ]);
     assert.equal(staleEmbedRow?.status, "ERROR");
     assert.equal(stalePendingRow?.status, "ERROR");
+    assert.equal(staleStoredRow?.status, "ERROR");
+    assert.equal(staleExtractingRow?.status, "ERROR");
+    for (const recovered of [staleEmbedRow, stalePendingRow, staleStoredRow, staleExtractingRow]) {
+      const metadata = recovered?.metadata as Record<string, unknown> | null;
+      assert.equal(metadata?.stage, "recovery");
+      assert.match(String(metadata?.error), /Retry this source to resume/);
+    }
     assert.equal(freshRow?.status, "EMBEDDING", "a live (fresh) row must never be recovered");
   });
 

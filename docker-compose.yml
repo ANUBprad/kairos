@@ -72,6 +72,7 @@ services:
       # on the host loopback so the plaintext channel is not reachable from the
       # LAN; production runs with TLS or a loopback bind instead.
       - KAIROS_GRPC_BIND_HOST=0.0.0.0
+      - KAIROS_PROVIDER_TIMEOUT_SECONDS=${KAIROS_PROVIDER_TIMEOUT_SECONDS:-90}
     deploy:
       resources:
         limits:
@@ -101,6 +102,7 @@ services:
     environment:
       - INTELLIGENCE_HOST=intelligence
       - INTELLIGENCE_PORT=28080
+      - KAIROS_PROVIDER_TIMEOUT_SECONDS=${KAIROS_PROVIDER_TIMEOUT_SECONDS:-90}
     deploy:
       resources:
         limits:
@@ -169,6 +171,91 @@ services:
       start_period: 30s
     depends_on:
       - prometheus
+    networks:
+      - kairos
+
+  # Applies pending Prisma migrations once per `docker compose up`, before the
+  # portal and worker start. Uses the builder stage because the standalone
+  # runtime image intentionally has no Prisma CLI or migration files.
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/portal.Dockerfile
+      target: builder
+    command: ["npx", "prisma", "migrate", "deploy"]
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${PORTAL_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/kairos?schema=public}
+      - DIRECT_URL=${PORTAL_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/kairos?schema=public}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - kairos
+
+  # Production build of the Next.js portal. NODE_ENV=production means demo mode
+  # is off (real sign-in) and object storage must be Cloudinary; set the
+  # CLOUDINARY_* variables in .env. The published port stays on the host
+  # loopback because TLS terminates outside this compose stack.
+  portal:
+    build:
+      context: .
+      dockerfile: docker/portal.Dockerfile
+      target: portal
+      args:
+        NEXT_PUBLIC_BETTER_AUTH_URL: ${NEXT_PUBLIC_BETTER_AUTH_URL:-http://localhost:3000}
+        NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+        NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST:-https://us.i.posthog.com}
+    ports:
+      - "127.0.0.1:${PORTAL_PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      # Override the host-facing URL in .env with the compose service name.
+      - DATABASE_URL=${PORTAL_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/kairos?schema=public}
+      - DIRECT_URL=${PORTAL_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/kairos?schema=public}
+      - NEXT_PUBLIC_BETTER_AUTH_URL=${NEXT_PUBLIC_BETTER_AUTH_URL:-http://localhost:3000}
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - kairos
+
+  # Durable ingestion worker. Run at least one so queued documents finish even
+  # when no browser request is alive; it is safe to kill and restart.
+  worker:
+    build:
+      context: .
+      dockerfile: docker/portal.Dockerfile
+      target: worker
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=${PORTAL_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/kairos?schema=public}
+      - DIRECT_URL=${PORTAL_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/kairos?schema=public}
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
     networks:
       - kairos
 

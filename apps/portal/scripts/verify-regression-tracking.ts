@@ -136,27 +136,27 @@ async function main() {
     });
 
     // 1. Track the in-tenant comparison.
-    const tracked = await trackRegressionComparison({ baselineRunId: baseline.id, candidateRunId: candidate.id }, orgId);
+    const tracked = await trackRegressionComparison({ baselineRunId: baseline.id, candidateRunId: candidate.id }, orgId, memberUserId);
     assertCompatible(tracked.machine);
     assertMachineFinite(tracked.machine);
     if (tracked.record.datasetId !== version.id) throw new Error(`record dataset ${tracked.record.datasetId} != version ${version.id}`);
     if (tracked.record.overallVerdict !== "improvement") throw new Error(`expected improvement, got ${tracked.record.overallVerdict}`);
 
     // 2. Repeating the same pair is idempotent.
-    const again = await trackRegressionComparison({ baselineRunId: baseline.id, candidateRunId: candidate.id }, orgId);
+    const again = await trackRegressionComparison({ baselineRunId: baseline.id, candidateRunId: candidate.id }, orgId, memberUserId);
     if (again.record.id !== tracked.record.id) throw new Error("re-tracking created a second record");
     const count = await prisma.benchmarkRegression.count({ where: { baselineRunId: baseline.id, candidateRunId: candidate.id } });
     if (count !== 1) throw new Error(`expected 1 record, got ${count}`);
 
     // 3. A foreign organization cannot read this org's runs.
     await expectRunNotFound(() =>
-      trackRegressionComparison({ baselineRunId: baseline.id, candidateRunId: candidate.id }, foreignOrgId),
+      trackRegressionComparison({ baselineRunId: baseline.id, candidateRunId: candidate.id }, foreignOrgId, foreignUserId),
     );
 
     // 4. The persisted comparison is readable through the org boundary and the
     //    quality gate passes under the configured policy.
     const policy = loadPolicy();
-    const persisted = await getBenchmarkRegressionForOrg(tracked.record.id, orgId);
+    const persisted = await getBenchmarkRegressionForOrg(tracked.record.id, orgId, memberUserId);
     if (!persisted) throw new Error("persisted regression not readable by the owning org");
     const gate = evaluateQualityGate(persisted.machine, policy);
     if (gate.outcome !== "PASS") {
@@ -166,7 +166,7 @@ async function main() {
 
     // 5. A foreign organization cannot read this org's persisted regression,
     //    and the gate outcome is deterministic over the same snapshot.
-    const foreignRead = await getBenchmarkRegressionForOrg(tracked.record.id, foreignOrgId);
+    const foreignRead = await getBenchmarkRegressionForOrg(tracked.record.id, foreignOrgId, foreignUserId);
     if (foreignRead !== null) throw new Error("foreign org read the owning org's persisted regression");
     const gateAgain = evaluateQualityGate(persisted.machine, policy);
     if (JSON.stringify(gateAgain) !== JSON.stringify(gate)) throw new Error("quality gate outcome is not deterministic");

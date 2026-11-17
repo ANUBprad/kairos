@@ -112,6 +112,7 @@ describe("YouTube URL validation", () => {
       "https://m.youtube.com/watch?v=AbCdEfGhIjK",
       "https://www.youtube.com/shorts/AbCdEfGhIjK",
       "https://www.youtube.com/embed/AbCdEfGhIjK",
+      "https://www.youtube.com/live/AbCdEfGhIjK",
       "http://www.youtube.com/watch?v=AbCdEfGhIjK",
       "https://www.youtu.be/AbCdEfGhIjK",
     ]) {
@@ -161,7 +162,6 @@ describe("YouTube URL validation", () => {
       "https://www.youtube.com/watch?v=AbCdEfGhIjKX",
       "https://youtu.be",
       "https://youtu.be/short",
-      "https://www.youtube.com/live/AbCdEfGhIjK",
     ]) {
       assert.throws(() => parseYouTubeUrl(url), isCode("invalid_video_id"));
     }
@@ -257,6 +257,34 @@ describe("Transcript retrieval", () => {
       fetchYouTubeTranscript(WATCH_URL, { resolveHost: YT_DNS, httpGet: ytHttpGet({ watch: info }) }),
       isCode("transcript_unavailable"),
     );
+  });
+
+  it("accepts YouTube JSON3 caption responses", async () => {
+    const json3 = JSON.stringify({
+      events: [
+        { tStartMs: 0, dDurationMs: 1500, segs: [{ utf8: "Hello JSON3 transcript." }] },
+        { tStartMs: 1500, dDurationMs: 1500, segs: [{ utf8: "This format is supported too." }] },
+      ],
+    });
+    const result = await fetchYouTubeTranscript(WATCH_URL, {
+      resolveHost: YT_DNS,
+      httpGet: ytHttpGet({ watch: INFO, timedText: json3 }),
+    });
+    assert.equal(result.cueCount, 2);
+    assert.match(result.text, /Hello JSON3 transcript/);
+    assert.match(result.text, /This format is supported too/);
+  });
+
+  it("accepts YouTube srv3 caption responses", async () => {
+    const srv3 = '<timedtext><body><p t="0" d="1500"><s>Hello srv3 transcript.</s></p>' +
+      '<p t="1500" d="1500"><s>This format is supported too.</s></p></body></timedtext>';
+    const result = await fetchYouTubeTranscript(WATCH_URL, {
+      resolveHost: YT_DNS,
+      httpGet: ytHttpGet({ watch: INFO, timedText: srv3 }),
+    });
+    assert.equal(result.cueCount, 2);
+    assert.match(result.text, /Hello srv3 transcript/);
+    assert.match(result.text, /This format is supported too/);
   });
 
   it("rejects a watch page with no player response", async () => {

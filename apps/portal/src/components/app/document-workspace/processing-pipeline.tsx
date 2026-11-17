@@ -147,6 +147,38 @@ export function ProcessingPipeline({ stages, status, onRetry, className }: Proce
   );
 }
 
+// Stage ids must match the ids used above. The status→stage table previously
+// looked up `stage.id.toUpperCase()` ("UPLOAD", "EXTRACT", …) which never
+// matched, so the pipeline panel rendered every stage as pending while a
+// document was actively processing.
+const STAGE_IDS = ["upload", "extract", "chunk", "embed", "index"] as const;
+
+const STAGE_INDEX_FOR_STATUS: Record<string, number> = {
+  QUEUED: 0,
+  UPLOADING: 0,
+  STORED: 0,
+  EXTRACTING: 1,
+  CHUNKING: 2,
+  EMBEDDING_PENDING: 3,
+  EMBEDDING: 3,
+  INDEXED: 4,
+  READY: 4,
+};
+
+// Pipeline metadata records the internal stage name; map it to the stage the
+// user sees so a failure is shown on the row that actually failed.
+const STAGE_FOR_PIPELINE_NAME: Record<string, (typeof STAGE_IDS)[number]> = {
+  init: "upload",
+  fetch: "upload",
+  upload: "upload",
+  extract: "extract",
+  chunk: "chunk",
+  store: "index",
+  db: "index",
+  index: "index",
+  embed: "embed",
+};
+
 export function buildPipelineStages(
   status: string,
   metadata?: Record<string, unknown> | null
@@ -159,40 +191,27 @@ export function buildPipelineStages(
     { id: "index", label: "Indexing", status: "pending" },
   ];
 
-  const statusOrder: Record<string, number> = {
-    QUEUED: 0,
-    UPLOADING: 1,
-    STORED: 1,
-    EXTRACTING: 2,
-    CHUNKING: 3,
-    EMBEDDING_PENDING: 4,
-    EMBEDDING: 4,
-    INDEXED: 5,
-    READY: 5,
-    ERROR: -1,
-  };
-
-  const currentIdx = statusOrder[status] ?? -1;
-
   if (status === "ERROR") {
-    const errorStage = metadata?.stage as string | undefined;
+    const failedId = STAGE_FOR_PIPELINE_NAME[String(metadata?.stage ?? "")] ?? "upload";
+    const failedIdx = STAGE_IDS.indexOf(failedId);
     for (const stage of stages) {
-      if (stage.id === errorStage) {
+      const idx = STAGE_IDS.indexOf(stage.id as (typeof STAGE_IDS)[number]);
+      if (idx < failedIdx) stage.status = "completed";
+      else if (idx === failedIdx) {
         stage.status = "error";
         stage.error = (metadata?.error as string) || "Failed";
-      } else if (statusOrder[errorStage ?? ""] !== undefined && statusOrder[stage.id] < statusOrder[errorStage ?? ""]) {
-        stage.status = "completed";
       }
     }
-  } else {
-    for (const stage of stages) {
-      const stageIdx = statusOrder[stage.id.toUpperCase()] ?? -1;
-      if (stageIdx < currentIdx) {
-        stage.status = "completed";
-      } else if (stageIdx === currentIdx) {
-        stage.status = "active";
-      }
-    }
+    return stages;
+  }
+
+  const currentIdx = STAGE_INDEX_FOR_STATUS[status];
+  if (currentIdx === undefined) return stages;
+
+  for (const stage of stages) {
+    const idx = STAGE_IDS.indexOf(stage.id as (typeof STAGE_IDS)[number]);
+    if (idx < currentIdx) stage.status = "completed";
+    else if (idx === currentIdx) stage.status = "active";
   }
 
   if (status === "READY" || status === "INDEXED") {

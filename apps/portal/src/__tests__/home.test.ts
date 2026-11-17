@@ -8,6 +8,15 @@ function source(relativePath: string): string {
 
 const page = source("../app/app/page.tsx");
 const view = source("../components/app/home/home-view.tsx");
+const sidebar = source("../components/app/sidebar.tsx");
+const palette = source("../components/ui/command-palette.tsx");
+const workspaceContext = source("../lib/workspace-context.tsx");
+const layout = source("../app/app/layout.tsx");
+const sourceDialog = source("../components/app/source-add-dialog.tsx");
+const appNav = source("../lib/app-nav.ts");
+const tracePage = source("../app/app/observability/traces/page.tsx");
+const incidentPage = source("../app/app/observability/incidents/page.tsx");
+const experimentBuilder = source("../app/app/experiment-builder/experiment-builder-client.tsx");
 
 describe("home dashboard", () => {
   it("scopes every recent-activity read to the caller's project and user", () => {
@@ -43,6 +52,49 @@ describe("home dashboard", () => {
       assert.ok(view.includes(`href="${href}"`), `missing ${href}`);
     }
     assert.match(view, /kbWorkspaceHref\(/);
+  });
+
+  it("does not repeat navigation destinations as sidebar quick actions", () => {
+    assert.doesNotMatch(sidebar, /Quick Actions|Open Studio|New workspace/);
+    assert.match(sidebar, /organizations\.length > 1/);
+    assert.match(sidebar, /activeHref/);
+  });
+
+  it("keeps the command palette focused on navigation, not fake actions", () => {
+    assert.doesNotMatch(palette, /ACTION_COMMANDS|Upload Document|Create Workspace|Open Chat|Run Evaluation/);
+    assert.match(palette, /cmd\.category === "Workspace"/);
+    assert.match(palette, /Search pages/);
+  });
+
+  it("toggles the command palette from one keyboard handler only", () => {
+    assert.doesNotMatch(palette, /e\.key === "k"/, "palette must not re-handle Ctrl/Cmd+K");
+    assert.match(workspaceContext, /shortcutsRef\.get\("command-palette"\)/);
+    assert.match(palette, /registerShortcut\("command-palette"/);
+  });
+
+  it("hides the non-persistent experiment builder from discoverable navigation", () => {
+    assert.doesNotMatch(appNav, /Experiment Builder|\/app\/experiment-builder/);
+  });
+
+  it("does not offer to run preview-only experiment settings", () => {
+    assert.doesNotMatch(experimentBuilder, /Run in Evaluation/);
+    assert.match(experimentBuilder, /Preview only/);
+    assert.match(experimentBuilder, /not saved or applied to benchmark runs/);
+  });
+
+  it("does not render links to trace or incident detail routes that do not exist", () => {
+    assert.doesNotMatch(tracePage, /\/app\/observability\/traces\/\$\{trace\.id\}/);
+    assert.doesNotMatch(incidentPage, /\/app\/observability\/incidents\/\$\{inc\.id\}/);
+  });
+
+  it("removes hidden shortcuts that duplicated navigation with misleading targets", () => {
+    assert.doesNotMatch(layout, /KeyboardShortcuts/);
+    assert.doesNotMatch(layout, /dashboard\/keyboard-shortcuts/);
+  });
+
+  it("explains that YouTube ingestion requires accessible captions", () => {
+    assert.match(sourceDialog, /imports the video&apos;s available captions/);
+    assert.match(sourceDialog, /without accessible captions cannot be indexed/);
   });
 
   it("does not resurrect the removed stat-card dashboard", () => {

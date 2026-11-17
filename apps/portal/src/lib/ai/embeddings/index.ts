@@ -1,2 +1,2 @@
-export { generateEmbeddings } from "./service";
+export { generateEmbeddings, recoverStaleEmbeddingDocuments } from "./service";
 export type { EmbeddingResult } from "./service";

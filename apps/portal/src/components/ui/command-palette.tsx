@@ -2,53 +2,37 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Search,
-  Upload,
-  Plus,
-  MessageSquare,
-  FlaskConical,
-  BarChart3,
-  type LucideIcon,
-} from "lucide-react";
+import { Search, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace-context";
-import { FLAT_APP_NAV } from "@/lib/app-nav";
+import { APP_NAV } from "@/lib/app-nav";
 
 interface CommandItem {
   id: string;
   label: string;
   description?: string;
   href?: string;
-  action?: string;
   icon: LucideIcon;
   category: string;
   keywords: string[];
-  shortcut?: string;
 }
 
-// Navigation commands come from the single app-nav source so the palette can
-// never drift from the sidebar.
-const NAVIGATION_COMMANDS: CommandItem[] = FLAT_APP_NAV.map((item) => ({
-  id: item.href,
-  label: item.label,
-  description: item.description,
-  href: item.href,
-  icon: item.icon as LucideIcon,
-  category: "Navigation",
-  keywords: item.keywords ?? [item.label.toLowerCase()],
-}));
+// The palette opens pages; it does not pretend that navigation is an action.
+// Keep the everyday workspace destinations visible by default and reveal
+// advanced destinations only when the user searches for them.
+const NAVIGATION_COMMANDS: CommandItem[] = APP_NAV.flatMap((section) =>
+  section.items.map((item) => ({
+    id: item.href,
+    label: item.label,
+    description: item.description,
+    href: item.href,
+    icon: item.icon as LucideIcon,
+    category: section.label === "Workspace" ? "Workspace" : "Advanced",
+    keywords: item.keywords ?? [item.label.toLowerCase()],
+  })),
+);
 
-const ACTION_COMMANDS: CommandItem[] = [
-  { id: "upload", label: "Upload Document", description: "Add files to a workspace", href: "/app/knowledge-bases", action: "upload", icon: Upload, category: "Actions", keywords: ["upload", "file", "document", "add"], shortcut: "U" },
-  { id: "create-kb", label: "Create Workspace", description: "Start a new workspace", href: "/app/knowledge-bases", action: "create-kb", icon: Plus, category: "Actions", keywords: ["create", "workspace", "knowledge", "base", "new"], shortcut: "N" },
-  { id: "new-chat", label: "Open Chat", description: "Ask questions about your documents", href: "/app/knowledge-bases", action: "new-chat", icon: MessageSquare, category: "Actions", keywords: ["chat", "ask", "question", "rag"], shortcut: "R" },
-  { id: "new-experiment", label: "New Experiment", description: "Build and test a retrieval pipeline", href: "/app/experiment-builder", action: "new-experiment", icon: FlaskConical, category: "Actions", keywords: ["experiment", "new", "build", "test"] },
-  { id: "run-evaluation", label: "Run Evaluation", description: "Benchmark retrieval performance", href: "/app/evaluation", action: "run-evaluation", icon: BarChart3, category: "Actions", keywords: ["evaluation", "benchmark", "metrics"], shortcut: "E" },
-  { id: "open-lab", label: "Open Retrieval Lab", description: "Test retrieval configurations", href: "/app/retrieval-lab", action: "open-lab", icon: FlaskConical, category: "Actions", keywords: ["retrieval", "lab", "test"] },
-];
-
-const ALL_COMMANDS = [...NAVIGATION_COMMANDS, ...ACTION_COMMANDS];
+const ALL_COMMANDS = NAVIGATION_COMMANDS;
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -60,7 +44,7 @@ export function CommandPalette() {
 
   const filtered = useMemo(() => {
     return ALL_COMMANDS.filter((cmd) => {
-      if (!query) return true;
+      if (!query) return cmd.category === "Workspace";
       const q = query.toLowerCase();
       return (
         cmd.label.toLowerCase().includes(q) ||
@@ -92,13 +76,13 @@ export function CommandPalette() {
     [router]
   );
 
+  // Ctrl/Cmd+K is owned by WorkspaceProvider's shortcut registry. Handling it
+  // here as well made one keypress toggle the palette twice (net: it never
+  // opened), so this listener only handles Escape.
   useEffect(() => {
+    if (!open) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setOpen((prev) => !prev);
-      }
-      if (e.key === "Escape" && open) {
+      if (e.key === "Escape") {
         setOpen(false);
         setQuery("");
       }
@@ -158,7 +142,7 @@ export function CommandPalette() {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search pages and actions..."
+            placeholder="Search pages..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -200,11 +184,6 @@ export function CommandPalette() {
                         </p>
                       )}
                     </div>
-                    {cmd.shortcut && (
-                      <kbd className="rounded border border-border bg-bg px-1.5 py-0.5 text-[10px] font-mono text-text-tertiary shrink-0">
-                        {cmd.shortcut}
-                      </kbd>
-                    )}
                   </button>
                 );
               })}

@@ -67,8 +67,9 @@ export function DocumentDetailsClient({ document, kbId, initialChunkIndex }: Doc
     try {
       const formData = new FormData();
       formData.set("id", document.id);
-      await reprocessDocument(formData);
-      toast.success("Reprocessing started");
+      const result = await reprocessDocument(formData);
+      if (result.status === "ERROR") toast.error("Reprocessing failed. Review the pipeline error below.");
+      else toast.success("Source reprocessed");
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to reprocess");

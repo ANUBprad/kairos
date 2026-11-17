@@ -187,6 +187,29 @@ All server actions validate:
 - Critical/High vulnerabilities addressed immediately
 - Medium/Low vulnerabilities addressed before release
 
+### CI Enforcement
+
+`.github/workflows/security.yml` runs on every push and pull request and fails
+the build instead of reporting into the void:
+
+| Gate | Command | Failure condition |
+|------|---------|-------------------|
+| Python static analysis | `bandit -r intelligence/ -ll` | any Medium or High finding |
+| Python dependencies | `pip-audit -r intelligence/requirements.txt` | any advisory not in the documented ignore list |
+| JavaScript dependencies | `node scripts/audit-gate.mjs` | any advisory URL not in `scripts/security-audit-baseline.json` |
+| Go dependencies | `govulncheck ./...` | any reachable vulnerability |
+
+`scripts/security-audit-baseline.json` records the advisories that were already
+present when the gate was introduced. The gate compares advisory URLs, so a
+*new* advisory fails the build even though the old backlog does not — and
+removing a baseline entry is how a fixed advisory is retired. `pip-audit`
+ignores the five unfixed `chromadb` advisories with an explicit comment; drop
+those ignores once fixed releases exist.
+
+`bandit` Medium/High is blocking. The one intentional suppression is
+`# nosec B104` on the container service binding `0.0.0.0`, which is required for
+the service to be reachable inside the container network.
+
 ### Supply Chain Security
 - Dependencies pinned to specific versions in lock files
 - Only trusted registries (npm, PyPI)

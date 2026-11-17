@@ -13,7 +13,7 @@ export function LeaderboardsClient({ entries }: { entries: LeaderboardRowEntry[]
         relatedPages={[
           { label: "Research Analytics", href: "/app/research/analytics" },
           { label: "Quality Gates", href: "/app/quality-gates" },
-          { label: "Experiment Builder", href: "/app/experiment-builder" },
+          { label: "Evaluation", href: "/app/evaluation" },
         ]}
       />
 

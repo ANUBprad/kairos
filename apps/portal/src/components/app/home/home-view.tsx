@@ -91,7 +91,7 @@ function Section({
 function OnboardingPanel() {
   const steps = [
     { title: "Create a workspace", description: "Name it after the subject you're researching." },
-    { title: "Add your sources", description: "Upload PDFs, paste text, or add links and videos." },
+    { title: "Add your sources", description: "Upload PDFs, paste text, or add links and YouTube videos with captions." },
     {
       title: "Research, create, and study",
       description: "Ask grounded questions, generate artifacts, and practice with quizzes.",
