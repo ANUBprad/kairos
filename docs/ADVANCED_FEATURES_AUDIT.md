@@ -37,6 +37,24 @@ This is the current implementation audit for the ingestion, navigation, advanced
 - **Scanned PDF OCR:** not implemented.
 - **YouTube audio transcription:** not implemented; accessible captions are required.
 
+### Honesty fixes in this branch
+
+Controls that implied behavior the product does not have were removed or turned
+into read-only facts, rather than left as dead buttons:
+
+- **Settings → Security** shows the real session and configuration facts it can
+  read. Password change and two-factor enrolment were not implemented, so their
+  inert forms are gone.
+- **Settings → Configuration** is read-only; there is no per-user provider or
+  model configuration to write.
+- **Research Notebook** edits the notebook's content and tags. The dead `#`
+  command affordance is gone.
+- **Research Analytics** reports the metrics it actually has and no longer
+  claims an "equivalence" verdict or a health score it does not compute.
+- **Publication Mode** filters the exported document by the enabled sections,
+  and the PDF export is the browser print dialog rather than a renamed Markdown
+  file.
+
 All 35 remaining sidebar destinations have matching route page files. Route existence is not treated as proof that every server-side workflow is healthy.
 
 ## CI issues addressed in this branch
@@ -57,4 +75,14 @@ CI on this branch is still the source of truth for whether these changes pass. D
 
 ## Remaining dependency risk
 
-A previous install/audit report flagged 20 dependency vulnerabilities, including 3 critical. They have not been force-upgraded in this branch: dependency remediation needs a separate package-by-package review and regression run rather than an unreviewed `npm audit fix --force`.
+An install/audit report flagged 20 dependency vulnerabilities, including 3
+critical. They were not force-upgraded here: dependency remediation needs a
+package-by-package review and regression run rather than an unreviewed
+`npm audit fix --force`.
+
+Instead, `.github/workflows/security.yml` now gates *new* advisories: the npm
+audit gate compares advisory URLs against `scripts/security-audit-baseline.json`
+(17 known advisories, 0 new), `pip-audit` blocks anything outside its documented
+ignore list (five unfixed `chromadb` advisories), `bandit -ll` blocks Medium/High
+Python findings, and `govulncheck` covers the Go gateway. The existing backlog is
+recorded rather than hidden behind `|| true`.

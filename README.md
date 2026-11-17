@@ -98,8 +98,14 @@ The compose stack provides the local database (PostgreSQL 16 with pgvector) at `
 cd apps/portal
 npm ci
 npx prisma migrate deploy   # applies all migrations to the compose-provided database
-npm run dev
+npm run dev                 # portal
+npm run worker              # second terminal — drains the durable ingestion queue
 ```
+
+Ingestion is durable: every upload enqueues a `ProcessingJob`, the request
+attempts it inline for latency, and the worker finishes anything the request did
+not. Run the worker in any environment where uploads must complete after the
+request returns.
 
 `npx prisma migrate deploy` is non-destructive: it only applies migrations that have not been recorded yet and never drops data. If you use the default compose Postgres, the schema is applied in one command.
 

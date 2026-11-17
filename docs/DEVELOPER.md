@@ -273,11 +273,17 @@ docker compose up -d postgres
 cd apps/portal
 npx prisma migrate deploy
 KAIROS_DEMO_MODE=true npm run dev
+KAIROS_DEMO_MODE=true npm run worker   # second terminal — durable ingestion queue
 ```
 
 `KAIROS_DEMO_MODE=true` signs every request in as a demo admin
 (`demo@kairos.dev`, created on first use) and is hard-disabled when
 `NODE_ENV=production`. Use `/signup` instead to exercise the real auth flow.
+
+`npm run test:e2e` automates the first-run, command-palette, upload-entry and
+publication-export journeys with Playwright against a real database (see
+`apps/portal/playwright.config.ts`). The rest of the checklist below still needs
+a human.
 
 Walk the same journey the integration suite covers, in a browser:
 

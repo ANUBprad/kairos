@@ -42,16 +42,25 @@ citations
 
 ```text
 Browser
-  │  Upload file
+  │  Upload file / add URL / paste note
   ▼
-Portal (Next.js)
-  │  Validate type + size
+Portal (Next.js) server action
+  │  Validate type + size, write Document row
+  │  Enqueue ProcessingJob (status=PENDING, activeKey=documentId)
+  ▼
+PostgreSQL
+  │  The job row is the durable record of "this document still needs work"
+  │
+  ├── inline attempt (same request, best effort — latency only)
+  ▼
+Ingestion pipeline
   │  Extract text (PDF, DOCX, TXT, Markdown, CSV, URL, YouTube)
   │  Chunk the text
   │  Embed each chunk              ← 768-dim provider call, rejected if not 768
   ▼
 PostgreSQL + pgvector
      Write DocumentChunk + DocumentEmbedding (model + dimensions recorded)
+     Mark ProcessingJob SUCCEEDED (activeKey → NULL)
   │
   ▼
 Browser
@@ -60,16 +69,43 @@ Browser
 
 ### Steps
 
-1. **User uploads file** via the browser
+1. **User uploads file** via the browser (or adds a URL, YouTube video, or note)
 2. **Portal validates** file type and size
-3. **Portal extracts** text (PDF, DOCX, TXT, Markdown, CSV, URL, YouTube)
-4. **Portal chunks** the extracted text
-5. **Portal embeds** each chunk with the knowledge base's resolved embedding
+3. **Portal writes** the `Document` row and enqueues a `ProcessingJob`
+4. **The request attempts the pipeline inline** so a small document finishes
+   before the response returns. Durability never depends on that attempt: the
+   job row survives a crashed request, a redeploy, or a closed tab
+5. **The worker** (`npm run worker`, `scripts/worker.ts`) claims pending jobs
+   atomically and runs the same pipeline for any job the request did not finish
+6. **Portal extracts** text (PDF, DOCX, TXT, Markdown, CSV, URL, YouTube)
+7. **Portal chunks** the extracted text
+8. **Portal embeds** each chunk with the knowledge base's resolved embedding
    provider/model. Ingestion refuses any model that is not 768-dimensional
    before it calls the provider
-6. **Portal writes** `DocumentChunk` and `DocumentEmbedding` rows in one
+9. **Portal writes** `DocumentChunk` and `DocumentEmbedding` rows in one
    transaction, recording the model and dimensions actually used
-7. **Success response** returned to user
+10. **Success response** returned to user
+
+### Durability, retries and recovery
+
+- **One active job per document.** `ProcessingJob.activeKey` is the document id
+  while the job is `PENDING` or `RUNNING` and `NULL` once it is terminal, so the
+  unique index allows a new job after a finished one and refuses two live jobs
+  for the same document.
+- **Heartbeats.** A running job updates `lockedAt`. A job whose `lockedAt` is
+  older than the stale window is reclaimed by the worker loop, so a killed
+  process does not strand the document in `RUNNING`.
+- **Retries.** Crashes and infrastructure failures (provider 5xx, timeouts,
+  connection loss) are retried with exponential backoff up to a bounded attempt
+  count. Deterministic failures the pipeline reports as `ok: false` — a scanned
+  PDF with no text layer, an unsupported format — are terminal immediately;
+  retrying them would only delay the error the user needs to see.
+- **Recovery on read.** `listDocuments` re-enqueues a document whose job is
+  missing or terminally stuck, so a document uploaded while the worker was down
+  still gets processed.
+- **Payloads are self-contained.** Non-file sources carry their extracted text
+  in `payload.content`, so a later worker needs nothing from the original
+  request. File sources re-read the stored object.
 
 The vector column is `DocumentEmbedding.embedding vector(768)` and the HNSW
 index over it is created by the SQL migration
