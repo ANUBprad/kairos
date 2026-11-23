@@ -280,6 +280,41 @@ export async function verifyOAuthState(input: {
     };
 }
 
+const NONCE_CLEANUP_BATCH_SIZE = 100;
+
+/**
+ * Deletes expired, already-consumed OAuth nonces in bounded batches.
+ *
+ * Best-effort housekeeping only: verification logic is unchanged, and an
+ * unconsumed (possibly in-flight) nonce is never removed here.
+ *
+ * @param limit - Maximum number of rows to delete in this invocation
+ * @returns Number of rows deleted
+ */
+export async function cleanupExpiredOAuthNonces(limit = 500): Promise<number> {
+    if (!Number.isSafeInteger(limit) || limit < 1) {
+        throw new ValidationError("Invalid OAuth nonce cleanup limit");
+    }
+
+    const now = new Date();
+    let removed = 0;
+
+    while (removed < limit) {
+        const batchSize = Math.min(NONCE_CLEANUP_BATCH_SIZE, limit - removed);
+        const batch = await prisma.oAuthStateNonce.deleteMany({
+            where: {
+                expiresAt: { lte: now },
+                consumedAt: { not: null },
+            },
+            limit: batchSize,
+        });
+        removed += batch.count;
+        if (batch.count < batchSize) break;
+    }
+
+    return removed;
+}
+
 /** Exported for tests that need to reproduce signature checks without a DB. */
 export function verifyOAuthStateSignature(token: string): boolean {
     const parts = token.split(".");

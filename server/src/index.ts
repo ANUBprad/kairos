@@ -7,6 +7,9 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
 import { registerRoutes } from "./routes/index.js";
 import { errorHandler } from "./middleware/error-handler.middleware.js";
+import { csrfProtection } from "./middleware/csrf.middleware.js";
+import { cleanupExpiredOAuthNonces } from "./lib/oauth-state.js";
+import { recoverAbandonedDurableJobs } from "./lib/outbox.js";
 import { inngest } from "./inngest/client.js";
 import { serve } from "inngest/express";
 import { functions } from "./inngest/index.js";
@@ -76,6 +79,10 @@ app.post(
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
+// Better Auth (/api/auth), the HMAC webhook, and Inngest have their own
+// protections and are exempted inside the middleware by path.
+app.use(csrfProtection);
+
 if (env.NODE_ENV !== "production") {
     app.use("/uploads", express.static("uploads"));
 }
@@ -111,4 +118,16 @@ app.use(errorHandler);
 app.listen(Number(PORT), "0.0.0.0", () => {
     logger.info("Server listening", { port: PORT, nodeEnv: env.NODE_ENV });
     logInngestStartupMode();
+
+    // Best-effort startup cleanup; never block listening on maintenance work.
+    void cleanupExpiredOAuthNonces().catch((error: unknown) => {
+        logger.warn("OAuth nonce cleanup failed at startup", {
+            error: error instanceof Error ? error.message : String(error),
+        });
+    });
+    void recoverAbandonedDurableJobs().catch((error: unknown) => {
+        logger.warn("Durable job recovery failed at startup", {
+            error: error instanceof Error ? error.message : String(error),
+        });
+    });
 });

@@ -4,3 +4,7 @@ playwright-report/
 playwright/.cache/
 .env
 .env.local
+
+# Generated local podcast/interruption audio (dev-only fallback storage)
+server/uploads/podcasts/
+*.mp3

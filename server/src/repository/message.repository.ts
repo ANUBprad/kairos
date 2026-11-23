@@ -22,17 +22,21 @@ export type CreateMessageData = {
 };
 
 /**
- * Queries all messages in a conversation in chronological order.
+ * Queries the most recent messages in a conversation in chronological order.
+ * The bounded take keeps history loading predictable; very old messages are
+ * intentionally excluded once a conversation exceeds the cap.
  *
  * @param conversationId - Unique identifier of the conversation
  * @returns Promise resolving to list of message records
  */
-export function findMessagesByConversationId(conversationId: string) {
-    return prisma.message.findMany({
+export async function findMessagesByConversationId(conversationId: string) {
+    const messages = await prisma.message.findMany({
         where: { conversationId },
         select: messageSelect,
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
+        take: 200,
     });
+    return messages.reverse();
 }
 
 /**

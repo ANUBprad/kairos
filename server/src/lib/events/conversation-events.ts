@@ -12,9 +12,13 @@ export async function enqueueConversationSummarize(input: {
     conversationId: string;
     userId: string;
 }) {
+    // Deterministic id keeps repeated submissions of the same summary job from
+    // creating duplicate Inngest runs.
+    const jobKey = `conversation-summarize:${input.conversationId}`;
     const accepted = await sendInngestEvent({
+        id: jobKey,
         name: "conversation/summarize",
-        data: input,
+        data: { ...input, jobKey },
     });
 
     if (!accepted) {

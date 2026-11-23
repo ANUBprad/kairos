@@ -1,5 +1,6 @@
 import { findChunksBySourceId } from "../repository/source-chunk.repository.js";
 import { findSourceById } from "../repository/source.repository.js";
+import { markDurableJobDelivered, releaseDurableJob } from "../lib/outbox.js";
 import {
     markArtifactFailed,
     processArtifactById,
@@ -10,7 +11,7 @@ import { inngest } from "./client.js";
 
 
 /**
- * Inngest durable background function triggered by `source/created`.
+ * Inngest durable function triggered by `source/created`.
  * Coordinates the multi-step ETL pipeline: mark processing -> extract -> chunk -> embed & index in Pinecone.
  */
 export const processSource = inngest.createFunction(
@@ -20,7 +21,7 @@ export const processSource = inngest.createFunction(
       triggers: [{ event: "source/created" }],
   },
   async ({ event, step }) => {
-      const { sourceId } = event.data;
+      const { sourceId, jobKey } = event.data;
 
     //   STEP 1: mark source as processing {status: "PROCESSING"}
       await step.run("mark-processing", () => markSourceProcessing(sourceId));
@@ -54,8 +55,14 @@ export const processSource = inngest.createFunction(
               return { chunkCount: chunks.length };
           });
 
+          if (jobKey) {
+              await markDurableJobDelivered(jobKey);
+          }
           return { sourceId, status: "READY", ...result };
       } catch (error) {
+          if (jobKey) {
+              await releaseDurableJob(jobKey, error);
+          }
           await step.run("mark-failed", async () => {
               const source = await findSourceById(sourceId);
               if (source) {
@@ -68,7 +75,7 @@ export const processSource = inngest.createFunction(
 );
 
 /**
- * Inngest durable background function triggered by `conversation/summarize`.
+ * Inngest durable function triggered by `conversation/summarize`.
  * Produces rolling summaries of long conversations and syncs user memory to Mem0.
  */
 export const summarizeConversation = inngest.createFunction(
@@ -89,7 +96,7 @@ export const summarizeConversation = inngest.createFunction(
 );
 
 /**
- * Inngest durable background function triggered by `artifact/generate`.
+ * Inngest durable function triggered by `artifact/generate`.
  * Runs AI synthesis for study artifacts (quizzes, flashcards, mind maps, podcasts).
  */
 export const generateArtifact = inngest.createFunction(
@@ -99,12 +106,17 @@ export const generateArtifact = inngest.createFunction(
         triggers: [{ event: "artifact/generate" }],
     },
     async ({ event, step }) => {
-        const { artifactId } = event.data;
+        const { artifactId, jobKey } = event.data;
 
         try {
-            await step.run("generate", () => processArtifactById(artifactId));
+            await step.run("generate", () => processArtifactById(artifactId, jobKey));
             return { artifactId, status: "READY" };
         } catch (error) {
+            // processArtifactById already releases and marks the artifact
+            // failed; this is an idempotent safety net for step-level errors.
+            if (jobKey) {
+                await releaseDurableJob(jobKey, error);
+            }
             await step.run("mark-failed", async () => {
                 const message =
                     error instanceof Error

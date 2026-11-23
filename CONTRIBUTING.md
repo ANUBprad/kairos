@@ -40,7 +40,7 @@ npm run prisma:migrate
 npm run prisma:generate
 ```
 
-If `prisma migrate status` reports drift, run `./scripts/repair-migration-history.ps1` for read-only diagnostics and review the result with a database owner before making any repair.
+If `prisma migrate status` reports drift, run `server/scripts/repair-migration-history.ps1` (from the repository root) for read-only diagnostics and review the result with a database owner before making any repair. The script must never be used to silently rewrite migration history.
 
 Known intentional drift: the initial migration creates a legacy orphan `Test` table that is not in `schema.prisma`. It is preserved until its data and references are reviewed. Read-only reconciliation queries are in `server/prisma/reconciliation/001-read-only-reconciliation.sql`.
 
@@ -54,6 +54,31 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000). API: [http://localhost:8081](http://localhost:8081).
 
 On Windows PowerShell, prefer the root `npm run dev` script instead of chaining with `&&`.
+
+## Local migrations and tests
+
+- Run migrations only through `npm run prisma:migrate --prefix server` (`prisma migrate deploy`) after reviewing the checked-in migration history. Never use `prisma db push` to paper over drift.
+- Generate the client with `npm run prisma:generate --prefix server`, then run unit tests with `npm run test:unit --prefix server`. Integration/eval commands need real credentials and a seeded workspace; keep them out of the default unit suite.
+- Newly added `*.test.ts` files must be listed in the `test:unit` script in `server/package.json` to run in CI.
+- Startup maintenance (OAuth nonce cleanup, abandoned durable-job recovery) is best-effort and non-blocking; failures are logged as warnings.
+
+## Security configuration
+
+### CSRF / origin checks
+
+- Custom `POST`/`PUT`/`PATCH`/`DELETE` routes under `/api` require either `Sec-Fetch-Site: same-origin` (or `none`) or an `Origin` header that exactly matches an allowed `CLIENT_URL` origin.
+- A missing `Origin` is deliberately rejected with `403 { "error": "CSRF origin check failed" }`, even for otherwise authenticated requests. Browser clients send `Origin` automatically for these writes; non-browser clients must send it explicitly or use one of the exempt routes. Do not add new exemptions without an equivalent protection.
+- Exempt by design: `/api/auth/*` (Better Auth origin checks), `/api/payment/webhook` (raw body + Razorpay HMAC), and `/api/inngest` (signing key). Reads (`GET`/`HEAD`/`OPTIONS`) are not checked.
+
+### Proxy and origin configuration
+
+- `CLIENT_URL` is an explicit comma-separated origin list. Wildcards, non-http(s) schemes, and localhost/loopback origins in production are rejected.
+- `TRUST_PROXY` is unset by default, which means no proxy is trusted and forwarded-IP headers are ignored. In production set an explicit comma-separated proxy address list. Numeric hop counts work in local development only and are rejected in production because Better Auth cannot represent them as trusted proxy addresses.
+- Better Auth should consume `getBetterAuthTrustedProxies()` and `getBetterAuthIpHeaders()` from `server/src/config/network.ts` so its trust policy matches Express.
+
+### Generated audio
+
+Podcast MP3s written to `server/uploads/podcasts/` are generated, dev-only artifacts, are gitignored, and have no retention guarantee. Use Cloudinary for durable storage; do not treat local audio files as production data.
 
 ## Architecture (source → answer)
 

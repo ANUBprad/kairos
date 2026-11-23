@@ -14,7 +14,7 @@ import {
     getUserCredits,
 } from "./credit.services.js";
 import { ForbiddenError } from "../types/app-error.js";
-import type { PlanType } from "../generated/prisma/client.js";
+import type { PlanType, Prisma } from "../generated/prisma/client.js";
 
 export const PLAN_LIMITS: Record<
     PlanType,
@@ -50,6 +50,161 @@ export interface LimitDetails {
     current: number;
     max: number | null;
     plan: PlanType;
+}
+
+/** Limit types that can be enforced from inside a creation transaction. */
+export type TransactionalLimitType = "artifacts" | "sources" | "messages";
+
+function effectivePlan(user: {
+    plan: PlanType;
+    planExpiresAt: Date | null;
+}): PlanType {
+    if (
+        user.plan !== "FREE" &&
+        user.planExpiresAt !== null &&
+        new Date(user.planExpiresAt) <= new Date()
+    ) {
+        return "FREE";
+    }
+    return user.plan;
+}
+
+function maxFor(plan: PlanType, limitType: TransactionalLimitType): number | null {
+    const limits = PLAN_LIMITS[plan];
+    if (limitType === "sources") return limits.SOURCES;
+    if (limitType === "artifacts") return limits.ARTIFACTS;
+    return limits.MESSAGES;
+}
+
+function quotaExceededError(
+    plan: PlanType,
+    limitType: TransactionalLimitType,
+    current: number,
+    max: number | null,
+): ForbiddenError {
+    const nextPlan = plan === "FREE" ? "Pro" : "Pro+";
+    return new ForbiddenError(
+        `${plan} plan limit reached: You can create a maximum of ${max} ${limitType} on the ${plan} plan. Upgrade to ${nextPlan} for more.`,
+        {
+            code: "LIMIT_REACHED",
+            limitType,
+            current,
+            max,
+            plan,
+        } satisfies LimitDetails & { code: string },
+    );
+}
+
+/**
+ * Serializes quota checks for a user inside a transaction where raw SQL is
+ * available (PostgreSQL advisory lock). Fakes without `$queryRaw` simply rely
+ * on the transactional count re-check below.
+ */
+async function lockQuotaForUser(
+    tx: Prisma.TransactionClient,
+    userId: string,
+): Promise<void> {
+    const queryRaw = (tx as unknown as {
+        $queryRaw?: (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>;
+    }).$queryRaw;
+    if (typeof queryRaw === "function") {
+        await queryRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}::text))`;
+    }
+}
+
+/**
+ * Re-checks a plan quota using data read inside the caller's transaction.
+ * Pre-checks in the API are advisory; this is the authoritative boundary check
+ * performed in the same transaction that creates the record and debits credits.
+ */
+export async function assertQuotaInTransaction(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    limitType: TransactionalLimitType,
+): Promise<void> {
+    await lockQuotaForUser(tx, userId);
+
+    const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+            plan: true,
+            planExpiresAt: true,
+            totalArtifactsCreated: true,
+        },
+    });
+    const plan = user ? effectivePlan(user) : "FREE";
+    const max = maxFor(plan, limitType);
+    if (max === null) return;
+
+    let current = 0;
+    if (limitType === "sources") {
+        current = await tx.source.count({
+            where: { workspace: { userId } },
+        });
+    } else if (limitType === "messages") {
+        current = await tx.message.count({
+            where: { role: "USER", conversation: { workspace: { userId } } },
+        });
+    } else {
+        current = user?.totalArtifactsCreated ?? 0;
+    }
+
+    if (current >= max) {
+        throw quotaExceededError(plan, limitType, current, max);
+    }
+}
+
+/**
+ * Atomically consumes one artifact quota slot. The conditional counter update
+ * makes exact-boundary concurrency safe even without serializable isolation:
+ * two transactions can never both take the last slot.
+ */
+export async function consumeArtifactQuotaInTransaction(
+    tx: Prisma.TransactionClient,
+    userId: string,
+): Promise<void> {
+    await lockQuotaForUser(tx, userId);
+
+    const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { plan: true, planExpiresAt: true, totalArtifactsCreated: true },
+    });
+    const plan = user ? effectivePlan(user) : "FREE";
+    const max = maxFor(plan, "artifacts") ?? 0;
+    const current = user?.totalArtifactsCreated ?? 0;
+
+    const consumed = await tx.user.updateMany({
+        where: { id: userId, totalArtifactsCreated: { lt: max } },
+        data: { totalArtifactsCreated: { increment: 1 } },
+    });
+    if (consumed.count !== 1) {
+        throw quotaExceededError(plan, "artifacts", current, max);
+    }
+}
+
+async function assertUserQuota(
+    userId: string,
+    limitType: TransactionalLimitType,
+): Promise<void> {
+    const { plan, limits } = await getUserPlan(userId);
+    const max =
+        limitType === "sources"
+            ? limits.SOURCES
+            : limitType === "artifacts"
+              ? limits.ARTIFACTS
+              : limits.MESSAGES;
+    if (max === null) return;
+
+    const current =
+        limitType === "sources"
+            ? await countUserSources(userId)
+            : limitType === "artifacts"
+              ? (await findUserTotalArtifacts(userId))?.totalArtifactsCreated ?? 0
+              : await countUserMessages(userId);
+
+    if (current >= max) {
+        throw quotaExceededError(plan, limitType, current, max);
+    }
 }
 
 /**
@@ -177,6 +332,7 @@ export async function assertCanCreateWorkspace(userId: string): Promise<void> {
  */
 export async function assertCanCreateSource(userId: string): Promise<void> {
     await assertHasCredits(userId, CREDIT_COSTS.SOURCE_UPLOAD);
+    await assertUserQuota(userId, "sources");
 }
 
 /** Charges a source exactly once after its record has been created. */
@@ -211,6 +367,7 @@ export async function assertCanCreateArtifact(
     artifactType?: string,
 ): Promise<void> {
     await assertHasCredits(userId, getArtifactCharge(artifactType).cost);
+    await assertUserQuota(userId, "artifacts");
 }
 
 /** Charges an artifact exactly once after its record has been created. */
@@ -253,6 +410,7 @@ export async function incrementArtifactCount(userId: string): Promise<void> {
 /** Checks the chat credit balance without charging. */
 export async function assertCanSendMessage(userId: string): Promise<void> {
     await assertHasCredits(userId, CREDIT_COSTS.CHAT_MESSAGE);
+    await assertUserQuota(userId, "messages");
 }
 
 /** Charges a chat message exactly once after the user message is persisted. */

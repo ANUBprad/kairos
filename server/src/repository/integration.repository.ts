@@ -17,6 +17,7 @@ export function findConnectedAccountsByUserId(userId: string) {
             createdAt: true,
             updatedAt: true,
         },
+        take: 20,
     });
 }
 

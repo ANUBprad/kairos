@@ -199,7 +199,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for architecture, RAG evals, and CI com
 | Variable | Description |
 | :--- | :--- |
 | `PORT` | Backend server port (default: `8081`) |
-| `CLIENT_URL` | Frontend origin URL (e.g. `http://localhost:3000`) |
+| `CLIENT_URL` | Frontend origin URL, or comma-separated allowed origins (e.g. `http://localhost:3000`) |
+| `TRUST_PROXY` | Optional comma-separated trusted proxy addresses; leave unset to trust none (numeric hop counts are dev-only) |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `BETTER_AUTH_SECRET` | 32+ character random secret for session encryption |
 | `BETTER_AUTH_URL` | Base server auth URL (`http://localhost:8081`) |
@@ -222,6 +223,24 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for architecture, RAG evals, and CI com
 | :--- | :--- |
 | `NEXT_PUBLIC_API_URL` | Public backend API URL (`http://localhost:8081`) |
 | `NEXT_PUBLIC_BETTER_AUTH_URL` | Better Auth server URL (`http://localhost:8081`) |
+
+---
+
+## Security and local operations
+
+### CSRF requirement
+
+State-changing requests to custom `/api` routes (`POST`, `PUT`, `PATCH`, `DELETE`) must carry either `Sec-Fetch-Site: same-origin`/`none` or an `Origin` header that exactly matches a configured `CLIENT_URL` origin. Requests with no `Origin` are rejected with `403 { "error": "CSRF origin check failed" }` by default; non-browser clients must send `Origin` explicitly. `/api/auth/*` (Better Auth), `/api/payment/webhook` (Razorpay HMAC), and `/api/inngest` (signing key) are exempt. See [CONTRIBUTING.md](./CONTRIBUTING.md#csrf--origin-checks) for details.
+
+### Proxy configuration
+
+Leave `TRUST_PROXY` unset to trust no proxies and ignore forwarded-IP headers. In production, set an explicit comma-separated proxy address/CIDR list so Express and Better Auth agree. Numeric hop counts are supported for local development only and are rejected in production. `CLIENT_URL` must use explicit http(s) origins: no wildcards, and no localhost/loopback origins in production.
+
+### Local migrations and tests
+
+Apply checked-in migrations with `npm run prisma:migrate --prefix server` (never `prisma db push`), generate the client with `npm run prisma:generate --prefix server`, and run unit tests with `npm run test:unit --prefix server`. See [CONTRIBUTING.md](./CONTRIBUTING.md#local-migrations-and-tests) for the full workflow.
+
+Generated podcast/interruption MP3s under `server/uploads/podcasts/` are gitignored, dev-only artifacts with no retention guarantee; Cloudinary is the durable store.
 
 ---
 

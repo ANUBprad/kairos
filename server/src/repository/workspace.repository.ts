@@ -35,6 +35,7 @@ export function findWorkspacesByUserId(userId: string) {
         where: { userId },
         select: workspaceSelect,
         orderBy: { updatedAt: "desc" },
+        take: 100,
     });
 }
 

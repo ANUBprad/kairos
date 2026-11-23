@@ -335,21 +335,50 @@ enum ArtifactStatus {
 }
 
 model LearningArtifact {
-  id          String         @id @default(cuid())
-  workspaceId String
-  type        ArtifactType
-  title       String
-  content     Json?
-  sourceIds   String[]
-  status      ArtifactStatus @default(PENDING)
-  metadata    Json?
-  refundedAt  DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id             String         @id @default(cuid())
+  workspaceId    String
+  type           ArtifactType
+  title          String
+  content        Json?
+  sourceIds      String[]
+  status         ArtifactStatus @default(PENDING)
+  metadata       Json?
+  refundedAt     DateTime?
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([workspaceId, type])
   @@index([workspaceId, status])
+  @@index([status, leaseExpiresAt])
   @@map("learning_artifact")
+}
+
+enum DurableJobStatus {
+  PENDING
+  PROCESSING
+  DELIVERED
+  DEAD
+}
+
+/// Transactional outbox row for jobs that must survive process crashes.
+model DurableJob {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  type        String
+  payload     Json
+  status      DurableJobStatus @default(PENDING)
+  attempts    Int              @default(0)
+  maxAttempts Int              @default(5)
+  availableAt DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deliveredAt DateTime?
+  lastError   String?
+
+  @@index([status, availableAt])
+  @@map("durable_job")
 }

@@ -64,7 +64,10 @@ import {
     assertCanSendMessage,
     chargeForChatMessage,
 } from "./usage.services.js";
-import { refundCreditCharge } from "./credit.services.js";
+import {
+    refundCreditCharge,
+    type RefundChargeInput,
+} from "./credit.services.js";
 import { logger } from "../lib/logger.js";
 import { addMemoriesFromMessages, searchUserMemories } from "../lib/mem0.js";
 import { createRequestMetrics } from "../lib/observability/request-metrics.js";
@@ -72,6 +75,39 @@ import { estimateChatCostUsd } from "../lib/openai.js";
 import { createMessageMetricsRecord } from "../repository/message-metrics.repository.js";
 import type { RetrieveTiming } from "../lib/rag/retrieve.js";
 
+export interface ChatFailureCompensationInput {
+    messageId: string;
+    userId: string;
+    reason: string;
+    refund?: (input: RefundChargeInput) => Promise<boolean>;
+    deleteMessage?: (messageId: string) => Promise<void>;
+}
+
+/**
+ * Refunds exactly one recorded chat debit and removes the orphaned user
+ * message. Both operations are idempotent, so duplicate failure reports cannot
+ * credit the user twice. Used for setup failures before a stream exists.
+ */
+export async function compensateChatFailure(
+    input: ChatFailureCompensationInput,
+): Promise<void> {
+    const refund = input.refund ?? refundCreditCharge;
+    const deleteMessage = input.deleteMessage ?? deleteMessageRecord;
+
+    await refund({
+        chargeIdempotencyKey: `chat-charge:${input.messageId}`,
+        refundIdempotencyKey: `chat-refund:${input.messageId}`,
+        expectedUserId: input.userId,
+        reason: input.reason,
+    });
+
+    await deleteMessage(input.messageId).catch((error) => {
+        logger.error("Failed to clean up uncharged chat message", {
+            messageId: input.messageId,
+            err: error,
+        });
+    });
+}
 
 /**
  * Lists all conversations in a workspace for the sidebar/history UI.
@@ -335,238 +371,263 @@ export async function streamWorkspaceChat(
         }
     };
 
-    const requestMetrics = createRequestMetrics();
-    const retrieveTiming: RetrieveTiming = {};
+    // Once an assistant message exists the charge is earned; later housekeeping
+    // failures must never trigger a refund.
+    let assistantPersisted = false;
+    // `onError` cannot be async in this AI SDK version; keep its promise so the
+    // refund is guaranteed to complete before this function returns.
+    let streamErrorRefund: Promise<void> | null = null;
 
-    const mem0Start = performance.now();
-    const [retrievedChunks, userMemories] = await Promise.all([
-        retrieveWorkspaceContext(workspaceId, userText, retrieveTiming),
-        searchUserMemories(userId, userText),
-    ]);
-    requestMetrics.setStage("mem0", Math.round(performance.now() - mem0Start));
-    if (retrieveTiming.embedQueryMs !== undefined) {
-        requestMetrics.setStage("embed_query", retrieveTiming.embedQueryMs);
-    }
-    if (retrieveTiming.pineconeQueryMs !== undefined) {
-        requestMetrics.setStage("pinecone_query", retrieveTiming.pineconeQueryMs);
-    }
-    if (retrieveTiming.rerankMs !== undefined) {
-        requestMetrics.setStage("rerank", retrieveTiming.rerankMs);
-        requestMetrics.setRerankCalls(RERANK_ENABLED ? 1 : 0);
-    }
-    if (retrieveTiming.embedCacheHit !== undefined) {
-        requestMetrics.setEmbedCacheHit(retrieveTiming.embedCacheHit);
-    }
-    if (retrieveTiming.embedTokens !== undefined) {
-        requestMetrics.setEmbedTokens(retrieveTiming.embedTokens);
-    }
+    try {
+        const requestMetrics = createRequestMetrics();
+        const retrieveTiming: RetrieveTiming = {};
 
-    const pendingStreamCitations = retrievedChunks.map((chunk, index) => ({
-        index: index + 1,
-        sourceId: chunk.sourceId,
-        sourceTitle: chunk.sourceTitle,
-        sourceType: chunk.sourceType,
-        chunkId: chunk.chunkId,
-        chunkIndex: chunk.chunkIndex,
-        page: chunk.page,
-        excerpt: chunk.text.slice(0, 280),
-        score: chunk.score,
-    }));
+        const mem0Start = performance.now();
+        const [retrievedChunks, userMemories] = await Promise.all([
+            retrieveWorkspaceContext(workspaceId, userText, retrieveTiming),
+            searchUserMemories(userId, userText),
+        ]);
+        requestMetrics.setStage("mem0", Math.round(performance.now() - mem0Start));
+        if (retrieveTiming.embedQueryMs !== undefined) {
+            requestMetrics.setStage("embed_query", retrieveTiming.embedQueryMs);
+        }
+        if (retrieveTiming.pineconeQueryMs !== undefined) {
+            requestMetrics.setStage("pinecone_query", retrieveTiming.pineconeQueryMs);
+        }
+        if (retrieveTiming.rerankMs !== undefined) {
+            requestMetrics.setStage("rerank", retrieveTiming.rerankMs);
+            requestMetrics.setRerankCalls(RERANK_ENABLED ? 1 : 0);
+        }
+        if (retrieveTiming.embedCacheHit !== undefined) {
+            requestMetrics.setEmbedCacheHit(retrieveTiming.embedCacheHit);
+        }
+        if (retrieveTiming.embedTokens !== undefined) {
+            requestMetrics.setEmbedTokens(retrieveTiming.embedTokens);
+        }
 
-    const systemPrompt = buildChatSystemPrompt({
-        chunks: retrievedChunks,
-        conversationSummary: conversation.summary,
-        userMemories: userMemories.map((memory) => memory.memory),
-        webSearchEnabled,
-    });
+        const pendingStreamCitations = retrievedChunks.map((chunk, index) => ({
+            index: index + 1,
+            sourceId: chunk.sourceId,
+            sourceTitle: chunk.sourceTitle,
+            sourceType: chunk.sourceType,
+            chunkId: chunk.chunkId,
+            chunkIndex: chunk.chunkIndex,
+            page: chunk.page,
+            excerpt: chunk.text.slice(0, 280),
+            score: chunk.score,
+        }));
 
-    const contextMessages =
-        conversation.summary &&
-            input.messages.length > RECENT_MESSAGE_WINDOW
-            ? input.messages.slice(-RECENT_MESSAGE_WINDOW)
-            : input.messages;
+        const systemPrompt = buildChatSystemPrompt({
+            chunks: retrievedChunks,
+            conversationSummary: conversation.summary,
+            userMemories: userMemories.map((memory) => memory.memory),
+            webSearchEnabled,
+        });
 
-    let webSearchResults: TavilySearchResponse | null = null;
-    const stream = createUIMessageStream({
-        originalMessages: input.messages,
-        onError: (error) => {
-            logger.error("Chat stream failed", {
-                workspaceId,
-                conversationId: conversation.id,
-                messageId: userMessage.id,
-                err: error,
-            });
-            void refundChatCharge("generation error");
-            return "The assistant could not complete this response.";
-        },
-        execute: async ({ writer }) => {
-            if (pendingStreamCitations.length > 0) {
-                writer.write({
-                    type: "data-rag-citations",
-                    data: pendingStreamCitations,
-                } as Parameters<typeof writer.write>[0]);
-            }
+        const contextMessages =
+            conversation.summary &&
+                input.messages.length > RECENT_MESSAGE_WINDOW
+                ? input.messages.slice(-RECENT_MESSAGE_WINDOW)
+                : input.messages;
 
-            const llmStart = performance.now();
-            const tools =
-                webSearchEnabled
-                    ? {
-                        web_search: tool({
-                            description:
-                                "Search the web for up-to-date information outside the workspace sources.",
-                            inputSchema: z.object({
-                                query: z
-                                    .string()
-                                    .describe(
-                                        "The search query for current web information",
-                                    ),
+        let webSearchResults: TavilySearchResponse | null = null;
+        const stream = createUIMessageStream({
+            originalMessages: input.messages,
+            onError: (error) => {
+                logger.error("Chat stream failed", {
+                    workspaceId,
+                    conversationId: conversation.id,
+                    messageId: userMessage.id,
+                    err: error,
+                });
+                streamErrorRefund = refundChatCharge("generation error");
+                return "The assistant could not complete this response.";
+            },
+            execute: async ({ writer }) => {
+                if (pendingStreamCitations.length > 0) {
+                    writer.write({
+                        type: "data-rag-citations",
+                        data: pendingStreamCitations,
+                    } as Parameters<typeof writer.write>[0]);
+                }
+
+                const llmStart = performance.now();
+                const tools =
+                    webSearchEnabled
+                        ? {
+                            web_search: tool({
+                                description:
+                                    "Search the web for up-to-date information outside the workspace sources.",
+                                inputSchema: z.object({
+                                    query: z
+                                        .string()
+                                        .describe(
+                                            "The search query for current web information",
+                                        ),
+                                }),
+                                execute: async ({ query }) => {
+                                    const results = await searchWeb(query);
+                                    webSearchResults = results;
+                                    return formatTavilyResultsForPrompt(results);
+                                },
                             }),
-                            execute: async ({ query }) => {
-                                const results = await searchWeb(query);
-                                webSearchResults = results;
-                                return formatTavilyResultsForPrompt(results);
-                            },
-                        }),
-                    }
-                    : undefined;
+                        }
+                        : undefined;
 
-            const result = streamText({
-                model: openai(chatModel),
-                system: systemPrompt,
-                messages: await convertToModelMessages(contextMessages),
-                tools,
-                stopWhen: webSearchEnabled ? isStepCount(3) : undefined,
-                onFinish: ({ usage }) => {
-                    requestMetrics.setLlmUsage({
-                        promptTokens: usage?.inputTokens,
-                        completionTokens: usage?.outputTokens,
+                const result = streamText({
+                    model: openai(chatModel),
+                    system: systemPrompt,
+                    messages: await convertToModelMessages(contextMessages),
+                    tools,
+                    stopWhen: webSearchEnabled ? isStepCount(3) : undefined,
+                    onFinish: ({ usage }) => {
+                        requestMetrics.setLlmUsage({
+                            promptTokens: usage?.inputTokens,
+                            completionTokens: usage?.outputTokens,
+                        });
+                        requestMetrics.setStage(
+                            "llm_stream",
+                            Math.round(performance.now() - llmStart),
+                        );
+                    },
+                });
+
+                writer.merge(toUIMessageStream({ stream: result.stream }));
+            },
+            onFinish: async ({ responseMessage, isAborted }) => {
+                if (isAborted) {
+                    await refundChatCharge("stream aborted");
+                    return;
+                }
+
+                const assistantText = getTextFromUIMessage(responseMessage).trim();
+                if (!assistantText) {
+                    await refundChatCharge("empty assistant response");
+                    return;
+                }
+
+                const workspaceIndices = parseWorkspaceCitationIndices(assistantText);
+                let workspaceCitations = resolveCitationsFromRetrieval(
+                    retrievedChunks,
+                    workspaceIndices,
+                );
+                workspaceCitations = applyCitationFallback(
+                    retrievedChunks,
+                    workspaceCitations,
+                );
+
+                const webCitations =
+                    webSearchResults
+                        ? resolveWebCitationsFromResults(
+                            webSearchResults.results,
+                            parseWebCitationIndices(assistantText),
+                        )
+                        : [];
+
+                const allCitations = await reconcileWorkspaceCitations(
+                    workspaceId,
+                    [...workspaceCitations, ...webCitations],
+                );
+
+                const savedMessage = await createMessageRecord({
+                    conversationId: conversation.id,
+                    role: "ASSISTANT",
+                    content: assistantText,
+                    citations: allCitations,
+                });
+                assistantPersisted = true;
+
+                const metricsSnapshot = requestMetrics.finish();
+                const estimatedCostUsd = estimateChatCostUsd(chatModel, {
+                    promptTokens: metricsSnapshot.llmPromptTokens,
+                    completionTokens: metricsSnapshot.llmCompletionTokens,
+                    embedTokens: metricsSnapshot.embedTokens,
+                });
+
+                await createMessageMetricsRecord({
+                    messageId: savedMessage.id,
+                    embedTokens: metricsSnapshot.embedTokens,
+                    llmPromptTokens: metricsSnapshot.llmPromptTokens,
+                    llmCompletionTokens: metricsSnapshot.llmCompletionTokens,
+                    rerankCalls: metricsSnapshot.rerankCalls,
+                    embedCacheHit: metricsSnapshot.embedCacheHit,
+                    stagesMs: metricsSnapshot.stagesMs,
+                    estimatedCostUsd,
+                }).catch((error) => {
+                    logger.error("Failed to persist message metrics", { err: error });
+                });
+
+                logger.info("chat_request_metrics", {
+                    workspaceId,
+                    conversationId: conversation.id,
+                    retrieveK: retrievedChunks.length,
+                    citationCount: allCitations.length,
+                    stagesMs: metricsSnapshot.stagesMs,
+                    tokens: {
+                        embed: metricsSnapshot.embedTokens,
+                        llmPrompt: metricsSnapshot.llmPromptTokens,
+                        llmCompletion: metricsSnapshot.llmCompletionTokens,
+                    },
+                    embedCacheHit: metricsSnapshot.embedCacheHit,
+                });
+
+                await touchConversation(conversation.id);
+
+                if (!conversation.title) {
+                    await updateConversationRecord(conversation.id, {
+                        title: buildConversationTitle(userText),
                     });
-                    requestMetrics.setStage(
-                        "llm_stream",
-                        Math.round(performance.now() - llmStart),
-                    );
-                },
-            });
+                }
 
-            writer.merge(toUIMessageStream({ stream: result.stream }));
-        },
-        onFinish: async ({ responseMessage, isAborted }) => {
-            if (isAborted) {
-                await refundChatCharge("stream aborted");
-                return;
-            }
+                const messageCount = await countMessagesByConversationId(
+                    conversation.id,
+                );
 
-            const assistantText = getTextFromUIMessage(responseMessage).trim();
-            if (!assistantText) {
-                await refundChatCharge("empty assistant response");
-                return;
-            }
+                if (messageCount % CONVERSATION_SUMMARY_INTERVAL === 0) {
+                    await enqueueConversationSummarize({
+                        conversationId: conversation.id,
+                        userId,
+                    });
+                }
 
-            const workspaceIndices = parseWorkspaceCitationIndices(assistantText);
-            let workspaceCitations = resolveCitationsFromRetrieval(
-                retrievedChunks,
-                workspaceIndices,
-            );
-            workspaceCitations = applyCitationFallback(
-                retrievedChunks,
-                workspaceCitations,
-            );
-
-            const webCitations =
-                webSearchResults
-                    ? resolveWebCitationsFromResults(
-                        webSearchResults.results,
-                        parseWebCitationIndices(assistantText),
-                    )
-                    : [];
-
-            const allCitations = await reconcileWorkspaceCitations(
-                workspaceId,
-                [...workspaceCitations, ...webCitations],
-            );
-
-            const savedMessage = await createMessageRecord({
-                conversationId: conversation.id,
-                role: "ASSISTANT",
-                content: assistantText,
-                citations: allCitations,
-            });
-
-            const metricsSnapshot = requestMetrics.finish();
-            const estimatedCostUsd = estimateChatCostUsd(chatModel, {
-                promptTokens: metricsSnapshot.llmPromptTokens,
-                completionTokens: metricsSnapshot.llmCompletionTokens,
-                embedTokens: metricsSnapshot.embedTokens,
-            });
-
-            await createMessageMetricsRecord({
-                messageId: savedMessage.id,
-                embedTokens: metricsSnapshot.embedTokens,
-                llmPromptTokens: metricsSnapshot.llmPromptTokens,
-                llmCompletionTokens: metricsSnapshot.llmCompletionTokens,
-                rerankCalls: metricsSnapshot.rerankCalls,
-                embedCacheHit: metricsSnapshot.embedCacheHit,
-                stagesMs: metricsSnapshot.stagesMs,
-                estimatedCostUsd,
-            }).catch((error) => {
-                logger.error("Failed to persist message metrics", { err: error });
-            });
-
-            logger.info("chat_request_metrics", {
-                workspaceId,
-                conversationId: conversation.id,
-                retrieveK: retrievedChunks.length,
-                citationCount: allCitations.length,
-                stagesMs: metricsSnapshot.stagesMs,
-                tokens: {
-                    embed: metricsSnapshot.embedTokens,
-                    llmPrompt: metricsSnapshot.llmPromptTokens,
-                    llmCompletion: metricsSnapshot.llmCompletionTokens,
-                },
-                embedCacheHit: metricsSnapshot.embedCacheHit,
-            });
-
-            await touchConversation(conversation.id);
-
-            if (!conversation.title) {
-                await updateConversationRecord(conversation.id, {
-                    title: buildConversationTitle(userText),
-                });
-            }
-
-            const messageCount = await countMessagesByConversationId(
-                conversation.id,
-            );
-
-            if (messageCount % CONVERSATION_SUMMARY_INTERVAL === 0) {
-                await enqueueConversationSummarize({
-                    conversationId: conversation.id,
+                void addMemoriesFromMessages(
                     userId,
+                    [
+                        { role: "user", content: userText },
+                        { role: "assistant", content: assistantText },
+                    ],
+                    {
+                        source: "learned",
+                        conversationId: conversation.id,
+                    },
+                ).catch((error) => {
+                    logger.error("Mem0 add failed", { err: error });
                 });
-            }
+            },
+        });
 
-            void addMemoriesFromMessages(
+        await pipeUIMessageStreamToResponse({
+            response: res,
+            stream,
+            headers: {
+                "X-Conversation-Id": conversation.id,
+                "Access-Control-Expose-Headers": "X-Conversation-Id, x-conversation-id",
+            },
+        });
+
+        if (streamErrorRefund) {
+            await streamErrorRefund;
+        }
+    } catch (error) {
+        // Retrieval, prompt construction, stream creation or piping failed
+        // before an assistant message could be persisted: undo the charge.
+        if (!assistantPersisted) {
+            await compensateChatFailure({
+                messageId: userMessage.id,
                 userId,
-                [
-                    { role: "user", content: userText },
-                    { role: "assistant", content: assistantText },
-                ],
-                {
-                    source: "learned",
-                    conversationId: conversation.id,
-                },
-            ).catch((error) => {
-                logger.error("Mem0 add failed", { err: error });
+                reason: "chat request failed before completion",
             });
-        },
-    });
-
-    await pipeUIMessageStreamToResponse({
-        response: res,
-        stream,
-        headers: {
-            "X-Conversation-Id": conversation.id,
-            "Access-Control-Expose-Headers": "X-Conversation-Id, x-conversation-id",
-        },
-    });
+        }
+        throw error;
+    }
 }

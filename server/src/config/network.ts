@@ -6,6 +6,22 @@ const LOCALHOST_ORIGINS = [
     "http://localhost:8081",
 ];
 
+const LOOPBACK_HOSTNAMES = new Set([
+    "localhost",
+    "127.0.0.1",
+    "::1",
+    "0.0.0.0",
+]);
+
+function isLoopbackHost(hostname: string): boolean {
+    const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+    return (
+        LOOPBACK_HOSTNAMES.has(normalized) ||
+        normalized.endsWith(".localhost") ||
+        /^127\./.test(normalized)
+    );
+}
+
 export function isProductionEnvironment(): boolean {
     return (
         process.env.NODE_ENV === "production" ||
@@ -14,6 +30,9 @@ export function isProductionEnvironment(): boolean {
 }
 
 function parseOrigin(value: string): string {
+    if (value.includes("*")) {
+        throw new AppError(500, "Wildcard origins are not allowed");
+    }
     let parsed: URL;
     try {
         parsed = new URL(value);
@@ -23,8 +42,16 @@ function parseOrigin(value: string): string {
     if (!["http:", "https:"].includes(parsed.protocol)) {
         throw new AppError(500, "CLIENT_URL origins must use http or https");
     }
-    if (isProductionEnvironment() && parsed.protocol !== "https:") {
-        throw new AppError(500, "CLIENT_URL must use https in production");
+    if (isProductionEnvironment()) {
+        if (parsed.protocol !== "https:") {
+            throw new AppError(500, "CLIENT_URL must use https in production");
+        }
+        if (isLoopbackHost(parsed.hostname)) {
+            throw new AppError(
+                500,
+                "Localhost origins are not allowed in production",
+            );
+        }
     }
     return parsed.origin;
 }
@@ -52,6 +79,14 @@ export function getAllowedOrigins(): string[] {
         throw new AppError(500, "At least one CLIENT_URL origin must be configured");
     }
 
+    // Defense in depth: never return a loopback origin to a production caller.
+    if (
+        isProductionEnvironment() &&
+        origins.some((origin) => isLoopbackHost(new URL(origin).hostname))
+    ) {
+        throw new AppError(500, "Localhost origins are not allowed in production");
+    }
+
     return origins;
 }
 
@@ -62,14 +97,30 @@ function parseTrustedProxyTokens(): string[] {
         .filter(Boolean);
 }
 
-/** Express trust-proxy setting. Nothing is trusted unless explicitly configured. */
+/**
+ * Express trust-proxy setting. Nothing is trusted unless explicitly configured.
+ *
+ * Numeric hop counts are supported for local development only: Express treats a
+ * number as a hop count, which Better Auth cannot express as a trusted proxy
+ * address. Production therefore requires an explicit token list so both layers
+ * enforce the same policy.
+ */
 export function getExpressTrustProxy(): false | number | string | string[] {
     const tokens = parseTrustedProxyTokens();
     if (tokens.length === 0) return false;
+    if (tokens.some((token) => token.includes("*"))) {
+        throw new AppError(500, "Wildcard TRUST_PROXY entries are not allowed");
+    }
     if (tokens.length === 1 && /^\d+$/.test(tokens[0])) {
         const hops = Number(tokens[0]);
-        if (!Number.isInteger(hops) || hops < 1) {
+        if (!Number.isSafeInteger(hops) || hops < 1) {
             throw new AppError(500, "TRUST_PROXY hop count must be a positive integer");
+        }
+        if (isProductionEnvironment()) {
+            throw new AppError(
+                500,
+                "TRUST_PROXY numeric hop counts are not allowed in production; set an explicit comma-separated proxy address list",
+            );
         }
         return hops;
     }
@@ -85,7 +136,9 @@ export function getBetterAuthTrustedProxies(): string[] {
 
 /** Forwarded-IP headers are only read when a proxy is explicitly trusted. */
 export function getBetterAuthIpHeaders(): string[] {
-    return getExpressTrustProxy() === false
-        ? []
-        : ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"];
+    const setting = getExpressTrustProxy();
+    if (setting === false || (Array.isArray(setting) && setting.length === 0)) {
+        return [];
+    }
+    return ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"];
 }

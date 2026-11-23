@@ -7,12 +7,13 @@ import {
     markSourceFailed,
     markSourceProcessing,
 } from "./source-processing.services.js";
+import { markDurableJobDelivered, releaseDurableJob } from "../lib/outbox.js";
 
 /** Full source pipeline without Inngest (extract → chunk → embed). */
-export async function processSourceById(sourceId: string) {
-    await markSourceProcessing(sourceId);
-
+export async function processSourceById(sourceId: string, jobKey?: string) {
     try {
+        await markSourceProcessing(sourceId);
+
         const extracted = await extractSourceContent(sourceId);
         await chunkSourceContent(
             sourceId,
@@ -28,8 +29,11 @@ export async function processSourceById(sourceId: string) {
         const chunks = await findChunksBySourceId(sourceId);
         await embedAndIndexSource(source, chunks);
 
+        if (jobKey) await markDurableJobDelivered(jobKey);
         return { sourceId, status: "READY", chunkCount: chunks.length };
     } catch (error) {
+        if (jobKey) await releaseDurableJob(jobKey, error);
+
         const source = await findSourceById(sourceId);
         if (source) {
             await markSourceFailed(sourceId, error, source.metadata);

@@ -62,7 +62,7 @@ export const importYoutubeSchema = z.object({
 });
 
 export const bulkDeleteSourcesSchema = z.object({
-    sourceIds: z.array(z.string().trim().min(1)).min(1),
+    sourceIds: z.array(z.string().trim().min(1)).min(1).max(100),
 });
 
 export const reprocessSourcesSchema = z.object({

@@ -1,32 +1,41 @@
+import { randomUUID } from "node:crypto";
 import { uploadImageToCloudinary, uploadPdfToCloudinary } from "../lib/cloudinary.js";
 import { extractTextFromImageBuffer } from "../lib/sources/image-ocr.js";
 import { scrapeWebsite } from "../lib/sources/firecrawl.js";
 import { buildFaviconUrl } from "../lib/sources/favicon.js";
 import { extractPdfFromBuffer } from "../lib/sources/pdf.js";
+import prisma from "../lib/db.js";
+import type { Prisma } from "../generated/prisma/client.js";
 import {
-    enqueueSourceProcessing,
-    runSourceProcessingFallback,
-} from "../lib/events/source-events.js";
-import { logger } from "../lib/logger.js";
+    dispatchDurableJob,
+    insertDurableJob,
+    logDurableJobError,
+    requeueDurableJob,
+} from "../lib/outbox.js";
 import {
     deleteSourceVectors,
     isIgnorablePineconeDeleteError,
 } from "../lib/pinecone.js";
 import { fetchYoutubeTranscript } from "../lib/sources/youtube.js";
 import {
-    createSourceRecord,
     deleteSourceRecord,
     findSourceByIdAndWorkspaceId,
     findSourcesByWorkspaceId,
     updateSourceRecord,
+    sourceSelect,
+    type CreateSourceData,
     type SourceRecord,
 } from "../repository/source.repository.js";
 import { NotFoundError } from "../types/app-error.js";
 import { CreateSourceInput, ImportWebsiteInput, ImportYoutubeInput, ListSourcesQuery } from "../validators/source.validator.js";
 import { getWorkspaceByIdForUser } from "./workspace.services.js";
 import {
+    CREDIT_COSTS,
+    debitCreditsInTransaction,
+} from "./credit.services.js";
+import {
     assertCanCreateSource,
-    chargeForSource,
+    assertQuotaInTransaction,
 } from "./usage.services.js";
 
 /**
@@ -40,44 +49,109 @@ async function assertWorkspaceAccess(workspaceId: string, userId: string) {
     await getWorkspaceByIdForUser(workspaceId, userId);
 }
 
+export interface SourceCreationTxInput {
+    sourceId: string;
+    userId: string;
+    data: CreateSourceData;
+    chargeIdempotencyKey: string;
+    jobKey: string;
+}
+
 /**
- * Persists a source record in the database and enqueues an asynchronous background processing event via Inngest.
- *
- * @param data - Source creation payload including workspaceId, title, type, content, and metadata
- * @returns The newly created source record
+ * Atomic source ingestion: row + debit + outbox job. Exported so failure
+ * windows can be exercised with a fake transaction client.
  */
-export async function createAndProcessSource(
-    data: Parameters<typeof createSourceRecord>[0],
-    userId: string,
-) {
-    const source = await createSourceRecord(data);
+export async function insertSourceCreationInTransaction(
+    tx: Prisma.TransactionClient,
+    input: SourceCreationTxInput,
+): Promise<SourceRecord> {
+    await assertQuotaInTransaction(tx, input.userId, "sources");
 
-    try {
-        // Charge only after the source row exists; the key ties any later
-        // refund to this exact upload.
-        await chargeForSource(userId, source.id);
-    } catch (error) {
-        await deleteSourceRecord(source.id).catch((cleanupError) => {
-            logger.error("Failed to clean up uncharged source", {
-                sourceId: source.id,
-                err: cleanupError,
-            });
-        });
-        throw error;
-    }
-
-    const accepted = await enqueueSourceProcessing({
-        sourceId: source.id,
-        workspaceId: source.workspaceId,
+    const source = await tx.source.create({
+        data: {
+            id: input.sourceId,
+            workspaceId: input.data.workspaceId,
+            type: input.data.type,
+            title: input.data.title,
+            content: input.data.content ?? null,
+            url: input.data.url ?? null,
+            status: input.data.status ?? "PENDING",
+            metadata: input.data.metadata,
+        },
+        select: sourceSelect,
     });
-    if (!accepted) {
-        runSourceProcessingFallback({
-            sourceId: source.id,
+
+    await debitCreditsInTransaction(tx, {
+        userId: input.userId,
+        amount: CREDIT_COSTS.SOURCE_UPLOAD,
+        type: "SOURCE_UPLOAD",
+        description: "Uploaded a source document",
+        metadata: { sourceId: input.sourceId },
+        idempotencyKey: input.chargeIdempotencyKey,
+    });
+
+    await insertDurableJob(tx, {
+        key: input.jobKey,
+        type: "source.process",
+        payload: {
+            sourceId: input.sourceId,
             workspaceId: source.workspaceId,
-        });
-    }
+            title: source.title,
+            sourceType: source.type,
+            chargeIdempotencyKey: input.chargeIdempotencyKey,
+        },
+    });
 
     return source;
+}
+
+/**
+ * Persists a source and its durable processing job in one transaction, then
+ * dispatches after commit. Enqueue/fallback failures can never leave a charged
+ * source whose processing job was lost.
+ */
+export async function createAndProcessSource(
+    data: CreateSourceData,
+    userId: string,
+) {
+    const sourceId = randomUUID();
+    const jobKey = `source.process:${sourceId}`;
+    const chargeIdempotencyKey = `source-charge:${sourceId}`;
+
+    const source = await prisma.$transaction((tx) =>
+        insertSourceCreationInTransaction(tx, {
+            sourceId,
+            userId,
+            data,
+            chargeIdempotencyKey,
+            jobKey,
+        }),
+    );
+
+    void dispatchDurableJob(jobKey).catch((error) => {
+        logDurableJobError(jobKey, error);
+    });
+
+    return source;
+}
+
+/** Reuses the durable job for a re-processing request (no new charge). */
+async function requeueSourceProcessing(source: SourceRecord): Promise<void> {
+    const jobKey = `source.process:${source.id}`;
+    await requeueDurableJob(jobKey, {
+        key: jobKey,
+        type: "source.process",
+        payload: {
+            sourceId: source.id,
+            workspaceId: source.workspaceId,
+            title: source.title,
+            sourceType: source.type,
+            chargeIdempotencyKey: `source-charge:${source.id}`,
+        },
+    });
+    void dispatchDurableJob(jobKey).catch((error) => {
+        logDurableJobError(jobKey, error);
+    });
 }
 
 /**
@@ -481,16 +555,7 @@ export async function reprocessSourceForWorkspace(
         });
     }
 
-    const accepted = await enqueueSourceProcessing({
-        sourceId: source.id,
-        workspaceId: source.workspaceId,
-    });
-    if (!accepted) {
-        runSourceProcessingFallback({
-            sourceId: source.id,
-            workspaceId: source.workspaceId,
-        });
-    }
+    await requeueSourceProcessing(source);
 
     return { reprocessed: true };
 }
@@ -529,16 +594,7 @@ export async function reprocessSourcesForWorkspace(
             });
         }
 
-        const accepted = await enqueueSourceProcessing({
-            sourceId: source.id,
-            workspaceId: source.workspaceId,
-        });
-        if (!accepted) {
-            runSourceProcessingFallback({
-                sourceId: source.id,
-                workspaceId: source.workspaceId,
-            });
-        }
+        await requeueSourceProcessing(source);
     }
 
     return { reprocessed: targetSources.length };

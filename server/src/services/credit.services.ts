@@ -70,11 +70,41 @@ export async function assertHasCredits(userId: string, required: number): Promis
 }
 
 /**
- * Atomically deducts credits from a user's account and logs the transaction.
- * An idempotency key makes retries safe; the debit amount is never recomputed
- * from client input.
+ * Resolves an already-recorded debit for an idempotency key. A key may only be
+ * reused by the same user and the same amount; reusing it for a different
+ * charge is rejected instead of silently skipping the debit.
  */
-export async function deductCredits(
+async function idempotentDebitBalance(
+  reader: Pick<Prisma.TransactionClient, "creditTransaction" | "user">,
+  input: CreditMutationInput,
+): Promise<number | null> {
+  if (!input.idempotencyKey) return null;
+
+  const existing = await reader.creditTransaction.findUnique({
+    where: { idempotencyKey: input.idempotencyKey },
+    select: { id: true, userId: true, amount: true },
+  });
+  if (!existing) return null;
+
+  if (existing.userId !== input.userId || existing.amount !== -input.amount) {
+    throw new Error(
+      `Idempotency key ${input.idempotencyKey} is already used by a different credit charge.`,
+    );
+  }
+
+  const user = await reader.user.findUnique({
+    where: { id: input.userId },
+    select: { credits: true },
+  });
+  return user?.credits ?? 0;
+}
+
+/**
+ * Debits credits using a caller-owned transaction so the ledger row, the
+ * business record and a durable outbox job can commit atomically.
+ */
+export async function debitCreditsInTransaction(
+  tx: Prisma.TransactionClient,
   input: CreditMutationInput,
 ): Promise<{ success: boolean; balance: number }> {
   const { userId, amount, type, description, metadata, idempotencyKey } = input;
@@ -82,74 +112,81 @@ export async function deductCredits(
     throw new Error("Credit deduction amount must be a positive integer.");
   }
 
-  try {
-    return await prisma.$transaction(async (tx) => {
-      if (idempotencyKey) {
-        const existing = await tx.creditTransaction.findUnique({
-          where: { idempotencyKey },
-          select: { id: true },
-        });
-        if (existing) {
-          const user = await tx.user.findUnique({
-            where: { id: userId },
-            select: { credits: true },
-          });
-          return { success: true, balance: user?.credits ?? 0 };
-        }
-      }
+  if (idempotencyKey) {
+    const existingBalance = await idempotentDebitBalance(tx, input);
+    if (existingBalance !== null) {
+      return { success: true, balance: existingBalance };
+    }
+  }
 
-      const current = await tx.user.findUnique({
-        where: { id: userId },
-        select: { credits: true },
-      });
-      const currentBalance = current?.credits ?? 0;
+  const current = await tx.user.findUnique({
+    where: { id: userId },
+    select: { credits: true },
+  });
+  const currentBalance = current?.credits ?? 0;
 
-      if (currentBalance < amount) {
-        throw new InsufficientCreditsError(
-          `Insufficient credits. Required: ${amount}, Available: ${currentBalance}.`,
-          {
-            required: amount,
-            balance: currentBalance,
-            deficit: amount - currentBalance,
-          },
-        );
-      }
+  if (currentBalance < amount) {
+    throw new InsufficientCreditsError(
+      `Insufficient credits. Required: ${amount}, Available: ${currentBalance}.`,
+      {
+        required: amount,
+        balance: currentBalance,
+        deficit: amount - currentBalance,
+      },
+    );
+  }
 
-      // Conditional decrement prevents lost updates and overdrafts under concurrency.
-      const claimed = await tx.user.updateMany({
-        where: { id: userId, credits: { gte: amount } },
-        data: { credits: { decrement: amount } },
-      });
-      if (claimed.count !== 1) {
-        throw new InsufficientCreditsError("Credit balance changed concurrently.", {
-          required: amount,
-          balance: currentBalance,
-          deficit: amount - currentBalance,
-        });
-      }
-
-      const updated = await tx.user.findUniqueOrThrow({
-        where: { id: userId },
-        select: { credits: true },
-      });
-
-      await tx.creditTransaction.create({
-        data: {
-          userId,
-          amount: -amount,
-          balanceAfter: updated.credits,
-          type,
-          description,
-          metadata: metadata as object | undefined,
-          idempotencyKey,
-        },
-      });
-
-      return { success: true, balance: updated.credits };
+  // Conditional decrement prevents lost updates and overdrafts under concurrency.
+  const claimed = await tx.user.updateMany({
+    where: { id: userId, credits: { gte: amount } },
+    data: { credits: { decrement: amount } },
+  });
+  if (claimed.count !== 1) {
+    throw new InsufficientCreditsError("Credit balance changed concurrently.", {
+      required: amount,
+      balance: currentBalance,
+      deficit: amount - currentBalance,
     });
+  }
+
+  const updated = await tx.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { credits: true },
+  });
+
+  await tx.creditTransaction.create({
+    data: {
+      userId,
+      amount: -amount,
+      balanceAfter: updated.credits,
+      type,
+      description,
+      metadata: metadata as object | undefined,
+      idempotencyKey,
+    },
+  });
+
+  return { success: true, balance: updated.credits };
+}
+
+/**
+ * Atomically deducts credits from a user's account and logs the transaction.
+ * An idempotency key makes retries safe; the debit amount is never recomputed
+ * from client input.
+ */
+export async function deductCredits(
+  input: CreditMutationInput,
+): Promise<{ success: boolean; balance: number }> {
+  try {
+    return await prisma.$transaction((tx) =>
+      debitCreditsInTransaction(tx, input),
+    );
   } catch (error) {
-    if (idempotencyKey && isUniqueConstraintError(error)) {
-      return { success: true, balance: await readBalance(userId) };
+    if (input.idempotencyKey && isUniqueConstraintError(error)) {
+      // A concurrent request with the same key won the race. Verify that it
+      // recorded the same charge before treating this call as a success.
+      const balance = await idempotentDebitBalance(prisma, input);
+      return { success: true, balance: balance ?? (await readBalance(input.userId)) };
     }
     throw error;
   }

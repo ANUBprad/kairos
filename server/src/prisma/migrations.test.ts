@@ -13,6 +13,13 @@ const reconciliation = readFileSync(
   ),
   "utf8",
 );
+const reliabilityMigration = readFileSync(
+  new URL(
+    "../../prisma/migrations/20261123150000_reliability_outbox_and_artifact_leases/migration.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 describe("schema and migration parity", () => {
   it("declares the credit ledger idempotency key in schema and migration", () => {
@@ -37,5 +44,30 @@ describe("schema and migration parity", () => {
 
   it("preserves the legacy orphan table instead of dropping it", () => {
     assert.doesNotMatch(reconciliation, /DROP TABLE/i);
+    assert.doesNotMatch(reliabilityMigration, /DROP TABLE/i);
+  });
+
+  it("declares the durable outbox in schema and the forward-only migration", () => {
+    assert.match(schema, /model DurableJob/);
+    assert.match(schema, /key\s+String\s+@unique/);
+    assert.match(schema, /@@index\(\[status, availableAt\]\)/);
+    assert.match(schema, /enum DurableJobStatus/);
+    assert.match(reliabilityMigration, /CREATE TYPE "DurableJobStatus"/);
+    assert.match(reliabilityMigration, /CREATE TABLE IF NOT EXISTS "durable_job"/);
+    assert.match(reliabilityMigration, /CREATE UNIQUE INDEX IF NOT EXISTS "durable_job_key_key"/);
+  });
+
+  it("declares artifact leases in schema and the forward-only migration", () => {
+    assert.match(schema, /leaseToken\s+String\?/);
+    assert.match(schema, /leaseExpiresAt\s+DateTime\?/);
+    assert.match(schema, /@@index\(\[status, leaseExpiresAt\]\)/);
+    assert.match(reliabilityMigration, /ADD COLUMN IF NOT EXISTS "leaseToken"/);
+    assert.match(reliabilityMigration, /ADD COLUMN IF NOT EXISTS "leaseExpiresAt"/);
+  });
+
+  it("does not rewrite historical application data in the reliability migration", () => {
+    assert.doesNotMatch(reliabilityMigration, /\bUPDATE\s+/i);
+    assert.doesNotMatch(reliabilityMigration, /\bDELETE\s+/i);
+    assert.doesNotMatch(reliabilityMigration, /\bDROP\s+COLUMN/i);
   });
 });

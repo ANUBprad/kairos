@@ -64,12 +64,20 @@ export async function createRazorpayOrder(
 
     if (options?.plan) {
         const selectedPlan = options.plan;
+        // Defensive runtime check: an invalid plan must never fall through to
+        // a default target (in particular, must never become PRO).
+        if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES, selectedPlan)) {
+            throw new ValidationError("Unsupported subscription plan");
+        }
         const planConfig = PLAN_PRICES[selectedPlan];
         amountInr = planConfig.pricePaise / 100;
         creditsToAward = planConfig.credits;
         targetPlan = selectedPlan;
         description = planConfig.name;
     } else {
+        // Credit packs are written with an explicit null plan. Legacy rows with
+        // plan='PRO' are ambiguous and settlement now rejects them.
+        targetPlan = null;
         amountInr = options?.amountInr ?? 50;
         if (!ALLOWED_CREDIT_AMOUNTS_INR.includes(amountInr)) {
             throw new ValidationError("Unsupported top-up amount");

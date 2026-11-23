@@ -83,6 +83,7 @@ export function findSourcesByWorkspaceId(
         where,
         select: sourceSelect,
         orderBy: { createdAt: "desc" },
+        take: 200,
     });
 }
 
@@ -125,6 +126,7 @@ export function findSourceSummariesByWorkspaceIdAndIds(
     return prisma.source.findMany({
         where: { workspaceId, id: { in: sourceIds } },
         select: sourceSummarySelect,
+        take: 200,
     });
 }
 

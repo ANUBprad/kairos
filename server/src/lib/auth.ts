@@ -7,6 +7,7 @@ import {
     getBetterAuthTrustedProxies,
     isProductionEnvironment,
 } from "../config/network.js";
+import { grantSignupCreditsForUser } from "./signup-credits.js";
 
 const allowedOrigins = getAllowedOrigins();
 const isProduction = isProductionEnvironment();
@@ -16,14 +17,23 @@ const ipAddressHeaders = getBetterAuthIpHeaders();
 export const auth = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL || "http://localhost:8081",
     secret: process.env.BETTER_AUTH_SECRET,
-    trustedOrigins: [
-        ...allowedOrigins,
-        "http://localhost:3000",
-        "http://localhost:8081",
-    ],
+    // getAllowedOrigins() only appends localhost origins outside production.
+    // Adding them here as well would silently trust them in production.
+    trustedOrigins: allowedOrigins,
     database: prismaAdapter(prisma, {
         provider: "postgresql", // or "mysql", "postgresql", ...etc
     }),
+    databaseHooks: {
+        user: {
+            create: {
+                // The database default grants the 50 welcome credits; this hook
+                // records the matching idempotent SIGNUP_BONUS ledger entry.
+                after: async (user) => {
+                    await grantSignupCreditsForUser({ id: user.id });
+                },
+            },
+        },
+    },
     emailAndPassword: {
         enabled: true,
     },

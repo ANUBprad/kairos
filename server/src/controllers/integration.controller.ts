@@ -43,7 +43,32 @@ import {
 import { workspaceIdParamSchema } from "../validators/workspace.validator.js";
 import { artifactIdParamSchema } from "../validators/artifact.validator.js";
 import { ValidationError } from "../types/app-error.js";
-import type { IntegrationProvider } from "../generated/prisma/client.js";
+import type {
+    ConnectedAccount,
+    IntegrationProvider,
+} from "../generated/prisma/client.js";
+
+/** Public connected-account shape. Never includes accessToken/refreshToken. */
+export type ConnectedAccountDto = Pick<
+    ConnectedAccount,
+    "id" | "provider" | "metadata" | "createdAt" | "updatedAt"
+>;
+
+/**
+ * Builds an explicit response DTO so persisted provider credentials can never
+ * leak to clients through a serialized database row.
+ */
+export function toConnectedAccountDto(
+    account: ConnectedAccountDto,
+): ConnectedAccountDto {
+    return {
+        id: account.id,
+        provider: account.provider,
+        metadata: account.metadata,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt,
+    };
+}
 
 /**
  * Handles HTTP GET request to list all connected third-party accounts (Google Drive, Notion) for the current user.
@@ -52,7 +77,9 @@ import type { IntegrationProvider } from "../generated/prisma/client.js";
  * @param res - Express response returning connection status per provider
  */
 export async function getConnectedIntegrations(req: Request, res: Response) {
-    const accounts = await findConnectedAccountsByUserId(req.session.user.id);
+    const accounts = (await findConnectedAccountsByUserId(req.session.user.id)).map(
+        toConnectedAccountDto,
+    );
 
     const result = {
         googleDrive: {
@@ -193,7 +220,7 @@ export async function getNotionAuth(req: Request, res: Response) {
  * Handles HTTP POST request to connect a Notion workspace via an internal integration token.
  *
  * @param req - Express request with integration token in body
- * @param res - Express response returning connected account record
+ * @param res - Express response returning the safe connected-account DTO
  */
 export async function connectNotionToken(req: Request, res: Response) {
     const { token } = connectNotionSchema.parse(req.body);
@@ -201,7 +228,7 @@ export async function connectNotionToken(req: Request, res: Response) {
         userId: req.session.user.id,
         token,
     });
-    res.json({ success: true, account });
+    res.json({ success: true, account: toConnectedAccountDto(account) });
 }
 
 /**

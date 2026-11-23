@@ -62,21 +62,8 @@ export function errorHandler(
         return;
     }
 
-    if (error instanceof Error) {
-        const message = error.message;
-
-        if (
-            message.includes("IntegrationProvider") ||
-            message.includes("invalid input value for enum")
-        ) {
-            res.status(500).json({
-                error:
-                    "Database is missing GitHub integration support. Run: ALTER TYPE \"IntegrationProvider\" ADD VALUE IF NOT EXISTS 'GITHUB';",
-            });
-            return;
-        }
-    }
-
+    // Operational SQL/enum hints are logged only. Structured errors above may
+    // carry safe details; unexpected 500s must never leak internals to clients.
     logger.error("Unhandled request error", {
         error: error instanceof Error ? error.message : String(error),
     });

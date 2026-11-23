@@ -27,6 +27,7 @@ export function findConversationsByWorkspaceId(workspaceId: string) {
         where: { workspaceId },
         select: conversationSelect,
         orderBy: { updatedAt: "desc" },
+        take: 100,
     });
 }
 

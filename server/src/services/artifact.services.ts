@@ -1,14 +1,25 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma } from "../generated/prisma/client.js";
 import prisma from "../lib/db.js";
-import { enqueueArtifactGeneration } from "../lib/events/artifact-events.js";
 import {
-    createArtifactRecord,
+    dispatchDurableJob,
+    insertDurableJob,
+    logDurableJobError,
+    markDurableJobDelivered,
+    releaseDurableJob,
+    requeueDurableJob,
+} from "../lib/outbox.js";
+import {
     deleteArtifactRecord,
     findStaleArtifactIdsForWorkspace,
     findArtifactById,
     findArtifactByIdAndWorkspaceId,
     findArtifactsByWorkspaceId,
-    updateArtifactRecord,
+    createArtifactRecord,
+    claimArtifactForProcessing,
+    completeArtifactProcessing,
+    markArtifactFailedIfEligible,
+    markArtifactPendingForRetry,
     type ArtifactRecord,
 } from "../repository/artifact.repository.js";
 import { NotFoundError, ValidationError } from "../types/app-error.js";
@@ -21,13 +32,25 @@ import { getWorkspaceByIdForUser } from "./workspace.services.js";
 import {
     assertCanCreateArtifact,
     assertCanCreateArtifactType,
-    chargeForArtifact,
-    incrementArtifactCount,
+    assertQuotaInTransaction,
+    consumeArtifactQuotaInTransaction,
+    getArtifactCharge,
 } from "./usage.services.js";
-import { refundChargeInTransaction } from "./credit.services.js";
+import {
+    debitCreditsInTransaction,
+    refundChargeInTransaction,
+} from "./credit.services.js";
 
 import { generateArtifactTitleWithGemini } from "../lib/gemini.js";
 import type { CreateArtifactInput } from "../validators/artifact.validator.js";
+
+const ARTIFACT_LEASE_MS = 15 * 60 * 1000;
+
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
 
 /** Maps legacy DB enum values to the types the API and client expect. */
 function normalizeArtifactRecord(artifact: ArtifactRecord): ArtifactRecord {
@@ -63,9 +86,15 @@ export async function listArtifactsForWorkspace(
 }
 
 /**
- * Persists a FAILED status and error message on an artifact row.
+ * Persists a FAILED status and error message only when the compare-and-swap
+ * transition succeeds. A READY artifact and a refunded artifact are never
+ * touched again, so repeated failure reports cannot double-refund.
  */
-export async function markArtifactFailed(artifactId: string, message: string) {
+export async function markArtifactFailed(
+    artifactId: string,
+    message: string,
+    leaseToken: string | null = null,
+) {
     await prisma.$transaction(async (tx) => {
         const artifact = await tx.learningArtifact.findUnique({
             where: { id: artifactId },
@@ -80,10 +109,18 @@ export async function markArtifactFailed(artifactId: string, message: string) {
         // A READY artifact must never be refunded; an already-refunded one is a retry.
         if (!artifact || artifact.status === "READY") return;
 
-        const previousMetadata =
-            artifact.metadata && typeof artifact.metadata === "object"
-                ? (artifact.metadata as Record<string, unknown>)
-                : {};
+        const previousMetadata = asRecord(artifact.metadata);
+        const transitioned = await markArtifactFailedIfEligible(
+            artifactId,
+            leaseToken,
+            message,
+            {
+                tx,
+                metadata: { ...previousMetadata, processingError: message },
+                refundedAt: artifact.refundedAt ?? null,
+            },
+        );
+        if (!transitioned || artifact.refundedAt) return;
 
         const workspace = await tx.workspace.findUnique({
             where: { id: artifact.workspaceId },
@@ -92,36 +129,24 @@ export async function markArtifactFailed(artifactId: string, message: string) {
 
         // Only refund when a ledger row proves this specific artifact was
         // debited. Historical unmarked charges are intentionally left alone.
-        const refunded = !artifact.refundedAt && workspace?.userId
-            ? await refundChargeInTransaction(tx, {
-                chargeIdempotencyKey: `artifact-charge:${artifactId}`,
-                refundIdempotencyKey: `artifact-refund:${artifactId}`,
-                expectedUserId: workspace.userId,
-                reason: message,
-            })
-            : false;
-
-        await tx.learningArtifact.update({
-            where: { id: artifactId },
-            data: {
-                status: "FAILED",
-                refundedAt:
-                    artifact.refundedAt ?? (refunded ? new Date() : null),
-                metadata: { ...previousMetadata, processingError: message },
-            },
+        if (!workspace?.userId) return;
+        const refunded = await refundChargeInTransaction(tx, {
+            chargeIdempotencyKey: `artifact-charge:${artifactId}`,
+            refundIdempotencyKey: `artifact-refund:${artifactId}`,
+            expectedUserId: workspace.userId,
+            reason: message,
         });
+        if (refunded) {
+            await tx.learningArtifact.updateMany({
+                where: { id: artifactId, status: "FAILED" as const },
+                data: { refundedAt: new Date() },
+            });
+        }
     });
 }
 
 /**
  * Loads a single artifact after verifying workspace ownership.
- *
- * @param workspaceId - Workspace the artifact belongs to
- * @param artifactId - Artifact to fetch
- * @param userId - Authenticated user's id
- * @returns Artifact record with content when status is `READY`
- * @throws {NotFoundError} When the artifact does not exist in this workspace
- *
  */
 export async function getArtifactForWorkspace(
     workspaceId: string,
@@ -142,18 +167,71 @@ export async function getArtifactForWorkspace(
     return normalizeArtifactRecord(artifact);
 }
 
+export interface ArtifactCreationTxInput {
+    artifactId: string;
+    workspaceId: string;
+    userId: string;
+    type: CreateArtifactInput["type"];
+    title: string;
+    sourceIds: string[];
+    chargeIdempotencyKey: string;
+    jobKey: string;
+}
+
 /**
- * Creates a pending artifact and enqueues background generation via Inngest.
+ * The atomic artifact creation unit of work: row + debit + quota consumption +
+ * outbox job. Exported so failure windows can be tested with a fake tx.
+ */
+export async function insertArtifactCreationInTransaction(
+    tx: Prisma.TransactionClient,
+    input: ArtifactCreationTxInput,
+): Promise<ArtifactRecord> {
+    await assertQuotaInTransaction(tx, input.userId, "artifacts");
+
+    const artifact = await createArtifactRecord(
+        {
+            id: input.artifactId,
+            workspaceId: input.workspaceId,
+            type: input.type,
+            title: input.title,
+            sourceIds: input.sourceIds,
+            status: "PENDING",
+        },
+        tx,
+    );
+
+    const charge = getArtifactCharge(input.type);
+    await debitCreditsInTransaction(tx, {
+        userId: input.userId,
+        amount: charge.cost,
+        type: charge.type,
+        description: charge.description,
+        metadata: { artifactId: input.artifactId },
+        idempotencyKey: input.chargeIdempotencyKey,
+    });
+
+    await consumeArtifactQuotaInTransaction(tx, input.userId);
+
+    await insertDurableJob(tx, {
+        key: input.jobKey,
+        type: "artifact.generate",
+        payload: {
+            artifactId: input.artifactId,
+            workspaceId: input.workspaceId,
+            chargeIdempotencyKey: input.chargeIdempotencyKey,
+            type: input.type,
+        },
+    });
+
+    return artifact;
+}
+
+/**
+ * Creates a pending artifact and durably enqueues background generation.
  *
- * Validates that ready sources exist before creating the row. The actual AI
- * generation runs asynchronously in {@link processArtifactById}.
- *
- * @param workspaceId - Workspace to attach the artifact to
- * @param userId - Authenticated user's id
- * @param input - Artifact type, optional title, optional source id filter
- * @returns New artifact with status `PENDING`
- * @throws {ValidationError} When no ready sources are available
- *
+ * The expensive preparation happens before charging; the row, ledger entry,
+ * lifetime counter and outbox job commit together, so an enqueue failure never
+ * leaves a charged artifact with no way to be generated or refunded.
  */
 export async function createArtifactForWorkspace(
     workspaceId: string,
@@ -164,8 +242,6 @@ export async function createArtifactForWorkspace(
     await assertCanCreateArtifact(userId, input.type);
     await assertCanCreateArtifactType(userId, input.type);
 
-    // Do the expensive preparation before charging, so a failed Gemini or
-    // context-gathering call never consumes credits.
     const context = await gatherSourceContext(
         workspaceId,
         input.sourceIds,
@@ -175,55 +251,33 @@ export async function createArtifactForWorkspace(
         input.title?.trim() ||
         (await generateArtifactTitleWithGemini(input.type, context.text));
 
-    const artifact = await createArtifactRecord({
-        workspaceId,
-        type: input.type,
-        title,
-        sourceIds: context.sourceIds,
-        status: "PENDING",
+    const artifactId = randomUUID();
+    const chargeIdempotencyKey = `artifact-charge:${artifactId}`;
+    const jobKey = `artifact-generate:${artifactId}`;
+
+    const artifact = await prisma.$transaction((tx) =>
+        insertArtifactCreationInTransaction(tx, {
+            artifactId,
+            workspaceId,
+            userId,
+            type: input.type,
+            title,
+            sourceIds: context.sourceIds,
+            chargeIdempotencyKey,
+            jobKey,
+        }),
+    );
+
+    // Never await dispatch in the request path; the outbox row is durable.
+    void dispatchDurableJob(jobKey).catch((error) => {
+        logDurableJobError(jobKey, error);
     });
 
-    try {
-        // The debit is keyed to the artifact row so failure paths can refund
-        // exactly once without affecting historical unmarked debits.
-        await chargeForArtifact(userId, artifact.id, input.type);
-
-        // Increment lifetime artifact counter (deletions won't restore quota)
-        await incrementArtifactCount(userId);
-
-        const enqueued = await enqueueArtifactGeneration({
-            artifactId: artifact.id,
-            workspaceId,
-        });
-
-        if (!enqueued) {
-            void processArtifactById(artifact.id).catch((err) => {
-                logger.error("Direct artifact generation failed", { err });
-            });
-        }
-
-        return artifact;
-    } catch (error) {
-        // Do not leave an unpaid artifact row behind if the debit itself fails.
-        await deleteArtifactRecord(artifact.id).catch((cleanupError) => {
-            logger.error("Failed to clean up uncharged artifact", {
-                artifactId: artifact.id,
-                err: cleanupError,
-            });
-        });
-        throw error;
-    }
+    return artifact;
 }
 
 /**
  * Deletes an artifact from the workspace.
- *
- * @param workspaceId - Workspace the artifact belongs to
- * @param artifactId - Artifact to delete
- * @param userId - Authenticated user's id
- * @returns Resolves when the artifact row is deleted
- * @throws {NotFoundError} When the artifact is not found
- *
  */
 export async function deleteArtifactForWorkspace(
     workspaceId: string,
@@ -235,7 +289,8 @@ export async function deleteArtifactForWorkspace(
 }
 
 /**
- * Re-queues generation for a failed artifact without consuming usage quota again.
+ * Re-queues generation for a failed artifact without consuming usage quota or
+ * charging again.
  */
 export async function retryArtifactForWorkspace(
     workspaceId: string,
@@ -252,28 +307,25 @@ export async function retryArtifactForWorkspace(
         throw new ValidationError("Only failed artifacts can be retried");
     }
 
-    const priorMetadata =
-        (artifact.metadata as Record<string, unknown> | null) ?? {};
+    const transitioned = await markArtifactPendingForRetry(artifactId);
+    if (!transitioned) {
+        throw new ValidationError("Artifact changed state; retry is not allowed");
+    }
 
-    await updateArtifactRecord(artifactId, {
-        status: "PENDING",
-        metadata: {
-            ...priorMetadata,
-            processingError: undefined,
-            retriedAt: new Date().toISOString(),
+    const jobKey = `artifact-generate:${artifactId}`;
+    await requeueDurableJob(jobKey, {
+        key: jobKey,
+        type: "artifact.generate",
+        payload: {
+            artifactId,
+            workspaceId,
+            chargeIdempotencyKey: `artifact-charge:${artifactId}`,
+            type: artifact.type,
         },
     });
-
-    const enqueued = await enqueueArtifactGeneration({
-        artifactId,
-        workspaceId,
+    void dispatchDurableJob(jobKey).catch((error) => {
+        logDurableJobError(jobKey, error);
     });
-
-    if (!enqueued) {
-        void processArtifactById(artifactId).catch((err) => {
-            logger.error("Direct artifact retry failed", { artifactId, err });
-        });
-    }
 
     const updated = await findArtifactByIdAndWorkspaceId(
         artifactId,
@@ -288,28 +340,34 @@ export async function retryArtifactForWorkspace(
 }
 
 /**
- * Runs the full artifact generation pipeline (used by Inngest worker).
- *
- * ```
- * status: PROCESSING
- *   → gatherSourceContext
- *   → generateArtifactContent
- *   → status: READY (or FAILED on error)
- * ```
- *
- * @param artifactId - Artifact to generate content for
- * @returns Updated artifact with `READY` status and generated content
- * @throws When the artifact is missing or generation fails (status set to `FAILED`)
- *
- *
+ * Runs the full artifact generation pipeline (used by Inngest workers and the
+ * local outbox fallback). A lease guarantees only one worker can generate a
+ * given artifact at a time.
  */
-export async function processArtifactById(artifactId: string) {
+export async function processArtifactById(artifactId: string, jobKey?: string) {
     const artifact = await findArtifactById(artifactId);
     if (!artifact) {
-        throw new Error("Artifact not found");
+        const error = new Error("Artifact not found");
+        if (jobKey) await releaseDurableJob(jobKey, error);
+        throw error;
     }
 
-    await updateArtifactRecord(artifactId, { status: "PROCESSING" });
+    if (artifact.status === "READY") {
+        if (jobKey) await markDurableJobDelivered(jobKey);
+        return artifact;
+    }
+
+    const leaseToken = randomUUID();
+    const claimed = await claimArtifactForProcessing(
+        artifactId,
+        leaseToken,
+        ARTIFACT_LEASE_MS,
+    );
+    if (!claimed) {
+        // Another worker (or an already-finished run) owns this artifact.
+        if (jobKey) await markDurableJobDelivered(jobKey);
+        return (await findArtifactById(artifactId)) ?? artifact;
+    }
 
     const artifactType =
         artifact.type === "DIAGRAM" ? "MINDMAP" : artifact.type;
@@ -325,7 +383,6 @@ export async function processArtifactById(artifactId: string) {
             context.text,
         );
 
-        // If title was a generic date fallback, refine it with specific topic/Gemini
         let finalTitle = artifact.title;
         if (finalTitle.includes(" · ")) {
             if (artifactType === "PODCAST" && (content as Record<string, unknown>)?.topic) {
@@ -339,25 +396,35 @@ export async function processArtifactById(artifactId: string) {
             }
         }
 
-        return updateArtifactRecord(artifactId, {
-            title: finalTitle,
-            type: artifactType,
-            status: "READY",
-            content: content as Prisma.InputJsonValue,
-            metadata: {
-                generatedAt: new Date().toISOString(),
-                processingError: undefined,
+        const completed = await completeArtifactProcessing(
+            artifactId,
+            leaseToken,
+            {
+                title: finalTitle,
+                type: artifactType,
+                content: content as Prisma.InputJsonValue,
+                metadata: {
+                    generatedAt: new Date().toISOString(),
+                    processingError: null,
+                },
             },
-        });
+        );
+        if (!completed) {
+            throw new Error("Artifact lease was lost before completion");
+        }
 
+        if (jobKey) await markDurableJobDelivered(jobKey);
+        return (await findArtifactById(artifactId)) ?? artifact;
     } catch (error) {
         const message =
             error instanceof Error
                 ? error.message
                 : "Artifact generation failed";
 
-        await markArtifactFailed(artifactId, message);
+        if (jobKey) await releaseDurableJob(jobKey, error);
+        await markArtifactFailed(artifactId, message, leaseToken);
 
+        logger.error("Artifact generation failed", { artifactId, err: error });
         throw error;
     }
 }
