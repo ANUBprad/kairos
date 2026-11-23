@@ -1,4 +1,5 @@
 import { logger } from "../logger.js";
+import { providerFetch } from "../provider-http.js";
 
 const SKIP_DIRS = new Set([
     "node_modules",
@@ -189,7 +190,7 @@ async function githubApiFetch<T>(
         headers.Authorization = `Bearer ${token}`;
     }
 
-    const res = await fetch(`https://api.github.com${path}`, { headers });
+    const res = await providerFetch(`https://api.github.com${path}`, { headers });
 
     if (!res.ok) {
         const body = await res.text().catch(() => "");

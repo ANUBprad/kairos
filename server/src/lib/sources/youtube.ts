@@ -2,6 +2,7 @@ import { fetchTranscript as fetchTranscriptPlus, YoutubeTranscript as YoutubeTra
 import { YoutubeTranscript } from "youtube-transcript";
 import { ValidationError } from "../../types/app-error.js";
 import { Firecrawl } from "firecrawl";
+import { providerFetch } from "../provider-http.js";
 
 const USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -91,7 +92,7 @@ function extractYouTubeVideoId(url: string): string | null {
  */
 async function fetchYoutubeTitle(videoId: string): Promise<string | null> {
     try {
-        const response = await fetch(
+        const response = await providerFetch(
             `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
             {
                 headers: {

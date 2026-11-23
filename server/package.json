@@ -12,8 +12,11 @@
     "prisma:migrate": "prisma migrate deploy",
     "eval:rag": "tsx evals/run-rag-eval.ts",
     "typecheck": "prisma generate && tsc --noEmit",
-    "test:unit": "tsx --test src/lib/rag/citation-parse.test.ts src/lib/chunking/layout.test.ts src/config/env.test.ts src/config/network.test.ts src/lib/pricing.test.ts src/lib/oauth-state.test.ts src/lib/safe-fetch.test.ts src/lib/logger.test.ts src/lib/http-range.test.ts src/lib/outbox.test.ts src/middleware/csrf.middleware.test.ts src/controllers/integration-dto.test.ts src/services/payment-settlement.test.ts src/services/billing-entitlement.test.ts src/services/credit.services.test.ts src/services/reliability-lifecycle.test.ts src/services/signup-credits.test.ts src/prisma/migrations.test.ts",
-    "test:integration": "tsx --test src/integration/artifact-concurrency.integration.test.ts src/integration/round3-reliability.integration.test.ts",
+    "test:unit": "tsx --test src/lib/rag/citation-parse.test.ts src/lib/chunking/layout.test.ts src/config/env.test.ts src/config/network.test.ts src/lib/pricing.test.ts src/lib/oauth-state.test.ts src/lib/safe-fetch.test.ts src/lib/provider-http.test.ts src/lib/logger.test.ts src/lib/http-range.test.ts src/lib/outbox.test.ts src/middleware/csrf.middleware.test.ts src/controllers/integration-dto.test.ts src/services/payment-settlement.test.ts src/services/billing-entitlement.test.ts src/services/credit.services.test.ts src/services/reliability-lifecycle.test.ts src/services/signup-credits.test.ts src/prisma/migrations.test.ts",
+    "test:integration": "tsx --test src/integration/artifact-concurrency.integration.test.ts src/integration/round3-reliability.integration.test.ts src/integration/http-security.integration.test.ts src/integration/job-recovery.integration.test.ts src/integration/payment-sandbox.integration.test.ts",
+    "test:http": "tsx --test src/integration/http-security.integration.test.ts",
+    "test:jobs": "tsx --test src/integration/job-recovery.integration.test.ts",
+    "test:payments": "tsx --test src/integration/payment-sandbox.integration.test.ts",
     "test:rag": "tsx --test src/lib/rag/citation-parse.test.ts src/lib/chunking/layout.test.ts"
   },
   "keywords": [],

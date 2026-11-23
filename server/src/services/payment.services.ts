@@ -20,6 +20,33 @@ import type { VerifyPaymentInput } from "../validators/payment.validator.js";
 
 export { PLAN_PRICES } from "../lib/pricing.js";
 
+/** Minimal provider surface needed to create an order. */
+export type PaymentProviderOrder = {
+    id: string;
+    amount: string | number;
+    currency: string;
+};
+
+export type PaymentProvider = {
+    createOrder(input: {
+        amount: number;
+        currency: string;
+        receipt: string;
+        notes: Record<string, string>;
+    }): Promise<PaymentProviderOrder>;
+};
+
+let providerOverride: PaymentProvider | undefined;
+
+/**
+ * Test-only provider injection. A deterministic, provider-mocked test can
+ * exercise the real service and database without contacting Razorpay. Never
+ * called by production code paths.
+ */
+export function setPaymentProviderForTests(provider: PaymentProvider | undefined): void {
+    providerOverride = provider;
+}
+
 /** Initializes the Razorpay SDK instance with configured credentials. */
 function getRazorpayInstance() {
     const key_id = process.env.RAZORPAY_KEY_ID;
@@ -30,6 +57,19 @@ function getRazorpayInstance() {
             500,
             "Razorpay API keys are not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in server/.env",
         );
+    }
+
+    if (providerOverride) {
+        return {
+            razorpay: {
+                orders: {
+                    create: (
+                        input: Parameters<PaymentProvider["createOrder"]>[0],
+                    ) => providerOverride!.createOrder(input),
+                },
+            } as unknown as Razorpay,
+            keyId: key_id,
+        };
     }
 
     return {

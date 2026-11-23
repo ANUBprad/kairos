@@ -33,6 +33,8 @@ const baseSchema = z.object({
     RAZORPAY_KEY_ID: z.string().optional(),
     RAZORPAY_KEY_SECRET: z.string().optional(),
     RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+    /** Explicit deployment identity; never inferred from credentials. */
+    DEPLOYMENT_ENV: z.enum(["local", "staging", "production"]).optional(),
     OAUTH_STATE_SECRET: z
         .string()
         .min(32, "OAUTH_STATE_SECRET must be at least 32 characters")
@@ -64,6 +66,21 @@ export function getServerEnv(): ServerEnv {
     }
 
     cached = parsed.data;
+
+    const deploymentEnv =
+        cached.DEPLOYMENT_ENV ??
+        (cached.NODE_ENV === "production" ? "production" : "local");
+
+    // Never allow live payment credentials outside an explicitly production
+    // deployment. A staging service must fail closed if a live key is copied.
+    if (
+        deploymentEnv !== "production" &&
+        /^rzp_live_/i.test(cached.RAZORPAY_KEY_ID?.trim() ?? "")
+    ) {
+        throw new Error(
+            "Live Razorpay credentials are not allowed in local or staging deployments.",
+        );
+    }
 
     if (cached.NODE_ENV === "production") {
         const requiredInProd: (keyof ServerEnv)[] = [

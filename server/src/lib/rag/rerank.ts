@@ -1,5 +1,6 @@
 import { RAG_TOP_K, RERANK_MODEL } from "../ai-config.js";
 import { logger } from "../logger.js";
+import { providerFetch } from "../provider-http.js";
 import type { RetrievedChunk } from "./reconcile.js";
 
 type CohereRerankResponse = {
@@ -27,7 +28,7 @@ export async function rerankChunks(
     }
 
     try {
-        const response = await fetch("https://api.cohere.com/v2/rerank", {
+        const response = await providerFetch("https://api.cohere.com/v2/rerank", {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${apiKey}`,

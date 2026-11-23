@@ -1,6 +1,15 @@
 # Render Blueprint — backend (OpenBook / ChaibookLM)
 # Docs: https://render.com/docs/blueprint-spec
+#
+# SECURITY NOTE: every credential below is `sync: false`, so no secret value is
+# stored in this repository or in the blueprint. Configure values in the Render
+# dashboard per environment. Staging and production MUST use separate databases,
+# separate OAuth apps/callback URLs, separate Razorpay TEST-mode credentials,
+# and separate signing secrets. See STAGING_DEPLOYMENT.md.
 services:
+  # ---------------------------------------------------------------------------
+  # PRODUCTION — deploy only after staging validation and owner approval.
+  # ---------------------------------------------------------------------------
   - type: web
     name: openbook-server
     runtime: node
@@ -14,6 +23,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Explicit identity gates live payment credentials on this service.
+      - key: DEPLOYMENT_ENV
+        value: production
       # Set these in the Render dashboard (or as sync: false secrets):
       - key: DATABASE_URL
         sync: false
@@ -22,6 +34,26 @@ services:
       - key: BETTER_AUTH_SECRET
         sync: false
       - key: BETTER_AUTH_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_REDIRECT_URI
+        sync: false
+      - key: NOTION_CLIENT_ID
+        sync: false
+      - key: NOTION_CLIENT_SECRET
+        sync: false
+      - key: NOTION_REDIRECT_URI
+        sync: false
+      - key: OAUTH_STATE_SECRET
         sync: false
       - key: OPENAI_API_KEY
         sync: false
@@ -43,6 +75,11 @@ services:
         sync: false
       - key: FIRECRAWL_API_KEY
         sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: MEM0_API_KEY
+        sync: false
+      # Payments are optional, but if enabled all three must be set together.
       - key: RAZORPAY_KEY_ID
         sync: false
       - key: RAZORPAY_KEY_SECRET
@@ -51,13 +88,100 @@ services:
       # genuine webhook fails HMAC verification and payments never settle.
       - key: RAZORPAY_WEBHOOK_SECRET
         sync: false
-      # Optional hardening: separates OAuth state HMAC from the auth secret.
-      - key: OAUTH_STATE_SECRET
-        sync: false
-      # Optional canonical server URL used by auth/provider callbacks.
       - key: SERVER_URL
         sync: false
       # Optional explicit proxy tokens (numeric hop counts are rejected in
       # production). Set only when the service really runs behind a proxy.
+      - key: TRUST_PROXY
+        sync: false
+      # Inngest Cloud is opt-in. Leave the INNGEST_* variables unset to run
+      # durable jobs in-process on the web service with the periodic sweeper.
+
+  # ---------------------------------------------------------------------------
+  # STAGING — isolated, disposable validation environment.
+  #
+  # NOTE FOR THE OWNER: deploying this blueprint provisions BOTH services.
+  # If you only want the production service, deploy with the staging block
+  # removed (or deploy staging from a separate blueprint/branch). Nothing in
+  # this file is deployed automatically by committing it.
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: kairos-server-staging
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Staging uses real Express middleware but is NOT production. This flag
+      # rejects any copied rzp_live_* key at startup (fail closed).
+      - key: DEPLOYMENT_ENV
+        value: staging
+      # Separate staging database — never the production connection string.
+      - key: DATABASE_URL
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      - key: BETTER_AUTH_URL
+        sync: false
+      # Staging OAuth apps with staging callback URLs, not production ones.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_REDIRECT_URI
+        sync: false
+      - key: NOTION_CLIENT_ID
+        sync: false
+      - key: NOTION_CLIENT_SECRET
+        sync: false
+      - key: NOTION_REDIRECT_URI
+        sync: false
+      - key: OAUTH_STATE_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_UPLOAD_PRESET
+        sync: false
+      - key: FIRECRAWL_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: MEM0_API_KEY
+        sync: false
+      # Razorpay TEST MODE only. A live key here is rejected at startup.
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: SERVER_URL
+        sync: false
       - key: TRUST_PROXY
         sync: false

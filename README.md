@@ -199,14 +199,26 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for architecture, RAG evals, and CI com
 | Variable | Description |
 | :--- | :--- |
 | `PORT` | Backend server port (default: `8081`) |
+| `NODE_ENV` | `development`, `production` or `test` |
+| `DEPLOYMENT_ENV` | Explicit `local`/`staging`/`production` identity. Staging rejects any `rzp_live_*` key at startup. Defaults from `NODE_ENV` when omitted. |
 | `CLIENT_URL` | Frontend origin URL, or comma-separated allowed origins (e.g. `http://localhost:3000`) |
 | `TRUST_PROXY` | Optional comma-separated trusted proxy addresses; leave unset to trust none (numeric hop counts are dev-only) |
 | `DATABASE_URL` | PostgreSQL connection string |
+| `TEST_DATABASE_URL` | **Disposable** PostgreSQL URL used only by integration tests. Never point at production or a shared DB. |
 | `BETTER_AUTH_SECRET` | 32+ character random secret for session encryption |
 | `BETTER_AUTH_URL` | Base server auth URL (`http://localhost:8081`) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google login and Drive integration credentials |
+| `GOOGLE_REDIRECT_URI` | Exact Google OAuth callback URL for this deployment |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub login and private repo import credentials |
+| `GITHUB_REDIRECT_URI` | Exact GitHub OAuth callback URL for this deployment |
+| `NOTION_CLIENT_ID` / `NOTION_CLIENT_SECRET` | Notion integration credentials |
+| `NOTION_REDIRECT_URI` | Exact Notion OAuth callback URL for this deployment |
 | `OPENAI_API_KEY` | OpenAI API key for text/chat generation |
-| `GEMINI_API_KEY` | Google Gemini API key |
+| `GEMINI_API_KEY` | Google Gemini API key (sent via `x-goog-api-key`, never in the URL) |
 | `ELEVENLABS_API_KEY` | ElevenLabs API key for multi-speaker TTS |
+| `COHERE_API_KEY` | Cohere API key for optional reranking |
+| `TAVILY_API_KEY` | Tavily API key for web search |
+| `MEM0_API_KEY` | Mem0 API key (optional memory features) |
 | `PINECONE_API_KEY` | Pinecone API key |
 | `PINECONE_INDEX` | Pinecone index name |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
@@ -214,10 +226,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for architecture, RAG evals, and CI com
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 | `CLOUDINARY_UPLOAD_PRESET` | Your own Cloudinary unsigned preset; required only if signed credentials (API key/secret) are unavailable. There is no hardcoded fallback preset. |
 | `FIRECRAWL_API_KEY` | Firecrawl API key for URL scraping |
-| `RAZORPAY_KEY_ID` | Razorpay Key ID for payments |
+| `RAZORPAY_KEY_ID` | Razorpay Key ID for payments (use `rzp_test_*` outside production) |
 | `RAZORPAY_KEY_SECRET` | Razorpay Key Secret |
 | `RAZORPAY_WEBHOOK_SECRET` | Required when Razorpay is enabled; webhooks fail HMAC verification without it |
 | `OAUTH_STATE_SECRET` | Optional 32+ character secret to separate OAuth state HMAC from the auth secret |
+| `INNGEST_*` | Optional Inngest Cloud configuration; unset to run durable jobs in-process |
 
 ### Client (`client/.env.local`)
 
@@ -232,7 +245,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for architecture, RAG evals, and CI com
 
 ### CSRF requirement
 
-State-changing requests to custom `/api` routes (`POST`, `PUT`, `PATCH`, `DELETE`) must carry either `Sec-Fetch-Site: same-origin`/`none` or an `Origin` header that exactly matches a configured `CLIENT_URL` origin. Requests with no `Origin` are rejected with `403 { "error": "CSRF origin check failed" }` by default; non-browser clients must send `Origin` explicitly. `/api/auth/*` (Better Auth), `/api/payment/webhook` (Razorpay HMAC), and `/api/inngest` (signing key) are exempt. See [CONTRIBUTING.md](./CONTRIBUTING.md#csrf--origin-checks) for details.
+State-changing requests to custom `/api` routes (`POST`, `PUT`, `PATCH`, `DELETE`) must carry either `Sec-Fetch-Site: same-origin` or an `Origin` header that exactly matches a configured `CLIENT_URL` origin. `Sec-Fetch-Site: none` (direct navigation) and requests with no `Origin` are rejected with `403 { "error": "CSRF origin check failed" }` by default; non-browser clients must send `Origin` explicitly. `/api/auth/*` (Better Auth), `/api/payment/webhook` (Razorpay HMAC), and `/api/inngest` (signing key) are exempt. See [CONTRIBUTING.md](./CONTRIBUTING.md#csrf--origin-checks) for details.
 
 ### Proxy configuration
 
@@ -242,7 +255,26 @@ Leave `TRUST_PROXY` unset to trust no proxies and ignore forwarded-IP headers. I
 
 Apply checked-in migrations with `npm run prisma:migrate --prefix server` (never `prisma db push`), generate the client with `npm run prisma:generate --prefix server`, and run unit tests with `npm run test:unit --prefix server`. See [CONTRIBUTING.md](./CONTRIBUTING.md#local-migrations-and-tests) for the full workflow.
 
-Generated podcast/interruption MP3s under `server/uploads/podcasts/` are gitignored, dev-only artifacts with no retention guarantee; Cloudinary is the durable store.
+Additional server suites (all require an isolated `TEST_DATABASE_URL` unless noted):
+
+- `npm run test:integration --prefix server` — real-PostgreSQL concurrency, HTTP security, job recovery and provider-mocked payments.
+- `npm run test:http --prefix server` — real Express routes/middleware (auth, IDOR, CSRF, uploads, OAuth callbacks, payment boundary).
+- `npm run test:jobs --prefix server` — durable-job recovery/backlog scenarios.
+- `npm run test:payments --prefix server` — provider-mocked Razorpay lifecycle (no live calls).
+
+Generated podcast/interruption MP3s under `server/uploads/podcasts/` are gitignored, dev-only artifacts with no retention guarantee; Cloudinary is the durable store. Uploads are served only through the ownership-checked `GET /api/audio/:workspaceId/:artifactId` route — there is no unauthenticated static mount.
+
+### Staging readiness
+
+Isolated staging deployment steps, HTTP/security validation, provider integration status, background-job recovery evidence, operational runbook, licensing gate and the current release classification are documented in:
+
+- [STAGING_DEPLOYMENT.md](./STAGING_DEPLOYMENT.md)
+- [STAGING_SECURITY_TESTS.md](./STAGING_SECURITY_TESTS.md)
+- [INTEGRATION_SECURITY.md](./INTEGRATION_SECURITY.md)
+- [BACKGROUND_JOB_RECOVERY.md](./BACKGROUND_JOB_RECOVERY.md)
+- [OPERATIONS_RUNBOOK.md](./OPERATIONS_RUNBOOK.md)
+- [LICENSING_REVIEW.md](./LICENSING_REVIEW.md)
+- [RELEASE_READINESS_REPORT.md](./RELEASE_READINESS_REPORT.md)
 
 ---
 

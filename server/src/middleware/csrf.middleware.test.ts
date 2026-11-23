@@ -70,11 +70,17 @@ describe("CSRF protection", () => {
         assert.equal(result.nextCalls, 1);
     });
 
-    it("accepts same-origin and none Sec-Fetch-Site values", () => {
-        for (const fetchSite of ["same-origin", "none"]) {
-            const result = run({ headers: { "sec-fetch-site": fetchSite } });
-            assert.equal(result.nextCalls, 1, `expected ${fetchSite} to pass`);
-        }
+    it("accepts same-origin Fetch Metadata without an Origin header", () => {
+        const result = run({ headers: { "sec-fetch-site": "same-origin" } });
+        assert.equal(result.nextCalls, 1);
+    });
+
+    it("requires a matching Origin when Sec-Fetch-Site is none", () => {
+        assertRejected(run({ headers: { "sec-fetch-site": "none" } }));
+        const allowed = run({
+            headers: { "sec-fetch-site": "none", origin: ALLOWED_ORIGIN },
+        });
+        assert.equal(allowed.nextCalls, 1);
     });
 
     it("rejects a disallowed Origin", () => {

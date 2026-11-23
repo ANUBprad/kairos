@@ -13,6 +13,7 @@ import {
 import { ValidationError } from "../types/app-error.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { logger } from "../lib/logger.js";
+import { providerFetch } from "../lib/provider-http.js";
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "";
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
@@ -72,7 +73,7 @@ export async function handleGithubCallback({
         throw new ValidationError("Authorization code is missing.");
     }
 
-    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+    const tokenRes = await providerFetch("https://github.com/login/oauth/access_token", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -120,7 +121,7 @@ export async function handleGithubCallback({
     let avatarUrl: string | undefined;
 
     try {
-        const userRes = await fetch("https://api.github.com/user", {
+        const userRes = await providerFetch("https://api.github.com/user", {
             headers: {
                 Authorization: `Bearer ${tokenData.access_token}`,
                 Accept: "application/vnd.github+json",
@@ -199,7 +200,7 @@ export async function listUserGithubRepos(
         throw new ValidationError("GitHub account is not connected. Please connect your GitHub account first.");
     }
 
-    const response = await fetch(
+    const response = await providerFetch(
         "https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator,organization_member",
         {
             headers: {

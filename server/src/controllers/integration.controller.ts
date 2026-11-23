@@ -33,6 +33,24 @@ import {
     verifyOAuthState,
 } from "../lib/oauth-state.js";
 import { logger } from "../lib/logger.js";
+
+/**
+ * Clears the single-use state cookie BEFORE ending the response.
+ *
+ * `res.redirect()` calls `res.end()`, so calling `clearOAuthStateCookie()` in a
+ * `finally` block afterwards failed with "Cannot set headers after they are
+ * sent" and left the nonce cookie in the browser. The database nonce is still
+ * single-use, but a stale cookie is confusing and caused unhandled errors.
+ */
+function redirectClearingState(
+    res: Response,
+    provider: "GOOGLE_DRIVE" | "NOTION" | "GITHUB",
+    url: string,
+): void {
+    clearOAuthStateCookie(res, provider);
+    res.redirect(url);
+}
+
 import {
     connectNotionSchema,
     exportNotionSchema,
@@ -149,18 +167,20 @@ export async function googleDriveCallback(req: Request, res: Response) {
         }
 
         await handleGoogleDriveCallback({ code: code.trim(), userId: verified.userId });
-        res.redirect(
+        redirectClearingState(
+            res,
+            "GOOGLE_DRIVE",
             `${getPrimaryClientUrl()}/settings/integrations?connected=google-drive`,
         );
     } catch (error) {
         logger.warn("Google Drive OAuth callback rejected", {
             reason: error instanceof Error ? error.name : "UnknownError",
         });
-        res.redirect(
+        redirectClearingState(
+            res,
+            "GOOGLE_DRIVE",
             `${getPrimaryClientUrl()}/settings/integrations?error=oauth_invalid_state`,
         );
-    } finally {
-        clearOAuthStateCookie(res, "GOOGLE_DRIVE");
     }
 }
 
@@ -251,18 +271,20 @@ export async function notionOAuthCallback(req: Request, res: Response) {
         }
 
         await handleNotionOAuthCallback({ code: code.trim(), userId: verified.userId });
-        res.redirect(
+        redirectClearingState(
+            res,
+            "NOTION",
             `${getPrimaryClientUrl()}/settings/integrations?connected=notion`,
         );
     } catch (error) {
         logger.warn("Notion OAuth callback rejected", {
             reason: error instanceof Error ? error.name : "UnknownError",
         });
-        res.redirect(
+        redirectClearingState(
+            res,
+            "NOTION",
             `${getPrimaryClientUrl()}/settings/integrations?error=oauth_invalid_state`,
         );
-    } finally {
-        clearOAuthStateCookie(res, "NOTION");
     }
 }
 
@@ -363,7 +385,9 @@ export async function githubCallback(req: Request, res: Response) {
                 typeof error_description === "string"
                     ? error_description.slice(0, 200)
                     : "GitHub authorization was cancelled or denied.";
-            res.redirect(
+            redirectClearingState(
+                res,
+                "GITHUB",
                 getGithubCallbackRedirect(verified.returnTo, {
                     github_error: message,
                 }),
@@ -372,7 +396,9 @@ export async function githubCallback(req: Request, res: Response) {
         }
 
         if (typeof code !== "string" || !code.trim()) {
-            res.redirect(
+            redirectClearingState(
+                res,
+                "GITHUB",
                 getGithubCallbackRedirect(verified.returnTo, {
                     github_error: "Missing GitHub authorization code.",
                 }),
@@ -389,7 +415,9 @@ export async function githubCallback(req: Request, res: Response) {
                         ? callbackError.name
                         : "UnknownError",
             });
-            res.redirect(
+            redirectClearingState(
+                res,
+                "GITHUB",
                 getGithubCallbackRedirect(verified.returnTo, {
                     github_error: "Failed to connect GitHub.",
                 }),
@@ -397,7 +425,9 @@ export async function githubCallback(req: Request, res: Response) {
             return;
         }
 
-        res.redirect(
+        redirectClearingState(
+            res,
+            "GITHUB",
             getGithubCallbackRedirect(verified.returnTo, {
                 connected: "github",
             }),
@@ -406,13 +436,13 @@ export async function githubCallback(req: Request, res: Response) {
         logger.warn("GitHub OAuth callback rejected", {
             reason: error instanceof Error ? error.name : "UnknownError",
         });
-        res.redirect(
+        redirectClearingState(
+            res,
+            "GITHUB",
             getGithubCallbackRedirect("/settings/integrations", {
                 github_error: "OAuth state verification failed. Please retry.",
             }),
         );
-    } finally {
-        clearOAuthStateCookie(res, "GITHUB");
     }
 }
 

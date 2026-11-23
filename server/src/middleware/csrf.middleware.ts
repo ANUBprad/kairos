@@ -59,7 +59,9 @@ function isExemptPath(path: string, exemptPaths: readonly string[]): boolean {
  *
  * Safe defaults:
  * - Only POST/PUT/PATCH/DELETE under /api are checked; reads and non-API routes pass.
- * - `Sec-Fetch-Site: cross-site` is always rejected; `same-origin`/`none` pass.
+ * - `Sec-Fetch-Site: cross-site` is always rejected; `same-origin` passes.
+ * - `none` (direct navigation/bookmark) still requires a matching Origin; it is
+ *   not treated as proof of same-origin by itself.
  * - Otherwise an Origin header must be present and exactly match a configured
  *   allowed origin. Missing Origin is rejected rather than silently trusted:
  *   non-browser clients must target an exempt route (or a browser must send Origin).
@@ -101,10 +103,12 @@ export function createCsrfProtection(
             reject();
             return;
         }
-        if (fetchSite === "same-origin" || fetchSite === "none") {
+        if (fetchSite === "same-origin") {
             next();
             return;
         }
+        // `none` is set for direct navigation, not by a same-origin script.
+        // Do not let it bypass the Origin check below.
 
         const rawOrigin = firstHeader(req.headers.origin);
         if (!rawOrigin || rawOrigin.includes(",")) {

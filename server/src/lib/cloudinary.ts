@@ -1,7 +1,24 @@
 
+import { randomUUID } from "node:crypto";
 import { v2 as cloudinary } from "cloudinary";
 import { ValidationError } from "../types/app-error.js";
 import { logger } from "./logger.js";
+
+const UPLOAD_TIMEOUT_MS = 30_000;
+
+/**
+ * Object ids must not be derived from the client filename alone: two users
+ * uploading "notes.pdf" would otherwise target the same object and one could
+ * overwrite the other's file. A random suffix makes each upload distinct, and
+ * `overwrite: false` is a second line of defence.
+ */
+function buildUniquePublicId(filename: string): string {
+    const base = filename
+        .replace(/\.[^/.]+$/, "")
+        .replace(/[^A-Za-z0-9_-]/g, "_")
+        .slice(0, 80);
+    return `${base || "upload"}_${randomUUID()}`;
+}
 
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
 // Never fall back to a hardcoded preset owned by a third party. The unsigned
@@ -99,12 +116,13 @@ export async function uploadPdfToCloudinary(
             });
 
             const base64Data = `data:application/pdf;base64,${buffer.toString("base64")}`;
-            const cleanId = filename.replace(/\.[^/.]+$/, "");
+            const cleanId = buildUniquePublicId(filename);
 
             const result = await cloudinary.uploader.upload(base64Data, {
                 resource_type: "raw",
                 folder: "chaibook/pdfs",
                 public_id: cleanId,
+                overwrite: false,
             });
 
             if (result?.secure_url) {
@@ -135,7 +153,7 @@ export async function uploadPdfToCloudinary(
 
     const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
-        { method: "POST", body: form },
+        { method: "POST", body: form, signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) },
     );
 
     const result = (await response.json()) as CloudinaryUploadResponse;
@@ -209,12 +227,13 @@ export async function uploadImageToCloudinary(
             });
 
             const base64Data = `data:${contentType};base64,${buffer.toString("base64")}`;
-            const cleanId = filename.replace(/\.[^/.]+$/, "");
+            const cleanId = buildUniquePublicId(filename);
 
             const result = await cloudinary.uploader.upload(base64Data, {
                 resource_type: "image",
                 folder: "chaibook/images",
                 public_id: cleanId,
+                overwrite: false,
             });
 
             if (result?.secure_url) {
@@ -244,7 +263,7 @@ export async function uploadImageToCloudinary(
 
     const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        { method: "POST", body: form },
+        { method: "POST", body: form, signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) },
     );
 
     const result = (await response.json()) as CloudinaryUploadResponse;
@@ -300,12 +319,13 @@ export async function uploadAudioToCloudinary(
             });
 
             const base64Data = `data:audio/mp3;base64,${buffer.toString("base64")}`;
-            const cleanId = filename.replace(/\.[^/.]+$/, "");
+            const cleanId = buildUniquePublicId(filename);
 
             const result = await cloudinary.uploader.upload(base64Data, {
                 resource_type: "video",
                 folder: "chaibook/podcasts",
                 public_id: cleanId,
+                overwrite: false,
                 format: "mp3",
             });
 
@@ -337,7 +357,7 @@ export async function uploadAudioToCloudinary(
 
     const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
-        { method: "POST", body: form },
+        { method: "POST", body: form, signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) },
     );
 
     const result = (await response.json()) as CloudinaryUploadResponse;
@@ -346,7 +366,7 @@ export async function uploadAudioToCloudinary(
         // Fallback to raw upload if video/upload fails on preset
         const rawResponse = await fetch(
             `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
-            { method: "POST", body: form },
+            { method: "POST", body: form, signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) },
         );
         const rawResult = (await rawResponse.json()) as CloudinaryUploadResponse;
         if (!rawResponse.ok) {

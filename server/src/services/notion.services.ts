@@ -13,6 +13,7 @@ import {
 import { NotFoundError, ValidationError } from "../types/app-error.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { logger } from "../lib/logger.js";
+import { providerFetch } from "../lib/provider-http.js";
 
 const NOTION_CLIENT_ID = process.env.NOTION_CLIENT_ID || "";
 const NOTION_CLIENT_SECRET = process.env.NOTION_CLIENT_SECRET || "";
@@ -66,7 +67,7 @@ export async function connectNotionWithToken({
     }
 
     // Verify token by querying Notion bot user
-    const userRes = await fetch("https://api.notion.com/v1/users/me", {
+    const userRes = await providerFetch("https://api.notion.com/v1/users/me", {
         headers: {
             Authorization: `Bearer ${token.trim()}`,
             "Notion-Version": NOTION_API_VERSION,
@@ -122,7 +123,7 @@ export async function handleNotionOAuthCallback({
         `${NOTION_CLIENT_ID}:${NOTION_CLIENT_SECRET}`,
     ).toString("base64");
 
-    const tokenRes = await fetch("https://api.notion.com/v1/oauth/token", {
+    const tokenRes = await providerFetch("https://api.notion.com/v1/oauth/token", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -203,7 +204,7 @@ export async function listNotionPages(userId: string, search?: string) {
         body.query = search.trim();
     }
 
-    const res = await fetch("https://api.notion.com/v1/search", {
+    const res = await providerFetch("https://api.notion.com/v1/search", {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,
@@ -295,7 +296,7 @@ async function fetchPageBlocksAsMarkdown(
 ): Promise<string> {
     if (depth > 3) return ""; // prevent excessive nesting
 
-    const res = await fetch(
+    const res = await providerFetch(
         `https://api.notion.com/v1/blocks/${pageId}/children?page_size=100`,
         {
             headers: {
@@ -412,7 +413,7 @@ export async function importNotionPage({
     const token = await getNotionToken(userId);
 
     // 2. Fetch page metadata. The host is fixed; encode the path segment.
-    const pageRes = await fetch(
+    const pageRes = await providerFetch(
         `https://api.notion.com/v1/pages/${encodeURIComponent(pageId)}`,
         {
             headers: {
@@ -640,7 +641,7 @@ export async function exportArtifactToNotion({
         }
     }
 
-    const createRes = await fetch("https://api.notion.com/v1/pages", {
+    const createRes = await providerFetch("https://api.notion.com/v1/pages", {
         method: "POST",
         headers: {
             Authorization: `Bearer ${token}`,

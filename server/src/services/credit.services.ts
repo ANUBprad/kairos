@@ -193,6 +193,24 @@ export async function deductCredits(
 }
 
 /**
+ * Ensures an idempotency key that is already present refers to the same grant.
+ * Without this check a reused key silently skipped a credit for the wrong user
+ * or the wrong amount.
+ */
+function assertMatchingGrant(
+    existing: { userId: string; amount: number },
+    userId: string,
+    amount: number,
+    idempotencyKey: string,
+): void {
+    if (existing.userId !== userId || existing.amount !== amount) {
+        throw new Error(
+            `Idempotency key ${idempotencyKey} is already used by a different credit grant.`,
+        );
+    }
+}
+
+/**
  * Atomically adds credits to a user's account (e.g. from a purchase or bonus) and logs the transaction.
  */
 export async function addCredits(
@@ -208,9 +226,13 @@ export async function addCredits(
       if (idempotencyKey) {
         const existing = await tx.creditTransaction.findUnique({
           where: { idempotencyKey },
-          select: { id: true },
+          select: { userId: true, amount: true },
         });
         if (existing) {
+          // A key may only be replayed for the same user and the same grant.
+          // Reusing it for a different grant must fail rather than silently
+          // skip a credit that was never actually recorded.
+          assertMatchingGrant(existing, userId, amount, idempotencyKey);
           const user = await tx.user.findUnique({
             where: { id: userId },
             select: { credits: true },
@@ -245,6 +267,15 @@ export async function addCredits(
     });
   } catch (error) {
     if (idempotencyKey && isUniqueConstraintError(error)) {
+      // A concurrent winner created the row. Validate that it recorded the
+      // same grant before treating this call as an idempotent success.
+      const winner = await prisma.creditTransaction.findUnique({
+        where: { idempotencyKey },
+        select: { userId: true, amount: true },
+      });
+      if (winner) {
+        assertMatchingGrant(winner, userId, amount, idempotencyKey);
+      }
       return readBalance(userId);
     }
     throw error;

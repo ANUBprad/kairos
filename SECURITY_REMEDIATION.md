@@ -150,9 +150,10 @@ create a new billable message.
 ## 6. CSRF and request configuration
 
 - Custom state-changing API routes are protected by explicit origin checks in
-  `server/src/middleware/csrf.middleware.ts`. Same-origin requests (including
-  `Sec-Fetch-Site: same-origin|none`) pass; cross-site or disallowed origins
-  and missing `Origin` are rejected with 403.
+  `server/src/middleware/csrf.middleware.ts`. A matching `Origin` or
+  `Sec-Fetch-Site: same-origin` passes; `Sec-Fetch-Site: none` (direct
+  navigation), cross-site or disallowed origins, and missing `Origin` are
+  rejected with 403. `none` no longer bypasses the `Origin` check.
 - `/api/auth/*`, `/api/payment/webhook` (HMAC-verified) and `/api/inngest` are
   exempt by design and keep their own protections.
 - Trusted origins come only from `CLIENT_URL` via `server/src/config/network.ts`.
@@ -202,8 +203,8 @@ backfill, refund or historical rewrite.
 | F5 | Provider ID/query interpolation | **Fixed**: regex validation, `encodeURIComponent`, stricter Drive query escaping. |
 | F6 | Unbounded DB reads | **Fixed** for API reads (artifacts 200, chunk API 2000; existing list caps retained). Internal indexing paths intentionally read all chunks. |
 | F7 | Raw console logging | **Fixed** for third-party/parser errors; remaining `console` calls are startup/config diagnostics only. |
-| F8 | Bounded job dispatch/recovery (50 per call), in-process local fallback | **Known limitation**: repeated ticks are required for larger backlogs; local fallback remains in-process. Not an auth-boundary fix. |
-| F9 | Test coverage gaps | **Known limitation**: no route-level auth/IDOR, CSRF, OAuth callback, payment HTTP or upload E2E tests; default `npm test` runs unit tests only, and DB concurrency tests require `TEST_DATABASE_URL`. |
+| F8 | Bounded job dispatch/recovery (50 per call), in-process local fallback | **Partially fixed — Round 5**: a bounded periodic sweeper now drains backlog automatically in repeated ticks with an overlap guard; the 50-per-call bound and in-process fallback remain by design. See `BACKGROUND_JOB_RECOVERY.md`. |
+| F9 | Test coverage gaps | **Fixed — Round 5**: real HTTP suites now cover auth/session, IDOR, CSRF, upload boundaries, OAuth callbacks, payment HTTP and webhook boundaries, plus provider-mocked payments and PostgreSQL job recovery. See `STAGING_SECURITY_TESTS.md`. |
 
 The Round 4 audit found no high-confidence IDOR, CSRF bypass, payment
 signature bypass, or SSRF exploit chain beyond the items above.
@@ -221,11 +222,13 @@ signature bypass, or SSRF exploit chain beyond the items above.
 - The only difference between migration history and `schema.prisma` is the
   legacy `Test` table, which the schema intentionally does not model. It is
   preserved in the database and is not dropped by any migration.
-- Verification performed on this change set: Prisma validate/generate,
-  `tsc --noEmit`, 120 unit tests, 12 real-PostgreSQL integration tests, server
-  build, client build, Chromium Playwright E2E (3 tests), migration
-  deploy/status/diff on a fresh disposable DB, secret scan, and
-  `git -c core.whitespace=cr-at-eol diff --check`.
+- Verification performed on the earlier Round 3/4 change set: Prisma
+  validate/generate, `tsc --noEmit`, 120 unit tests, 12 real-PostgreSQL
+  integration tests, server build, client build, Chromium Playwright E2E
+  (3 tests), migration deploy/status/diff on a fresh disposable DB, secret
+  scan, and `git -c core.whitespace=cr-at-eol diff --check`. The Round 5
+  verification matrix (124 unit / 47 integration tests and rebuilt artifacts)
+  is recorded in `RELEASE_READINESS_REPORT.md`.
 
 Local validation pattern (never point these commands at a production DB):
 
@@ -253,7 +256,40 @@ SHADOW_DATABASE_URL=<disposable-shadow-url> npx prisma migrate diff --exit-code 
   historical rewrites were applied.
 - The legacy `Test` table is preserved.
 - Remaining limitations: third-party Firecrawl network hop (section 1), bounded
-  job recovery and in-process fallback (F8), route-level E2E gaps (F9), the
-  legacy `Test` schema/migration delta (section 10), and the absence of a
-  controlled staging validation. These must be evaluated before any staging
-  or production rollout.
+  50-per-tick job recovery and in-process fallback (F8), the legacy `Test`
+  schema/migration delta (section 10), and the absence of a controlled staging
+  validation with live provider credentials. These must be evaluated before any
+  production rollout. Route-level E2E gaps (F9) were closed in Round 5.
+
+## 12. Round 5 — staging readiness changes
+
+Round 5 focused on reproducible High/Medium audit findings and on making the
+remaining live-only checks explicit. Engineering changes:
+
+- **Private audio uploads**: removed the unauthenticated `express.static("uploads")`
+  mount. Generated audio is reachable only via the ownership-checked
+  `GET /api/audio/:workspaceId/:artifactId` byte-range route.
+- **Automatic job recovery**: `createDurableJobSweeper()` periodically re-dispatches
+  due `PENDING` jobs and recovers stale `PROCESSING` leases in bounded, guarded
+  ticks; it is started by the server entrypoint. See `BACKGROUND_JOB_RECOVERY.md`.
+- **Credit idempotency**: a `addCredits` idempotency key can no longer be reused
+  by a different user or amount; the unique-race path re-validates the existing
+  grant via `assertMatchingGrant`.
+- **Provider hardening**: Gemini keys moved from the query string to the
+  `x-goog-api-key` header; Cloudinary signed uploads use unique `public_id`,
+  `overwrite: false` and a sanitized path; all 20 raw provider `fetch` calls now
+  go through the shared 20-second-timeout `providerFetch()` helper. OAuth
+  callbacks now clear the single-use state cookie **before** redirecting,
+  removing an "Cannot set headers after they are sent" error and stale cookies.
+- **Deployment identity**: `DEPLOYMENT_ENV` is explicit (`local`/`staging`/
+  `production`) and live `rzp_live_*` keys are rejected outside production.
+  `render.yaml` declares a separate staging service and all-secret `sync: false`
+  env vars. See `STAGING_DEPLOYMENT.md` and `INTEGRATION_SECURITY.md`.
+- **HTTP/CSRF/health**: `Sec-Fetch-Site: none` no longer bypasses the Origin
+  check; `/health` (which queries dependencies) has its own rate limiter while
+  `/healthz` stays unthrottled; `createApp()` in `server/src/app.ts` makes the
+  real Express app testable without binding a port.
+
+All changes remain within the private repository. No live staging deploy,
+provider credential, payment, refund or production access was used; see
+`RELEASE_READINESS_REPORT.md` for the final classification and labels.

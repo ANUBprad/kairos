@@ -4,6 +4,17 @@
 
 import { logger } from "./logger.js";
 
+// Gemini accepts the key in a header. Keeping it out of the URL prevents the
+// credential from appearing in proxy logs, error strings and task history.
+const GEMINI_TIMEOUT_MS = 15_000;
+
+function geminiHeaders(apiKey: string): Record<string, string> {
+    return {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+    };
+}
+
 /**
  * Generates a descriptive, context-aware title (3-7 words) for a learning artifact using Google Gemini 2.5 Flash API.
  *
@@ -57,10 +68,11 @@ export async function generateArtifactTitleWithGemini(
         for (const model of models) {
             try {
                 const response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
                     {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: geminiHeaders(apiKey),
+                        signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: prompt }] }],
                             generationConfig: {
@@ -155,10 +167,11 @@ export async function enhancePromptWithGemini(
     for (const model of models) {
         try {
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
                 {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: geminiHeaders(apiKey),
+                    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
                     body: JSON.stringify({
                         contents: [
                             {

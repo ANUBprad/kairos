@@ -41,6 +41,20 @@ export const webhookLimiter = rateLimit({
     message: { error: "Webhook rate limit exceeded." },
 });
 
+/**
+ * The dependency-checking /health endpoint performs live database queries.
+ * Limit it so an anonymous caller cannot turn it into a load amplifier.
+ * /healthz remains unthrottled: it is a pure liveness probe.
+ */
+export const healthLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: ipKey,
+    message: { error: "Health check rate limit exceeded." },
+});
+
 /** Stricter limits for ingestion, chat, and artifact generation (mutating methods). */
 export const aiOperationLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,

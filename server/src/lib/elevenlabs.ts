@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { AppError } from "../types/app-error.js";
 import { logger } from "./logger.js";
+import { providerFetch } from "./provider-http.js";
 
 // Standard Premade ElevenLabs Voices (work on all tier accounts)
 export const ELEVENLABS_VOICES = {
@@ -34,7 +35,7 @@ export async function synthesizeElevenLabsSpeech(
         );
     }
 
-    const response = await fetch(
+    const response = await providerFetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
         {
             method: "POST",

@@ -10,6 +10,7 @@ import { extractText } from "unpdf";
 import { NotFoundError, ValidationError } from "../types/app-error.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { logger } from "../lib/logger.js";
+import { providerFetch } from "../lib/provider-http.js";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
@@ -66,7 +67,7 @@ export async function handleGoogleDriveCallback({
         throw new ValidationError("Authorization code is missing.");
     }
 
-    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    const tokenRes = await providerFetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -94,7 +95,7 @@ export async function handleGoogleDriveCallback({
     let email = "Google User";
     let name = "Google Account";
     try {
-        const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        const userRes = await providerFetch("https://www.googleapis.com/oauth2/v2/userinfo", {
             headers: { Authorization: `Bearer ${access_token}` },
         });
         if (userRes.ok) {
@@ -148,7 +149,7 @@ async function getValidAccessToken(userId: string): Promise<string> {
         throw new ValidationError("Google Drive access token expired and no refresh token is available. Please reconnect.");
     }
 
-    const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+    const refreshRes = await providerFetch("https://oauth2.googleapis.com/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
@@ -212,7 +213,7 @@ export async function listGoogleDriveFiles(userId: string, search?: string) {
     );
     url.searchParams.set("orderBy", "modifiedTime desc");
 
-    const res = await fetch(url.toString(), {
+    const res = await providerFetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -270,7 +271,7 @@ export async function importGoogleDriveFile({
     // 2. Fetch file metadata. The host is fixed; encode the path segment so a
     // provider id can never alter the request path or query.
     const encodedFileId = encodeURIComponent(fileId);
-    const metaRes = await fetch(
+    const metaRes = await providerFetch(
         `https://www.googleapis.com/drive/v3/files/${encodedFileId}?fields=id,name,mimeType,size,webViewLink`,
         {
             headers: { Authorization: `Bearer ${token}` },
@@ -296,7 +297,7 @@ export async function importGoogleDriveFile({
     if (mimeType === "application/vnd.google-apps.document") {
         sourceType = "GOOGLE_DOC";
         // Export Google Doc as plain text
-        const exportRes = await fetch(
+        const exportRes = await providerFetch(
             `https://www.googleapis.com/drive/v3/files/${encodedFileId}/export?mimeType=text/plain`,
             {
                 headers: { Authorization: `Bearer ${token}` },
@@ -309,7 +310,7 @@ export async function importGoogleDriveFile({
     } else if (mimeType === "application/pdf") {
         sourceType = "PDF";
         // Download PDF binary stream
-        const downloadRes = await fetch(
+        const downloadRes = await providerFetch(
             `https://www.googleapis.com/drive/v3/files/${encodedFileId}?alt=media`,
             {
                 headers: { Authorization: `Bearer ${token}` },
