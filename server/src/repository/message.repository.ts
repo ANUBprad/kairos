@@ -19,6 +19,7 @@ export type CreateMessageData = {
     role: MessageRecord["role"];
     content: string;
     citations?: Prisma.InputJsonValue;
+    requestKey?: string;
 };
 
 /**
@@ -64,9 +65,57 @@ export function createMessageRecord(data: CreateMessageData) {
             role: data.role,
             content: data.content,
             citations: data.citations,
+            requestKey: data.requestKey,
         },
         select: messageSelect,
     });
+}
+
+/**
+ * Idempotent reservation of a USER message inside the caller's transaction.
+ * With a request key, a retried request reuses the winning row instead of
+ * inserting another message (and therefore another quota unit/charge).
+ */
+export async function reserveUserMessageInTransaction(
+    tx: Prisma.TransactionClient,
+    data: CreateMessageData & { requestKey?: string },
+): Promise<{ message: MessageRecord; created: boolean }> {
+    if (!data.requestKey) {
+        const message = await tx.message.create({
+            data: {
+                conversationId: data.conversationId,
+                role: data.role,
+                content: data.content,
+                citations: data.citations,
+            },
+            select: messageSelect,
+        });
+        return { message, created: true };
+    }
+
+    const existing = await tx.message.findUnique({
+        where: { requestKey: data.requestKey },
+        select: messageSelect,
+    });
+    if (existing) return { message: existing, created: false };
+
+    const inserted = await tx.message.createMany({
+        data: [
+            {
+                conversationId: data.conversationId,
+                role: data.role,
+                content: data.content,
+                citations: data.citations,
+                requestKey: data.requestKey,
+            },
+        ],
+        skipDuplicates: true,
+    });
+    const message = await tx.message.findUniqueOrThrow({
+        where: { requestKey: data.requestKey },
+        select: messageSelect,
+    });
+    return { message, created: inserted.count === 1 };
 }
 
 /** Removes a single message, used when a message could not be charged. */

@@ -194,7 +194,12 @@ export async function listGoogleDriveFiles(userId: string, search?: string) {
 
     let query = "trashed = false and (mimeType = 'application/pdf' or mimeType = 'application/vnd.google-apps.document')";
     if (search && search.trim()) {
-        const sanitized = search.replace(/'/g, "\\'");
+        // Escape backslashes first, then quotes: this is a Drive query string,
+        // not a URL, so encodeURIComponent would not protect its grammar.
+        const sanitized = search
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "\\'")
+            .slice(0, 200);
         query += ` and name contains '${sanitized}'`;
     }
 
@@ -262,9 +267,11 @@ export async function importGoogleDriveFile({
 
     const token = await getValidAccessToken(userId);
 
-    // 2. Fetch file metadata
+    // 2. Fetch file metadata. The host is fixed; encode the path segment so a
+    // provider id can never alter the request path or query.
+    const encodedFileId = encodeURIComponent(fileId);
     const metaRes = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size,webViewLink`,
+        `https://www.googleapis.com/drive/v3/files/${encodedFileId}?fields=id,name,mimeType,size,webViewLink`,
         {
             headers: { Authorization: `Bearer ${token}` },
         },
@@ -290,7 +297,7 @@ export async function importGoogleDriveFile({
         sourceType = "GOOGLE_DOC";
         // Export Google Doc as plain text
         const exportRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`,
+            `https://www.googleapis.com/drive/v3/files/${encodedFileId}/export?mimeType=text/plain`,
             {
                 headers: { Authorization: `Bearer ${token}` },
             },
@@ -303,7 +310,7 @@ export async function importGoogleDriveFile({
         sourceType = "PDF";
         // Download PDF binary stream
         const downloadRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+            `https://www.googleapis.com/drive/v3/files/${encodedFileId}?alt=media`,
             {
                 headers: { Authorization: `Bearer ${token}` },
             },

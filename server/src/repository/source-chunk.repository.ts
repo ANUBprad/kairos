@@ -68,11 +68,14 @@ export function createSourceChunks(chunks: CreateSourceChunkData[]) {
  * @param sourceId - Unique identifier of the source
  * @returns Promise resolving to list of chunk records
  */
-export function findChunksBySourceId(sourceId: string) {
+export function findChunksBySourceId(sourceId: string, take?: number) {
     return prisma.sourceChunk.findMany({
         where: { sourceId },
         select: sourceChunkSelect,
         orderBy: { index: "asc" },
+        // Internal indexing callers omit `take` and must see every chunk.
+        // API callers pass an explicit bound.
+        ...(take === undefined ? {} : { take }),
     });
 }
 

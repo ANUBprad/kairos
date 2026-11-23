@@ -1,5 +1,6 @@
 import { summarizeConversationById } from "../../services/conversation-memory.services.js";
 import { sendInngestEvent } from "./inngest-send.js";
+import { logger } from "../logger.js";
 
 
 /**
@@ -26,10 +27,10 @@ export async function enqueueConversationSummarize(input: {
             input.conversationId,
             input.userId,
         ).catch((err) => {
-            console.error(
-                `Conversation summarize failed for ${input.conversationId}:`,
+            logger.error("Conversation summarize failed", {
+                conversationId: input.conversationId,
                 err,
-            );
+            });
         });
     }
 }

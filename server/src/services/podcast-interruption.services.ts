@@ -3,6 +3,7 @@ import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import type { Prisma } from "../generated/prisma/client.js";
 import { CHAT_MODEL } from "../lib/ai-config.js";
+import { logger } from "../lib/logger.js";
 import { getWorkspaceByIdForUser } from "./workspace.services.js";
 import {
     findArtifactByIdAndWorkspaceId,
@@ -124,7 +125,7 @@ export async function processPodcastInterruption({
             const cloudResult = await uploadAudioToCloudinary(mp3Buffer, filename);
             if (cloudResult?.secureUrl) audioUrl = cloudResult.secureUrl;
         } catch (cloudErr) {
-            console.warn("Cloudinary upload fallback for interruption:", cloudErr);
+            logger.warn("Cloudinary upload fallback for interruption", { err: cloudErr });
         }
 
         // Local save fallback
@@ -132,11 +133,11 @@ export async function processPodcastInterruption({
             try {
                 audioUrl = savePodcastAudioLocally(mp3Buffer, filename);
             } catch (e) {
-                console.warn("Local save failed for interruption:", e);
+                logger.warn("Local save failed for interruption", { err: e });
             }
         }
     } catch (audioErr) {
-        console.error("Failed to generate audio for podcast interruption:", audioErr);
+        logger.error("Failed to generate audio for podcast interruption", { err: audioErr });
     }
 
     // 5. Construct interruption record

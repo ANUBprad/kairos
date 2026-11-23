@@ -1,3 +1,5 @@
+import { logger } from "../logger.js";
+
 const SKIP_DIRS = new Set([
     "node_modules",
     ".git",
@@ -255,7 +257,7 @@ export async function listGithubRepoFiles(
     }>(`/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`, token);
 
     if (treeData.truncated) {
-        console.warn(`GitHub tree for ${owner}/${repo} was truncated; some files may be missing.`);
+        logger.warn("GitHub tree was truncated; some files may be missing", { owner, repo });
     }
 
     return treeData.tree
@@ -354,7 +356,7 @@ export async function fetchGithubRepoContent(
             totalBytes += contentBytes;
             files.push({ path: item.path, content });
         } catch (err) {
-            console.warn(`Failed to fetch ${item.path}:`, err);
+            logger.warn("Failed to fetch GitHub file", { path: item.path, err });
         }
     }
 

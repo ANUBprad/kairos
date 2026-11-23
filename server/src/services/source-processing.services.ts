@@ -18,10 +18,12 @@ import {
 } from "../repository/source-chunk.repository.js";
 import {
     findSourceById,
+    markSourceReadyIfProcessing,
     sourceSelect,
     updateSourceRecord,
     type SourceRecord,
 } from "../repository/source.repository.js";
+import { isDurableJobTerminal } from "../lib/outbox.js";
 import { refundChargeInTransaction } from "./credit.services.js";
 
 type SourceMetadata = {
@@ -164,38 +166,49 @@ export async function markSourceFailed(
             ? (existingMetadata as SourceMetadata)
             : {};
 
+    // Retryable worker failures keep their charge. Only a terminal outbox job
+    // (or a legacy source with no job) may compensate.
+    const terminal = await isDurableJobTerminal(`source.process:${sourceId}`);
+
     return prisma.$transaction(async (tx) => {
-        const source = await tx.source.findUniqueOrThrow({
-            where: { id: sourceId },
-            select: { workspaceId: true, status: true },
-        });
-
-        // Refund only a debit recorded for this source. Legacy sources without
-        // a ledger entry are left untouched.
-        if (source.status !== "READY") {
-            const workspace = await tx.workspace.findUnique({
-                where: { id: source.workspaceId },
-                select: { userId: true },
-            });
-            if (workspace?.userId) {
-                await refundChargeInTransaction(tx, {
-                    chargeIdempotencyKey: `source-charge:${sourceId}`,
-                    refundIdempotencyKey: `source-refund:${sourceId}`,
-                    expectedUserId: workspace.userId,
-                    reason: message,
-                });
-            }
-        }
-
-        return tx.source.update({
-            where: { id: sourceId },
+        // Atomic compare-and-swap: a concurrent worker that reached READY in
+        // the meantime wins. READY is immutable for failure handlers.
+        const changed = await tx.source.updateMany({
+            where: { id: sourceId, status: { not: "READY" as const } },
             data: {
-                status: "FAILED",
+                status: "FAILED" as const,
                 metadata: {
                     ...metadata,
                     processingError: message,
                 },
             },
+        });
+        if (changed.count !== 1 || !terminal) {
+            return tx.source.findUnique({
+                where: { id: sourceId },
+                select: sourceSelect,
+            });
+        }
+
+        const source = await tx.source.findUniqueOrThrow({
+            where: { id: sourceId },
+            select: { workspaceId: true },
+        });
+        const workspace = await tx.workspace.findUnique({
+            where: { id: source.workspaceId },
+            select: { userId: true },
+        });
+        if (workspace?.userId) {
+            await refundChargeInTransaction(tx, {
+                chargeIdempotencyKey: `source-charge:${sourceId}`,
+                refundIdempotencyKey: `source-refund:${sourceId}`,
+                expectedUserId: workspace.userId,
+                reason: message,
+            });
+        }
+
+        return tx.source.findUniqueOrThrow({
+            where: { id: sourceId },
             select: sourceSelect,
         });
     });
@@ -384,13 +397,14 @@ export async function embedAndIndexSource(
             ? (source.metadata as SourceMetadata)
             : {};
 
-    return updateSourceRecord(source.id, {
-        status: "READY",
-        metadata: {
-            ...metadata,
-            chunkCount: chunks.length,
-            indexedAt: new Date().toISOString(),
-            processingError: undefined,
-        },
+    const completed = await markSourceReadyIfProcessing(source.id, {
+        ...metadata,
+        chunkCount: chunks.length,
+        indexedAt: new Date().toISOString(),
+        processingError: undefined,
     });
+    if (!completed) {
+        throw new Error("Source lease was lost before completion");
+    }
+    return completed;
 }

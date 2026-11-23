@@ -5,6 +5,7 @@ import {
     RERANK_ENABLED,
 } from "../ai-config.js";
 import { embedQueryText } from "../openai.js";
+import { logger } from "../logger.js";
 import { queryWorkspaceVectors } from "../pinecone.js";
 import {
     searchChunksByWorkspace,
@@ -97,10 +98,9 @@ export async function retrieveWorkspaceCandidates(
             }
         }
     } catch (err) {
-        console.warn(
-            "Vector retrieval notice (falling back to database source search):",
+        logger.warn("Vector retrieval notice (falling back to database source search)", {
             err,
-        );
+        });
     }
 
     if (chunks.length > 0) {
@@ -196,7 +196,7 @@ async function retrieveDatabaseFallback(
             });
         }
     } catch (fallbackErr) {
-        console.warn("Database source retrieval fallback error:", fallbackErr);
+        logger.warn("Database source retrieval fallback error", { err: fallbackErr });
     }
 
     return chunks;

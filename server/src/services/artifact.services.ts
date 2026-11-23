@@ -4,6 +4,7 @@ import prisma from "../lib/db.js";
 import {
     dispatchDurableJob,
     insertDurableJob,
+    isDurableJobTerminal,
     logDurableJobError,
     markDurableJobDelivered,
     releaseDurableJob,
@@ -20,6 +21,7 @@ import {
     completeArtifactProcessing,
     markArtifactFailedIfEligible,
     markArtifactPendingForRetry,
+    renewArtifactLease,
     type ArtifactRecord,
 } from "../repository/artifact.repository.js";
 import { NotFoundError, ValidationError } from "../types/app-error.js";
@@ -95,6 +97,9 @@ export async function markArtifactFailed(
     message: string,
     leaseToken: string | null = null,
 ) {
+    // Compensation is strictly terminal: a job that will be retried must keep
+    // its charge. The durable outbox refunds exactly once when it reaches DEAD.
+    const terminal = await isDurableJobTerminal(`artifact-generate:${artifactId}`);
     await prisma.$transaction(async (tx) => {
         const artifact = await tx.learningArtifact.findUnique({
             where: { id: artifactId },
@@ -121,6 +126,7 @@ export async function markArtifactFailed(
             },
         );
         if (!transitioned || artifact.refundedAt) return;
+        if (!terminal) return;
 
         const workspace = await tx.workspace.findUnique({
             where: { id: artifact.workspaceId },
@@ -306,6 +312,13 @@ export async function retryArtifactForWorkspace(
     if (artifact.status !== "FAILED") {
         throw new ValidationError("Only failed artifacts can be retried");
     }
+    // A terminal failure was already compensated. Reusing the original charge
+    // key would let a refunded artifact be regenerated for free.
+    if (artifact.refundedAt) {
+        throw new ValidationError(
+            "This artifact was refunded after a terminal failure. Create a new artifact instead.",
+        );
+    }
 
     const transitioned = await markArtifactPendingForRetry(artifactId);
     if (!transitioned) {
@@ -364,8 +377,9 @@ export async function processArtifactById(artifactId: string, jobKey?: string) {
         ARTIFACT_LEASE_MS,
     );
     if (!claimed) {
-        // Another worker (or an already-finished run) owns this artifact.
-        if (jobKey) await markDurableJobDelivered(jobKey);
+        // Another worker owns a live lease. Leave the job in its current state
+        // so the active holder can report completion; marking it DELIVERED
+        // here would silently lose an in-flight job.
         return (await findArtifactById(artifactId)) ?? artifact;
     }
 
@@ -377,6 +391,12 @@ export async function processArtifactById(artifactId: string, jobKey?: string) {
             artifact.workspaceId,
             artifact.sourceIds,
         );
+
+        // Long-running generation must keep its lease alive; otherwise a
+        // recovery sweep could hand the artifact to a second worker.
+        if (!(await renewArtifactLease(artifactId, leaseToken, ARTIFACT_LEASE_MS))) {
+            throw new Error("Artifact lease was lost before generation");
+        }
 
         const content = await generateArtifactContent(
             artifactType,

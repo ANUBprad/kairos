@@ -212,10 +212,12 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for architecture, RAG evals, and CI com
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| `CLOUDINARY_UPLOAD_PRESET` | Cloudinary unsigned preset name |
+| `CLOUDINARY_UPLOAD_PRESET` | Your own Cloudinary unsigned preset; required only if signed credentials (API key/secret) are unavailable. There is no hardcoded fallback preset. |
 | `FIRECRAWL_API_KEY` | Firecrawl API key for URL scraping |
 | `RAZORPAY_KEY_ID` | Razorpay Key ID for payments |
 | `RAZORPAY_KEY_SECRET` | Razorpay Key Secret |
+| `RAZORPAY_WEBHOOK_SECRET` | Required when Razorpay is enabled; webhooks fail HMAC verification without it |
+| `OAUTH_STATE_SECRET` | Optional 32+ character secret to separate OAuth state HMAC from the auth secret |
 
 ### Client (`client/.env.local`)
 

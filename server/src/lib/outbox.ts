@@ -141,7 +141,9 @@ export async function requeueDurableJob(
     }
 
     await durableJobs(store()).updateMany({
-        where: { key },
+        // A delivered job represents finished, charged work. Only explicit
+        // retries of incomplete/terminal jobs may rewind it.
+        where: { key, status: { not: "DELIVERED" as const } },
         data: {
             status: "PENDING" as const,
             attempts: 0,
@@ -171,6 +173,18 @@ export async function claimDurableJob(key: string): Promise<boolean> {
         data: { status: "PROCESSING" as const, lastError: null },
     });
     return claimed.count === 1;
+}
+
+/**
+ * Terminal means "no further retries will happen": either the job is DEAD, or
+ * it predates the outbox (no row). Retryable states must never trigger refunds.
+ */
+export async function isDurableJobTerminal(key: string): Promise<boolean> {
+    const job = await durableJobs(store()).findUnique({
+        where: { key },
+        select: { status: true },
+    });
+    return !job || job.status === "DEAD";
 }
 
 /** PROCESSING -> DELIVERED. Repeating this call is harmless. */
@@ -219,7 +233,10 @@ async function compensateDeadJob(job: DurableJobRow, error: unknown): Promise<vo
                     refundedAt: artifact.refundedAt ?? null,
                 },
             );
-            if (!changed) return;
+            // A worker may already have moved the artifact to FAILED (without
+            // refunding, because its job was still retryable). That is still a
+            // terminal outcome once this job is DEAD, so compensate it too.
+            if (!changed && artifact.status !== "FAILED") return;
 
             const workspace = await tx.workspace.findUnique({
                 where: { id: artifact.workspaceId },
@@ -299,9 +316,9 @@ async function compensateDeadJob(job: DurableJobRow, error: unknown): Promise<vo
 export async function releaseDurableJob(
     key: string,
     error: unknown,
-): Promise<void> {
+): Promise<"RETRY" | "DEAD" | null> {
     const job = await durableJobs(store()).findUnique({ where: { key } });
-    if (!job || job.status !== "PROCESSING") return;
+    if (!job || job.status !== "PROCESSING") return null;
 
     const attempts = job.attempts + 1;
     const dead = attempts >= job.maxAttempts;
@@ -319,12 +336,13 @@ export async function releaseDurableJob(
         });
         if (updated.count === 1) {
             await compensateDeadJob({ ...job, attempts, status: "DEAD", lastError: message }, error);
+            return "DEAD";
         }
-        return;
+        return null;
     }
 
     const backoffMs = Math.min(1000 * 2 ** (attempts - 1), MAX_BACKOFF_MS);
-    await durableJobs(store()).updateMany({
+    const updated = await durableJobs(store()).updateMany({
         where: { key, ...staleCondition },
         data: {
             status: "PENDING" as const,
@@ -333,6 +351,7 @@ export async function releaseDurableJob(
             lastError: message,
         },
     });
+    return updated.count === 1 ? "RETRY" : null;
 }
 
 async function deliverToInngest(job: DurableJobRow): Promise<boolean> {
@@ -394,10 +413,13 @@ export async function dispatchDurableJob(key: string): Promise<boolean> {
     try {
         const accepted = await deliverToInngest(job);
         if (!accepted) {
-            // Inngest is unavailable: only a successful local run is durable.
+            // Inngest is unavailable: run locally. The worker marks the job
+            // DELIVERED only after its own atomic completion succeeds.
             await runLocalFallback(job);
         }
-        await markDurableJobDelivered(key);
+        // Event acceptance is NOT completion. A PROCESSING job stays
+        // PROCESSING until the worker reports success with markDurableJobDelivered;
+        // stale recovery can therefore reclaim a crashed worker's job.
         return true;
     } catch (error) {
         await releaseDurableJob(key, error);

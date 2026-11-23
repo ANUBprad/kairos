@@ -76,8 +76,11 @@ app.post(
     asyncHandler(handleRazorpayWebhook),
 );
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// JSON bodies are API metadata only. File uploads go through Multer with their
+// own magic-byte checked limits (25 MB PDF / 15 MB image), so accepting large
+// generic bodies here only creates a memory-exhaustion surface.
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
 // Better Auth (/api/auth), the HMAC webhook, and Inngest have their own
 // protections and are exempted inside the middleware by path.

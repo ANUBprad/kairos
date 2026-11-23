@@ -2,30 +2,21 @@ import prisma from "./db.js";
 
 const SIGNUP_BONUS_CREDITS = 50;
 
-function isUniqueConstraintError(error: unknown): boolean {
-    return (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        (error as { code?: unknown }).code === "P2002"
-    );
-}
-
 /**
- * Records the ledger entry that matches the 50 welcome credits granted by the
- * `user.credits` database default. It never changes the user's balance, and a
- * unique idempotency key makes repeated registration hooks harmless.
+ * Grants the 50 welcome credits and records the matching SIGNUP_BONUS ledger
+ * entry in one transaction. `createMany({ skipDuplicates: true })` is the
+ * conflict-safe insert: unlike catching a unique violation inside an
+ * interactive transaction, it does not leave the transaction in an aborted
+ * state. The balance is incremented only when this call actually inserted the
+ * ledger row, so concurrent/retried signup hooks cannot grant the bonus twice.
+ *
+ * Users created before this behavior keep their existing balances; nothing is
+ * backfilled or rewritten.
  */
 export async function grantSignupCreditsForUser(user: { id: string }): Promise<void> {
     const idempotencyKey = `signup-credit:${user.id}`;
 
     await prisma.$transaction(async (tx) => {
-        const existing = await tx.creditTransaction.findUnique({
-            where: { idempotencyKey },
-            select: { id: true },
-        });
-        if (existing) return;
-
         const current = await tx.user.findUnique({
             where: { id: user.id },
             select: { credits: true },
@@ -33,24 +24,25 @@ export async function grantSignupCreditsForUser(user: { id: string }): Promise<v
         // The user can be removed between account creation and the hook.
         if (!current) return;
 
-        try {
-            await tx.creditTransaction.create({
-                data: {
+        const inserted = await tx.creditTransaction.createMany({
+            data: [
+                {
                     userId: user.id,
                     amount: SIGNUP_BONUS_CREDITS,
-                    // The default balance already includes the bonus; the
-                    // ledger entry documents that initial state.
-                    balanceAfter: current.credits,
+                    balanceAfter: current.credits + SIGNUP_BONUS_CREDITS,
                     type: "SIGNUP_BONUS",
                     description: "Welcome credits",
                     metadata: { idempotencyKey },
                     idempotencyKey,
                 },
-            });
-        } catch (error) {
-            // Another registration hook won the race with the same key.
-            if (isUniqueConstraintError(error)) return;
-            throw error;
-        }
+            ],
+            skipDuplicates: true,
+        });
+        if (inserted.count === 0) return;
+
+        await tx.user.update({
+            where: { id: user.id },
+            data: { credits: { increment: SIGNUP_BONUS_CREDITS } },
+        });
     });
 }

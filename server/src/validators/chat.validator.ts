@@ -19,6 +19,9 @@ export const chatBodySchema = z
             .max(MAX_CHAT_MESSAGES, "Too many messages in one request"),
         model: z.enum(CHAT_MODELS).optional(),
         webSearch: z.boolean().optional(),
+        // Bounded idempotency key for retrying a chat request without charging
+        // or consuming quota twice. Clients may omit it for normal traffic.
+        requestKey: z.string().trim().min(1).max(128).optional(),
     })
     .superRefine((value, ctx) => {
         let total = 0;

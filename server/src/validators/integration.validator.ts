@@ -4,12 +4,17 @@ export const connectNotionSchema = z.object({
     token: z.string().min(1, "Notion token is required"),
 });
 
+// Provider IDs are opaque tokens that appear in URL paths. Restricting the
+// alphabet to what Google Drive / Notion actually issue prevents path or query
+// injection even before encodeURIComponent is applied at the call site.
+const PROVIDER_ID = /^[A-Za-z0-9_-]{1,200}$/;
+
 export const importDriveFileSchema = z.object({
-    fileId: z.string().min(1, "Google Drive file ID is required"),
+    fileId: z.string().trim().regex(PROVIDER_ID, "Invalid Google Drive file ID"),
 });
 
 export const importNotionPageSchema = z.object({
-    pageId: z.string().min(1, "Notion page ID is required"),
+    pageId: z.string().trim().regex(PROVIDER_ID, "Invalid Notion page ID"),
 });
 
 export const importGithubRepoSchema = z.object({
@@ -18,7 +23,7 @@ export const importGithubRepoSchema = z.object({
 });
 
 export const exportNotionSchema = z.object({
-    parentPageId: z.string().optional(),
+    parentPageId: z.string().trim().regex(PROVIDER_ID, "Invalid Notion page ID").optional(),
 });
 
 export const integrationProviderParamSchema = z.object({

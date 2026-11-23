@@ -61,9 +61,10 @@ import {
 } from "../utils/chat-message.js";
 import { getWorkspaceByIdForUser } from "./workspace.services.js";
 import {
-    assertCanSendMessage,
     chargeForChatMessage,
+    reserveChatMessageInTransaction,
 } from "./usage.services.js";
+import prisma from "../lib/db.js";
 import {
     refundCreditCharge,
     type RefundChargeInput,
@@ -313,6 +314,7 @@ export async function streamWorkspaceChat(
         messages: UIMessage[];
         model?: string;
         webSearch?: boolean;
+        requestKey?: string;
     },
 ) {
     const workspace = await getWorkspaceByIdForUser(workspaceId, userId);
@@ -327,22 +329,28 @@ export async function streamWorkspaceChat(
         throw new ValidationError("A user message is required");
     }
 
-    // Check before any expensive retrieval/generation. The debit is tied to
-    // the persisted user message so a failed stream can be refunded once.
-    await assertCanSendMessage(userId);
-
     const conversation = await resolveConversation(
         workspaceId,
         input.conversationId,
         userText,
     );
 
-    const userMessage = await createMessageRecord({
-        conversationId: conversation.id,
-        role: "USER",
-        content: userText,
-    });
+    // Authoritative quota check + user-message persistence in one transaction.
+    // The per-user advisory lock serializes concurrent requests, and a request
+    // key makes client retries idempotent. Expensive retrieval starts only
+    // after this transaction commits.
+    const { message: userMessage } =
+        await prisma.$transaction((tx) =>
+            reserveChatMessageInTransaction(tx, {
+                userId,
+                conversationId: conversation.id,
+                content: userText,
+                requestKey: input.requestKey,
+            }),
+        );
 
+    // The charge idempotency key is derived from the message id, so a retried
+    // request that reused this message cannot debit credits a second time.
     try {
         await chargeForChatMessage(userId, userMessage.id);
     } catch (error) {

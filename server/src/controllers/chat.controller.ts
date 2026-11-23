@@ -126,5 +126,6 @@ export async function streamChat(req: Request, res: Response) {
         messages: body.messages as unknown as UIMessage[],
         model: body.model,
         webSearch: body.webSearch,
+        requestKey: body.requestKey,
     });
 }

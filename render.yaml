@@ -47,3 +47,17 @@ services:
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
+      # Required at runtime whenever Razorpay is enabled; without it every
+      # genuine webhook fails HMAC verification and payments never settle.
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # Optional hardening: separates OAuth state HMAC from the auth secret.
+      - key: OAUTH_STATE_SECRET
+        sync: false
+      # Optional canonical server URL used by auth/provider callbacks.
+      - key: SERVER_URL
+        sync: false
+      # Optional explicit proxy tokens (numeric hop counts are rejected in
+      # production). Set only when the service really runs behind a proxy.
+      - key: TRUST_PROXY
+        sync: false

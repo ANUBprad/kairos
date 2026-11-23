@@ -15,6 +15,10 @@ import {
 } from "./credit.services.js";
 import { ForbiddenError } from "../types/app-error.js";
 import type { PlanType, Prisma } from "../generated/prisma/client.js";
+import {
+    messageSelect,
+    reserveUserMessageInTransaction,
+} from "../repository/message.repository.js";
 
 export const PLAN_LIMITS: Record<
     PlanType,
@@ -97,18 +101,26 @@ function quotaExceededError(
 
 /**
  * Serializes quota checks for a user inside a transaction where raw SQL is
- * available (PostgreSQL advisory lock). Fakes without `$queryRaw` simply rely
+ * available (PostgreSQL advisory lock). Fakes without `$executeRaw` simply rely
  * on the transactional count re-check below.
  */
 async function lockQuotaForUser(
     tx: Prisma.TransactionClient,
     userId: string,
 ): Promise<void> {
-    const queryRaw = (tx as unknown as {
-        $queryRaw?: (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>;
-    }).$queryRaw;
-    if (typeof queryRaw === "function") {
-        await queryRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}::text))`;
+    const client = tx as unknown as {
+        $executeRaw?: (
+            strings: TemplateStringsArray,
+            ...values: unknown[]
+        ) => Promise<number>;
+    };
+    if (typeof client.$executeRaw === "function") {
+        // `$executeRaw` is a tagged template whose implementation depends on
+        // its Prisma `this`; a bare extracted reference loses the client and
+        // fails on `_createPrismaPromise`. It also avoids deserializing the
+        // `void` column returned by `pg_advisory_xact_lock`.
+        const executeRaw = client.$executeRaw.bind(client);
+        await executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}::text))`;
     }
 }
 
@@ -411,6 +423,50 @@ export async function incrementArtifactCount(userId: string): Promise<void> {
 export async function assertCanSendMessage(userId: string): Promise<void> {
     await assertHasCredits(userId, CREDIT_COSTS.CHAT_MESSAGE);
     await assertUserQuota(userId, "messages");
+}
+
+/**
+ * Authoritative chat quota boundary. The per-user advisory lock, the plan
+ * re-check and the USER message insert all happen in the caller's transaction,
+ * so concurrent requests cannot both reserve the last available message.
+ */
+export async function reserveChatMessageInTransaction(
+    tx: Prisma.TransactionClient,
+    input: {
+        userId: string;
+        conversationId: string;
+        content: string;
+        requestKey?: string;
+    },
+) {
+    // A retry of an already-reserved request must be accepted even when the
+    // user is now at their quota boundary. Re-check before *and* after taking
+    // the advisory lock: the second check catches a concurrent same-key
+    // request that committed while we waited for the lock.
+    if (input.requestKey) {
+        const existing = await tx.message.findUnique({
+            where: { requestKey: input.requestKey },
+            select: messageSelect,
+        });
+        if (existing) return { message: existing, created: false };
+    }
+
+    await assertQuotaInTransaction(tx, input.userId, "messages");
+
+    if (input.requestKey) {
+        const existing = await tx.message.findUnique({
+            where: { requestKey: input.requestKey },
+            select: messageSelect,
+        });
+        if (existing) return { message: existing, created: false };
+    }
+
+    return reserveUserMessageInTransaction(tx, {
+        conversationId: input.conversationId,
+        role: "USER",
+        content: input.content,
+        requestKey: input.requestKey,
+    });
 }
 
 /** Charges a chat message exactly once after the user message is persisted. */

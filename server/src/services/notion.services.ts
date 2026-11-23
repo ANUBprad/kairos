@@ -411,13 +411,16 @@ export async function importNotionPage({
 
     const token = await getNotionToken(userId);
 
-    // 2. Fetch page metadata
-    const pageRes = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Notion-Version": NOTION_API_VERSION,
+    // 2. Fetch page metadata. The host is fixed; encode the path segment.
+    const pageRes = await fetch(
+        `https://api.notion.com/v1/pages/${encodeURIComponent(pageId)}`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Notion-Version": NOTION_API_VERSION,
+            },
         },
-    });
+    );
 
     if (!pageRes.ok) {
         throw new NotFoundError("Notion page not found or inaccessible.");

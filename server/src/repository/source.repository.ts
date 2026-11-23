@@ -174,4 +174,23 @@ export function updateSourceRecord(
         data,
         select: sourceSelect,
     });
-}   
+}
+
+/**
+ * Conditional completion: only a source still in PROCESSING may become READY.
+ * A stale worker cannot overwrite a newer FAILED/READY state.
+ */
+export async function markSourceReadyIfProcessing(
+    sourceId: string,
+    metadata: Prisma.InputJsonValue,
+): Promise<SourceRecord | null> {
+    const changed = await prisma.source.updateMany({
+        where: { id: sourceId, status: "PROCESSING" },
+        data: { status: "READY", metadata },
+    });
+    if (changed.count !== 1) return null;
+    return prisma.source.findUnique({
+        where: { id: sourceId },
+        select: sourceSelect,
+    });
+}

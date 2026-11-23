@@ -87,7 +87,7 @@ export async function generateMultiSpeakerPodcastAudio(
             const buffer = await synthesizeElevenLabsSpeech(turn.text, voiceId);
             audioBuffers.push(buffer);
         } catch (error) {
-            console.error(`Failed to synthesize turn for ${turn.speaker}:`, error);
+            logger.error("Failed to synthesize podcast turn", { speaker: turn.speaker, err: error });
         }
     }
 
@@ -120,7 +120,7 @@ export function savePodcastAudioLocally(
         const filePath = path.join(uploadsDir, filename);
         fs.writeFileSync(filePath, buffer);
     } catch (err) {
-        console.warn("Could not save podcast to local disk:", err);
+        logger.warn("Could not save podcast to local disk", { err });
     }
 
     const serverUrl =

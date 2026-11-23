@@ -10,6 +10,7 @@ import {
     savePodcastAudioLocally,
 } from "../lib/elevenlabs.js";
 import { uploadAudioToCloudinary } from "../lib/cloudinary.js";
+import { logger } from "../lib/logger.js";
 
 
 const MAX_CONTEXT_CHARS = 120_000;
@@ -260,7 +261,7 @@ Source material:\n\n${sourceText}`,
                         audioUrl = uploadResult.secureUrl;
                     }
                 } catch (cloudErr) {
-                    console.warn("Cloudinary upload failed for podcast, using fallback:", cloudErr);
+                    logger.warn("Cloudinary upload failed for podcast, using fallback", { err: cloudErr });
                 }
 
                 // 2. Save locally as secondary fallback
@@ -268,11 +269,11 @@ Source material:\n\n${sourceText}`,
                     try {
                         audioUrl = savePodcastAudioLocally(mp3Buffer, filename);
                     } catch (localErr) {
-                        console.warn("Local audio saving failed:", localErr);
+                        logger.warn("Local audio saving failed", { err: localErr });
                     }
                 }
             } catch (audioErr) {
-                console.error("Audio synthesis failed:", audioErr);
+                logger.error("Audio synthesis failed", { err: audioErr });
             }
 
             return {

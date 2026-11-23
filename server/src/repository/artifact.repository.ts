@@ -37,7 +37,9 @@ function writer(tx?: ArtifactWriter): ArtifactWriter {
 }
 
 /**
- * Queries all learning artifacts in a workspace, ordered by newest first.
+ * Queries the most recent learning artifacts in a workspace, newest first.
+ * The list is bounded so a long-lived workspace cannot produce an unbounded
+ * API response; older artifacts remain stored and individually addressable.
  *
  * @param workspaceId - Workspace identifier
  * @returns Promise resolving to list of artifact records
@@ -47,6 +49,7 @@ export function findArtifactsByWorkspaceId(workspaceId: string) {
         where: { workspaceId },
         select: artifactSelect,
         orderBy: { createdAt: "desc" },
+        take: 200,
     });
 }
 
@@ -176,13 +179,16 @@ export async function claimArtifactForProcessing(
             status: "PROCESSING",
             leaseToken,
             leaseExpiresAt: new Date(now.getTime() + leaseMs),
-            metadata: { processingError: null },
         },
     });
     return claimed.count === 1;
 }
 
-/** PROCESSING (with the matching lease) -> READY. */
+/**
+ * PROCESSING (matching token, unexpired lease) -> READY. A stale worker whose
+ * lease has expired cannot complete the artifact, even if no other worker has
+ * claimed it yet.
+ */
 export async function completeArtifactProcessing(
     artifactId: string,
     leaseToken: string,
@@ -190,7 +196,12 @@ export async function completeArtifactProcessing(
     tx?: ArtifactWriter,
 ): Promise<boolean> {
     const completed = await writer(tx).learningArtifact.updateMany({
-        where: { id: artifactId, status: "PROCESSING", leaseToken },
+        where: {
+            id: artifactId,
+            status: "PROCESSING",
+            leaseToken,
+            leaseExpiresAt: { gt: new Date() },
+        },
         data: {
             ...data,
             status: "READY",
@@ -199,6 +210,50 @@ export async function completeArtifactProcessing(
         },
     });
     return completed.count === 1;
+}
+
+/**
+ * Extends a live lease. Workers must renew before long-running steps so a
+ * legitimate generation is not treated as abandoned. Only the current holder
+ * of an unexpired lease may renew.
+ */
+export async function renewArtifactLease(
+    artifactId: string,
+    leaseToken: string,
+    leaseMs: number,
+    tx?: ArtifactWriter,
+): Promise<boolean> {
+    const renewed = await writer(tx).learningArtifact.updateMany({
+        where: {
+            id: artifactId,
+            status: "PROCESSING",
+            leaseToken,
+            leaseExpiresAt: { gt: new Date() },
+        },
+        data: { leaseExpiresAt: new Date(Date.now() + leaseMs) },
+    });
+    return renewed.count === 1;
+}
+
+/**
+ * Releases a worker's lease and returns the artifact to PENDING for retry.
+ * This is a status-only transition: it never refunds. Compensation belongs to
+ * the durable outbox's terminal (DEAD) transition.
+ */
+export async function releaseArtifactLeaseForRetry(
+    artifactId: string,
+    leaseToken: string,
+    tx?: ArtifactWriter,
+): Promise<boolean> {
+    const released = await writer(tx).learningArtifact.updateMany({
+        where: { id: artifactId, status: "PROCESSING", leaseToken },
+        data: {
+            status: "PENDING",
+            leaseToken: null,
+            leaseExpiresAt: null,
+        },
+    });
+    return released.count === 1;
 }
 
 export interface MarkArtifactFailedOptions {
@@ -219,13 +274,18 @@ export async function markArtifactFailedIfEligible(
     options: MarkArtifactFailedOptions = {},
 ): Promise<boolean> {
     const now = new Date();
-    const leaseConditions: Prisma.LearningArtifactWhereInput[] = [
-        { leaseToken: null },
-        { leaseExpiresAt: null },
-        { leaseExpiresAt: { lt: now } },
-    ];
+    const leaseConditions: Prisma.LearningArtifactWhereInput[] = [];
     if (leaseToken) {
-        leaseConditions.push({ leaseToken });
+        // Only the active lease holder may fail the artifact; an expired
+        // token no longer grants that authority.
+        leaseConditions.push({ leaseToken, leaseExpiresAt: { gt: now } });
+    } else {
+        // The stale sweep may only take over released or expired leases.
+        leaseConditions.push(
+            { leaseToken: null },
+            { leaseExpiresAt: null },
+            { leaseExpiresAt: { lt: now } },
+        );
     }
 
     const failed = await writer(options.tx).learningArtifact.updateMany({

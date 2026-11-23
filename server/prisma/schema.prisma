@@ -35,7 +35,7 @@ model User {
   email                 String
   emailVerified         Boolean             @default(false)
   image                 String?
-  credits               Int                 @default(50)
+  credits               Int                 @default(0)
   plan                  PlanType            @default(FREE)
   planExpiresAt         DateTime?
   totalArtifactsCreated Int                 @default(0)
@@ -279,6 +279,9 @@ model Message {
   role           MessageRole
   content        String
   citations      Json?
+  /// Stable client request key: makes chat retries idempotent without
+  /// consuming quota or credits twice.
+  requestKey     String?         @unique
   createdAt      DateTime        @default(now())
   conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   metrics        MessageMetrics?

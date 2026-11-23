@@ -126,11 +126,10 @@ function expandIpv6(ip: string): number[] | null {
   return [...left, ...new Array<number>(missing).fill(0), ...right];
 }
 
-/** Returns the IPv4 wrapped by ::ffff:0:0/96 or the deprecated ::0:0/96 form. */
-function embeddedIpv4(groups: number[]): string | null {
+/** Returns the IPv4 wrapped by ::ffff:a.b.c.d (IPv4-mapped) when present. */
+function mappedIpv4(groups: number[]): string | null {
   const mapped = groups.slice(0, 5).every((group) => group === 0) && groups[5] === 0xffff;
-  const compatible = groups.slice(0, 6).every((group) => group === 0);
-  if (!mapped && !compatible) return null;
+  if (!mapped) return null;
   return [
     (groups[6] >> 8) & 0xff,
     groups[6] & 0xff,
@@ -145,8 +144,8 @@ function normalizeIp(ip: string): string {
   if (family === 6) {
     const groups = expandIpv6(ip);
     if (groups) {
-      const embedded = embeddedIpv4(groups);
-      if (embedded) return embedded;
+      const mapped = mappedIpv4(groups);
+      if (mapped) return mapped;
       return groups.map((group) => group.toString(16).padStart(4, "0")).join(":");
     }
   }
@@ -170,6 +169,13 @@ function isPrivateIpv4(ip: string): boolean {
     (a === 192 && b === 0 && c === 0) ||
     (a === 192 && b === 0 && c === 2) ||
     (a === 192 && b === 168) ||
+    // IETF special-purpose assignments that can reach local infrastructure:
+    // 6to4 relay anycast (RFC 3068), AS112 (RFC 7534), AMT (RFC 7450) and
+    // direct-delegation AS112 (RFC 6491).
+    (a === 192 && b === 88 && c === 99) ||
+    (a === 192 && b === 31 && c === 196) ||
+    (a === 192 && b === 52 && c === 193) ||
+    (a === 192 && b === 175 && c === 48) ||
     (a === 198 && (b === 18 || b === 19)) ||
     (a === 198 && b === 51 && c === 100) ||
     (a === 203 && b === 0 && c === 113) ||
@@ -177,40 +183,69 @@ function isPrivateIpv4(ip: string): boolean {
   );
 }
 
-function isPrivateIpv6(ip: string): boolean {
+/**
+ * Deny-by-default IPv6 policy. Only ordinary global unicast is permitted.
+ *
+ * IPv4-mapped addresses are evaluated by their embedded IPv4 destination.
+ * Every other transition/special-purpose layout is rejected outright: this
+ * process cannot guarantee the actual destination chosen by a NAT64/6to4/
+ * Teredo translator, so those layouts must never be pinned as if they were
+ * ordinary global unicast.
+ */
+function isDisallowedIpv6(ip: string): boolean {
   const groups = expandIpv6(ip);
   if (!groups) return true;
-  if (groups.every((group) => group === 0)) return true;
-  if (groups.slice(0, 7).every((group) => group === 0) && groups[7] === 1) return true;
 
-  const embedded = embeddedIpv4(groups);
-  if (embedded) return isPrivateIpv4(embedded);
+  const mapped = mappedIpv4(groups);
+  if (mapped) return isPrivateIpv4(mapped);
 
   const [a, b] = groups;
-  return (
-    (a & 0xfe00) === 0xfc00 || // fc00::/7 unique local
-    (a & 0xffc0) === 0xfe80 || // fe80::/10 link local
-    (a & 0xffc0) === 0xfec0 || // fec0::/10 deprecated site local
-    (a & 0xff00) === 0xff00 || // ff00::/8 multicast
-    (a === 0x2001 && b === 0x0db8) // 2001:db8::/32 documentation
-  );
+  // 0000::/8 includes the unspecified/loopback addresses, the deprecated
+  // IPv4-compatible form (::a.b.c.d) and the SIIT translated form
+  // (::ffff:0:0/96); none of them are acceptable public destinations.
+  if (a === 0) return true;
+  if ((a & 0xfe00) === 0xfc00) return true; // fc00::/7 unique local
+  if ((a & 0xffc0) === 0xfe80) return true; // fe80::/10 link local
+  if ((a & 0xffc0) === 0xfec0) return true; // fec0::/10 deprecated site local
+  if ((a & 0xff00) === 0xff00) return true; // ff00::/8 multicast
+  if (a === 0x2001 && (b & 0xfe00) === 0) return true; // 2001::/23 IETF assignments:
+  // Teredo 2001::/32, ORCHID 2001:10::/28, ORCHIDv2 2001:20::/28,
+  // benchmarking 2001:2::/48, AS112-v6 2001:4:112::/48.
+  if (a === 0x2001 && b === 0x0db8) return true; // 2001:db8::/32 documentation
+  if (a === 0x2002) return true; // 2002::/16 6to4
+  if (a === 0x0064 && b === 0xff9b) return true; // 64:ff9b::/96 NAT64 + 64:ff9b:1::/48 local-use
+  if (a === 0x0100 && b === 0) return true; // 100::/64 discard-only
+  if ((a & 0xff00) === 0x5f00) return true; // 5f00::/8 segment routing SIDs
+  if (a === 0x3fff && (b & 0xf000) === 0) return true; // 3fff::/20 documentation
+  return false;
 }
 
-function assertPublicAddress(address: string): void {
+function assertPublicAddress(address: string, expectedFamily?: number): void {
   const family = net.isIP(address);
+  if (family === 0) {
+    throw new ValidationError("URL host could not be resolved");
+  }
+  if (expectedFamily !== undefined && expectedFamily !== family) {
+    throw new ValidationError("Resolved address family does not match its value");
+  }
+  // Zone identifiers change link scope and must never reach the pinned lookup.
+  if (address.includes("%")) {
+    throw new ValidationError("URL host is not a permitted public address");
+  }
   if (family === 4 && isPrivateIpv4(address)) {
     throw new ValidationError("URL host is not a permitted public address");
   }
-  if (family === 6 && isPrivateIpv6(address)) {
+  if (family === 6 && isDisallowedIpv6(address)) {
     throw new ValidationError("URL host is not a permitted public address");
-  }
-  if (family === 0) {
-    throw new ValidationError("URL host could not be resolved");
   }
 }
 
 function assertSafeHostname(hostname: string): void {
   const lower = hostname.toLowerCase().replace(/\.$/, "");
+  // A zone id selects a link-local scope and has no meaning for a public fetch.
+  if (lower.includes("%")) {
+    throw new ValidationError("URL host is not permitted");
+  }
   if (
     lower === "localhost" ||
     lower.endsWith(".localhost") ||
@@ -266,7 +301,7 @@ export async function resolveSafePublicHttpUrl(
   const literal = stripBrackets(url.hostname);
   const literalFamily = net.isIP(literal);
   if (literalFamily !== 0) {
-    assertPublicAddress(literal);
+    assertPublicAddress(literal, literalFamily);
     return { url, address: literal, family: literalFamily };
   }
 
@@ -281,8 +316,10 @@ export async function resolveSafePublicHttpUrl(
   if (records.length === 0) {
     throw new ValidationError("URL host could not be resolved");
   }
+  // Fail closed on mixed answers: every returned address must be permitted,
+  // not just the one we happen to pin. A later rebind therefore cannot win.
   for (const record of records) {
-    assertPublicAddress(record.address);
+    assertPublicAddress(record.address, record.family);
   }
 
   const pinned = records.find((record) => record.family === 4) ?? records[0];
@@ -430,7 +467,11 @@ function performRequest(
           }
         };
         if (typeof socket.on === "function") {
+          // Recheck after TLS/ready in case the peer address is only exposed
+          // once the handshake completes. `checked` keeps this idempotent.
           socket.on("connect", () => checkPeer());
+          socket.on("secureConnect", () => checkPeer());
+          socket.on("ready", () => checkPeer());
         }
         checkPeer();
       });

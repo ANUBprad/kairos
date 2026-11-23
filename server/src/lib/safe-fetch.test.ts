@@ -401,4 +401,164 @@ describe("safe outbound fetch", () => {
     assert.equal(socket.destroyed, true);
     assert.equal(deps.requestOptions[0].pinnedAddress, "93.184.216.34");
   });
+
+  it("rejects NAT64, 6to4, Teredo and SIIT transition addresses", async () => {
+    const transitionAddresses = [
+      "64:ff9b::7f00:1",        // NAT64 encoding of 127.0.0.1
+      "64:ff9b::c0a8:1",        // NAT64 encoding of 192.168.0.1
+      "64:ff9b:1::1",           // NAT64 local-use prefix
+      "2002:0a00:1::1",         // 6to4 encoding of 10.0.0.1
+      "2002:7f00:1::",          // 6to4 encoding of 127.0.0.1
+      "2001::1",                // Teredo / IETF protocol assignments
+      "::ffff:0:7f00:1",        // SIIT IPv4-translatable form
+    ];
+    for (const ip of transitionAddresses) {
+      await rejectsValidation(
+        assertSafePublicHttpUrl(`http://[${ip}]/`),
+        /permitted public address/,
+      );
+      await rejectsValidation(
+        assertSafePublicHttpUrl("http://good.example/", {
+          lookup: async () => [{ address: ip, family: 6 }],
+        }),
+        /permitted public address/,
+      );
+    }
+  });
+
+  it("rejects special-purpose IPv6 ranges while allowing public IPv6", async () => {
+    const blocked = [
+      "::",
+      "::1",
+      "fc00::1",
+      "fdff::1",
+      "fe80::1",
+      "fec0::1",
+      "ff02::1",
+      "100::1",
+      "5f00::1",
+      "2001:2::1",
+      "2001:10::1",
+      "2001:20::1",
+      "2001:4:112::1",
+      "3fff::1",
+      "0:1::1",
+    ];
+    for (const ip of blocked) {
+      await rejectsValidation(
+        assertSafePublicHttpUrl(`http://[${ip}]/`),
+        /permitted public address/,
+      );
+    }
+
+    const socket = new FakeSocket("2606:4700::1111");
+    const deps = recordingDeps([{ chunks: ["v6"], socket }], async () => [
+      { address: "2606:4700::1111", family: 6 },
+    ]);
+    const result = await safeFetchBuffer("https://[2606:4700::1111]/", {}, deps);
+    assert.equal(result.buffer.toString(), "v6");
+    assert.equal(deps.requestOptions[0].pinnedFamily, 6);
+    assert.equal(deps.requestOptions[0].headers.host, "[2606:4700::1111]");
+    assert.equal(deps.requestOptions[0].servername, "2606:4700::1111");
+    assert.equal(socket.destroyed, false);
+  });
+
+  it("rejects remaining special-purpose IPv4 assignments", async () => {
+    for (const ip of [
+      "192.88.99.1",
+      "192.31.196.1",
+      "192.52.193.1",
+      "192.175.48.1",
+      "192.0.0.9",
+      "192.0.0.10",
+      "240.0.0.1",
+      "255.255.255.255",
+    ]) {
+      await rejectsValidation(
+        assertSafePublicHttpUrl(`http://${ip}/`),
+        /permitted public address/,
+      );
+    }
+  });
+
+  it("accepts an IPv4-mapped public address based on its embedded IPv4", async () => {
+    const socket = new FakeSocket("8.8.8.8");
+    const deps = recordingDeps([{ chunks: ["ok"], socket }]);
+
+    const result = await safeFetchBuffer("http://[::ffff:8.8.8.8]/", {}, deps);
+
+    assert.equal(result.buffer.toString(), "ok");
+    assert.equal(deps.requestOptions[0].pinnedFamily, 6);
+    assert.equal(socket.destroyed, false);
+  });
+
+  it("rejects mixed public/private DNS answers and mismatched record families", async () => {
+    await rejectsValidation(
+      assertSafePublicHttpUrl("http://example.com/", {
+        lookup: async () => [
+          { address: "93.184.216.34", family: 4 },
+          { address: "10.0.0.1", family: 4 },
+        ],
+      }),
+      /permitted public address/,
+    );
+    await rejectsValidation(
+      assertSafePublicHttpUrl("http://example.com/", {
+        lookup: async () => [
+          { address: "2606:4700::1111", family: 6 },
+          { address: "64:ff9b::7f00:1", family: 6 },
+        ],
+      }),
+      /permitted public address/,
+    );
+    await rejectsValidation(
+      assertSafePublicHttpUrl("http://example.com/", {
+        lookup: async () => [{ address: "10.0.0.1", family: 6 }],
+      }),
+      /family does not match/,
+    );
+  });
+
+  it("uses only the validated DNS answer even if a later lookup would rebind", async () => {
+    let calls = 0;
+    const deps = recordingDeps([{ chunks: ["ok"] }], async () => {
+      calls += 1;
+      return calls === 1
+        ? [{ address: "93.184.216.34", family: 4 }]
+        : [{ address: "10.0.0.1", family: 4 }];
+    });
+
+    await safeFetchBuffer("http://example.com/", {}, deps);
+
+    assert.equal(calls, 1);
+    assert.equal(await pinnedFromRequestOptions(deps.requestOptions[0]), "93.184.216.34");
+  });
+
+  it("rejects redirects to private or transition IPv6 addresses before connecting", async () => {
+    for (const ip of ["::1", "fd00::1", "64:ff9b::7f00:1", "2002:7f00:1::"]) {
+      const deps = recordingDeps([
+        { status: 302, headers: { location: `http://[${ip}]/` } },
+        { status: 200 },
+      ]);
+      await rejectsValidation(
+        safeFetchBuffer("http://example.com/", {}, deps),
+        /permitted public address/,
+      );
+      assert.equal(deps.requests.length, 1);
+    }
+  });
+
+  it("accepts trailing-dot public hosts but rejects zone-scoped addresses", async () => {
+    const deps = recordingDeps([{ chunks: ["ok"] }]);
+    await safeFetchBuffer("http://example.com./", {}, deps);
+    assert.equal(deps.lookupCalls[0].hostname, "example.com.");
+
+    // A zone id changes link scope; never pin a resolver answer that carries one.
+    await rejectsValidation(
+      assertSafePublicHttpUrl("http://example.com/", {
+        lookup: async () => [{ address: "fe80::1%eth0", family: 6 }],
+      }),
+      /permitted public address/,
+    );
+  });
 });

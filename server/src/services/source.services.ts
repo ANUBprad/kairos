@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { logger } from "../lib/logger.js";
 import { uploadImageToCloudinary, uploadPdfToCloudinary } from "../lib/cloudinary.js";
 import { extractTextFromImageBuffer } from "../lib/sources/image-ocr.js";
 import { scrapeWebsite } from "../lib/sources/firecrawl.js";
@@ -26,7 +27,7 @@ import {
     type CreateSourceData,
     type SourceRecord,
 } from "../repository/source.repository.js";
-import { NotFoundError } from "../types/app-error.js";
+import { NotFoundError, ValidationError } from "../types/app-error.js";
 import { CreateSourceInput, ImportWebsiteInput, ImportYoutubeInput, ListSourcesQuery } from "../validators/source.validator.js";
 import { getWorkspaceByIdForUser } from "./workspace.services.js";
 import {
@@ -135,6 +136,18 @@ export async function createAndProcessSource(
     return source;
 }
 
+/**
+ * A source whose terminal failure was refunded must be imported again so a new
+ * charge is recorded. Reusing its original charge key would be free work.
+ */
+async function wasSourceRefunded(sourceId: string): Promise<boolean> {
+    const refund = await prisma.creditTransaction.findUnique({
+        where: { idempotencyKey: `source-refund:${sourceId}` },
+        select: { id: true },
+    });
+    return refund !== null;
+}
+
 /** Reuses the durable job for a re-processing request (no new charge). */
 async function requeueSourceProcessing(source: SourceRecord): Promise<void> {
     const jobKey = `source.process:${source.id}`;
@@ -213,10 +226,10 @@ export async function deleteSourceForWorkspace(
         await deleteSourceVectors(workspaceId, sourceId);
     } catch (err) {
         if (!isIgnorablePineconeDeleteError(err)) {
-            console.warn(
-                `Failed to delete Pinecone vectors for source ${sourceId}:`,
+            logger.warn("Failed to delete Pinecone vectors for source", {
+                sourceId,
                 err,
-            );
+            });
         }
     }
     await deleteSourceRecord(sourceId);
@@ -333,7 +346,7 @@ export async function uploadPdfSource(
         pageCount = extracted.pageCount;
         pageTexts = extracted.pages;
     } catch (parseErr) {
-        console.warn("Direct PDF buffer extraction notice:", parseErr);
+        logger.warn("Direct PDF buffer extraction notice", { err: parseErr });
     }
 
     let uploadMetadata: Record<string, unknown> = {};
@@ -350,7 +363,7 @@ export async function uploadPdfSource(
             resourceType: upload.resourceType,
         };
     } catch (cloudErr) {
-        console.warn("Cloudinary upload skipped or failed (PDF will still be indexed locally):", cloudErr);
+        logger.warn("Cloudinary upload skipped or failed (PDF will still be indexed locally)", { err: cloudErr });
         uploadMetadata = {
             fileName: file.originalname,
             fileSize: file.size,
@@ -397,7 +410,7 @@ export async function uploadImageSource(
         content = ocr.text;
         ocrModel = ocr.model;
     } catch (parseErr) {
-        console.warn("Image OCR at upload notice:", parseErr);
+        logger.warn("Image OCR at upload notice", { err: parseErr });
     }
 
     let uploadMetadata: Record<string, unknown> = {
@@ -419,10 +432,7 @@ export async function uploadImageSource(
             resourceType: upload.resourceType,
         };
     } catch (cloudErr) {
-        console.warn(
-            "Cloudinary image upload skipped or failed (will retry OCR from buffer in pipeline if needed):",
-            cloudErr,
-        );
+        logger.warn("Cloudinary image upload skipped or failed", { err: cloudErr });
         if (!content) {
             throw cloudErr;
         }
@@ -542,6 +552,12 @@ export async function reprocessSourceForWorkspace(
 ) {
     const source = await getSourceForWorkspace(workspaceId, sourceId, userId);
 
+    if (await wasSourceRefunded(sourceId)) {
+        throw new ValidationError(
+            "This source was refunded after a terminal failure. Import it again to be charged and processed.",
+        );
+    }
+
     if (source.status === "FAILED") {
         const priorMetadata =
             (source.metadata as Record<string, unknown> | null) ?? {};
@@ -580,7 +596,11 @@ export async function reprocessSourcesForWorkspace(
         ? sources.filter((s) => sourceIds.includes(s.id))
         : sources;
 
+    let requeued = 0;
     for (const source of targetSources) {
+        // Skip compensated sources; they must be re-imported with a new charge.
+        if (await wasSourceRefunded(source.id)) continue;
+
         if (source.status === "FAILED") {
             const priorMetadata =
                 (source.metadata as Record<string, unknown> | null) ?? {};
@@ -595,9 +615,10 @@ export async function reprocessSourcesForWorkspace(
         }
 
         await requeueSourceProcessing(source);
+        requeued += 1;
     }
 
-    return { reprocessed: targetSources.length };
+    return { reprocessed: requeued };
 }
 
 /**
@@ -614,7 +635,9 @@ export async function getSourceChunksForWorkspace(
     userId: string,
 ) {
     await getSourceForWorkspace(workspaceId, sourceId, userId);
-    const chunks = await (await import("../repository/source-chunk.repository.js")).findChunksBySourceId(sourceId);
+    // API responses are bounded; internal indexing paths intentionally read
+    // the full chunk set.
+    const chunks = await (await import("../repository/source-chunk.repository.js")).findChunksBySourceId(sourceId, 2000);
     return {
         sourceId,
         workspaceId,

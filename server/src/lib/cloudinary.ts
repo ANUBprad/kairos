@@ -1,11 +1,24 @@
 
 import { v2 as cloudinary } from "cloudinary";
 import { ValidationError } from "../types/app-error.js";
+import { logger } from "./logger.js";
 
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET ?? "swamiabhishek45";
+// Never fall back to a hardcoded preset owned by a third party. The unsigned
+// fallback is only used when signed credentials are unavailable, and then the
+// operator must supply their own preset explicitly.
+const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
 const apiKey = process.env.CLOUDINARY_API_KEY;
 const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+function requireUploadPreset(): string {
+    if (!uploadPreset?.trim()) {
+        throw new ValidationError(
+            "CLOUDINARY_UPLOAD_PRESET is required for unsigned uploads when signed credentials are unavailable.",
+        );
+    }
+    return uploadPreset;
+}
 
 /** Normalized result returned after a successful Cloudinary upload. */
 export type CloudinaryUploadResult = {
@@ -46,11 +59,14 @@ export function getSignedCloudinaryDownloadUrl(
         secure: true,
     });
 
+    // A signed URL without an expiry stays valid forever. Bound it to one hour
+    // so a leaked download link cannot expose a private source indefinitely.
     return cloudinary.url(publicId, {
         resource_type: resourceType,
         type: "upload",
         sign_url: true,
         secure: true,
+        expires_at: Math.floor(Date.now() / 1000) + 60 * 60,
     });
 }
 
@@ -101,10 +117,9 @@ export async function uploadPdfToCloudinary(
                 };
             }
         } catch (signedErr) {
-            console.warn(
-                "Cloudinary signed PDF upload failed, attempting unsigned upload:",
-                signedErr,
-            );
+            logger.warn("Cloudinary signed PDF upload failed, attempting unsigned upload", {
+                err: signedErr,
+            });
         }
     }
 
@@ -115,7 +130,7 @@ export async function uploadPdfToCloudinary(
         new Blob([new Uint8Array(buffer)], { type: "application/pdf" }),
         filename,
     );
-    form.append("upload_preset", uploadPreset);
+    form.append("upload_preset", requireUploadPreset());
     form.append("folder", "chaibook/pdfs");
 
     const response = await fetch(
@@ -212,10 +227,9 @@ export async function uploadImageToCloudinary(
                 };
             }
         } catch (signedErr) {
-            console.warn(
-                "Cloudinary signed image upload failed, attempting unsigned upload:",
-                signedErr,
-            );
+            logger.warn("Cloudinary signed image upload failed, attempting unsigned upload", {
+                err: signedErr,
+            });
         }
     }
 
@@ -225,7 +239,7 @@ export async function uploadImageToCloudinary(
         new Blob([new Uint8Array(buffer)], { type: contentType }),
         filename,
     );
-    form.append("upload_preset", uploadPreset);
+    form.append("upload_preset", requireUploadPreset());
     form.append("folder", "chaibook/images");
 
     const response = await fetch(
@@ -305,10 +319,9 @@ export async function uploadAudioToCloudinary(
                 };
             }
         } catch (signedErr) {
-            console.warn(
-                "Cloudinary signed upload failed, attempting unsigned upload:",
-                signedErr,
-            );
+            logger.warn("Cloudinary signed upload failed, attempting unsigned upload", {
+                err: signedErr,
+            });
         }
     }
 
@@ -319,7 +332,7 @@ export async function uploadAudioToCloudinary(
         new Blob([new Uint8Array(buffer)], { type: "audio/mpeg" }),
         filename,
     );
-    form.append("upload_preset", uploadPreset);
+    form.append("upload_preset", requireUploadPreset());
     form.append("folder", "chaibook/podcasts");
 
     const response = await fetch(
