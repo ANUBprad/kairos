@@ -59,7 +59,7 @@ the restored database. Record the result in `RELEASE_READINESS_REPORT.md`.
 cd server
 npx prisma validate
 npx tsc --noEmit
-npm run test:unit                  # 137
+npm run test:unit                  # 148 (Phase 07)
 DATABASE_URL=<disposable-url> TEST_DATABASE_URL=<disposable-url> npm run test:integration  # 47
 npm run build
 cd ../client && npm run build
@@ -74,8 +74,13 @@ git -c core.whitespace=cr-at-eol diff --check
 ```
 
 The client build may hit a OneDrive file lock on `.next` in this workspace. A
-temporary `VERIFY_DIST_DIR` override was used for verification and reverted;
-no build config change is part of the commit.
+temporary `VERIFY_DIST_DIR` override was used in an earlier phase and reverted;
+no build config change is part of the commit. In Phase 07 an OS-level lock on a
+single `property-information` source-map file blocked in-place `npm ci`; lockfile
+reproducibility was instead verified with `npm ci` in a clean temporary directory
+using the same `package.json`/`package-lock.json`, and the installed tree was
+copied back. Only that 179-byte source map failed to copy; it is not used by the
+build. The positive staging client build then passed.
 
 ## 5. Job and payment incident response
 
@@ -120,3 +125,30 @@ no build config change is part of the commit.
   customer data or real email is authorized by these changes.
 - Keep the repository private until the independent licensing gate in
   `LICENSING_REVIEW.md` is resolved by the owner.
+
+## 8. Phase 07 staging-only deployment and drill
+
+1. Verify the guard before any Render action:
+
+   ```bash
+   node scripts/check-staging-blueprint.mjs render.staging.yaml
+   ```
+
+2. Deploy **only** `render.staging.yaml` from private `origin/main`. Do not use
+   the full `render.yaml`, which still contains the production service. Confirm
+   only `kairos-server-staging` and `kairos-client-staging` exist/change.
+3. Use `kairos-phase07-pg-20261123`-style throwaway databases only for local
+   drills. Phase 07 backup evidence: 45,614-byte `pg_dump -Fc` artifact restored
+   into the separate `kairos_phase07_restore` database in 1,385 ms; `prisma
+   migrate status` reported 13/13 migrations and fixture counts matched (1 user,
+   workspace, source, artifact, message, conversation, payment, ledger row and
+   job), with all orphan/invariant counters zero.
+4. Keep `render.yaml` unchanged as a reference; any change to it must not add a
+   production service to the staging blueprint.
+5. Phase 07 added fail-closed staging origin checks in both client and server,
+   production identity checks, `TRUST_PROXY` IP/CIDR validation, bounded
+   Cloudinary download URLs, redaction and combined provider signals. All have
+   regression tests and the final matrix passed.
+6. Clean only Phase 07-labelled containers after the drill. Other containers
+   (`kairos-remediation-pg-20261123`, `kairos-postgres-1`, `openbook-postgres`)
+   are unrelated and must be left untouched.

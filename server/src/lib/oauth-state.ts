@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import prisma from "./db.js";
 import { timingSafeEqualString } from "./crypto.js";
 import { AppError, ValidationError } from "../types/app-error.js";
+import { isProductionEnvironment } from "../config/network.js";
 import type { IntegrationProvider } from "../generated/prisma/client.js";
 
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -36,11 +37,9 @@ function getStateSecret(): string {
     return secret;
 }
 
+/** Shares the single production predicate used by CORS, cookies and Better Auth. */
 function isProduction(): boolean {
-    return (
-        process.env.NODE_ENV === "production" ||
-        process.env.BETTER_AUTH_URL?.startsWith("https://") === true
-    );
+    return isProductionEnvironment();
 }
 
 function sign(encodedPayload: string): string {

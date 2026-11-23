@@ -70,3 +70,17 @@ The job tests assert against PostgreSQL that:
 
 Until those are executed, live background-job behaviour is
 **PARTIALLY VERIFIED** (local PostgreSQL evidence only).
+
+## 6. Phase 07 re-verification
+
+No background-job logic was changed in Phase 07. After all Phase 07 hardening
+edits, the full `npm run test:integration` suite was rerun against the disposable
+`kairos_phase07` PostgreSQL database: **47/47 pass** (`INTEGRATION_FINAL_EXIT=0`),
+including the 6 durable-job recovery tests and the 12 artifact/round-3
+concurrency tests. The backup/restore drill also verified a `DELIVERED` job row
+survived restore with no stale `PROCESSING` or premature `DEAD` rows.
+
+Worker crash/restart, DB interruption, provider outage and live Inngest
+event execution on a deployed staging service remain **BLOCKED —
+CREDENTIALS/PERMISSIONS REQUIRED**; the in-process fallback is not a durable
+replacement for a hosted worker across full service replacement.

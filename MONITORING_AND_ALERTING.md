@@ -11,12 +11,13 @@ real customer telemetry was accessed.
 | --- | --- | --- |
 | `GET /healthz` | `server/src/app.ts` | Pure liveness (`{ status, uptime }`). No DB/provider query. This is the correct Render health check. |
 | `GET /health` | `server/src/app.ts` + `services/health.services.ts` | Readiness/diagnostics: `SELECT 1` on PostgreSQL (5 s timeout) and optional Pinecone `describeIndex`; returns 503 when degraded. Throttled to 30 requests/minute per client key so it cannot be used as a dependency-probe amplifier. |
-| Structured JSON logs | `server/src/lib/logger.ts` | `info`/`warn`/`error` records with timestamp and recursive redaction of secrets, tokens, cookies, signatures and stack traces. No provider secret should ever be logged. |
+| Structured JSON logs | `server/src/lib/logger.ts` | `info`/`warn`/`error` records with timestamp and recursive redaction of secrets, tokens, cookies, signatures and stack traces. Phase 07 also redacts free-form messages, session/OTP/card keys and provider key patterns. No provider secret should ever be logged. |
 | `chat_request_metrics` logs | `chat.services.ts`, `lib/observability/request-metrics.ts` | Per-request stage timings (embed, Pinecone, rerank, Mem0, Tavily, LLM stream, total), token counts, rerank calls and embedding-cache hit flag. Also persisted in `message_metrics` where applicable. |
 | Durable job state | `durable_job` table, `lib/outbox.ts`, `lib/job-sweeper.ts` | `PENDING → PROCESSING → DELIVERED | DEAD`, bounded 50-job sweeps, stale lease recovery and exactly-one-compensating-refund on terminal `DEAD`. |
 | Payment/credit ledger | `payment_record`, `credit_transaction` | Settlement idempotency and server-owned pricing; suitable for duplicate-charge/refund anomaly checks. |
 | Rate-limit headers | `express-rate-limit` | `RateLimit-*` headers on JSON/auth endpoints; useful for detecting spoofed-proxy or abuse patterns. |
 | Dependency gate | `.github/workflows/ci.yml` | `dependency-security` job runs `npm ci` + `npm audit --audit-level=high` in both workspaces and asserts lockfiles are unchanged. Critical/high regressions fail CI. |
+| Staging isolation gate | `.github/workflows/ci.yml` | New `staging-blueprint-guard` job runs `node scripts/check-staging-blueprint.mjs render.staging.yaml`; a production service or inline secret in the staging blueprint fails CI. |
 
 No new telemetry vendor, SDK or external endpoint was introduced. No metric
 contains customer content or credentials by design; keep dashboards private.
@@ -73,3 +74,14 @@ real 429/OAuth/webhook event rates, and any pager/on-call integration. Local
 unit, integration and HTTP evidence is documented in
 `RELEASE_READINESS_REPORT.md`; it must not be reported as live monitoring
 coverage.
+
+## 5. Phase 07 status
+
+- Log redaction, the generic Cloudinary 403 response and the staging blueprint
+  guard are **FIXED AND VERIFIED** locally with regression tests/CI guard.
+- `requestId`/correlation headers were checked for: none are currently emitted.
+  Structured logs, payment/webhook/job warning and error lines exist; no new
+  telemetry vendor or header was introduced in this phase.
+- No dashboard, alert rule, pager, Render log stream or deployed `/health` was
+  accessed or configured. Those items remain **BLOCKED — CREDENTIALS/PERMISSIONS
+  REQUIRED** and must not be described as active monitoring.

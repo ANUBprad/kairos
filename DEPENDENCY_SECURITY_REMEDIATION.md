@@ -122,3 +122,27 @@ notes.
 advisory. The job comment documents the only acceptable exception route: a
 time-bounded, narrowly scoped change linked to an explicit accepted-risk entry
 in this file with owner approval. No global audit suppression is used.
+
+## 6. Phase 07 recheck (no blind upgrades)
+
+After the final Phase 07 code edits, `npm audit --json` was rerun in all three
+workspaces:
+
+| Workspace | Critical | High | Moderate | Low | Total |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| server | 0 | 0 | 7 | 0 | 7 |
+| client | 0 | 0 | 10 | 4 | 14 |
+| root | 0 | 0 | 0 | 0 | 0 |
+
+These counts are unchanged from Phase 06. No package was upgraded, downgraded or
+blindly `npm audit fix`ed during Phase 07. The same residual package sets remain
+reviewed and **ACCEPTED RISK — OWNER APPROVAL REQUIRED**; their dependency chains
+and reachability notes stay in `security/dependency-audit/inventory.json`. The
+CI critical/high gate was not weakened. A new independent `staging-blueprint-guard`
+CI job was added for staging isolation, not dependency suppression.
+
+Lockfile reproducibility was re-verified: server `npm ci` succeeded in place;
+an OS-level lock on one client source-map file prevented in-place reinstall, so
+`npm ci` was run successfully in a clean temporary directory with the committed
+client manifest/lockfile (`TEMP_CLIENT_NPM_CI_EXIT=0`) and both lockfiles remained
+byte-identical under `git diff --exit-code`.

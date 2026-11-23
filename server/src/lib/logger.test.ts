@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { redactForLog } from "./logger.js";
+import { logger, redactForLog } from "./logger.js";
 
 describe("log redaction", () => {
   it("redacts sensitive keys recursively", () => {
@@ -30,5 +30,41 @@ describe("log redaction", () => {
     const output = redactForLog(new Error("failed")) as Record<string, unknown>;
     assert.equal(output.stack, "[stack omitted]");
     assert.equal(output.message, "failed");
+  });
+
+  it("redacts provider keys embedded in free-form messages", () => {
+    const output = redactForLog(
+      "provider failed with sk-abcdefghijklmnopqrst or rzp_test_abcdefgh1234",
+    ) as string;
+    assert.doesNotMatch(output, /sk-abcdefghijklmnopqrst/);
+    assert.doesNotMatch(output, /rzp_test_abcdefgh1234/);
+  });
+
+  it("redacts session, OTP and card-shaped metadata keys", () => {
+    const output = redactForLog({
+      session_token: "visible-never",
+      otp: "123456",
+      cardNumber: "4111111111111111",
+      safeField: "kept",
+    }) as Record<string, unknown>;
+    assert.equal(output.session_token, "[REDACTED]");
+    assert.equal(output.otp, "[REDACTED]");
+    assert.equal(output.cardNumber, "[REDACTED]");
+    assert.equal(output.safeField, "kept");
+  });
+
+  it("applies redaction to the log message argument itself", () => {
+    const original = console.log;
+    let line = "";
+    console.log = (value: unknown) => {
+      line = String(value);
+    };
+    try {
+      logger.info("token sk-abcdefghijklmnopqrst accepted");
+    } finally {
+      console.log = original;
+    }
+    assert.doesNotMatch(line, /sk-abcdefghijklmnopqrst/);
+    assert.match(line, /\[REDACTED\]/);
   });
 });

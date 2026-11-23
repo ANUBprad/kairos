@@ -1,0 +1,132 @@
+# Render Blueprint — KAIROS STAGING ONLY
+#
+# This blueprint deliberately contains ONLY the two isolated staging services:
+#   - kairos-server-staging  (backend, DEPLOYMENT_ENV=staging)
+#   - kairos-client-staging  (frontend, rewrites /api to the staging backend)
+#
+# The production service defined in render.yaml is intentionally absent.
+# Deploying THIS file cannot create, update, restart or redeploy it.
+# Verify with: node scripts/check-staging-blueprint.mjs
+#
+# SECURITY: every credential below is `sync: false`. No secret value is stored
+# in this repository. Configure values only in the private Render dashboard.
+# Staging MUST use a separate database, separate OAuth apps/callback URLs,
+# Razorpay TEST-mode keys only, staging-owned Cloudinary resources, and signing
+# secrets distinct from production. No real customer data belongs here.
+services:
+  - type: web
+    name: kairos-server-staging
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    # Liveness only. /health is a throttled readiness probe and must not be
+    # used as a deployment health check.
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEPLOYMENT_ENV
+        value: staging
+      # Database identity: STAGING_DATABASE_ID must be present in DATABASE_URL.
+      # Never paste the production connection string here.
+      - key: DATABASE_URL
+        sync: false
+      # Must be the public URL of kairos-client-staging (https only).
+      - key: CLIENT_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      - key: BETTER_AUTH_URL
+        sync: false
+      # Staging OAuth applications with staging callback URLs.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_REDIRECT_URI
+        sync: false
+      - key: NOTION_CLIENT_ID
+        sync: false
+      - key: NOTION_CLIENT_SECRET
+        sync: false
+      - key: NOTION_REDIRECT_URI
+        sync: false
+      - key: OAUTH_STATE_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_UPLOAD_PRESET
+        sync: false
+      - key: FIRECRAWL_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: MEM0_API_KEY
+        sync: false
+      # Razorpay TEST MODE only. A rzp_live_* key fails startup closed.
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # Public staging backend URL; must be https and staging-marked.
+      - key: SERVER_URL
+        sync: false
+      # Explicit proxy allowlist only; numeric hop counts are rejected.
+      - key: TRUST_PROXY
+        sync: false
+      # Mandatory identity gates enforced by server/src/config/env.ts.
+      - key: STAGING_DATABASE_ID
+        sync: false
+      - key: STAGING_RESOURCE_PREFIX
+        sync: false
+      # Optional production denylist / exact production DB URL.
+      - key: STAGING_FORBIDDEN_ENDPOINTS
+        sync: false
+      - key: PRODUCTION_DATABASE_URL
+        sync: false
+
+  - type: web
+    name: kairos-client-staging
+    runtime: node
+    rootDir: client
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DEPLOYMENT_ENV
+        value: staging
+      # Browser-facing staging backend URL (public, contains no secret).
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_BETTER_AUTH_URL
+        sync: false
+      # Server-side rewrite target only. Validated to be staging-owned when
+      # DEPLOYMENT_ENV=staging; no backend secret may ever be placed here.
+      - key: BACKEND_INTERNAL_URL
+        sync: false

@@ -55,10 +55,13 @@ export function errorHandler(
         cloudinaryError.name === "UnexpectedResponse" &&
         cloudinaryError.http_code === 403
     ) {
-        res.status(400).json({
-            error:
-                "Cloudinary upload rejected: your API key is missing Upload (create) permission. In Cloudinary Dashboard → Settings → API Keys, use the root secret or create a key with Upload enabled.",
+        // Operational guidance is logged for the owner, never returned to a
+        // client: dashboard paths and key-permission details are internal.
+        logger.warn("Cloudinary rejected an upload (403)", {
+            httpCode: cloudinaryError.http_code,
+            name: cloudinaryError.name,
         });
+        res.status(400).json({ error: "Cloudinary rejected the upload." });
         return;
     }
 

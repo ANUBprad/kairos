@@ -11,11 +11,15 @@ import { grantSignupCreditsForUser } from "./signup-credits.js";
 
 const allowedOrigins = getAllowedOrigins();
 const isProduction = isProductionEnvironment();
+const configuredBaseUrl = process.env.BETTER_AUTH_URL;
+if (isProduction && !configuredBaseUrl) {
+    throw new Error("BETTER_AUTH_URL is required in production");
+}
 const trustedProxies = getBetterAuthTrustedProxies();
 const ipAddressHeaders = getBetterAuthIpHeaders();
 
 export const auth = betterAuth({
-    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:8081",
+    baseURL: configuredBaseUrl || "http://localhost:8081",
     secret: process.env.BETTER_AUTH_SECRET,
     // getAllowedOrigins() only appends localhost origins outside production.
     // Adding them here as well would silently trust them in production.
@@ -26,8 +30,8 @@ export const auth = betterAuth({
     databaseHooks: {
         user: {
             create: {
-                // The database default grants the 50 welcome credits; this hook
-                // records the matching idempotent SIGNUP_BONUS ledger entry.
+                // The schema defaults credits to 0; this hook grants the 50
+                // welcome credits exactly once via an idempotent ledger entry.
                 after: async (user) => {
                     await grantSignupCreditsForUser({ id: user.id });
                 },

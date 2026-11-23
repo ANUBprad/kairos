@@ -210,3 +210,90 @@ mean production-ready, and no production promotion is authorized. The
 independent licensing gate remains **E. PUBLIC REDISTRIBUTION BLOCKED —
 LICENSING EVIDENCE INSUFFICIENT** until the owner resolves it; dependency and
 staging remediation do not change that gate.
+
+---
+
+# Phase 07 addendum — isolated staging deployment readiness
+
+Baseline (confirmed locally and remotely before edits):
+`eb5df27baa236563e3f32c81ec41d3e6a2c227d7`, branch `main`, clean tree, only
+remote `origin https://github.com/ANUBprad/kairos.git`, visibility `PRIVATE`.
+Final commit delivering this addendum: `8d7c2c16471d99cfb34774fcf73352facf3ae561` (the commit that
+contains `PHASE07_STAGING_VALIDATION_REPORT.md`). No Render/provider credentials
+were available, so the final classification is C, not A or B.
+
+## 8. Phase 07 verification matrix (all after final edits)
+
+| Check | Result |
+| --- | --- |
+| Baseline / remote / visibility | `eb5df27...`; `git ls-remote origin refs/heads/main` matched baseline; `visibility=PRIVATE` |
+| Staging blueprint guard | `PASS (2 staging services, no production service)`, exit 0; YAML parses to `['kairos-server-staging','kairos-client-staging']` |
+| CI | New `staging-blueprint-guard` job added alongside existing dependency gate |
+| `npm ci` server | Exit 0; `package-lock.json` unchanged |
+| `npm ci` client | In-place attempt blocked by a OneDrive OS file lock on one source-map; clean temporary-directory `npm ci` with committed manifest/lockfile exit 0; lockfile unchanged; installed tree restored, positive build passed |
+| `npx prisma validate` / `generate` | Exit 0 / exit 0 |
+| `prisma migrate deploy` + `status` (disposable `kairos_phase07`) | 13 migrations applied; `Database schema is up to date!` |
+| Schema audit | 19 tables, 166 columns, 10 enums, 54 indexes, 13 FKs, 19 PKs; legacy `Test` present |
+| `npm run typecheck` / `npm run build` (server) | Exit 0 / exit 0 after fixing a Cloudinary SDK type signature |
+| `npm run test:unit` (server) | **148/148 pass**, exit 0 |
+| `npm run test:integration` (real PostgreSQL) | **47/47 pass**, exit 0 (rerun after final edits) |
+| Client staging build | Exit 0; rewrites target staging backend |
+| Client negative build | Expected failure: `BACKEND_INTERNAL_URL looks like production; refusing staging rewrite` |
+| `npx playwright test` | **3/3 pass**, exit 0 after explicit `--port` fix in `playwright.config.ts` |
+| `npm audit --json` server / client / root | 0 critical, 0 high; 7 moderate server, 10 moderate + 4 low client, 0 root |
+| Secret scan / `git diff --check` | No real credential; documented synthetic fixtures only; whitespace clean |
+| Backup / restore | 45,614-byte dump restored into separate DB in 1,385 ms; 13/13 migrations, fixture counts identical, all invariants zero |
+
+## 9. Phase 07 status by workstream
+
+### FIXED AND VERIFIED
+
+- Two independent security audits found no P0/P1 findings; safe P2/P3 hardening
+  was implemented with regressions: expiring Cloudinary private URLs, generic
+  Cloudinary 403 response, expanded log redaction, combined provider abort
+  signals, redirect socket cleanup, `TRUST_PROXY` IP/CIDR validation, unified
+  production predicate, production identity fail-closed checks, staging origin
+  gates in client and server.
+- Staging-only deployment cannot provision the production service; CI enforces
+  this.
+- All local verification, migration, integrity, backup and restore work above.
+
+### IMPLEMENTED — LIVE VALIDATION REQUIRED
+
+- The staging blueprint, dashboard variable set, rewrite isolation and startup
+  gates are ready; exact owner deployment steps are in
+  `STAGING_DEPLOYMENT.md` section 6.
+
+### BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED
+
+- Render deployment IDs/URLs/timestamps: none exist. No Render account/API key/
+  owner ID was available.
+- Live `/healthz`, `/health`, TLS/HSTS, cookie flags, CORS/CSRF, browser checks.
+- Live Razorpay test-mode checkout, webhook signature delivery, duplicate/out-of-
+  order delivery, cancellation and refund.
+- Live OAuth (Google/GitHub/Notion), provider integrations (Firecrawl, Tavily,
+  Drive, GitHub, YouTube, Pinecone, Cloudinary, Mem0, ElevenLabs, Gemini/OpenAI,
+  Cohere, Inngest, email), Zod 4 Inngest/Mem0 smoke tests, worker crash/restart,
+  live monitoring/alerts and real email delivery.
+
+### ACCEPTED RISK — OWNER APPROVAL REQUIRED
+
+- The unchanged 7 moderate server and 10 moderate + 4 low client advisories;
+  no blind upgrade was performed. Details remain in
+  `DEPENDENCY_SECURITY_REMEDIATION.md`.
+
+### NOT FIXED
+
+- Legacy `Test` table, third-party Firecrawl crawler network (not DNS-pinned by
+  Kairos outside its own `safeFetch` boundary), in-process job fallback limits,
+  all live validation above, and the independent licensing gate.
+
+## 10. Phase 07 final classification
+
+**C. READY FOR STAGING DEPLOYMENT**
+
+This is the strongest classification independently verifiable here: staging-only
+configuration and local verification are complete, but deployment credentials or
+permissions are unavailable. It is **not** production-ready and no production
+promotion is authorized. Independently, the licensing classification remains
+**E. PUBLIC REDISTRIBUTION BLOCKED — LICENSING EVIDENCE INSUFFICIENT**.

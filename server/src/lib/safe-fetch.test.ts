@@ -318,6 +318,20 @@ describe("safe outbound fetch", () => {
     assert.equal(deps.lookupCalls.length, 4);
   });
 
+  it("destroys each redirected request before following the next hop", async () => {
+    const deps = recordingDeps([
+      { status: 302, headers: { location: "http://example.com/next" } },
+      { status: 200, chunks: ["ok"] },
+    ]);
+
+    const result = await safeFetchBuffer("http://example.com/start", {}, deps);
+
+    assert.equal(result.buffer.toString(), "ok");
+    assert.equal(deps.requests.length, 2);
+    assert.equal((deps.requests[0] as FakeRequest).destroyed, true);
+    assert.equal((deps.requests[1] as FakeRequest).destroyed, false);
+  });
+
   it("rejects an oversized streamed response despite a lying content-length", async () => {
     const deps = recordingDeps([
       {

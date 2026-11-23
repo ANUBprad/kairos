@@ -84,6 +84,35 @@ async function envModule() {
 }
 
 describe("getServerEnv", () => {
+    it("rejects a downgraded or incomplete production identity", async () => {
+        try {
+            const productionBase = {
+                ...validStagingEnv(),
+                DEPLOYMENT_ENV: "production" as const,
+                NODE_ENV: "production" as const,
+                STAGING_DATABASE_ID: undefined,
+                STAGING_RESOURCE_PREFIX: undefined,
+            };
+            setEnv({ ...productionBase, NODE_ENV: "development" });
+            const { getServerEnv } = await envModule();
+            assert.throws(() => getServerEnv(), /requires NODE_ENV=production/);
+
+            setEnv({ ...productionBase, BETTER_AUTH_URL: undefined });
+            const { getServerEnv: getEnv2 } = await envModule();
+            assert.throws(() => getEnv2(), /BETTER_AUTH_URL/);
+
+            setEnv({ ...productionBase, SERVER_URL: "http://api.example.net" });
+            const { getServerEnv: getEnv3 } = await envModule();
+            assert.throws(() => getEnv3(), /SERVER_URL must be an https URL/);
+
+            setEnv(productionBase);
+            const { getServerEnv: getEnv4 } = await envModule();
+            assert.equal(getEnv4().DEPLOYMENT_ENV, "production");
+        } finally {
+            restoreEnv();
+        }
+    });
+
     it("accepts a minimal local configuration", async () => {
         try {
             setEnv(validLocalEnv());
@@ -149,6 +178,29 @@ describe("getServerEnv", () => {
         }
     });
 
+    it("rejects a production or unmarked frontend/backend origin in staging", async () => {
+        try {
+            const { getServerEnv } = await envModule();
+
+            setEnv({ ...validStagingEnv(), CLIENT_URL: "https://app.example-prod.net" });
+            assert.throws(() => getServerEnv(), /CLIENT_URL looks like a production endpoint/);
+
+            setEnv({ ...validStagingEnv(), CLIENT_URL: "https://example.net" });
+            assert.throws(() => getServerEnv(), /CLIENT_URL is not marked as staging-owned/);
+
+            setEnv({ ...validStagingEnv(), CLIENT_URL: "http://staging.example.test" });
+            assert.throws(() => getServerEnv(), /CLIENT_URL must use https/);
+
+            setEnv({
+                ...validStagingEnv(),
+                SERVER_URL: "https://api-production.example.net",
+            });
+            assert.throws(() => getServerEnv(), /SERVER_URL looks like a production endpoint/);
+        } finally {
+            restoreEnv();
+        }
+    });
+
     it("rejects an unmarked or production-like staging database", async () => {
         try {
             const { getServerEnv } = await envModule();
@@ -170,8 +222,8 @@ describe("getServerEnv", () => {
         try {
             setEnv({
                 ...validStagingEnv(),
-                STAGING_FORBIDDEN_ENDPOINTS: "https://api.example.com",
-                SERVER_URL: "https://api.example.com",
+                STAGING_FORBIDDEN_ENDPOINTS: "api-staging-forbidden.example.test",
+                SERVER_URL: "https://api-staging-forbidden.example.test",
             });
             const { getServerEnv } = await envModule();
             assert.throws(() => getServerEnv(), /forbidden production endpoint/);

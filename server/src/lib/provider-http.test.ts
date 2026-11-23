@@ -34,7 +34,7 @@ describe("providerFetch", () => {
         assert.ok(PROVIDER_TIMEOUT_MS > 0);
     });
 
-    it("preserves an explicit caller signal instead of overriding it", async () => {
+    it("combines a caller signal with the hard provider timeout", async () => {
         let received: RequestInit | undefined;
         globalThis.fetch = (async (
             _input: Parameters<typeof fetch>[0],
@@ -49,6 +49,11 @@ describe("providerFetch", () => {
         await providerFetch("https://example.test/resource", {
             signal: controller.signal,
         });
-        assert.equal(received?.signal, controller.signal);
+        const combined = received?.signal as AbortSignal;
+        assert.ok(combined);
+        assert.notEqual(combined, controller.signal, "must not drop the timeout signal");
+        assert.equal(combined.aborted, false);
+        controller.abort("caller cancelled");
+        assert.equal(combined.aborted, true, "caller cancellation must still propagate");
     });
 });

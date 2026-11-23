@@ -15,7 +15,7 @@ credentials):
 ```bash
 $env:DATABASE_URL='postgresql://kairos:<local-only>@127.0.0.1:55445/kairos_stage06'
 $env:TEST_DATABASE_URL=$env:DATABASE_URL
-npm run test:unit            # 137 tests, no database required
+npm run test:unit            # 148 tests (Phase 07), no database required
 npm run test:http            # 18 real-HTTP tests
 npm run test:jobs            # 6 durable-job recovery tests
 npm run test:payments        # 11 provider-mocked payment tests
@@ -88,3 +88,25 @@ REQUIRED**:
 
 Record each result in `RELEASE_READINESS_REPORT.md`; do not mark them passed
 based on mocked tests.
+
+## 7. Phase 07 additions (all executed locally; live host checks still blocked)
+
+Final post-edit results against the disposable `kairos_phase07` database:
+
+| Check | Result |
+| --- | --- |
+| `npm run test:unit` | **148/148 pass** (11 new Phase 07 regressions: staging origin gates, production identity fail-closed, malformed `TRUST_PROXY`, combined abort signals, logger message/key redaction, Cloudinary signed-URL expiry, generic Cloudinary 403, redirect socket cleanup) |
+| `npm run test:integration` | **47/47 pass** (real Express HTTP, auth/IDOR/CSRF/OAuth state, provider-mocked payments, job recovery) |
+| Staging rewrite negative build | Correctly failed with `BACKEND_INTERNAL_URL looks like production; refusing staging rewrite` |
+| Staging blueprint guard | `PASS (2 staging services, no production service)` |
+| `npx playwright test` | **3/3 pass** after fixing a port collision in `playwright.config.ts` (the Next.js dev server now receives `--port` explicitly) |
+| Secret scan / whitespace | No real credential; only documented local/synthetic fixtures; `git diff --check` clean |
+
+The Cloudinary regression asserts the generated private-download URL contains
+an `expires_at` roughly one hour ahead and a signature, and rejects permanent
+`s--` signing. The error-handler regression asserts a Cloudinary 403 returns a
+generic client message while operational detail goes to the server log.
+
+Live HTTPS/TLS/HSTS/cookie, real OAuth round-trip, real Razorpay test-mode
+checkout/webhook/refund and live provider checks remain **BLOCKED —
+CREDENTIALS/PERMISSIONS REQUIRED**.

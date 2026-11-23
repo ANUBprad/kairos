@@ -119,3 +119,29 @@ resource is an incident; investigate before further deploys.
 - No force-push, reset or history rewrite is part of this procedure.
 - Public redistribution remains gated by `LICENSING_REVIEW.md`; rollback does
   not change that gate.
+
+## 7. Phase 07 forward-only migration and restore evidence
+
+No new migration was added in Phase 07. The same 13 checked-in migrations were
+applied to a fresh disposable database `kairos_phase07`
+(`kairos-phase07-pg-20261123`, host port 55447) with
+`npx prisma migrate deploy`; `npx prisma migrate status` reported
+`Database schema is up to date!` and 13 migrations found. Schema audit:
+19 tables, 166 columns, 10 enum types, 54 indexes, 13 foreign keys, 19 primary
+keys. The legacy `Test` table remains present intentionally.
+
+A fresh `pg_dump -Fc` backup was taken after inserting a synthetic fixture
+(1 user, 1 workspace, 1 source, 1 conversation, 1 message, 1 artifact,
+1 payment, 1 `PURCHASE` ledger row and 1 `DELIVERED` job). The 45,614-byte artifact
+(SHA-256 `5F22FFF4633C79663EEAC7DFC8C322583F250D93FD03027D446C036E46A78BA8`)
+was restored into the **separate** disposable database `kairos_phase07_restore`
+(`kairos-phase07-restore-20261123`, host port 55448) in 1,385 ms. Restored
+verification: `prisma migrate status` 13/13 up to date; all nine fixture counts
+identical; `orphan_workspaces/sources/artifacts/conversations/messages/payments/ledger
+= 0`; `invalid_refunds = 0`; `stale_processing_jobs = 0`;
+`premature_dead_jobs = 0`.
+
+Rollback policy is unchanged: redeploy the previous application commit for app-only
+incidents; for a schema-caused incident restore the pre-deploy backup into a new
+database and repoint the service—never reset, reverse a migration in place, or
+overwrite the live staging database. No production backup or database was touched.

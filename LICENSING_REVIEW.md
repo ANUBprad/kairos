@@ -12,7 +12,7 @@ EVIDENCE INSUFFICIENT.**
 | Upstream `server/package.json` | Declares `"license": "ISC"` |
 | `ATTRIBUTION.md` (this repo) | Preserves source attribution, original author/demo links, the owner's private-use permission statement, and the conflicting-license notice |
 
-`ATTRIBUTION.md` is intentionally **unchanged** by Phases 05–06 and must not be
+`ATTRIBUTION.md` is intentionally **unchanged** by Phases 05–07 and must not be
 removed or edited to assert a broader grant.
 
 ## 2. What this work did and did not do
@@ -37,7 +37,8 @@ resolve the MIT-vs-ISC conflict and the missing upstream `LICENSE` file. Options
 Until one of these is completed, the repository stays private and the
 independent licensing gate remains **E. PUBLIC REDISTRIBUTION BLOCKED —
 LICENSING EVIDENCE INSUFFICIENT** for any public-release question. This does not
-prevent a controlled, private staging validation (overall classification B in
-`RELEASE_READINESS_REPORT.md`) as an engineering step, but it does gate public
-release and any new license assertion. Dependency or staging fixes never
-resolve this gate.
+prevent a controlled, private staging-readiness effort (overall classification C
+in the Phase 07 addendum of `RELEASE_READINESS_REPORT.md`) as an engineering
+step, but it does gate public release and any new license assertion. Dependency
+or staging fixes never resolve this gate. Phase 07 made no licensing change and
+did not deploy anything publicly.

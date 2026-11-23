@@ -1,3 +1,4 @@
+import net from "node:net";
 import { AppError } from "../types/app-error.js";
 
 const LOCALHOST_ORIGINS = [
@@ -24,6 +25,7 @@ function isLoopbackHost(hostname: string): boolean {
 
 export function isProductionEnvironment(): boolean {
     return (
+        process.env.DEPLOYMENT_ENV === "production" ||
         process.env.NODE_ENV === "production" ||
         process.env.BETTER_AUTH_URL?.startsWith("https://") === true
     );
@@ -90,6 +92,17 @@ export function getAllowedOrigins(): string[] {
     return origins;
 }
 
+function isIpOrCidr(token: string): boolean {
+    const [address, prefix, ...extra] = token.split("/");
+    if (extra.length > 0) return false;
+    const family = net.isIP(address);
+    if (family === 0) return false;
+    if (prefix === undefined) return true;
+    if (!/^\d+$/.test(prefix)) return false;
+    const bits = Number(prefix);
+    return bits >= 0 && bits <= (family === 4 ? 32 : 128);
+}
+
 function parseTrustedProxyTokens(): string[] {
     return (process.env.TRUST_PROXY || "")
         .split(",")
@@ -110,6 +123,13 @@ export function getExpressTrustProxy(): false | number | string | string[] {
     if (tokens.length === 0) return false;
     if (tokens.some((token) => token.includes("*"))) {
         throw new AppError(500, "Wildcard TRUST_PROXY entries are not allowed");
+    }
+    for (const token of tokens) {
+        // A lone integer is a hop count (development only) validated below.
+        if (/^\d+$/.test(token)) continue;
+        if (!isIpOrCidr(token)) {
+            throw new AppError(500, `TRUST_PROXY entry "${token}" must be an IP address or CIDR`);
+        }
     }
     if (tokens.length === 1 && /^\d+$/.test(tokens[0])) {
         const hops = Number(tokens[0]);

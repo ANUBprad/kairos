@@ -5,9 +5,10 @@ import {
     getBetterAuthIpHeaders,
     getBetterAuthTrustedProxies,
     getExpressTrustProxy,
+    isProductionEnvironment,
 } from "./network.js";
 
-const ENV_KEYS = ["NODE_ENV", "BETTER_AUTH_URL", "CLIENT_URL", "TRUST_PROXY"];
+const ENV_KEYS = ["NODE_ENV", "DEPLOYMENT_ENV", "BETTER_AUTH_URL", "CLIENT_URL", "TRUST_PROXY"];
 const ORIGINAL_ENV = new Map(ENV_KEYS.map((key) => [key, process.env[key]]));
 
 function setEnv(values: Record<string, string | undefined>): void {
@@ -37,6 +38,19 @@ describe("network configuration", () => {
 
         setEnv({ CLIENT_URL: "https://app.example.com,https://localhost:3000" });
         assert.throws(() => getAllowedOrigins(), /Localhost origins are not allowed/);
+    });
+
+    it("treats an explicit production identity as production even without NODE_ENV", () => {
+        setEnv({
+            NODE_ENV: "development",
+            DEPLOYMENT_ENV: "production",
+            BETTER_AUTH_URL: "https://api.example.com",
+            CLIENT_URL: "https://app.example.com",
+            TRUST_PROXY: undefined,
+        });
+
+        assert.equal(isProductionEnvironment(), true);
+        assert.deepEqual(getAllowedOrigins(), ["https://app.example.com"]);
     });
 
     it("includes localhost origins in development", () => {
@@ -100,6 +114,22 @@ describe("network configuration", () => {
             "x-real-ip",
             "cf-connecting-ip",
         ]);
+    });
+
+    it("accepts explicit IP/CIDR proxies and rejects malformed tokens", () => {
+        setEnv({
+            NODE_ENV: "production",
+            BETTER_AUTH_URL: "https://api.example.com",
+            CLIENT_URL: "https://app.example.com",
+            TRUST_PROXY: "10.0.0.0/8, 2001:db8::1",
+        });
+        assert.deepEqual(getExpressTrustProxy(), ["10.0.0.0/8", "2001:db8::1"]);
+
+        setEnv({ TRUST_PROXY: "not-an-ip" });
+        assert.throws(() => getExpressTrustProxy(), /must be an IP address or CIDR/);
+
+        setEnv({ TRUST_PROXY: "10.0.0.1/99" });
+        assert.throws(() => getExpressTrustProxy(), /must be an IP address or CIDR/);
     });
 
     it("does not trust forwarded headers when no proxy is configured", () => {

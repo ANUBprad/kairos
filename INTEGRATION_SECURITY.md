@@ -13,11 +13,13 @@ All twenty raw provider `fetch` calls in `elevenlabs.ts`, `rag/rerank.ts`,
 `sources/github.ts`, `sources/youtube.ts`, `google-drive.services.ts` and
 `notion.services.ts` go through `server/src/lib/provider-http.ts`:
 
-- `providerFetch()` always applies a 20-second `AbortSignal.timeout()` unless
-  the caller supplies its own signal.
+- `providerFetch()` always applies a 20-second hard timeout. In Phase 07 a
+  caller-supplied signal is **combined** with that timeout via `AbortSignal.any`
+  instead of replacing it, so request cancellation still propagates without
+  dropping the bound.
 - `PROVIDER_TIMEOUT_MS` is covered by `server/src/lib/provider-http.test.ts`
-  (default signal added; explicit caller signal preserved). No provider is
-  contacted by that unit test.
+  (default signal added; caller signal combined and propagation verified). No
+  provider is contacted by that unit test.
 
 DNS-pinned, SSRF-resistant user-supplied URL fetching remains in
 `server/src/lib/safe-fetch.ts` (see `SECURITY_REMEDIATION.md`, section 1); that
@@ -28,7 +30,7 @@ policy is unchanged.
 | Integration | Change |
 | --- | --- |
 | Gemini | API key moved from the URL query string to `x-goog-api-key`; 15s timeout. Keys no longer appear in URLs/logs. |
-| Cloudinary | Signed uploads use a unique `public_id`, `overwrite: false` and a sanitized base path; raw upload calls have a 30s timeout. No hardcoded unsigned preset. Staging gates also require a staging-owned cloud name/upload preset. |
+| Cloudinary | Signed uploads use a unique `public_id`, `overwrite: false` and a sanitized base path; raw upload calls have a 30s timeout. No hardcoded unsigned preset. Staging gates require a staging-owned cloud name/upload preset. Phase 07 replaced `cloudinary.url()` with `cloudinary.utils.private_download_url()` so private download links carry a real one-hour `expires_at` and a matching signature; a Cloudinary 403 now returns only a generic client error, with dashboard guidance logged server-side. |
 | Google Drive / Notion / GitHub OAuth | State cookie cleared before `res.redirect()` on every callback branch; invalid state never yields `connected=`. |
 | ElevenLabs / Cohere rerank / GitHub / YouTube / Drive / Notion | Raw fetches replaced with bounded `providerFetch()`. |
 | All providers | Secrets remain `sync: false` in `render.yaml`; no credential value is committed or printed in logs. |
@@ -83,3 +85,30 @@ behaviour remain **BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**.
    in application logs or URLs. Live Inngest/Mem0 validation is specifically
    required because the nested `zod` major override passed typecheck/build/tests
    but was not exercised against a real provider.
+
+## 5. Phase 07 security review and hardening
+
+Two independent read-only source audits (auth/session/IDOR/CSRF/OAuth/payments/
+jobs, and SSRF/uploads/logging/proxy/health/error handling) found **no confirmed
+P0 or P1 findings**. The underlying logic—not merely test presence—was traced:
+HMAC verification over raw webhook bodies, atomic settlement/idempotency keys,
+owner-scoped repositories, single-use HMAC-signed OAuth state with cookie nonce
+binding, DNS-pinned per-hop SSRF validation, fail-closed proxy trust, and
+conditional job/artifact transitions.
+
+Safe P2/P3 hardening applied with regression tests (all **FIXED AND VERIFIED**
+locally):
+
+- Cloudinary `expires_at` (one-hour expiring private URLs), generic 403 response.
+- Logger redaction extended to free-form messages, session/OTP/card keys and
+  provider key patterns (`sk-`, `rzp_test_/rzp_live_`, `AIza`, `gh*`).
+- Combined provider abort signals; redirect sockets released immediately.
+- `TRUST_PROXY` IP/CIDR validation and one unified production predicate used by
+  CORS, Better Auth, OAuth cookies and env validation; production identity can
+  no longer be downgraded with `NODE_ENV=development`.
+- Client staging rewrite and server staging-origin gates.
+
+Live provider/Inngest/Mem0/Razorpay validation and the Zod 4 smoke test over a
+real Inngest/Mem0 deployment remain **BLOCKED — CREDENTIALS/PERMISSIONS
+REQUIRED**; the provider-mocked suites are not a substitute. Residual moderate/
+low dependency advisories remain **ACCEPTED RISK — OWNER APPROVAL REQUIRED**.

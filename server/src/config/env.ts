@@ -128,6 +128,34 @@ function assertStagingIsolation(env: ServerEnv): void {
         );
     }
 
+    // CORS is derived from CLIENT_URL, so the staging backend must only accept
+    // its dedicated staging frontend. SERVER_URL is the public staging API
+    // identity. Both must be https, staging-owned and never production-like.
+    for (const [key, value] of [
+        ["CLIENT_URL", env.CLIENT_URL],
+        ["SERVER_URL", env.SERVER_URL as string],
+    ] as const) {
+        let parsed: URL;
+        try {
+            parsed = new URL(value);
+        } catch {
+            throw new Error(`${key} must be a valid URL in staging.`);
+        }
+        if (parsed.protocol !== "https:") {
+            throw new Error(`${key} must use https in staging.`);
+        }
+        if (parsed.username || parsed.password) {
+            throw new Error(`${key} must not contain credentials.`);
+        }
+        const target = `${parsed.hostname}${parsed.pathname}`.toLowerCase();
+        if (looksProduction(target)) {
+            throw new Error(`${key} looks like a production endpoint; refusing staging startup.`);
+        }
+        if (!looksStaging(target)) {
+            throw new Error(`${key} is not marked as staging-owned; refusing staging startup.`);
+        }
+    }
+
     const dbIdentity = `${env.DATABASE_URL}`;
     const stagingDbId = env.STAGING_DATABASE_ID!.trim().toLowerCase();
     if (!dbIdentity.toLowerCase().includes(stagingDbId)) {
@@ -209,6 +237,14 @@ export function getServerEnv(): ServerEnv {
     const env = parsed.data;
     const deploymentEnv = deploymentEnvOf(env);
 
+    // A production-labelled deployment must never run with development-grade
+    // middleware/cookies. This closes the split-identity downgrade path.
+    if (deploymentEnv === "production" && env.NODE_ENV !== "production") {
+        throw new Error(
+            "DEPLOYMENT_ENV=production requires NODE_ENV=production; refusing a downgraded production deployment.",
+        );
+    }
+
     if (deploymentEnv === "staging") {
         assertStagingIsolation(env);
     } else if (
@@ -228,6 +264,8 @@ export function getServerEnv(): ServerEnv {
             "CLOUDINARY_CLOUD_NAME",
             "CLOUDINARY_API_KEY",
             "CLOUDINARY_API_SECRET",
+            "BETTER_AUTH_URL",
+            "SERVER_URL",
         ];
         const missing = requiredInProd.filter((key) =>
             isPlaceholder(env[key] as string | undefined),
@@ -246,6 +284,22 @@ export function getServerEnv(): ServerEnv {
             throw new Error(
                 `Missing or placeholder production env: ${missing.join(", ")}`,
             );
+        }
+        for (const key of ["BETTER_AUTH_URL", "SERVER_URL"] as const) {
+            let parsedUrl: URL;
+            try {
+                parsedUrl = new URL(env[key] as string);
+            } catch {
+                throw new Error(`${key} must be a valid URL in production.`);
+            }
+            if (
+                parsedUrl.protocol !== "https:" ||
+                parsedUrl.username ||
+                parsedUrl.password ||
+                /^(localhost|127\.|\[::1\]|0\.0\.0\.0)$/i.test(parsedUrl.hostname)
+            ) {
+                throw new Error(`${key} must be an https URL without credentials or loopback host in production.`);
+            }
         }
     } else {
         const optionalWarnings = [

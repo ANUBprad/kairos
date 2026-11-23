@@ -139,3 +139,70 @@ are documented in `RELEASE_READINESS_REPORT.md`:
 The following remain **BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**: actual
 Render deployment, HTTPS/cookie flags on a real domain, live provider calls,
 live Razorpay test-mode checkout/webhook delivery, and live email delivery.
+
+## 6. Phase 07 — staging-only blueprint (highest-priority change)
+
+The three-service `render.yaml` is left intact as the historical/reference
+manifest, but it is **not** the deployment entry point for this workflow. A new,
+dedicated blueprint `render.staging.yaml` contains **exactly** these two services:
+
+- `kairos-server-staging` (backend, `NODE_ENV=production`,
+  `DEPLOYMENT_ENV=staging`, `/healthz` liveness check)
+- `kairos-client-staging` (frontend, staging `NEXT_PUBLIC_*` browser URLs and
+  staging-only `/api` rewrite target)
+
+The production service is absent by construction. Every credential remains
+`sync: false`; no secret value, live Razorpay key or production URL is present.
+
+### 6.1 Automated guard
+
+```bash
+node scripts/check-staging-blueprint.mjs render.staging.yaml
+# STAGING BLUEPRINT GUARD: PASS (2 staging services, no production service)
+```
+
+The dependency-free guard runs in CI as the `staging-blueprint-guard` job. It
+fails if a third service, the production service name, an inline secret value, a
+non-`web` service, a non-`/healthz` health check, or a wrong environment marker
+is introduced. Result: **FIXED AND VERIFIED**.
+
+### 6.2 Owner deployment (only with Render access)
+
+```bash
+# In the private Render dashboard: "Blueprint > Deploy from a repository file"
+# Repository: ANUBprad/kairos  Branch: main  File: render.staging.yaml
+# Set every sync:false value in the dashboard, then create the two services.
+```
+
+1. Create a dedicated staging PostgreSQL database first. Its connection string
+   must contain the `STAGING_DATABASE_ID` you configure, and must not equal
+   `PRODUCTION_DATABASE_URL`.
+2. Set `CLIENT_URL` to the public `kairos-client-staging` HTTPS URL and
+   `SERVER_URL`/`NEXT_PUBLIC_API_URL`/`NEXT_PUBLIC_BETTER_AUTH_URL` to the public
+   `kairos-server-staging` HTTPS URL. `BACKEND_INTERNAL_URL` is the server-side
+   rewrite target only and must be staging-marked (or equal the public staging
+   API URL); it is never a secret or a `NEXT_PUBLIC_*` value.
+3. Confirm no production service was created, updated, restarted or redeployed.
+4. Record deployment IDs, service URLs, commit SHA and timestamps in
+   `PHASE07_STAGING_VALIDATION_REPORT.md`.
+5. Apply migrations with `prisma migrate deploy` against the staging URL only.
+
+### 6.3 Phase 07 fail-closed additions
+
+- `client/lib/env.ts`: with `DEPLOYMENT_ENV=staging`, both browser-facing URLs
+  and the rewrite target must be HTTPS, credential-free, staging-marked and not
+  production-like. A negative build with `BACKEND_INTERNAL_URL` pointed at a
+  production-looking host correctly failed with
+  `BACKEND_INTERNAL_URL looks like production; refusing staging rewrite`.
+- `server/src/config/env.ts`: `CLIENT_URL` and `SERVER_URL` must be HTTPS,
+  credential-free, staging-owned and non-production-like; a production-labelled
+  deployment can no longer run with `NODE_ENV=development`, and
+  `BETTER_AUTH_URL`/`SERVER_URL` are mandatory and validated in production.
+- `server/src/config/network.ts`, `auth.ts`, `oauth-state.ts`: one shared
+  production predicate now includes `DEPLOYMENT_ENV=production`, closing the
+  split-identity cookie/CORS downgrade path. `TRUST_PROXY` entries must be IP or
+  CIDR tokens (numeric hop counts remain development-only).
+
+No Render credentials were present in this environment, so no deployment
+occurred. Overall Phase 07 classification is `C. READY FOR STAGING DEPLOYMENT`;
+the independent licensing classification remains `E`.

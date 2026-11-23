@@ -1,8 +1,9 @@
 type LogLevel = "info" | "warn" | "error";
 
 const REDACTED = "[REDACTED]";
-const SENSITIVE_KEY = /(secret|token|password|passwd|api[-_]?key|authorization|cookie|credential|signature|private[-_]?key)/i;
+const SENSITIVE_KEY = /(secret|token|password|passwd|api[-_]?key|authorization|cookie|credential|signature|private[-_]?key|session|otp|card|cvv)/i;
 const BEARER = /(bearer\s+)[A-Za-z0-9._~+/=-]+/gi;
+const SENSITIVE_VALUE = /(sk-[A-Za-z0-9_-]{16,}|rzp_(?:test|live)_[A-Za-z0-9]{8,}|AIza[0-9A-Za-z_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,})/g;
 const MAX_STRING_LENGTH = 2000;
 
 /** Recursively redacts sensitive fields and bounds string sizes before logging. */
@@ -10,7 +11,9 @@ export function redactForLog(value: unknown, depth = 0): unknown {
     if (depth > 6) return "[TRUNCATED]";
     if (value === null || value === undefined) return value;
     if (typeof value === "string") {
-        const masked = value.replace(BEARER, `$1${REDACTED}`);
+        const masked = value
+            .replace(BEARER, `$1${REDACTED}`)
+            .replace(SENSITIVE_VALUE, REDACTED);
         return masked.length > MAX_STRING_LENGTH
             ? `${masked.slice(0, MAX_STRING_LENGTH)}…[truncated]`
             : masked;
@@ -42,7 +45,9 @@ export function redactForLog(value: unknown, depth = 0): unknown {
 function write(level: LogLevel, message: string, meta?: Record<string, unknown>) {
     const payload = {
         level,
-        message,
+        // Messages are free-form and may contain a provider error string with
+        // an embedded key; redact them exactly like metadata values.
+        message: redactForLog(message) as string,
         time: new Date().toISOString(),
         ...(meta ? (redactForLog(meta) as Record<string, unknown>) : {}),
     };

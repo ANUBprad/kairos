@@ -521,6 +521,9 @@ export async function safeFetchBuffer(
       );
 
       if (REDIRECT_STATUSES.has(response.status)) {
+        // Release the redirected socket immediately; otherwise each hop
+        // lingers until the global timeout under concurrent fetches.
+        request.destroy?.();
         const location = response.headers.get("location");
         if (!location || redirect === MAX_REDIRECTS) {
           throw new ValidationError("Too many or invalid redirects");

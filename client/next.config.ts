@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
-import { getClientEnv } from "./lib/env";
+import { getBackendInternalUrl } from "./lib/env";
 
-const BACKEND_URL =
-  process.env.BACKEND_INTERNAL_URL || getClientEnv().apiUrl;
+// Validated at build time: in staging this can only resolve to the staging
+// backend, never to a production endpoint.
+const BACKEND_URL = getBackendInternalUrl();
 
 const nextConfig: NextConfig = {
   images: {

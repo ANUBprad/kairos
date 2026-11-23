@@ -24,7 +24,10 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: "npm run dev",
+      // Pass the port explicitly: Next.js also honours the global PORT env var,
+      // which is reserved for the API server in this monorepo. Without this,
+      // both webServers can bind the same port and the suite times out.
+      command: `npm run dev -- --port ${clientPort}`,
       cwd: "client",
       url: `http://127.0.0.1:${clientPort}`,
       reuseExistingServer: !process.env.CI,

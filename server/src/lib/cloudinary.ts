@@ -5,6 +5,7 @@ import { ValidationError } from "../types/app-error.js";
 import { logger } from "./logger.js";
 
 const UPLOAD_TIMEOUT_MS = 30_000;
+const SIGNED_URL_TTL_SECONDS = 60 * 60;
 
 /**
  * Object ids must not be derived from the client filename alone: two users
@@ -76,14 +77,14 @@ export function getSignedCloudinaryDownloadUrl(
         secure: true,
     });
 
-    // A signed URL without an expiry stays valid forever. Bound it to one hour
-    // so a leaked download link cannot expose a private source indefinitely.
-    return cloudinary.url(publicId, {
+    // `expires_at` is ignored by `cloudinary.url()`'s normal `s--...--` signing;
+    // only `auth_token` honours it there. Use private_download_url instead so the
+    // signed API URL carries a real `expires_at` and a signature over that value.
+    // A leaked link then stops working after one hour.
+    return cloudinary.utils.private_download_url(publicId, "", {
         resource_type: resourceType,
         type: "upload",
-        sign_url: true,
-        secure: true,
-        expires_at: Math.floor(Date.now() / 1000) + 60 * 60,
+        expires_at: Math.floor(Date.now() / 1000) + SIGNED_URL_TTL_SECONDS,
     });
 }
 

@@ -31,6 +31,18 @@ jobs:
       - name: Lockfiles are reproducible
         run: git diff --exit-code -- server/package-lock.json client/package-lock.json
 
+  # Staging deployment safety: the staging blueprint must never be able to
+  # provision the production service, and no secret may be committed inline.
+  staging-blueprint-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Staging-only blueprint guard
+        run: node scripts/check-staging-blueprint.mjs render.staging.yaml
+
   server:
     runs-on: ubuntu-latest
     defaults:
