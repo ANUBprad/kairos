@@ -1,0 +1,572 @@
+import { openai } from "@ai-sdk/openai";
+import type { Response } from "express";
+import { z } from "zod";
+import {
+    convertToModelMessages,
+    createUIMessageStream,
+    isStepCount,
+    pipeUIMessageStreamToResponse,
+    streamText,
+    toUIMessageStream,
+    tool,
+    type UIMessage,
+} from "ai";
+import {
+    CHAT_MODEL,
+    CHAT_MODELS,
+    CONVERSATION_SUMMARY_INTERVAL,
+    RECENT_MESSAGE_WINDOW,
+    RERANK_ENABLED,
+} from "../lib/ai-config.js";
+import { enqueueConversationSummarize } from "../lib/events/conversation-events.js";
+import {
+    applyCitationFallback,
+    parseWebCitationIndices,
+    parseWorkspaceCitationIndices,
+    resolveCitationsFromRetrieval,
+    resolveWebCitationsFromResults,
+} from "../lib/rag/citation-parse.js";
+import {
+    buildChatSystemPrompt,
+    retrieveWorkspaceContext,
+} from "../lib/rag/retrieve.js";
+import { reconcileWorkspaceCitations } from "../lib/rag/reconcile.js";
+import {
+    createConversationRecord,
+    findConversationByIdAndWorkspaceId,
+    findConversationsByWorkspaceId,
+    touchConversation,
+    updateConversationRecord,
+    deleteConversationRecord,
+    resetConversationSummary,
+} from "../repository/conversation.repository.js";
+import {
+    createMessageRecord,
+    countMessagesByConversationId,
+    deleteMessageRecord,
+    deleteMessagesByConversationId,
+    findMessagesByConversationId,
+} from "../repository/message.repository.js";
+
+import {
+    formatTavilyResultsForPrompt,
+    searchWeb,
+    type TavilySearchResponse,
+} from "../lib/sources/tavily.js";
+import { NotFoundError, ValidationError } from "../types/app-error.js";
+import {
+    buildConversationTitle,
+    getLastUserMessageText,
+    getTextFromUIMessage,
+} from "../utils/chat-message.js";
+import { getWorkspaceByIdForUser } from "./workspace.services.js";
+import {
+    assertCanSendMessage,
+    chargeForChatMessage,
+} from "./usage.services.js";
+import { refundCreditCharge } from "./credit.services.js";
+import { logger } from "../lib/logger.js";
+import { addMemoriesFromMessages, searchUserMemories } from "../lib/mem0.js";
+import { createRequestMetrics } from "../lib/observability/request-metrics.js";
+import { estimateChatCostUsd } from "../lib/openai.js";
+import { createMessageMetricsRecord } from "../repository/message-metrics.repository.js";
+import type { RetrieveTiming } from "../lib/rag/retrieve.js";
+
+
+/**
+ * Lists all conversations in a workspace for the sidebar/history UI.
+ *
+ * @param workspaceId - Workspace to list conversations from
+ * @param userId - Authenticated user's id
+ * @returns Conversation records ordered by most recent activity
+ *
+ */
+export async function listConversationsForWorkspace(
+    workspaceId: string,
+    userId: string,
+) {
+    await getWorkspaceByIdForUser(workspaceId, userId);
+    return findConversationsByWorkspaceId(workspaceId);
+}
+
+/**
+ * Creates an empty conversation (optional title).
+ *
+ * Most chats are created implicitly on first message via {@link streamWorkspaceChat};
+ * this endpoint supports explicit "new chat" actions from the UI.
+ *
+ * @param workspaceId - Workspace to attach the conversation to
+ * @param userId - Authenticated user's id
+ * @param title - Optional display title
+ * @returns New conversation record
+ *
+ */
+export async function createConversationForWorkspace(
+    workspaceId: string,
+    userId: string,
+    title?: string,
+) {
+    await getWorkspaceByIdForUser(workspaceId, userId);
+    return createConversationRecord(workspaceId, title);
+}
+
+/**
+ * Loads persisted message history for a conversation.
+ *
+ * @param workspaceId - Workspace the conversation belongs to
+ * @param conversationId - Conversation to load messages for
+ * @param userId - Authenticated user's id
+ * @returns Message rows with role, content, citations, and timestamps
+ * @throws {NotFoundError} When the conversation does not exist in this workspace
+ *
+ */
+export async function getConversationMessagesForWorkspace(
+    workspaceId: string,
+    conversationId: string,
+    userId: string,
+) {
+    await getWorkspaceByIdForUser(workspaceId, userId);
+
+    const conversation = await findConversationByIdAndWorkspaceId(
+        conversationId,
+        workspaceId,
+    );
+
+    if (!conversation) {
+        throw new NotFoundError("Conversation not found");
+    }
+
+    const messages = await findMessagesByConversationId(conversationId);
+
+    return Promise.all(
+        messages.map(async (message) => {
+            if (!message.citations || !Array.isArray(message.citations)) {
+                return message;
+            }
+
+            const citations = await reconcileWorkspaceCitations(
+                workspaceId,
+                message.citations as {
+                    sourceId?: string;
+                    sourceTitle: string;
+                    sourceType: string;
+                }[],
+            );
+
+            return {
+                ...message,
+                citations,
+            };
+        }),
+    );
+}
+
+/**
+ * Deletes a conversation and all its messages (cascade).
+ *
+ * @param workspaceId - Workspace the conversation belongs to
+ * @param conversationId - Conversation to delete
+ * @param userId - Authenticated user's id
+ * @returns Resolves when the conversation row is deleted
+ * @throws {NotFoundError} When the conversation does not exist
+ *
+ */
+export async function deleteConversationForWorkspace(
+    workspaceId: string,
+    conversationId: string,
+    userId: string,
+) {
+    await getWorkspaceByIdForUser(workspaceId, userId);
+
+    const conversation = await findConversationByIdAndWorkspaceId(
+        conversationId,
+        workspaceId,
+    );
+
+    if (!conversation) {
+        throw new NotFoundError("Conversation not found");
+    }
+
+    await deleteConversationRecord(conversationId);
+}
+
+/**
+ * Clears all messages in a conversation but keeps the conversation in the sidebar.
+ */
+export async function clearConversationMessagesForWorkspace(
+    workspaceId: string,
+    conversationId: string,
+    userId: string,
+) {
+    await getWorkspaceByIdForUser(workspaceId, userId);
+
+    const conversation = await findConversationByIdAndWorkspaceId(
+        conversationId,
+        workspaceId,
+    );
+
+    if (!conversation) {
+        throw new NotFoundError("Conversation not found");
+    }
+
+    await deleteMessagesByConversationId(conversationId);
+    await resetConversationSummary(conversationId);
+}
+
+/**
+ * Finds an existing conversation or creates one from the first user message.
+ *
+ * @param workspaceId - Workspace scope
+ * @param conversationId - Existing id from client, or undefined for a new chat
+ * @param firstMessage - User text used to auto-generate a title for new conversations
+ * @returns Conversation record (existing or newly created)
+ * @throws {NotFoundError} When `conversationId` is provided but not found
+ *
+ *
+ */
+async function resolveConversation(
+    workspaceId: string,
+    conversationId: string | undefined,
+    firstMessage: string,
+) {
+    if (conversationId) {
+        const existing = await findConversationByIdAndWorkspaceId(
+            conversationId,
+            workspaceId,
+        );
+
+        if (!existing) {
+            throw new NotFoundError("Conversation not found");
+        }
+
+        return existing;
+    }
+
+    return createConversationRecord(
+        workspaceId,
+        buildConversationTitle(firstMessage),
+    );
+}
+
+/**
+ * Main RAG chat endpoint: streams an AI reply with workspace context and optional web search.
+ *
+ * **Pipeline:**
+ * 1. Validate user message and resolve/create conversation
+ * 2. Save user message to Postgres
+ * 3. Parallel: Pinecone RAG retrieval + Mem0 memory search
+ * 4. Build system prompt and stream model response via AI SDK
+ * 5. On finish: save assistant message, citations, title, summary job, Mem0 learning
+ *
+ * @param res - Express response (streamed via `pipeUIMessageStreamToResponse`)
+ * @param workspaceId - Workspace whose sources to search
+ * @param userId - Authenticated user's id
+ * @param input - Client chat payload from `useChat`
+ * @returns Writes UI message stream to `res`; sets `X-Conversation-Id` header
+ * @throws {ValidationError} When no user message text is present
+ * @throws {NotFoundError} When conversation or workspace is not found
+ *
+ *
+ */
+export async function streamWorkspaceChat(
+    res: Response,
+    workspaceId: string,
+    userId: string,
+    input: {
+        conversationId?: string;
+        messages: UIMessage[];
+        model?: string;
+        webSearch?: boolean;
+    },
+) {
+    const workspace = await getWorkspaceByIdForUser(workspaceId, userId);
+    const requestedModel = input.model ?? workspace.defaultModel;
+    const chatModel =
+        CHAT_MODELS.find((model) => model === requestedModel) ?? CHAT_MODEL;
+    const webSearchEnabled =
+        input.webSearch === true && !!process.env.TAVILY_API_KEY?.trim();
+
+    const userText = getLastUserMessageText(input.messages);
+    if (!userText) {
+        throw new ValidationError("A user message is required");
+    }
+
+    // Check before any expensive retrieval/generation. The debit is tied to
+    // the persisted user message so a failed stream can be refunded once.
+    await assertCanSendMessage(userId);
+
+    const conversation = await resolveConversation(
+        workspaceId,
+        input.conversationId,
+        userText,
+    );
+
+    const userMessage = await createMessageRecord({
+        conversationId: conversation.id,
+        role: "USER",
+        content: userText,
+    });
+
+    try {
+        await chargeForChatMessage(userId, userMessage.id);
+    } catch (error) {
+        await deleteMessageRecord(userMessage.id).catch((cleanupError) => {
+            logger.error("Failed to clean up uncharged chat message", {
+                messageId: userMessage.id,
+                err: cleanupError,
+            });
+        });
+        throw error;
+    }
+
+    const refundChatCharge = async (reason: string) => {
+        try {
+            await refundCreditCharge({
+                chargeIdempotencyKey: `chat-charge:${userMessage.id}`,
+                refundIdempotencyKey: `chat-refund:${userMessage.id}`,
+                expectedUserId: userId,
+                reason,
+            });
+        } catch (error) {
+            logger.error("Failed to refund chat charge", {
+                messageId: userMessage.id,
+                err: error,
+            });
+        }
+    };
+
+    const requestMetrics = createRequestMetrics();
+    const retrieveTiming: RetrieveTiming = {};
+
+    const mem0Start = performance.now();
+    const [retrievedChunks, userMemories] = await Promise.all([
+        retrieveWorkspaceContext(workspaceId, userText, retrieveTiming),
+        searchUserMemories(userId, userText),
+    ]);
+    requestMetrics.setStage("mem0", Math.round(performance.now() - mem0Start));
+    if (retrieveTiming.embedQueryMs !== undefined) {
+        requestMetrics.setStage("embed_query", retrieveTiming.embedQueryMs);
+    }
+    if (retrieveTiming.pineconeQueryMs !== undefined) {
+        requestMetrics.setStage("pinecone_query", retrieveTiming.pineconeQueryMs);
+    }
+    if (retrieveTiming.rerankMs !== undefined) {
+        requestMetrics.setStage("rerank", retrieveTiming.rerankMs);
+        requestMetrics.setRerankCalls(RERANK_ENABLED ? 1 : 0);
+    }
+    if (retrieveTiming.embedCacheHit !== undefined) {
+        requestMetrics.setEmbedCacheHit(retrieveTiming.embedCacheHit);
+    }
+    if (retrieveTiming.embedTokens !== undefined) {
+        requestMetrics.setEmbedTokens(retrieveTiming.embedTokens);
+    }
+
+    const pendingStreamCitations = retrievedChunks.map((chunk, index) => ({
+        index: index + 1,
+        sourceId: chunk.sourceId,
+        sourceTitle: chunk.sourceTitle,
+        sourceType: chunk.sourceType,
+        chunkId: chunk.chunkId,
+        chunkIndex: chunk.chunkIndex,
+        page: chunk.page,
+        excerpt: chunk.text.slice(0, 280),
+        score: chunk.score,
+    }));
+
+    const systemPrompt = buildChatSystemPrompt({
+        chunks: retrievedChunks,
+        conversationSummary: conversation.summary,
+        userMemories: userMemories.map((memory) => memory.memory),
+        webSearchEnabled,
+    });
+
+    const contextMessages =
+        conversation.summary &&
+            input.messages.length > RECENT_MESSAGE_WINDOW
+            ? input.messages.slice(-RECENT_MESSAGE_WINDOW)
+            : input.messages;
+
+    let webSearchResults: TavilySearchResponse | null = null;
+    const stream = createUIMessageStream({
+        originalMessages: input.messages,
+        onError: (error) => {
+            logger.error("Chat stream failed", {
+                workspaceId,
+                conversationId: conversation.id,
+                messageId: userMessage.id,
+                err: error,
+            });
+            void refundChatCharge("generation error");
+            return "The assistant could not complete this response.";
+        },
+        execute: async ({ writer }) => {
+            if (pendingStreamCitations.length > 0) {
+                writer.write({
+                    type: "data-rag-citations",
+                    data: pendingStreamCitations,
+                } as Parameters<typeof writer.write>[0]);
+            }
+
+            const llmStart = performance.now();
+            const tools =
+                webSearchEnabled
+                    ? {
+                        web_search: tool({
+                            description:
+                                "Search the web for up-to-date information outside the workspace sources.",
+                            inputSchema: z.object({
+                                query: z
+                                    .string()
+                                    .describe(
+                                        "The search query for current web information",
+                                    ),
+                            }),
+                            execute: async ({ query }) => {
+                                const results = await searchWeb(query);
+                                webSearchResults = results;
+                                return formatTavilyResultsForPrompt(results);
+                            },
+                        }),
+                    }
+                    : undefined;
+
+            const result = streamText({
+                model: openai(chatModel),
+                system: systemPrompt,
+                messages: await convertToModelMessages(contextMessages),
+                tools,
+                stopWhen: webSearchEnabled ? isStepCount(3) : undefined,
+                onFinish: ({ usage }) => {
+                    requestMetrics.setLlmUsage({
+                        promptTokens: usage?.inputTokens,
+                        completionTokens: usage?.outputTokens,
+                    });
+                    requestMetrics.setStage(
+                        "llm_stream",
+                        Math.round(performance.now() - llmStart),
+                    );
+                },
+            });
+
+            writer.merge(toUIMessageStream({ stream: result.stream }));
+        },
+        onFinish: async ({ responseMessage, isAborted }) => {
+            if (isAborted) {
+                await refundChatCharge("stream aborted");
+                return;
+            }
+
+            const assistantText = getTextFromUIMessage(responseMessage).trim();
+            if (!assistantText) {
+                await refundChatCharge("empty assistant response");
+                return;
+            }
+
+            const workspaceIndices = parseWorkspaceCitationIndices(assistantText);
+            let workspaceCitations = resolveCitationsFromRetrieval(
+                retrievedChunks,
+                workspaceIndices,
+            );
+            workspaceCitations = applyCitationFallback(
+                retrievedChunks,
+                workspaceCitations,
+            );
+
+            const webCitations =
+                webSearchResults
+                    ? resolveWebCitationsFromResults(
+                        webSearchResults.results,
+                        parseWebCitationIndices(assistantText),
+                    )
+                    : [];
+
+            const allCitations = await reconcileWorkspaceCitations(
+                workspaceId,
+                [...workspaceCitations, ...webCitations],
+            );
+
+            const savedMessage = await createMessageRecord({
+                conversationId: conversation.id,
+                role: "ASSISTANT",
+                content: assistantText,
+                citations: allCitations,
+            });
+
+            const metricsSnapshot = requestMetrics.finish();
+            const estimatedCostUsd = estimateChatCostUsd(chatModel, {
+                promptTokens: metricsSnapshot.llmPromptTokens,
+                completionTokens: metricsSnapshot.llmCompletionTokens,
+                embedTokens: metricsSnapshot.embedTokens,
+            });
+
+            await createMessageMetricsRecord({
+                messageId: savedMessage.id,
+                embedTokens: metricsSnapshot.embedTokens,
+                llmPromptTokens: metricsSnapshot.llmPromptTokens,
+                llmCompletionTokens: metricsSnapshot.llmCompletionTokens,
+                rerankCalls: metricsSnapshot.rerankCalls,
+                embedCacheHit: metricsSnapshot.embedCacheHit,
+                stagesMs: metricsSnapshot.stagesMs,
+                estimatedCostUsd,
+            }).catch((error) => {
+                logger.error("Failed to persist message metrics", { err: error });
+            });
+
+            logger.info("chat_request_metrics", {
+                workspaceId,
+                conversationId: conversation.id,
+                retrieveK: retrievedChunks.length,
+                citationCount: allCitations.length,
+                stagesMs: metricsSnapshot.stagesMs,
+                tokens: {
+                    embed: metricsSnapshot.embedTokens,
+                    llmPrompt: metricsSnapshot.llmPromptTokens,
+                    llmCompletion: metricsSnapshot.llmCompletionTokens,
+                },
+                embedCacheHit: metricsSnapshot.embedCacheHit,
+            });
+
+            await touchConversation(conversation.id);
+
+            if (!conversation.title) {
+                await updateConversationRecord(conversation.id, {
+                    title: buildConversationTitle(userText),
+                });
+            }
+
+            const messageCount = await countMessagesByConversationId(
+                conversation.id,
+            );
+
+            if (messageCount % CONVERSATION_SUMMARY_INTERVAL === 0) {
+                await enqueueConversationSummarize({
+                    conversationId: conversation.id,
+                    userId,
+                });
+            }
+
+            void addMemoriesFromMessages(
+                userId,
+                [
+                    { role: "user", content: userText },
+                    { role: "assistant", content: assistantText },
+                ],
+                {
+                    source: "learned",
+                    conversationId: conversation.id,
+                },
+            ).catch((error) => {
+                logger.error("Mem0 add failed", { err: error });
+            });
+        },
+    });
+
+    await pipeUIMessageStreamToResponse({
+        response: res,
+        stream,
+        headers: {
+            "X-Conversation-Id": conversation.id,
+            "Access-Control-Expose-Headers": "X-Conversation-Id, x-conversation-id",
+        },
+    });
+}

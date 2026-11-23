@@ -1,0 +1,209 @@
+/**
+ * Gemini API Integration for Fast, Free-Tier AI Operations (Titles, Summaries, Quick Labels)
+ */
+
+import { logger } from "./logger.js";
+
+/**
+ * Generates a descriptive, context-aware title (3-7 words) for a learning artifact using Google Gemini 2.5 Flash API.
+ *
+ * @param artifactType - Type of artifact (e.g. SUMMARY, QUIZ, MINDMAP, PODCAST)
+ * @param sourceText - Excerpt of source text content
+ * @param fallbackTitle - Optional default title if Gemini is unavailable
+ * @returns Cleaned title string
+ */
+export async function generateArtifactTitleWithGemini(
+    artifactType: string,
+    sourceText: string,
+    fallbackTitle?: string,
+): Promise<string> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    const typeLabel =
+        {
+            SUMMARY: "Summary",
+            TAKEAWAYS: "Key Takeaways",
+            FLASHCARDS: "Flashcards",
+            QUIZ: "Quiz",
+            MINDMAP: "Mind Map",
+            REPORT: "AI Report",
+            PODCAST: "Audio Debate & Podcast",
+        }[artifactType] || artifactType;
+
+    const defaultFallback =
+        fallbackTitle || `${typeLabel} · ${new Date().toLocaleDateString()}`;
+
+    if (!apiKey || !sourceText || !sourceText.trim()) {
+        return defaultFallback;
+    }
+
+    try {
+        const prompt = [
+            `You are a concise, smart title generator for an AI learning workbench.`,
+            `The user is creating a "${typeLabel}" artifact from their study materials.`,
+            `Generate a specific, descriptive, and engaging title (3 to 7 words max) that accurately reflects the core subject/topic of the source content.`,
+            `Guidelines:`,
+            `- Be specific to the subject (e.g., "Transformer Architecture & Attention Mechanisms", "Express.js REST APIs & Middleware", "Cellular Respiration & ATP Cycle")`,
+            `- Do NOT wrap in quotation marks.`,
+            `- Do NOT include words like "Title:", "A Summary of", or markdown asterisks.`,
+            `- Return ONLY the clean, raw title string.`,
+            ``,
+            `Source Excerpt:`,
+            sourceText.slice(0, 5000),
+        ].join("\n");
+
+        // Use active Google Gemini free-tier models (2.5 generation)
+        const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+
+        for (const model of models) {
+            try {
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }],
+                            generationConfig: {
+                                temperature: 0.2,
+                                maxOutputTokens: 250,
+                            },
+                        }),
+                    },
+                );
+
+                if (response.ok) {
+                    const data = (await response.json()) as {
+                        candidates?: Array<{
+                            content?: {
+                                parts?: Array<{ text?: string }>;
+                            };
+                        }>;
+                    };
+
+                    const parts = data?.candidates?.[0]?.content?.parts || [];
+                    // Find first non-empty text part
+                    const text = parts
+                        .map((p) => p.text || "")
+                        .join(" ")
+                        .trim();
+
+                    if (text) {
+                        // Clean up quotes, markdown asterisks, or unwanted prefixes
+                        const clean = text
+                            .replace(/^["'`]|["'`]$/g, "")
+                            .replace(/^\*\*|\*\*$/g, "")
+                            .replace(/^Title:\s*/i, "")
+                            .trim();
+                        if (clean.length > 2) {
+                            return clean;
+                        }
+                    }
+                } else {
+                    logger.warn(`Gemini model ${model} request failed`, {
+                        status: response.status,
+                    });
+                }
+            } catch (modelErr) {
+                logger.warn(`Gemini model ${model} request error`, {
+                    error: modelErr instanceof Error ? modelErr.name : "UnknownError",
+                });
+            }
+        }
+    } catch (error) {
+        logger.warn("Gemini title generation failed", {
+            error: error instanceof Error ? error.name : "UnknownError",
+        });
+    }
+
+    return defaultFallback;
+}
+
+/**
+ * Rewrites a user chat prompt to be clearer and more effective for RAG Q&A.
+ */
+export async function enhancePromptWithGemini(
+    prompt: string,
+    options?: { sourcesCount?: number },
+): Promise<string> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    const trimmed = prompt.trim();
+
+    if (!apiKey) {
+        throw new Error("Gemini API is not configured");
+    }
+    if (!trimmed) {
+        throw new Error("Prompt cannot be empty");
+    }
+
+    const contextLine =
+        options?.sourcesCount && options.sourcesCount > 0
+            ? `The user has ${options.sourcesCount} notebook source(s) selected for grounded answers.`
+            : "The user may not have sources selected; keep the prompt self-contained.";
+
+    const system = [
+        "You improve user prompts for a research notebook AI assistant (OpenBook).",
+        contextLine,
+        "Rewrite the prompt to be specific, well-structured, and actionable.",
+        "Preserve the user's intent and language.",
+        "Do not answer the question — only return the improved prompt.",
+        "No markdown headings, no quotes, no preamble like 'Here is...'.",
+        "Return only the enhanced prompt text.",
+    ].join("\n");
+
+    const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+
+    for (const model of models) {
+        try {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                parts: [
+                                    { text: `${system}\n\nUser prompt:\n${trimmed}` },
+                                ],
+                            },
+                        ],
+                        generationConfig: {
+                            temperature: 0.35,
+                            maxOutputTokens: 1024,
+                        },
+                    }),
+                },
+            );
+
+            if (!response.ok) {
+                logger.warn(`Gemini enhance ${model} request failed`, {
+                    status: response.status,
+                });
+                continue;
+            }
+
+            const data = (await response.json()) as {
+                candidates?: Array<{
+                    content?: { parts?: Array<{ text?: string }> };
+                }>;
+            };
+
+            const text = (data.candidates?.[0]?.content?.parts ?? [])
+                .map((p) => p.text ?? "")
+                .join("")
+                .trim()
+                .replace(/^["'`]|["'`]$/g, "")
+                .replace(/^Enhanced prompt:\s*/i, "");
+
+            if (text.length > 0) {
+                return text;
+            }
+        } catch (err) {
+            logger.warn(`Gemini enhance ${model} request error`, {
+                error: err instanceof Error ? err.name : "UnknownError",
+            });
+        }
+    }
+
+    throw new Error("Failed to enhance prompt. Please try again.");
+}

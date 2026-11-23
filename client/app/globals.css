@@ -1,0 +1,206 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+  --font-heading: var(--font-sans);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-selection: var(--selection);
+  --color-selection-foreground: var(--selection-foreground);
+}
+
+:root {
+  /* Geist is loaded in the root layout as --font-geist-sans; without this the
+     `font-sans` utility resolves to an empty var and falls back to Times. */
+  --font-sans: var(--font-geist-sans);
+  --background: #f6efe7;
+  --foreground: #09090b;
+  --card: #fcf9f5;
+  --card-foreground: #09090b;
+  --popover: #fcf9f5;
+  --popover-foreground: #09090b;
+  --primary: #18181b;
+  --primary-foreground: #fafafa;
+  --secondary: #ede3d7;
+  --secondary-foreground: #18181b;
+  --muted: #ede3d7;
+  --muted-foreground: #70685e;
+  --accent: #ede3d7;
+  --accent-foreground: #18181b;
+  --destructive: #ef4444;
+  --border: #e3d7c8;
+  --input: #e3d7c8;
+  --ring: #18181b;
+  --radius: 0.625rem;
+  --selection: #dfcfbc;
+  --selection-foreground: #18181b;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #121215;
+  --card-foreground: #fafafa;
+  --popover: #121215;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+  --secondary: #18181b;
+  --secondary-foreground: #fafafa;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --accent: #18181b;
+  --accent-foreground: #fafafa;
+  --destructive: #7f1d1d;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #d4d4d8;
+  --selection: #3f3f46;
+  --selection-foreground: #fafafa;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground min-h-screen transition-colors duration-150;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* One text selection colour for the whole app, driven by --selection so it
+   follows the light and dark themes. Deliberately left outside @layer so a
+   stray `selection:bg-*` utility can't reintroduce per-page colours; change
+   the tokens above instead of overriding this locally. */
+::selection,
+*::selection {
+  background-color: var(--selection);
+  color: var(--selection-foreground);
+}
+
+
+/* Custom sleek scrollbar matching light and dark modes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d6c8b8;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b8a896;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d6c8b8 transparent;
+}
+
+.dark * {
+  scrollbar-color: #27272a transparent;
+}
+
+/* Continuous logo strip on the landing page */
+@keyframes openbook-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.marquee-track {
+  animation: openbook-marquee 45s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* Gold Glitter & Shimmer Effects for PRO+ Tier */
+@keyframes gold-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.gold-glitter-badge {
+  background: linear-gradient(
+    135deg,
+    #bf953f 0%,
+    #fcf6ba 25%,
+    #b38728 50%,
+    #fbf5b7 75%,
+    #aa771c 100%
+  );
+  background-size: 200% 200%;
+  animation: gold-shimmer 4s ease infinite;
+}
+
+.gold-glitter-ring {
+  background: linear-gradient(
+    135deg,
+    #d4af37 0%,
+    #fff6cc 25%,
+    #aa771c 50%,
+    #fef08a 75%,
+    #d97706 100%
+  );
+  background-size: 200% 200%;
+  animation: gold-shimmer 4s ease infinite;
+}

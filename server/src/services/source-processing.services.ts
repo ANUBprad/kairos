@@ -1,0 +1,396 @@
+import type { PineconeRecord } from "@pinecone-database/pinecone";
+import type { Prisma } from "../generated/prisma/client.js";
+import prisma from "../lib/db.js";
+import { chunkPages, chunkText } from "../lib/chunking.js";
+import { embedTexts } from "../lib/openai.js";
+import { extractTextFromCloudinaryImage } from "../lib/sources/image-ocr.js";
+import { extractPdfFromCloudinary } from "../lib/sources/pdf.js";
+import {
+    deleteSourceVectors,
+    type VectorMetadata,
+    upsertSourceVectors,
+} from "../lib/pinecone.js";
+import {
+    createSourceChunks,
+    deleteChunksBySourceId,
+    findChunksBySourceId,
+    type SourceChunkRecord,
+} from "../repository/source-chunk.repository.js";
+import {
+    findSourceById,
+    sourceSelect,
+    updateSourceRecord,
+    type SourceRecord,
+} from "../repository/source.repository.js";
+import { refundChargeInTransaction } from "./credit.services.js";
+
+type SourceMetadata = {
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+    publicId?: string;
+    resourceType?: "raw" | "image";
+    importedFrom?: string;
+    videoId?: string;
+    processingError?: string;
+    chunkCount?: number;
+    pageCount?: number;
+    indexedAt?: string;
+    pageTexts?: string[];
+    chunkVersion?: number;
+    mimeType?: string;
+    ocrModel?: string;
+};
+
+/**
+ * Extracts raw textual content and pagination structure from a source record or its Cloudinary asset.
+ *
+ * @param source - The source database record to extract text from
+ * @returns Object with full text, page count, and page array (if applicable)
+ * @throws {Error} When source content or Cloudinary fileUrl metadata is missing
+ */
+async function extractSourceText(source: SourceRecord) {
+    const metadata =
+        source.metadata &&
+            typeof source.metadata === "object" &&
+            !Array.isArray(source.metadata)
+            ? (source.metadata as SourceMetadata)
+            : {};
+
+    if (source.type === "PDF") {
+        const storedPages = Array.isArray(metadata.pageTexts)
+            ? metadata.pageTexts.filter(
+                (page): page is string =>
+                    typeof page === "string" && page.trim().length > 0,
+            )
+            : [];
+
+        if (storedPages.length > 0) {
+            const text = source.content?.trim() || storedPages.join("\n\n");
+            return {
+                text,
+                pageCount: storedPages.length,
+                pages: storedPages,
+            };
+        }
+
+        if (metadata.fileUrl) {
+            const extracted = await extractPdfFromCloudinary({
+                fileUrl: metadata.fileUrl,
+                publicId: metadata.publicId,
+                resourceType: metadata.resourceType ?? "raw",
+            });
+            return {
+                text: extracted.text,
+                pageCount: extracted.pageCount,
+                pages: extracted.pages,
+            };
+        }
+    }
+
+    if (source.type === "IMAGE") {
+        const existing = source.content?.trim();
+        if (existing) {
+            return {
+                text: existing,
+                pageCount: undefined,
+                pages: undefined,
+            };
+        }
+
+        if (metadata.fileUrl) {
+            const ocr = await extractTextFromCloudinaryImage({
+                fileUrl: metadata.fileUrl,
+                publicId: metadata.publicId,
+                mimeType: metadata.mimeType,
+            });
+            return {
+                text: ocr.text,
+                pageCount: undefined,
+                pages: undefined,
+                extraMetadata: { ocrModel: ocr.model },
+            };
+        }
+
+        throw new Error("Image source is missing fileUrl metadata");
+    }
+
+    const text = source.content?.trim();
+    if (text) {
+        return {
+            text,
+            pageCount: undefined,
+            pages: undefined,
+        };
+    }
+
+    if (source.type === "PDF") {
+        throw new Error("PDF source is missing fileUrl metadata and pageTexts");
+    }
+
+    throw new Error(`Source ${source.id} has no extractable content`);
+}
+
+/**
+ * Updates a source status to "PROCESSING" in the database.
+ *
+ * @param sourceId - Unique identifier of the source
+ * @returns Updated source record
+ */
+export function markSourceProcessing(sourceId: string) {
+    return updateSourceRecord(sourceId, { status: "PROCESSING" });
+}
+
+/**
+ * Marks a source status as "FAILED" in the database and records the error message in metadata.
+ *
+ * @param sourceId - Unique identifier of the source
+ * @param error - The encountered error or exception
+ * @param existingMetadata - Existing source metadata to preserve
+ * @returns Updated source record with FAILED status and error details
+ */
+export async function markSourceFailed(
+    sourceId: string,
+    error: unknown,
+    existingMetadata: SourceRecord["metadata"],
+) {
+    const message =
+        error instanceof Error ? error.message : "Source processing failed";
+
+    const metadata =
+        existingMetadata &&
+            typeof existingMetadata === "object" &&
+            !Array.isArray(existingMetadata)
+            ? (existingMetadata as SourceMetadata)
+            : {};
+
+    return prisma.$transaction(async (tx) => {
+        const source = await tx.source.findUniqueOrThrow({
+            where: { id: sourceId },
+            select: { workspaceId: true, status: true },
+        });
+
+        // Refund only a debit recorded for this source. Legacy sources without
+        // a ledger entry are left untouched.
+        if (source.status !== "READY") {
+            const workspace = await tx.workspace.findUnique({
+                where: { id: source.workspaceId },
+                select: { userId: true },
+            });
+            if (workspace?.userId) {
+                await refundChargeInTransaction(tx, {
+                    chargeIdempotencyKey: `source-charge:${sourceId}`,
+                    refundIdempotencyKey: `source-refund:${sourceId}`,
+                    expectedUserId: workspace.userId,
+                    reason: message,
+                });
+            }
+        }
+
+        return tx.source.update({
+            where: { id: sourceId },
+            data: {
+                status: "FAILED",
+                metadata: {
+                    ...metadata,
+                    processingError: message,
+                },
+            },
+            select: sourceSelect,
+        });
+    });
+}
+
+/**
+ * Extracts and persists the textual content and page count of a source document.
+ *
+ * @param sourceId - Unique identifier of the source
+ * @returns Extracted content, pages, workspaceId, and updated source record
+ * @throws {Error} If source does not exist
+ */
+export async function extractSourceContent(sourceId: string) {
+    const source = await findSourceById(sourceId);
+    if (!source) {
+        throw new Error("Source not found");
+    }
+
+    const extracted = await extractSourceText(source);
+    const metadata =
+        source.metadata &&
+            typeof source.metadata === "object" &&
+            !Array.isArray(source.metadata)
+            ? (source.metadata as SourceMetadata)
+            : {};
+
+    const chunkVersion = (metadata.chunkVersion ?? 0) + 1;
+
+    const extraMetadata =
+        "extraMetadata" in extracted &&
+        extracted.extraMetadata &&
+        typeof extracted.extraMetadata === "object"
+            ? extracted.extraMetadata
+            : {};
+
+    await updateSourceRecord(sourceId, {
+        content: extracted.text,
+        metadata: {
+            ...metadata,
+            ...extraMetadata,
+            pageCount: extracted.pageCount ?? metadata.pageCount,
+            ...(extracted.pages?.length
+                ? { pageTexts: extracted.pages }
+                : {}),
+            chunkVersion,
+        },
+    });
+
+    return {
+        sourceId,
+        workspaceId: source.workspaceId,
+        text: extracted.text,
+        pages: extracted.pages,
+        source,
+    };
+}
+
+/**
+ * Breaks down source text into overlapping chunks, computes token counts, and saves them to Postgres.
+ *
+ * @param sourceId - Unique identifier of the parent source
+ * @param text - Full source text content
+ * @param pages - Optional page-by-page strings for PDF document preserving pagination
+ * @returns Newly created source chunk records in the database
+ * @throws {Error} When no chunks could be generated from the content
+ */
+export async function chunkSourceContent(
+    sourceId: string,
+    text: string,
+    pages?: string[],
+) {
+    await deleteChunksBySourceId(sourceId);
+
+    const chunks = pages?.length ? chunkPages(pages) : chunkText(text);
+
+    if (chunks.length === 0) {
+        throw new Error("No chunks were generated from source content");
+    }
+
+    return createSourceChunks(
+        chunks.map((chunk) => ({
+            sourceId,
+            index: chunk.index,
+            content: chunk.content,
+            tokenCount: Math.ceil(chunk.content.length / 4),
+            metadata: chunk.metadata as Prisma.InputJsonValue | undefined,
+        })),
+    );
+}
+
+/**
+ * Removes all vector embeddings from Pinecone and deletes text chunks from Postgres for a given source.
+ *
+ * @param workspaceId - Workspace containing the source vectors
+ * @param sourceId - Unique identifier of the source
+ */
+export async function removeSourceFromIndex(
+    workspaceId: string,
+    sourceId: string,
+) {
+    await deleteSourceVectors(workspaceId, sourceId);
+    await deleteChunksBySourceId(sourceId);
+}
+
+/**
+ * Returns all stored chunks for a source along with the total chunk count.
+ * Useful for debugging, verification, and inspecting chunking boundaries.
+ *
+ * @param sourceId - Unique identifier of the source
+ * @returns Object containing the chunk list and total count
+ */
+export async function listChunksForSource(sourceId: string) {
+    const chunks = await findChunksBySourceId(sourceId);
+    return { chunks, count: chunks.length };
+}
+
+/**
+ * Step 3 of the pipeline: embed chunks and store vectors in Pinecone.
+ *
+ * - Sends chunk text to OpenAI in batches of 50
+ * - Builds Pinecone records with embedding + searchable metadata
+ * - Upserts vectors into the workspace namespace
+ * - Marks source as `READY` with `chunkCount` and `indexedAt`
+ *
+ * Pinecone metadata includes enough context for retrieval without re-querying Postgres:
+ * `sourceTitle`, `sourceType`, chunk `text` (truncated to 35k chars), and optional `page`.
+ *
+ * @param source - The parent source record
+ * @param chunks - Chunk rows already saved in Postgres (must have `id`)
+ * @returns Updated source record with status `READY`
+ *
+ *
+ */
+
+export async function embedAndIndexSource(
+    source: SourceRecord,
+    chunks: SourceChunkRecord[],
+) {
+    await deleteSourceVectors(source.workspaceId, source.id);
+
+    const batchSize = 50;
+    const records: PineconeRecord<VectorMetadata>[] = [];
+
+    for (let i = 0; i < chunks.length; i += batchSize) {
+        const batch = chunks.slice(i, i + batchSize);
+        const embeddings = await embedTexts(batch.map((chunk) => chunk.content));
+
+        for (let j = 0; j < batch.length; j += 1) {
+            const chunk = batch[j]!;
+            const embedding = embeddings[j]!;
+            const chunkMetadata =
+                chunk.metadata &&
+                    typeof chunk.metadata === "object" &&
+                    !Array.isArray(chunk.metadata)
+                    ? (chunk.metadata as Record<string, unknown>)
+                    : {};
+
+            records.push({
+                id: chunk.id,
+                values: embedding,
+                metadata: {
+                    workspaceId: source.workspaceId,
+                    sourceId: source.id,
+                    chunkId: chunk.id,
+                    chunkIndex: chunk.index,
+                    sourceTitle: source.title,
+                    sourceType: source.type,
+                    text: chunk.content.slice(0, 35000),
+                    ...(typeof chunkMetadata.page === "number"
+                        ? { page: chunkMetadata.page }
+                        : {}),
+                    ...(typeof chunkMetadata.contentType === "string"
+                        ? { contentType: chunkMetadata.contentType }
+                        : {}),
+                },
+            });
+        }
+    }
+
+    await upsertSourceVectors(source.workspaceId, records);
+
+    const metadata =
+        source.metadata &&
+            typeof source.metadata === "object" &&
+            !Array.isArray(source.metadata)
+            ? (source.metadata as SourceMetadata)
+            : {};
+
+    return updateSourceRecord(source.id, {
+        status: "READY",
+        metadata: {
+            ...metadata,
+            chunkCount: chunks.length,
+            indexedAt: new Date().toISOString(),
+            processingError: undefined,
+        },
+    });
+}
