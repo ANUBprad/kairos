@@ -1,26 +1,29 @@
-# HTTP / security test evidence (Round 5)
+# HTTP / security test evidence (Phase 06)
 
-**Status: PASSED for local real-HTTP coverage; live HTTPS checks
-`BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED`.** All tests described here run the
-actual Express application created by `createApp()` in `server/src/app.ts` over
-a real TCP socket with a real PostgreSQL database. They do not stub controllers,
-middleware, services, or the ORM. Each suite creates synthetic fixtures and
-deletes them in `after()` hooks.
+**Status: PASSED for local real-HTTP and configuration coverage; live HTTPS
+checks `BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED`.** All tests described here
+run either the actual Express application created by `createApp()` over a real
+TCP socket with real PostgreSQL, or real configuration/HTTP primitives. They do
+not stub controllers, middleware, services or the ORM. Integration suites
+create synthetic fixtures and delete them in `after()` hooks.
 
 ## 1. How to run
 
-From `server/`, with an isolated disposable database:
+From `server/`, with an isolated disposable database (only local throwaway
+credentials):
 
 ```bash
-. <path-to-stage05-env.ps1>          # sets DATABASE_URL / TEST_DATABASE_URL only for the disposable DB
-npm run test:http                    # 18 tests
-npm run test:jobs                    # 6 tests
-npm run test:payments                # 11 tests
-npm run test:integration             # all 47 (includes the earlier 12)
+$env:DATABASE_URL='postgresql://kairos:<local-only>@127.0.0.1:55445/kairos_stage06'
+$env:TEST_DATABASE_URL=$env:DATABASE_URL
+npm run test:unit            # 137 tests, no database required
+npm run test:http            # 18 real-HTTP tests
+npm run test:jobs            # 6 durable-job recovery tests
+npm run test:payments        # 11 provider-mocked payment tests
+npm run test:integration     # all 47 (12 concurrency + 18 + 6 + 11)
 ```
 
-`npm run test:unit` (124 tests) needs no database. Never set `TEST_DATABASE_URL`
-to a shared or production database — the suites delete rows they create.
+Never set `TEST_DATABASE_URL` to a shared, staging-with-real-data or production
+database — the suites delete rows they create.
 
 ## 2. `http-security.integration.test.ts` — 18/18 PASS
 
@@ -37,37 +40,51 @@ Real Express routes/middleware/services/DB, covering:
 | OAuth state | all three callbacks (Google Drive, Notion, GitHub) reject missing/tampered state, clear the state cookie on the response, and never emit a `connected=` success redirect for invalid state |
 | Payment HTTP | forged webhook cannot grant credits; signed webhook with an unknown order does not grant value |
 
-Two real defects were found and fixed while writing this suite:
+Earlier defects fixed by this suite and still covered: unauthenticated static
+audio mount removed, and state cookies cleared before `res.redirect()` on every
+callback branch.
 
-1. `express.static("uploads")` exposed generated podcast audio without an
-   ownership check. Removed; audio is served only by
-   `GET /api/audio/:workspaceId/:artifactId`.
-2. OAuth callbacks cleared the state cookie in `finally` **after**
-   `res.redirect()` had ended the response, producing
-   `Cannot set headers after they are sent` and leaving a stale nonce cookie.
-   `redirectClearingState()` now clears the cookie before redirecting on every
-   success and failure branch of all three providers.
+## 3. `proxy-trust.test.ts` — 6/6 PASS (new, Phase 06)
 
-## 3. `job-recovery.integration.test.ts` — 6/6 PASS
+Regression coverage for `GHSA-jqcg-44mw-7w3h` / `CVE-2026-90711`:
 
-Exercised against PostgreSQL; see `BACKGROUND_JOB_RECOVERY.md` for detail.
+- untrusted socket IP wins over `X-Forwarded-For`;
+- explicit trusted IPv4 and IPv6 proxies still work;
+- the vulnerable short-prefix `::ffff:10.0.0.0/8` trust string no longer makes
+  an arbitrary client trusted (patched `proxy-addr@2.0.8`);
+- a genuine IPv4-mapped proxy address is still accepted;
+- a live HTTP rate-limit test proves three spoofed forwarding headers from the
+  same socket produce `200, 200, 429` rather than resetting the bucket.
 
-## 4. `payment-sandbox.integration.test.ts` — 11/11 PASS
+## 4. `env.test.ts` — 9/9 PASS (expanded in Phase 06)
 
-Provider-mocked lifecycle; see `INTEGRATION_SECURITY.md` for detail.
+Staging fail-closed gates: test-only Razorpay keys, production `NODE_ENV`,
+mandatory identity markers/secrets, distinct OAuth state secret, DB identity and
+production-endpoint rejection, forbidden endpoint denylist, storage ownership,
+and a regression proving failed validation is not cached.
 
-## 5. Live staging checks still required (owner)
+## 5. Job and payment suites
 
-These cannot be performed locally and remain blocked until staging access and
-credentials exist:
+- `job-recovery.integration.test.ts` — 6/6 PASS; see
+  `BACKGROUND_JOB_RECOVERY.md`.
+- `payment-sandbox.integration.test.ts` — 11/11 PASS; see
+  `INTEGRATION_SECURITY.md`.
+
+## 6. Live staging checks still required (owner)
+
+These cannot be performed locally and remain **BLOCKED — CREDENTIALS/PERMISSIONS
+REQUIRED**:
 
 - HTTPS redirect, HSTS, Secure/HttpOnly/SameSite session cookies on a real
   domain (verify with `curl -I` and browser dev tools).
+- Staging frontend `/api` rewrites and CORS/CSRF behaviour through the real
+  staging hostname.
 - Real OAuth redirect round-trips with staging-registered callback URLs.
-- Real Razorpay **test-mode** checkout, signed webhook delivery and cancellation.
+- Real Razorpay **test-mode** checkout, signed webhook delivery, cancellation
+  and refund.
 - Real provider integrations (Firecrawl, Tavily, Cloudinary, Pinecone,
   ElevenLabs, Gemini/OpenAI, Mem0, Inngest).
-- Real email delivery, if enabled.
+- Real email delivery and live monitoring/alerts, if enabled.
 
 Record each result in `RELEASE_READINESS_REPORT.md`; do not mark them passed
 based on mocked tests.

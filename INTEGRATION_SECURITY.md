@@ -1,14 +1,17 @@
-# Integration, provider and payment security (Round 5)
+# Integration, provider and payment security (Phase 06)
 
 **Status: provider-mocked tests PASSED; live provider/payment validation
 `BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED`.** No live provider, Razorpay
-test-mode, or email call was made while preparing these changes.
+test-mode, or email call was made while preparing these changes. All previously
+critical/high dependency advisories are **FIXED AND VERIFIED** locally; details
+and residual accepted moderate/low findings are in
+`DEPENDENCY_SECURITY_REMEDIATION.md`.
 
 ## 1. Shared outbound fetch hardening
 
 All twenty raw provider `fetch` calls in `elevenlabs.ts`, `rag/rerank.ts`,
 `sources/github.ts`, `sources/youtube.ts`, `google-drive.services.ts` and
-`notion.services.ts` now go through `server/src/lib/provider-http.ts`:
+`notion.services.ts` go through `server/src/lib/provider-http.ts`:
 
 - `providerFetch()` always applies a 20-second `AbortSignal.timeout()` unless
   the caller supplies its own signal.
@@ -22,13 +25,14 @@ policy is unchanged.
 
 ## 2. Per-provider fixes
 
-| Integration | Round 5 change |
+| Integration | Change |
 | --- | --- |
 | Gemini | API key moved from the URL query string to `x-goog-api-key`; 15s timeout. Keys no longer appear in URLs/logs. |
-| Cloudinary | Signed uploads use a unique `public_id`, `overwrite: false` and a sanitized base path; raw upload calls have a 30s timeout. No hardcoded unsigned preset. |
+| Cloudinary | Signed uploads use a unique `public_id`, `overwrite: false` and a sanitized base path; raw upload calls have a 30s timeout. No hardcoded unsigned preset. Staging gates also require a staging-owned cloud name/upload preset. |
 | Google Drive / Notion / GitHub OAuth | State cookie cleared before `res.redirect()` on every callback branch; invalid state never yields `connected=`. |
 | ElevenLabs / Cohere rerank / GitHub / YouTube / Drive / Notion | Raw fetches replaced with bounded `providerFetch()`. |
 | All providers | Secrets remain `sync: false` in `render.yaml`; no credential value is committed or printed in logs. |
+| Provider SDKs (Phase 06) | `better-auth 1.7.27`, `firecrawl 4.54.0`, `inngest 4.26.2`, `mem0ai 3.3.1`, `multer 2.5.0`, `zod 4.6.7` and patched transitive overrides; full verification matrix passed. |
 
 Provider-specific hardening already present and unchanged: restrictive provider
 ID validation and URL encoding, escaped Drive query terms, redacting logger,
@@ -58,15 +62,16 @@ Verified invariants:
   per settlement, correct final credit balance and plan, and exactly one refund
   for a matching eligible debit to the correct user (wrong-user refund denied).
 
-`DEPLOYMENT_ENV=staging` plus the `rzp_live_*` rejection in `config/env.ts`
-ensures a staging service cannot accept live credentials. Live test-mode
-checkout, webhook delivery from Razorpay, and provider refund behaviour remain
-**BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**.
+`DEPLOYMENT_ENV=staging` plus the `rzp_live_*` and non-test-key rejection in
+`config/env.ts` ensures a staging service cannot accept live credentials. Live
+test-mode checkout, webhook delivery from Razorpay, and provider refund
+behaviour remain **BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**.
 
 ## 4. Live checklist for the owner (not performed here)
 
-1. Configure staging Razorpay test-mode keys and webhook secret; register
-   `<staging-api>/api/payment/webhook` in the Razorpay test dashboard.
+1. Configure staging Razorpay test-mode keys, webhook secret, DB identity and
+   storage prefix gates; register `<staging-api>/api/payment/webhook` in the
+   Razorpay test dashboard.
 2. Complete a small test-mode checkout for a credit pack and for a subscription;
    confirm credits/plan in the staging DB exactly once.
 3. Replay the same webhook twice and out of order with verification; confirm no
@@ -75,4 +80,6 @@ checkout, webhook delivery from Razorpay, and provider refund behaviour remain
 5. Exercise a terminal artifact/source failure and confirm one compensating
    refund in the staging ledger.
 6. For each provider, run one read-only/live call and confirm no secret appears
-   in application logs or URLs.
+   in application logs or URLs. Live Inngest/Mem0 validation is specifically
+   required because the nested `zod` major override passed typecheck/build/tests
+   but was not exercised against a real provider.

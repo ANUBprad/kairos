@@ -6,6 +6,31 @@ on:
   pull_request:
 
 jobs:
+  # Dependency security gate. There are currently NO accepted critical/high
+  # advisories. If one must be temporarily accepted, record the exact rationale,
+  # exposure analysis, compensating controls and owner approval in
+  # DEPENDENCY_SECURITY_REMEDIATION.md, then narrow this gate with an explicit,
+  # time-bounded exception. Never disable the audit globally.
+  dependency-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Server critical/high advisory gate
+        working-directory: server
+        run: |
+          npm ci
+          npm audit --audit-level=high
+      - name: Client critical/high advisory gate
+        working-directory: client
+        run: |
+          npm ci
+          npm audit --audit-level=high
+      - name: Lockfiles are reproducible
+        run: git diff --exit-code -- server/package-lock.json client/package-lock.json
+
   server:
     runs-on: ubuntu-latest
     defaults:

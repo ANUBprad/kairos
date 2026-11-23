@@ -1,0 +1,172 @@
+{
+  "default": {
+    "reachable": "unknown",
+    "exposure": "requires-package-specific-review",
+    "layer": "unknown",
+    "remediation": "upgraded-or-overridden-where-compatibly-patched",
+    "breakingRisk": "low"
+  },
+  "packages": {
+    "proxy-addr": {
+      "reachable": "yes",
+      "exposure": "unauthenticated-request: X-Forwarded-For affects req.ip, rate-limit keys and logging",
+      "layer": "server-runtime",
+      "remediation": "override to 2.0.8 (patched upstream release), plus proxy regression tests",
+      "breakingRisk": "low - patch release, same API"
+    },
+    "better-auth": {
+      "reachable": "yes",
+      "exposure": "unauthenticated-request: OAuth callback / state / social login endpoints",
+      "layer": "server-and-browser-runtime",
+      "remediation": "direct upgrade 1.6.x/1.6.28 -> 1.7.27",
+      "breakingRisk": "low - minor release within v1; full auth E2E suite passed"
+    },
+    "next": {
+      "reachable": "yes",
+      "exposure": "unauthenticated-request: image optimization, routing, cache and server rendering",
+      "layer": "browser-and-server-runtime",
+      "remediation": "direct upgrade 16.3.0 -> 16.4.6 (same major)",
+      "breakingRisk": "low - same major; build, Playwright and route generation passed"
+    },
+    "prisma": {
+      "reachable": "yes",
+      "exposure": "build/CLI and generated client; not directly request-parsing",
+      "layer": "build-and-runtime",
+      "remediation": "direct upgrade 7.9.1 -> 7.10.1; effect override 3.22.5 closes @prisma/config advisory",
+      "breakingRisk": "low - same major; prisma validate/generate/migrate all passed"
+    },
+    "@prisma/config": {
+      "reachable": "yes",
+      "exposure": "build/CLI config loading; effect ReDoS needs attacker-controlled schema input",
+      "layer": "build-only",
+      "remediation": "effect override to 3.22.5 (patched in 3.x, no major jump)",
+      "breakingRisk": "low - prisma generate/validate/migrate passed"
+    },
+    "effect": {
+      "reachable": "yes",
+      "exposure": "ReDoS in Schema.TemplateLiteral; not fed untrusted request bodies by Kairos",
+      "layer": "build-only",
+      "remediation": "override to 3.22.5 (first patched 3.x, per GHSA-7589-6fvf-x4pw)",
+      "breakingRisk": "low - Prisma CLI verified; effect 4.x major override was rejected after typecheck failure"
+    },
+    "body-parser": {
+      "reachable": "yes",
+      "exposure": "unauthenticated-request: compressed request bodies",
+      "layer": "server-runtime",
+      "remediation": "override to 2.4.0",
+      "breakingRisk": "low - patch release"
+    },
+    "brace-expansion": {
+      "reachable": "yes",
+      "exposure": "glob expansion in tooling; untrusted input only if tool processes attacker-controlled patterns",
+      "layer": "build/test tooling",
+      "remediation": "scoped overrides: 2.1.7 (server), 1.1.21 and 5.0.12 (client major lines)",
+      "breakingRisk": "low - patch releases within each major line"
+    },
+    "axios": {
+      "reachable": "yes",
+      "exposure": "outbound HTTP from provider SDKs (Razorpay, Firecrawl, Tavily, Mem0)",
+      "layer": "server-runtime",
+      "remediation": "transitive upgrade to 1.20.0 via direct SDK upgrades",
+      "breakingRisk": "low - same major"
+    },
+    "fast-uri": {
+      "reachable": "yes",
+      "exposure": "URI parsing in ajv; can influence SSRF-sensitive URL handling",
+      "layer": "server-and-build",
+      "remediation": "override to 3.1.9 (first patched 3.x line)",
+      "breakingRisk": "low - patch release"
+    },
+    "firecrawl": {
+      "reachable": "yes",
+      "exposure": "outbound provider SDK; axios/zod advisories fixed by direct upgrade",
+      "layer": "server-runtime",
+      "remediation": "direct upgrade 4.32.0 -> 4.54.0",
+      "breakingRisk": "low - same major; typecheck/build passed"
+    },
+    "follow-redirects": {
+      "reachable": "yes",
+      "exposure": "outbound redirects in provider SDKs; credential stripping bypass",
+      "layer": "server-runtime",
+      "remediation": "override to 1.16.3",
+      "breakingRisk": "low - patch release"
+    },
+    "inngest": {
+      "reachable": "yes",
+      "exposure": "durable job SDK; nested zod 3.x advisory",
+      "layer": "server-runtime",
+      "remediation": "direct upgrade 4.18.0 -> 4.26.2 plus zod override to 4.6.7",
+      "breakingRisk": "medium - zod major override; job integration suite passed"
+    },
+    "mem0ai": {
+      "reachable": "yes",
+      "exposure": "memory provider SDK; cross-tenant key collision and nested zod 3.x",
+      "layer": "server-runtime",
+      "remediation": "direct upgrade 3.1.5 -> 3.3.1 plus zod override to 4.6.7",
+      "breakingRisk": "medium - zod major override; no live provider credential available"
+    },
+    "multer": {
+      "reachable": "yes",
+      "exposure": "unauthenticated-request: multipart uploads behind auth middleware",
+      "layer": "server-runtime",
+      "remediation": "direct upgrade 2.2.0 -> 2.5.0",
+      "breakingRisk": "low - same major; upload HTTP tests passed"
+    },
+    "systeminformation": {
+      "reachable": "yes",
+      "exposure": "host metrics via OpenTelemetry/worker diagnostics; not request-driven",
+      "layer": "server-runtime",
+      "remediation": "override to 5.33.23",
+      "breakingRisk": "low - patch release within v5"
+    },
+    "undici": {
+      "reachable": "yes",
+      "exposure": "outbound HTTP in AI SDKs and tooling; TLS/redirect/cache advisories",
+      "layer": "server-and-build",
+      "remediation": "override to 7.30.2 (same major line)",
+      "breakingRisk": "low - patch release"
+    },
+    "zod": {
+      "reachable": "yes",
+      "exposure": "request/schema validation; oversized constrained collections can exhaust memory",
+      "layer": "server-and-browser-runtime",
+      "remediation": "direct upgrade to 4.6.7 plus override forcing nested 3.x copies to 4.6.7",
+      "breakingRisk": "medium - nested consumers previously used zod 3.x; typecheck/build/tests passed"
+    },
+    "@grpc/grpc-js": {
+      "reachable": "yes",
+      "exposure": "OpenTelemetry OTLP exporter; mTLS auth context issue in specific configurations",
+      "layer": "server-observability",
+      "remediation": "override to 1.14.7",
+      "breakingRisk": "low - patch release"
+    },
+    "@modelcontextprotocol/sdk": {
+      "reachable": "partial",
+      "exposure": "CLI provider SDK used by shadcn generator, not a Kairos request path",
+      "layer": "build-tooling",
+      "remediation": "override to 1.32.2",
+      "breakingRisk": "low - patch/minor within v1"
+    },
+    "js-yaml": {
+      "reachable": "partial",
+      "exposure": "config parsing in build tooling; config files are repository-controlled",
+      "layer": "build-tooling",
+      "remediation": "override to 4.3.2",
+      "breakingRisk": "low - patch release"
+    },
+    "shadcn": {
+      "reachable": "no-runtime",
+      "exposure": "component generator CLI; not imported by the running app",
+      "layer": "build-tooling",
+      "remediation": "direct upgrade 4.16.2 -> 4.23.0; residual moderate advisories are transitive CLI-only",
+      "breakingRisk": "low - same major"
+    },
+    "source-map-js": {
+      "reachable": "partial",
+      "exposure": "build-time source map consumption; build inputs are repository-controlled",
+      "layer": "build-only",
+      "remediation": "override to 1.2.4",
+      "breakingRisk": "low - patch release"
+    }
+  }
+}

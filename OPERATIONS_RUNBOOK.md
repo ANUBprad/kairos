@@ -1,4 +1,4 @@
-# Operations runbook (Kairos)
+# Operations runbook (Kairos / Phase 06)
 
 This runbook covers local/disposable operations and the staging deployment an
 owner must perform. No production procedure is authorized by these changes.
@@ -12,7 +12,8 @@ owner must perform. No production procedure is authorized by these changes.
 
 A failing `/health` with a healthy `/healthz` means a dependency is degraded,
 not that the process should be restarted. Do not point deployment health checks
-at `/health`.
+at `/health`. Monitoring/alert recommendations are in
+`MONITORING_AND_ALERTING.md`.
 
 ## 2. Migrations
 
@@ -32,17 +33,21 @@ SHADOW_DATABASE_URL=<disposable-shadow-url> npx prisma migrate diff --exit-code 
 ```
 
 The legacy `Test` table is intentionally preserved and is the only known
-migration/schema delta. Do not drop it.
+migration/schema delta. Do not drop it. Full rollback guidance is in
+`MIGRATION_AND_ROLLBACK.md`.
 
 ## 3. Backup and restore drill (disposable database)
 
-Run only against infrastructure you own. Example for the local staging-phase
-container `kairos-stage05-pg-20261123` (host port 55444):
+Run only against infrastructure you own. Phase 06 used the throwaway container
+`kairos-stage06-pg-20261123` (host port 55445, DB `kairos_stage06`) and a
+**separate** disposable restore database:
 
 ```bash
-docker exec kairos-stage05-pg-20261123 pg_dump -U <db-user> -Fc kairos_stage05 > stage05.backup
+docker exec kairos-stage06-pg-20261123 \
+  pg_dump -U kairos -Fc kairos_stage06 > phase06-stage06.backup
 # restore into a SEPARATE disposable database, never over the source:
-docker exec -i kairos-stage05-pg-20261123 pg_restore -U <db-user> -d kairos_stage05_restore < stage05.backup
+docker exec -i <restore-container> \
+  pg_restore -U kairos -d kairos_stage06_restore < phase06-stage06.backup
 ```
 
 After restore, run `prisma migrate status` and the integration suites against
@@ -54,18 +59,23 @@ the restored database. Record the result in `RELEASE_READINESS_REPORT.md`.
 cd server
 npx prisma validate
 npx tsc --noEmit
-npm run test:unit
-DATABASE_URL=<disposable-url> TEST_DATABASE_URL=<disposable-url> npm run test:integration
+npm run test:unit                  # 137
+DATABASE_URL=<disposable-url> TEST_DATABASE_URL=<disposable-url> npm run test:integration  # 47
 npm run build
 cd ../client && npm run build
-cd .. && npx playwright test        # Chromium E2E (client/dev server running)
-```
+cd .. && npx playwright test       # 3 Chromium tests
 
-Then from the repo root:
+# dependency gates (CI also runs these)
+npm audit --audit-level=high --prefix server
+npm audit --audit-level=high --prefix client
+git diff --exit-code -- server/package-lock.json client/package-lock.json
 
-```bash
 git -c core.whitespace=cr-at-eol diff --check
 ```
+
+The client build may hit a OneDrive file lock on `.next` in this workspace. A
+temporary `VERIFY_DIST_DIR` override was used for verification and reverted;
+no build config change is part of the commit.
 
 ## 5. Job and payment incident response
 
@@ -82,15 +92,25 @@ git -c core.whitespace=cr-at-eol diff --check
   matches the dashboard, then replay from the provider test dashboard. Invalid
   signatures are rejected by design. Never grant value manually from a forged
   body.
+- **Dependency regression**: CI fails on any critical/high advisory. Follow
+  `DEPENDENCY_SECURITY_REMEDIATION.md`; do not run blind `npm audit fix` or
+  disable the audit.
 
 ## 6. Secrets and configuration
 
 - All environment credentials are `sync: false` in `render.yaml`; rotate them in
   the Render dashboard, never in git.
-- `DEPLOYMENT_ENV=staging` must reject any `rzp_live_*` key at startup. If the
-  service boots with a live key in staging, stop it and treat it as an incident.
-- `TRUST_PROXY` must be explicit; numeric hop counts are dev-only.
-- `OAUTH_STATE_SECRET` should be unique per environment.
+- `DEPLOYMENT_ENV=staging` requires `NODE_ENV=production`, `SERVER_URL`,
+  `OAUTH_STATE_SECRET`, `STAGING_DATABASE_ID`, `STAGING_RESOURCE_PREFIX`, and
+  rejects live/non-test Razorpay keys, production-looking DB endpoints, reused
+  production DB URLs and unmarked Cloudinary resources. Startup fails closed.
+- `TRUST_PROXY` must be explicit; numeric hop counts are dev-only. The patched
+  `proxy-addr` and `proxy-trust.test.ts` protect rate limits from forwarded-IP
+  spoofing.
+- `OAUTH_STATE_SECRET` must be unique per environment and distinct from
+  `BETTER_AUTH_SECRET` in staging.
+- A configuration that fails validation is no longer cached; correcting the
+  environment and restarting the process is sufficient.
 
 ## 7. Safe boundaries
 
@@ -98,5 +118,5 @@ git -c core.whitespace=cr-at-eol diff --check
   upstream OpenBook repository or its owner.
 - No production deploy, production DB/service access, real payment/refund, real
   customer data or real email is authorized by these changes.
-- Keep the repository private until the licensing gate in `LICENSING_REVIEW.md`
-  is resolved by the owner.
+- Keep the repository private until the independent licensing gate in
+  `LICENSING_REVIEW.md` is resolved by the owner.

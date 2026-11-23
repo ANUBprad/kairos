@@ -1,155 +1,212 @@
-# Release readiness report — Kairos Round 5
+# Release readiness report — Kairos Phase 06
 
-Scope: isolated staging configuration, HTTP/security E2E, payment and
-integration validation, background-job recovery, operational documentation,
-licensing review, final audit, and delivery to private `origin/main`.
+Scope: critical dependency remediation, controlled isolated staging
+configuration, live validation where authorized, final operations/release audit,
+documentation, commit and normal fast-forward push to private `origin/main`.
 
 Baseline (confirmed locally and remotely before edits):
-`e3caa781c4a4b2d0bc49e6b056a8cb8a3fb4da66`. Repository remained **private**
-throughout; the only configured remote is `origin https://github.com/ANUBprad/kairos.git`.
-Upstream `swamiabhishek45/OpenBook` and its owner were never contacted. No
-force-push, history rewrite, production deploy, production DB/service access,
-real payment/refund, real customer data, real email, or invented credential was
-used.
+`55befc8fb6c49e48538a5e4ac6771350f738b311`, branch `main`, clean tree, only
+remote `origin https://github.com/ANUBprad/kairos.git`, repository visibility
+`PRIVATE`. Upstream `swamiabhishek45/OpenBook` and its owner were never
+contacted. No force-push, history rewrite, reset, production deploy, production
+DB/service access, real payment/refund, real customer data, real email, fake
+credential, or public release was used.
 
-## 1. Verification matrix (all commands run after the final edits)
+Tooling: Node `v24.22.2`, npm `11.19.1`, Docker `29.9.3`.
+
+## 1. Final verification matrix (all commands run after the final edits)
 
 | Check | Result |
 | --- | --- |
-| `npx prisma validate --schema prisma/schema.prisma` | `VALIDATE_EXIT=0` |
-| `npx prisma generate --schema prisma/schema.prisma` | `GENERATE_EXIT=0` |
-| `npx tsc --noEmit` | `TSC_EXIT=0` |
-| `npm run test:unit` | `UNIT_EXIT=0` — **124/124 pass** |
-| `npm run test:integration` | `INTEGRATION_EXIT=0` — **47/47 pass** (12 existing + 18 HTTP + 6 jobs + 11 payments) |
-| `npm run build` (server) | `SERVER_BUILD_EXIT=0` |
-| `npm run build` (client) | `CLIENT_BUILD_EXIT=0` — 21 routes generated |
+| `npx prisma validate` | `VALIDATE_EXIT=0` — schema valid |
+| `npm ci --prefix server` | `SERVER_CI_EXIT=0`; lockfile hash unchanged |
+| `npm ci --prefix client` | `CLIENT_CI_EXIT=0`; lockfile hash unchanged |
+| `npm ls --all` (server) | `SERVER_LS_EXIT=1` — only missing **optional/peer** packages for unused bundled tooling (`mem0ai` optional adapters, Prisma Studio React peers, Radix/visx React peers). Same class of output existed at baseline; no runtime import was broken and `npm ci` + typecheck + build + 137 unit + 47 integration tests pass. |
+| `npm ls --all` (client) | `CLIENT_LS_EXIT=0` |
+| `npm audit --json` (server) | `SERVER_AUDIT_EXIT=1` (moderate only): **0 critical / 0 high / 7 moderate / 0 low** |
+| `npm audit --audit-level=high` (server) | `SERVER_HIGH_GATE_EXIT=0` |
+| `npm audit --json` (client) | `CLIENT_AUDIT_EXIT=1` (moderate/low only): **0 critical / 0 high / 10 moderate / 4 low** |
+| `npm audit --audit-level=high` (client) | `CLIENT_HIGH_GATE_EXIT=0` |
+| `npm audit --json` (root) | `ROOT_AUDIT_EXIT=0` — 0 advisories |
+| `npm run typecheck --prefix server` (twice: pre- and post-`npm ci`) | `TYPECHECK_EXIT=0`, `POST_CI_SERVER_TYPECHECK_EXIT=0` |
+| `npm run test:unit --prefix server` (pre- and post-`npm ci`) | **137/137 pass**, `UNIT_EXIT=0`, `POST_CI_UNIT_EXIT=0` |
+| `npm run test:integration --prefix server` against disposable PostgreSQL | `INTEGRATION_EXIT=0` — **47/47 pass** |
+| `npm run build --prefix server` (pre- and post-`npm ci`) | `SERVER_BUILD_EXIT=0`, `POST_CI_SERVER_BUILD_EXIT=0` |
+| `npm run build --prefix client` (pre- and post-`npm ci`) | `CLIENT_BUILD_EXIT=0`, `POST_CI_CLIENT_BUILD_EXIT=0` — 21 routes generated |
 | `npx playwright test` (chromium) | `PLAYWRIGHT_EXIT=0` — **3/3 pass** |
-| `prisma migrate deploy` on a fresh disposable DB | `MIGRATE_DEPLOY_EXIT=0` — 13 migrations applied |
-| `prisma migrate status` on that DB | `MIGRATE_STATUS_EXIT=0` — "Database schema is up to date!" |
-| `prisma migrate diff --exit-code --from-migrations ... --to-schema ...` | Exit 2 — **only** the pre-existing, documented legacy `Test` table delta |
-| Backup/restore drill (`pg_dump -Fc` → `pg_restore` into a separate disposable DB) | `DUMP_EXIT=0`, `RESTORE_EXIT=0`, restored `migrate status` = 0 |
-| Secret scan (tracked files) | No real credential found; only the intentional `rzp_live_shouldneverappear` fixture in `env.test.ts` |
+| `prisma migrate deploy` on fresh `kairos_stage06` | `MIGRATE_EXIT=0` — 13 migrations applied |
+| `prisma migrate status` on that DB | `STATUS_EXIT=0` — "Database schema is up to date!" |
+| `prisma migrate diff --exit-code --from-migrations ... --to-schema ...` | `MIGRATE_DIFF_EXIT=2` — **only** the documented legacy `Test` table delta |
+| Backup/restore drill (`pg_dump -Fc` → separate disposable DB) | `DUMP_EXIT=0`, `RESTORE_EXIT=0`, restored `migrate status=0` |
+| Secret scan (tracked + new files) | No real credential found; only the intentional `rzp_live_shouldneverappear` test fixture |
 | `git -c core.whitespace=cr-at-eol diff --check` | `WHITESPACE_EXIT=0` |
+| `git diff --exit-code -- ATTRIBUTION.md` | `ATTRIBUTION_UNCHANGED=True` |
+| `git ls-remote origin refs/heads/main` | pre-push `55befc8fb6c49e48538a5e4ac6771350f738b311`; verified again after push |
+| GitHub repository visibility | `ANUBprad/kairos visibility=PRIVATE` |
 
-Notes on the two non-zero audit commands:
+Notes:
 
-- `prisma migrate diff` reports `[-] Removed tables - Test`. This is the known
-  legacy table intentionally preserved in the database and not modelled in
-  `schema.prisma` (see `SECURITY_REMEDIATION.md`, section 10). No other drift.
-- The client build initially hit `EBUSY` on a OneDrive-locked
-  `.next/diagnostics/build-diagnostics.json`. Compilation itself had succeeded.
-  A temporary `VERIFY_DIST_DIR` override was used, the build passed, and both
-  `client/next.config.ts` and the auto-modified `client/tsconfig.json` were
-  restored to `HEAD` (verified with `git diff --exit-code`). The stale `.next`
-  lock is an environment artifact, not a repository defect.
+- `npm audit` exits 1 whenever moderate/low advisories exist; the CI gate
+  deliberately uses `--audit-level=high`, which passes. No audit check was
+  disabled.
+- The client build succeeded normally in the final run. The earlier OneDrive
+  `.next` lock had required a temporary `VERIFY_DIST_DIR`; that override and its
+  automatic `tsconfig.json` edits were reverted and are **not** in this commit.
+- `client/AGENTS.md` contains a one-line heading change regenerated by Next.js
+  16.4.6 (`#` → `##` in the agent-rules block, confirmed against
+  `node_modules/next/dist/server/lib/generate-agent-files.js`). It is committed
+  so the tree stays clean.
+- Integration/HTTP/payment tests use real PostgreSQL and real Express routes but
+  provider-mocked payments. They are not live provider validation.
 
-All integration suites created only synthetic rows in the disposable
-`TEST_DATABASE_URL` and removed them in `after()` hooks. Post-run DB queries
-confirmed zero leftover `http-%`, `jr-user-%` and `paytest-%` users and zero
-`jr-%` durable jobs.
+## 2. Status by workstream
 
-## 2. FIXED AND VERIFIED
+### FIXED AND VERIFIED
 
-- **Unauthenticated audio exposure** — removed `express.static("uploads")`;
-  audio is served only through ownership-checked
-  `GET /api/audio/:workspaceId/:artifactId`. Covered by the upload-boundary
-  HTTP test.
-- **OAuth callback state-cookie bug** — a real defect found by the HTTP suite:
-  clearing the cookie in `finally` after `res.redirect()` caused
-  `Cannot set headers after they are sent` and left a stale nonce. All three
-  callbacks now clear the cookie before redirecting on every branch; the suite
-  asserts a clearing `Set-Cookie` and no `connected=` on rejected state.
-- **Idempotency-key reuse** — `addCredits` now rejects a key whose existing or
-  concurrently-inserted row belongs to a different user or amount.
-- **Gemini key in URL** — moved to `x-goog-api-key` with a 15s timeout.
-- **Cloudinary collision/overwrite** — unique `public_id`, `overwrite: false`,
-  sanitized base, 30s raw-upload timeouts.
-- **Unbounded provider calls** — 20 raw `fetch` calls routed through
-  `providerFetch()` with a 20s default timeout (unit-tested).
-- **CSRF `Sec-Fetch-Site: none` bypass** — no longer passes without a matching
-  `Origin`; unit and HTTP tests updated.
-- **Dependency-checking health endpoint** — `/health` now has a 30/min limiter;
-  `/healthz` remains unthrottled liveness.
-- **No periodic job recovery** — bounded overlapping-guarded sweeper added and
-  started by the entrypoint; verified over 250-job backlogs.
-- **Missing route-level E2E** — real Express HTTP suite added (18 tests),
-  including auth/session, IDOR, CSRF, uploads, OAuth callbacks and payment
-  boundary.
+- All **critical and high** dependency advisories in both workspaces.
+  `proxy-addr` IP spoofing (`GHSA-jqcg-44mw-7w3h` / `CVE-2026-90711`), Next.js
+  Windows RCE (`GHSA-p293-qw3h-jr36` / `CVE-2026-75604`), Better Auth OAuth
+  advisories, Prisma/effect ReDoS, body-parser, multer, axios/follow-redirects,
+  fast-uri, undici, grpc-js and nested zod findings were removed by minimal
+  direct upgrades plus patch-level overrides.
+- Express trust/rate-limit spoofing regression: `proxy-trust.test.ts` (6/6),
+  including `::ffff:10.0.0.0/8` and a live HTTP limiter test.
+- Staging env fail-open cache bug: failed validation is no longer cached;
+  `env.test.ts` expanded to 9/9.
+- Startup identity/payment/storage gates in `env.ts` (tested locally):
+  `NODE_ENV=production`, mandatory `SERVER_URL`/`OAUTH_STATE_SECRET`/
+  `STAGING_DATABASE_ID`/`STAGING_RESOURCE_PREFIX`, distinct secrets, DB
+  identity/production denylist, Razorpay test-only, staging-owned Cloudinary.
+- CI `dependency-security` gate added; lockfiles reproduce under `npm ci`.
 
-## 3. IMPLEMENTED — LIVE VALIDATION BLOCKED
+### FIXED — PARTIALLY VERIFIED
 
-- Isolated staging service and explicit `DEPLOYMENT_ENV` in `render.yaml` with
-  all-secret `sync: false` env vars and startup rejection of `rzp_live_*` keys.
-- Provider-mocked payment validation with deterministic provider injection and
-  PostgreSQL financial-invariant assertions.
-- Background-job recovery validation covering 1/50/51/100/250 backlogs,
-  restarts, stale leases, poison jobs, duplicate delivery and concurrent claims.
-- Operational runbook, staging deployment guide, security-test evidence,
-  integration security guide and job recovery guide.
+- Forced nested `zod` from 3.x to 4.6.7 inside Inngest/Mem0: typecheck, client
+  and server builds, 137 unit tests, 47 integration tests and Playwright pass.
+  Live Inngest/Mem0 provider calls remain blocked, so the new major version is
+  not live-verified.
+- The full staging startup gate chain is verified by unit tests against
+  disposable configuration values; it has not been exercised by a deployed
+  Render service.
 
-## 4. PASSED
+### IMPLEMENTED — LIVE VALIDATION REQUIRED
 
-- Prisma validate/generate, TypeScript type-check, server and client builds.
-- 124 unit tests, 47 integration tests, 3 Playwright E2E tests.
-- Fresh-DB migrations, status and documented parity delta.
-- Backup/restore drill with a restored-schema status check.
-- Secret scan and whitespace check.
-- Synthetic-data cleanup verified by direct PostgreSQL queries.
+- Three-service staging topology in `render.yaml`: staging backend, dedicated
+  staging frontend (`kairos-client-staging`), and the untouched production
+  block. All credentials remain `sync: false`.
+- `client/.env.example`, expanded `server/.env.example`, monitoring/alerting
+  recommendations, migration/rollback plan and updated operations runbook.
+- Synthetic backup/restore drill and migration verification.
 
-## 5. PARTIALLY VERIFIED
+### BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED
 
-- **Payment correctness** — provider-mocked lifecycle and ledger invariants are
-  PASS; live Razorpay test-mode checkout/webhook delivery was not executed.
-- **Background-job recovery** — real PostgreSQL state-machine evidence is PASS;
-  live worker crash/restart and live Inngest delivery were not executed.
-- **Provider integrations** — code hardening and bounded fetch are verified;
-  live vendor calls were not made.
-- **Migration parity** — no drift except the intentionally preserved legacy
-  `Test` table.
+- Render staging deploy, real `/healthz` and `/health` from a deployed service.
+- HTTPS redirect, TLS/HSTS, cookie flags, CORS/CSRF and browser checks on a real
+  staging domain.
+- Live Razorpay **test-mode** checkout, signed webhook delivery, cancellation
+  and refund.
+- Live provider calls: Firecrawl, Tavily, Google Drive, Notion, GitHub, YouTube,
+  Pinecone, Cloudinary, Mem0, ElevenLabs, Gemini/OpenAI, Cohere, Inngest, email.
+- Worker crash/restart and Inngest outage/recovery tests.
 
-## 6. BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED
+### ACCEPTED RISK — OWNER APPROVAL REQUIRED
 
-- Render staging deploy, HTTPS/cookie/HSTS checks on a real domain.
-- Live provider calls for Firecrawl, Tavily, Google Drive/Notion/GitHub OAuth,
-  YouTube, Pinecone, Cloudinary, Mem0, ElevenLabs, Gemini/OpenAI, Inngest.
-- Live Razorpay **test-mode** checkout, signed webhook, cancellation and refund.
-- Real email delivery.
+- Server: 7 moderate advisories (`@opentelemetry/auto-instrumentations-node`,
+  `@opentelemetry/instrumentation-http`, `gaxios`, `gcp-metadata`, `glob`,
+  `minimatch`, `rimraf`). They are observability/build-tooling paths; npm's
+  fixes require breaking major upgrades and no untrusted request path was
+  found.
+- Client: 10 moderate and 4 low advisories, primarily the `shadcn` component
+  generator CLI (`@ts-morph/common`, `ts-morph`, `minimatch`,
+  `@typescript-eslint/*`, `typescript-eslint`) and low-severity DOMPurify/KaTeX/
+  Mermaid/streamdown paths. `shadcn`'s suggested fix is a major downgrade and
+  was rejected. None is reachable as a running-app critical/high path.
+- None of these was represented as fixed or silently suppressed; all are in
+  `security/dependency-audit/inventory.json` with dependency chains and review
+  notes.
 
-None of these was simulated as "passed"; the local mocked/DB evidence is
-labelled separately above.
+### NOT FIXED
 
-## 7. OWNER DECISION REQUIRED
+- Legacy `Test` database table remains intentionally unmapped; no migration
+  drops it.
+- Third-party Firecrawl network hop cannot be DNS-pinned locally.
+- Bounded 50-job sweeps and in-process fallback remain by design.
+- Live staging/provider/payment validation (section above).
+- MIT-vs-ISC licensing conflict and missing upstream `LICENSE` (see
+  `LICENSING_REVIEW.md`).
 
-- **Licensing** — no upstream `LICENSE`; upstream README said MIT while
-  `server/package.json` says ISC. `ATTRIBUTION.md` is unchanged. Keep the repo
-  private; do not assert a new license or make public. See `LICENSING_REVIEW.md`.
-- **Dependency advisories** — `npm audit --audit-level=high` reports server
-  **30** advisories (2 critical, 18 high, 8 moderate, 2 low) and client **33**
-  (3 critical, 10 high, 14 moderate, 6 low). Criticals include `proxy-addr`
-  IPv4-mapped IPv6 trust-subnet spoofing and Next.js RCE advisories. A blind
-  `npm audit fix --dry-run` would change ~120 packages (including a breaking
-  Inngest major) and still leave findings; no automated mass upgrade was
-  applied. Owner should schedule a deliberate dependency-upgrade round with a
-  full re-verification matrix.
+## 3. Dependency evidence
 
-## 8. NOT FIXED
+| Workspace | Before | After |
+| --- | --- | --- |
+| server | 30 total: **2 critical, 18 high**, 8 moderate, 2 low | 7 total: **0 critical, 0 high**, 7 moderate, 0 low |
+| client | 33 total: **3 critical, 10 high**, 14 moderate, 6 low | 14 total: **0 critical, 0 high**, 10 moderate, 4 low |
+| root | 0 | 0 |
 
-- Legacy `Test` table remains in the database and is intentionally not modelled
-  in `schema.prisma`; no migration drops it.
-- Bounded 50-job dispatch/recovery and in-process fallback remain by design
-  (now with an automatic periodic sweeper).
-- Third-party Firecrawl network hop cannot be DNS-pinned locally (external
-  service resolves its own connection).
-- Live staging validation and live provider/payment checks (section 6).
-- Licensing conflict and dependency advisories (section 7).
+Raw before/after `npm audit --json`, matched before/after lockfiles, the package
+review map, and the generated `inventory.json` (63 before entries, 21 after) are
+committed under `security/dependency-audit/`. Regenerate offline with
+`node scripts/generate-dependency-inventory.mjs`. No blind `npm audit fix`,
+`--force`, mass upgrade or audit suppression was used. The attempted
+`effect@4.1.5` override broke Prisma config loading and was reverted to
+`effect@3.22.5`, the first patched 3.x release.
 
-## 9. Delivery
+## 4. Disposable backup/restore evidence
 
-All changes will be committed with `Complete staging readiness and security
-validation` and pushed as a normal fast-forward to private `origin/main`.
-The disposable container `kairos-stage05-pg-20261123` will be removed at the end;
-other containers are untouched.
+A synthetic fixture was inserted into `kairos-stage06-pg-20261123` (1 user,
+1 workspace, 1 source, 1 artifact, 1 `PURCHASE` ledger row, 1 `DELIVERED` job),
+dumped with `pg_dump -Fc`, and restored into a **separate** disposable database
+`kairos_stage06_restore` on container `kairos-stage06-restore-20261123`.
 
-## 10. Final classification
+Verified on the restored database:
 
-A. READY FOR CONTROLLED STAGING VALIDATION
+- `prisma migrate status`: 13 migrations, schema up to date.
+- Counts: `user=1`, `workspace=1`, `source=1`, `learning_artifact=1`,
+  `credit_transaction=1`, `durable_job=1`, `payment_record=0`,
+  `_prisma_migrations=13`.
+- Consistency: `orphan_sources=0`, `orphan_artifacts=0`,
+  `refund_without_purchase=0`, `dead_jobs=0`, `stale_processing=0`.
+
+The synthetic fixture was then deleted from the source database, which was
+verified back to zero application rows. No production or real customer data was
+used.
+
+## 5. Owner action checklist (still required)
+
+1. Create a private staging database and staging frontend/backend services from
+   the staging blocks of `render.yaml`; never deploy the production block from
+   this workflow.
+2. Supply all staging secrets in the Render dashboard only. Set
+   `STAGING_DATABASE_ID` and `STAGING_RESOURCE_PREFIX` to values actually present
+   in the staging DB URL and Cloudinary resources; use Razorpay **test mode**.
+3. Register staging OAuth callbacks and the Razorpay test webhook. Deploy,
+   apply `prisma migrate deploy` to staging only, and confirm `/healthz` and
+   `/health`.
+4. Execute the live checks in `STAGING_SECURITY_TESTS.md` and configure alerts
+   from `MONITORING_AND_ALERTING.md`. Confirm the frontend `/api` rewrites reach
+   only the staging backend.
+5. Exercise live Inngest/Mem0 and worker crash/restart recovery; replay
+   duplicate webhooks and confirm exactly-once ledger effects.
+6. Record every live result here with timestamps and the staging commit SHA.
+   Do not infer a pass from mocked tests.
+7. Resolve the licensing gate in `LICENSING_REVIEW.md` before any public
+   redistribution or new license claim.
+
+## 6. Delivery
+
+All Phase 06 changes are committed with a meaningful message and pushed as a
+normal fast-forward to private `origin/main`. Local `HEAD` is verified equal to
+`git ls-remote origin refs/heads/main`, and `git status --short` is empty. Only
+the disposable containers created for this task
+(`kairos-stage06-pg-20261123`, `kairos-stage06-restore-20261123`) are removed;
+all other containers are untouched.
+
+## 7. Final classification
+
+**B. READY FOR CONTROLLED STAGING VALIDATION**
+
+This is an engineering staging-readiness classification only. It does **not**
+mean production-ready, and no production promotion is authorized. The
+independent licensing gate remains **E. PUBLIC REDISTRIBUTION BLOCKED —
+LICENSING EVIDENCE INSUFFICIENT** until the owner resolves it; dependency and
+staging remediation do not change that gate.

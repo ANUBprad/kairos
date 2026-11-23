@@ -1,0 +1,3905 @@
+{
+  "generatedBy": "scripts/generate-dependency-inventory.mjs",
+  "source": "npm audit --json captures in security/dependency-audit/",
+  "generatedAt": "2026-11-23T17:14:00.272Z",
+  "counts": {
+    "before": {
+      "low": 8,
+      "high": 28,
+      "moderate": 22,
+      "critical": 5
+    },
+    "after": {
+      "moderate": 17,
+      "low": 4
+    }
+  },
+  "advisories": [
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "@better-auth/drizzle-adapter",
+      "installedVersion": "1.6.26",
+      "severity": "low",
+      "direct": false,
+      "vulnerableRange": "1.6.17 - 1.7.6",
+      "firstPatchedBounds": [
+        "1.7.7"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "better-auth",
+        "@better-auth/drizzle-adapter"
+      ],
+      "nodes": [
+        "node_modules/@better-auth/drizzle-adapter"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-44jh-23m7-hpcf",
+          "source": 1243465,
+          "title": "@better-auth/drizzle-adapter: Concurrent requests can exceed rate limits on PostgreSQL",
+          "severity": "low",
+          "range": ">=1.6.17 <1.7.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-44jh-23m7-hpcf"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "@better-auth/kysely-adapter",
+      "installedVersion": "1.6.26",
+      "severity": "low",
+      "direct": false,
+      "vulnerableRange": ">=1.6.17 <1.7.0",
+      "firstPatchedBounds": [
+        "1.7.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "better-auth",
+        "@better-auth/kysely-adapter"
+      ],
+      "nodes": [
+        "node_modules/@better-auth/kysely-adapter"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-44jh-23m7-hpcf",
+          "source": 1243464,
+          "title": "@better-auth/drizzle-adapter: Concurrent requests can exceed rate limits on PostgreSQL",
+          "severity": "low",
+          "range": ">=1.6.17 <1.7.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-44jh-23m7-hpcf"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "@grpc/grpc-js",
+      "installedVersion": "1.14.4",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "1.14.0 - 1.14.4",
+      "firstPatchedBounds": [
+        "1.14.5"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/sdk-node",
+        "@opentelemetry/otlp-grpc-exporter-base",
+        "@grpc/grpc-js"
+      ],
+      "nodes": [
+        "node_modules/@grpc/grpc-js"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-m9gg-hp2v-232j",
+          "source": 1240622,
+          "title": "@grpc/grpc-js: In certain configurations, getAuthContext can return unauthorized certificates as though they were authorized",
+          "severity": "high",
+          "range": ">=1.14.0 <1.14.5",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-m9gg-hp2v-232j"
+        },
+        {
+          "id": "GHSA-f596-whhp-79r4",
+          "source": 1240624,
+          "title": "@grpc/grpc-js: The server transmits some error messages thrown by method handlers to the client in status messages",
+          "severity": "low",
+          "range": ">=1.14.0 <1.14.5",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-f596-whhp-79r4"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "OpenTelemetry OTLP exporter; mTLS auth context issue in specific configurations",
+        "layer": "server-observability",
+        "remediation": "override to 1.14.7",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "@opentelemetry/auto-instrumentations-node",
+      "installedVersion": "0.79.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "0.63.0 - 0.79.0",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node"
+      ],
+      "nodes": [
+        "node_modules/@opentelemetry/auto-instrumentations-node"
+      ],
+      "advisories": [
+        {
+          "id": "@opentelemetry/instrumentation-http",
+          "via": "@opentelemetry/instrumentation-http"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "0.63.0 - 0.79.0"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "@opentelemetry/instrumentation-http",
+      "installedVersion": "0.221.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": ">=0.204.0 <0.222.0",
+      "firstPatchedBounds": [
+        "0.222.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/instrumentation-http"
+      ],
+      "nodes": [
+        "node_modules/@opentelemetry/instrumentation-http"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3v2p-hm54-8qcq",
+          "source": 1246705,
+          "title": "OpenTelemetry JavaScript: Insertion of Sensitive Information into Log File and Exposure of Sensitive Information to an Unauthorized Actor in @opentelemetry/instrumentation-http",
+          "severity": "moderate",
+          "range": ">=0.204.0 <0.222.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3v2p-hm54-8qcq"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": ">=0.204.0 <0.222.0"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "@prisma/config",
+      "installedVersion": "7.9.1",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": ">=6.13.0-dev.1",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "prisma",
+        "@prisma/config"
+      ],
+      "nodes": [
+        "node_modules/@prisma/config"
+      ],
+      "advisories": [
+        {
+          "id": "deepmerge-ts",
+          "via": "deepmerge-ts"
+        },
+        {
+          "id": "effect",
+          "via": "effect"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "build/CLI config loading; effect ReDoS needs attacker-controlled schema input",
+        "layer": "build-only",
+        "remediation": "effect override to 3.22.5 (patched in 3.x, no major jump)",
+        "breakingRisk": "low - prisma generate/validate/migrate passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "axios",
+      "installedVersion": "1.18.0",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "1.0.0 - 1.19.0",
+      "firstPatchedBounds": [
+        "1.20.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "@tavily/core",
+        "axios"
+      ],
+      "nodes": [
+        "node_modules/axios",
+        "node_modules/razorpay/node_modules/axios"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-vh66-26gq-q6x8",
+          "source": 1240600,
+          "title": "Axios: Prototype pollution gadget in fetch adapter can alter outbound requests",
+          "severity": "moderate",
+          "range": ">=1.7.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-vh66-26gq-q6x8"
+        },
+        {
+          "id": "GHSA-9fr6-4gfg-395g",
+          "source": 1240601,
+          "title": "Axios: Prototype-Pollution Gadget in the Default Instance Allows Inherited Object.prototype.method to Override HTTP Method",
+          "severity": "moderate",
+          "range": ">=1.0.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-9fr6-4gfg-395g"
+        },
+        {
+          "id": "GHSA-c29m-xwm3-cm6r",
+          "source": 1240603,
+          "title": "Axios: ReDoS in fromDataURI data: URL parser freezes the Node event loop (DoS)",
+          "severity": "high",
+          "range": ">=1.16.1 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-c29m-xwm3-cm6r"
+        },
+        {
+          "id": "GHSA-mghh-pgcx-3jjj",
+          "source": 1240604,
+          "title": "Axios: ReDoS (O(N┬▓)) in shouldBypassProxy host normalization, reachable via untrusted redirect Location",
+          "severity": "high",
+          "range": ">=1.15.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-mghh-pgcx-3jjj"
+        },
+        {
+          "id": "GHSA-x97p-jq2g-jp4f",
+          "source": 1240605,
+          "title": "Axios: Prototype Pollution Gadget in axios toFormData Options",
+          "severity": "high",
+          "range": ">=1.15.1 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-x97p-jq2g-jp4f"
+        },
+        {
+          "id": "GHSA-3pq3-5fj3-cg6v",
+          "source": 1240607,
+          "title": "Axios: HTTP/2 adapter bypasses configured DNS lookup and proxy controls",
+          "severity": "high",
+          "range": ">=1.13.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3pq3-5fj3-cg6v"
+        },
+        {
+          "id": "GHSA-542g-h47m-68v8",
+          "source": 1240608,
+          "title": "Axios: Denial of Service via Unhandled 'error' Event in HTTP/2 ClientHttp2Session Initialization",
+          "severity": "high",
+          "range": ">=1.13.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-542g-h47m-68v8"
+        },
+        {
+          "id": "GHSA-j8rh-479h-cp32",
+          "source": 1240626,
+          "title": "Axios: Header Injection via Inherited headers After Minimal Interceptor",
+          "severity": "moderate",
+          "range": ">=1.0.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-j8rh-479h-cp32"
+        },
+        {
+          "id": "GHSA-4hqw-qxg8-jxx2",
+          "source": 1240627,
+          "title": "Axios: Fetch Adapter Header Injection via Inherited FormData getHeaders",
+          "severity": "moderate",
+          "range": ">=1.12.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4hqw-qxg8-jxx2"
+        },
+        {
+          "id": "GHSA-m8m8-qj5v-23w3",
+          "source": 1240628,
+          "title": "Axios: Node HTTP adapter prototype-pollution gadget allows request socket hijack via inherited createConnection",
+          "severity": "high",
+          "range": ">=1.15.2 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-m8m8-qj5v-23w3"
+        },
+        {
+          "id": "GHSA-44g4-m2mj-wpvx",
+          "source": 1240629,
+          "title": "Axios: CIDR-form NO_PROXY entries are ignored, causing proxy exclusion bypass for internal IP ranges",
+          "severity": "moderate",
+          "range": ">=1.15.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-44g4-m2mj-wpvx"
+        },
+        {
+          "id": "GHSA-r4gj-5m52-g5wh",
+          "source": 1240634,
+          "title": "Axios: maxRedirects: 0 is not enforced by the fetch adapter, allowing redirect-based SSRF",
+          "severity": "high",
+          "range": ">=1.17.0 <1.20.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-r4gj-5m52-g5wh"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "outbound HTTP from provider SDKs (Razorpay, Firecrawl, Tavily, Mem0)",
+        "layer": "server-runtime",
+        "remediation": "transitive upgrade to 1.20.0 via direct SDK upgrades",
+        "breakingRisk": "low - same major"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "better-auth",
+      "installedVersion": "1.6.26",
+      "severity": "critical",
+      "direct": true,
+      "vulnerableRange": "1.3.8-beta.3 - 1.7.6",
+      "firstPatchedBounds": [
+        "1.7.0-rc.3",
+        "1.7.7"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "better-auth"
+      ],
+      "nodes": [
+        "node_modules/better-auth"
+      ],
+      "advisories": [
+        {
+          "id": "@better-auth/drizzle-adapter",
+          "via": "@better-auth/drizzle-adapter"
+        },
+        {
+          "id": "@better-auth/kysely-adapter",
+          "via": "@better-auth/kysely-adapter"
+        },
+        {
+          "id": "GHSA-q84f-53jg-9ppm",
+          "source": 1243435,
+          "title": "better-auth: Device login approval does not show the requesting client or permissions",
+          "severity": "high",
+          "range": ">=1.3.8-beta.3 <1.7.0-rc.3",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-q84f-53jg-9ppm"
+        },
+        {
+          "id": "GHSA-44jh-23m7-hpcf",
+          "source": 1243463,
+          "title": "@better-auth/drizzle-adapter: Concurrent requests can exceed rate limits on PostgreSQL",
+          "severity": "low",
+          "range": ">=1.6.17 <1.7.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-44jh-23m7-hpcf"
+        },
+        {
+          "id": "GHSA-r4xp-prcw-77qf",
+          "source": 1243466,
+          "title": "better-auth: OAuth Proxy lets an attacker sign in as another user",
+          "severity": "high",
+          "range": ">=1.5.0-beta.12 <1.7.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-r4xp-prcw-77qf"
+        },
+        {
+          "id": "GHSA-965c-763c-88jm",
+          "source": 1243467,
+          "title": "better-auth: OAuth state can be used as a Magic Link to sign in as another user",
+          "severity": "critical",
+          "range": ">=1.4.0-beta.18 <1.7.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-965c-763c-88jm"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "unauthenticated-request: OAuth callback / state / social login endpoints",
+        "layer": "server-and-browser-runtime",
+        "remediation": "direct upgrade 1.6.x/1.6.28 -> 1.7.27",
+        "breakingRisk": "low - minor release within v1; full auth E2E suite passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "body-parser",
+      "installedVersion": "2.3.0",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "2.0.0 - 2.3.0",
+      "firstPatchedBounds": [
+        "2.4.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "express",
+        "body-parser"
+      ],
+      "nodes": [
+        "node_modules/body-parser"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-27r3-jxmh-p828",
+          "source": 1243074,
+          "title": "body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body",
+          "severity": "high",
+          "range": ">=2.0.0 <2.4.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-27r3-jxmh-p828"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "unauthenticated-request: compressed request bodies",
+        "layer": "server-runtime",
+        "remediation": "override to 2.4.0",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "brace-expansion",
+      "installedVersion": "2.1.4",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "2.0.0 - 2.1.6",
+      "firstPatchedBounds": [
+        "2.1.7",
+        "2.1.6",
+        "2.1.5"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/resource-detector-gcp",
+        "gcp-metadata",
+        "gaxios",
+        "rimraf",
+        "glob",
+        "minimatch",
+        "brace-expansion"
+      ],
+      "nodes": [
+        "node_modules/brace-expansion"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-q2hr-2g5m-vwhr",
+          "source": 1240101,
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+          "severity": "moderate",
+          "range": ">=2.0.0 <2.1.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr"
+        },
+        {
+          "id": "GHSA-qhr7-859c-m2p7",
+          "source": 1240105,
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+          "severity": "high",
+          "range": ">=2.0.0 <2.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7"
+        },
+        {
+          "id": "GHSA-6j4f-fj2g-mc7p",
+          "source": 1240109,
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+          "severity": "high",
+          "range": ">=2.0.0 <2.1.5",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "glob expansion in tooling; untrusted input only if tool processes attacker-controlled patterns",
+        "layer": "build/test tooling",
+        "remediation": "scoped overrides: 2.1.7 (server), 1.1.21 and 5.0.12 (client major lines)",
+        "breakingRisk": "low - patch releases within each major line"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "deepmerge-ts",
+      "installedVersion": "7.1.5",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "<8.0.0",
+      "firstPatchedBounds": [
+        "8.0.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "prisma",
+        "@prisma/config",
+        "deepmerge-ts"
+      ],
+      "nodes": [
+        "node_modules/deepmerge-ts"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-ggr8-5vv4-36mx",
+          "source": 1145093,
+          "title": "DeepmergeTS has stack exhaustion when merging recursive object graphs",
+          "severity": "high",
+          "range": "<8.0.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-ggr8-5vv4-36mx"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "effect",
+      "installedVersion": "3.20.0",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "<=3.22.0",
+      "firstPatchedBounds": [
+        "3.22.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "prisma",
+        "@prisma/config",
+        "effect"
+      ],
+      "nodes": [
+        "node_modules/effect"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-7589-6fvf-x4pw",
+          "source": 1248071,
+          "title": "Effect: ReDoS in Schema.TemplateLiteral compiled regex",
+          "severity": "high",
+          "range": "<=3.22.0",
+          "cve": "CVE-2026-121707",
+          "url": "https://github.com/advisories/GHSA-7589-6fvf-x4pw"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "ReDoS in Schema.TemplateLiteral; not fed untrusted request bodies by Kairos",
+        "layer": "build-only",
+        "remediation": "override to 3.22.5 (first patched 3.x, per GHSA-7589-6fvf-x4pw)",
+        "breakingRisk": "low - Prisma CLI verified; effect 4.x major override was rejected after typecheck failure"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "fast-uri",
+      "installedVersion": "3.1.5",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "3.0.0 - 3.1.8",
+      "firstPatchedBounds": [
+        "3.1.6",
+        "3.1.7",
+        "3.1.8",
+        "3.1.9"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "prisma",
+        "@prisma/dev",
+        "@prisma/streams-local",
+        "ajv",
+        "fast-uri"
+      ],
+      "nodes": [
+        "node_modules/fast-uri"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5jgf-p345-68v8",
+          "source": 1158521,
+          "title": "fast-uri vulnerable to host confusion via skipped IDN canonicalization on scheme-relative references",
+          "severity": "high",
+          "range": ">=3.1.3 <3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-5jgf-p345-68v8"
+        },
+        {
+          "id": "GHSA-f65p-4m7j-42xc",
+          "source": 1158524,
+          "title": "fast-uri vulnerable to server-side request forgery via malformed IPv6 normalization",
+          "severity": "high",
+          "range": ">=3.0.0 <3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-f65p-4m7j-42xc"
+        },
+        {
+          "id": "GHSA-fph4-wmhf-6fwf",
+          "source": 1158527,
+          "title": "fast-uri vulnerable to server-side request forgery via repeated hostname percent-decoding",
+          "severity": "high",
+          "range": ">=3.1.2 <3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-fph4-wmhf-6fwf"
+        },
+        {
+          "id": "GHSA-jqff-g426-hqxp",
+          "source": 1158530,
+          "title": "fast-uri vulnerable to host confusion via percent-encoded scheme normalization",
+          "severity": "high",
+          "range": ">=3.0.0 <3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-jqff-g426-hqxp"
+        },
+        {
+          "id": "GHSA-qw65-cvwx-89v3",
+          "source": 1239943,
+          "title": "fast-uri vulnerable to authority injection via an unvalidated port in serialize",
+          "severity": "high",
+          "range": ">=3.0.0 <3.1.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qw65-cvwx-89v3"
+        },
+        {
+          "id": "GHSA-hrr3-gc8f-f4qj",
+          "source": 1240091,
+          "title": "fast-uri vulnerable to inconsistent host case normalization via percent-encoded octets",
+          "severity": "moderate",
+          "range": ">=3.0.0 <3.1.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-hrr3-gc8f-f4qj"
+        },
+        {
+          "id": "GHSA-w74x-v6f9-j3xg",
+          "source": 1243098,
+          "title": "fast-uri vulnerable to URI scheme spoofing via percent-encoded scheme decoding",
+          "severity": "moderate",
+          "range": ">=3.0.0 <3.1.9",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-w74x-v6f9-j3xg"
+        },
+        {
+          "id": "GHSA-xhq7-xmqj-769h",
+          "source": 1243101,
+          "title": "fast-uri vulnerable to improper path equivalence in relative reference normalization",
+          "severity": "low",
+          "range": ">=3.0.0 <3.1.9",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-xhq7-xmqj-769h"
+        },
+        {
+          "id": "GHSA-wjr9-j795-jxcr",
+          "source": 1243104,
+          "title": "fast-uri vulnerable to host confusion via unchecked WHATWG host canonicalization",
+          "severity": "moderate",
+          "range": ">=3.1.3 <3.1.9",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-wjr9-j795-jxcr"
+        },
+        {
+          "id": "GHSA-333x-w4r6-6crp",
+          "source": 1243107,
+          "title": "fast-uri vulnerable to scheme injection via an unescaped first-segment colon in suffix references",
+          "severity": "low",
+          "range": ">=3.0.0 <3.1.9",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-333x-w4r6-6crp"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "URI parsing in ajv; can influence SSRF-sensitive URL handling",
+        "layer": "server-and-build",
+        "remediation": "override to 3.1.9 (first patched 3.x line)",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "firecrawl",
+      "installedVersion": "4.32.0",
+      "severity": "high",
+      "direct": true,
+      "vulnerableRange": "<=4.51.0",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "firecrawl"
+      ],
+      "nodes": [
+        "node_modules/firecrawl"
+      ],
+      "advisories": [
+        {
+          "id": "axios",
+          "via": "axios"
+        },
+        {
+          "id": "zod",
+          "via": "zod"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "outbound provider SDK; axios/zod advisories fixed by direct upgrade",
+        "layer": "server-runtime",
+        "remediation": "direct upgrade 4.32.0 -> 4.54.0",
+        "breakingRisk": "low - same major; typecheck/build passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "follow-redirects",
+      "installedVersion": "1.16.0",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "1.16.0 - 1.16.1",
+      "firstPatchedBounds": [
+        "1.16.1"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "@tavily/core",
+        "axios",
+        "follow-redirects"
+      ],
+      "nodes": [
+        "node_modules/follow-redirects"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-q3jh-wrc6-jgq8",
+          "source": 1242604,
+          "title": "follow-redirects array-form headers bypass cross-origin credential stripping",
+          "severity": "high",
+          "range": ">=1.16.0 <1.16.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-q3jh-wrc6-jgq8"
+        },
+        {
+          "id": "GHSA-8r9p-f939-6h3c",
+          "source": 1242605,
+          "title": "follow-redirects sensitiveHeaders regex escaping can expose credential headers",
+          "severity": "high",
+          "range": ">=1.16.0 <1.16.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-8r9p-f939-6h3c"
+        },
+        {
+          "id": "GHSA-mrwp-f3q8-3g9p",
+          "source": 1244003,
+          "title": "follow-redirects: Cross-realm sensitiveHeaders arrays are discarded and custom credentials can follow redirects",
+          "severity": "high",
+          "range": ">=1.16.0 <=1.16.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-mrwp-f3q8-3g9p"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "outbound redirects in provider SDKs; credential stripping bypass",
+        "layer": "server-runtime",
+        "remediation": "override to 1.16.3",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "gaxios",
+      "installedVersion": "7.1.3",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "7.1.3",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/resource-detector-gcp",
+        "gcp-metadata",
+        "gaxios"
+      ],
+      "nodes": [
+        "node_modules/gaxios"
+      ],
+      "advisories": [
+        {
+          "id": "rimraf",
+          "via": "rimraf"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "7.1.3"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "gcp-metadata",
+      "installedVersion": "8.1.4",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "8.1.3 - 8.1.4",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/resource-detector-gcp",
+        "gcp-metadata"
+      ],
+      "nodes": [
+        "node_modules/gcp-metadata"
+      ],
+      "advisories": [
+        {
+          "id": "gaxios",
+          "via": "gaxios"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "8.1.3 - 8.1.4"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "glob",
+      "installedVersion": "10.5.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "9.0.0 - 14.0.1",
+      "firstPatchedBounds": [
+        "14.0.1"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/resource-detector-gcp",
+        "gcp-metadata",
+        "gaxios",
+        "rimraf",
+        "glob"
+      ],
+      "nodes": [
+        "node_modules/glob"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3g3m-2fjr-6pw4",
+          "source": 1244013,
+          "title": "Glob: AbortSignal cancellation bypass allows post-timeout filesystem traversal",
+          "severity": "moderate",
+          "range": ">=9.0.0 <=14.0.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3g3m-2fjr-6pw4"
+        },
+        {
+          "id": "minimatch",
+          "via": "minimatch"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "9.0.0 - 14.0.1"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "inngest",
+      "installedVersion": "4.18.0",
+      "severity": "high",
+      "direct": true,
+      "vulnerableRange": "0.0.0-streaming-20230424112237 || 0.4.0-beta.1 - 3.41.0 || >=3.45.1-pr-1160.0",
+      "firstPatchedBounds": [],
+      "fixAvailable": {
+        "name": "inngest",
+        "version": "0.3.0",
+        "isSemVerMajor": true
+      },
+      "dependencyChain": [
+        "inngest"
+      ],
+      "nodes": [
+        "node_modules/inngest"
+      ],
+      "advisories": [
+        {
+          "id": "zod",
+          "via": "zod"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "durable job SDK; nested zod 3.x advisory",
+        "layer": "server-runtime",
+        "remediation": "direct upgrade 4.18.0 -> 4.26.2 plus zod override to 4.6.7",
+        "breakingRisk": "medium - zod major override; job integration suite passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "mem0ai",
+      "installedVersion": "3.1.5",
+      "severity": "high",
+      "direct": true,
+      "vulnerableRange": "*",
+      "firstPatchedBounds": [
+        "3.1.6"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "mem0ai"
+      ],
+      "nodes": [
+        "node_modules/mem0ai"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5324-3w58-qpp2",
+          "source": 1243615,
+          "title": "Mem0: Cross-tenant conversation leak via unescaped delimiter collision in session-scope key (_build_session_scope)",
+          "severity": "moderate",
+          "range": "<3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-5324-3w58-qpp2"
+        },
+        {
+          "id": "zod",
+          "via": "zod"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "memory provider SDK; cross-tenant key collision and nested zod 3.x",
+        "layer": "server-runtime",
+        "remediation": "direct upgrade 3.1.5 -> 3.3.1 plus zod override to 4.6.7",
+        "breakingRisk": "medium - zod major override; no live provider credential available"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "minimatch",
+      "installedVersion": "9.0.9",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "7.0.0 - 11.0.0",
+      "firstPatchedBounds": [
+        "11.0.1"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/resource-detector-gcp",
+        "gcp-metadata",
+        "gaxios",
+        "rimraf",
+        "glob",
+        "minimatch"
+      ],
+      "nodes": [
+        "node_modules/minimatch"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-g3hv-75wg-m249",
+          "source": 1244623,
+          "title": "minimatch has potential denial of service via globparts amplification",
+          "severity": "moderate",
+          "range": ">=7.0.0 <11.0.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "7.0.0 - 11.0.0"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "multer",
+      "installedVersion": "2.2.0",
+      "severity": "high",
+      "direct": true,
+      "vulnerableRange": "<=2.4.0",
+      "firstPatchedBounds": [
+        "2.3.0",
+        "2.4.0",
+        "2.5.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "multer"
+      ],
+      "nodes": [
+        "node_modules/multer"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-wc9g-mqfw-jrwm",
+          "source": 1193790,
+          "title": "multer vulnerable to Denial of Service via crafted multipart field names",
+          "severity": "high",
+          "range": "<2.3.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-wc9g-mqfw-jrwm"
+        },
+        {
+          "id": "GHSA-qfvm-cv95-jqjf",
+          "source": 1193791,
+          "title": "multer vulnerable to Denial of Service via file descriptor leak on aborted uploads",
+          "severity": "high",
+          "range": "=2.2.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qfvm-cv95-jqjf"
+        },
+        {
+          "id": "GHSA-qvfw-j98x-7q72",
+          "source": 1193792,
+          "title": "multer vulnerable to file size limit bypass via async fileFilter race condition",
+          "severity": "low",
+          "range": "<2.3.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qvfw-j98x-7q72"
+        },
+        {
+          "id": "GHSA-535w-7cp7-47q4",
+          "source": 1193793,
+          "title": "multer vulnerable to Denial of Service via oversized array index in field names",
+          "severity": "high",
+          "range": "<2.3.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-535w-7cp7-47q4"
+        },
+        {
+          "id": "GHSA-3pph-fpjx-jg34",
+          "source": 1239935,
+          "title": "multer vulnerable to Denial of Service via orphaned disk writes on aborted uploads",
+          "severity": "moderate",
+          "range": ">=2.2.0 <2.4.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3pph-fpjx-jg34"
+        },
+        {
+          "id": "GHSA-q7qp-rjg7-q26m",
+          "source": 1243083,
+          "title": "multer vulnerable to Denial of Service via a pending asynchronous fileFilter after request teardown",
+          "severity": "high",
+          "range": ">=2.0.0 <2.5.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-q7qp-rjg7-q26m"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "unauthenticated-request: multipart uploads behind auth middleware",
+        "layer": "server-runtime",
+        "remediation": "direct upgrade 2.2.0 -> 2.5.0",
+        "breakingRisk": "low - same major; upload HTTP tests passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "mysql2",
+      "installedVersion": "3.15.3",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "<=3.23.0",
+      "firstPatchedBounds": [
+        "3.22.0",
+        "3.23.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "prisma",
+        "mysql2"
+      ],
+      "nodes": [
+        "node_modules/mysql2"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3f6p-5ww8-9rcr",
+          "source": 1153173,
+          "title": "MySQL2: Auth Plugin Downgrade to mysql_clear_password Leaks Plaintext Credentials",
+          "severity": "high",
+          "range": "<3.22.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3f6p-5ww8-9rcr"
+        },
+        {
+          "id": "GHSA-rgwj-5xj2-c3m3",
+          "source": 1158532,
+          "title": "MySQL2: Unbounded zlib inflate in compressed MySQL protocol handler allows decompression-bomb DoS",
+          "severity": "moderate",
+          "range": "<=3.23.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rgwj-5xj2-c3m3"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "prisma",
+      "installedVersion": "7.9.1",
+      "severity": "high",
+      "direct": true,
+      "vulnerableRange": "6.13.0-dev.1 - 7.10.0 || 7.11.0-dev.1 - 8.1.0-dev.6",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "prisma"
+      ],
+      "nodes": [
+        "node_modules/prisma"
+      ],
+      "advisories": [
+        {
+          "id": "@prisma/config",
+          "via": "@prisma/config"
+        },
+        {
+          "id": "mysql2",
+          "via": "mysql2"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "build/CLI and generated client; not directly request-parsing",
+        "layer": "build-and-runtime",
+        "remediation": "direct upgrade 7.9.1 -> 7.10.1; effect override 3.22.5 closes @prisma/config advisory",
+        "breakingRisk": "low - same major; prisma validate/generate/migrate all passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "proxy-addr",
+      "installedVersion": "2.0.7",
+      "severity": "critical",
+      "direct": false,
+      "vulnerableRange": "1.1.0 - 2.0.7",
+      "firstPatchedBounds": [
+        "2.0.8"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "express",
+        "proxy-addr"
+      ],
+      "nodes": [
+        "node_modules/proxy-addr"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-jqcg-44mw-7w3h",
+          "source": 1241210,
+          "title": "proxy-addr vulnerable to IP spoofing via IPv4-mapped IPv6 trust subnet",
+          "severity": "critical",
+          "range": ">=1.1.0 <2.0.8",
+          "cve": "CVE-2026-90711",
+          "url": "https://github.com/advisories/GHSA-jqcg-44mw-7w3h"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "unauthenticated-request: X-Forwarded-For affects req.ip, rate-limit keys and logging",
+        "layer": "server-runtime",
+        "remediation": "override to 2.0.8 (patched upstream release), plus proxy regression tests",
+        "breakingRisk": "low - patch release, same API"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "qs",
+      "installedVersion": "6.15.3",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "2.2.5 - 6.16.0",
+      "firstPatchedBounds": [
+        "6.15.3",
+        "6.16.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "express",
+        "qs"
+      ],
+      "nodes": [
+        "node_modules/qs"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-x5fp-wj9c-mxmx",
+          "source": 1158506,
+          "title": "qs array-limit bypass via bracket-key comma parsing",
+          "severity": "moderate",
+          "range": ">=6.14.2 <=6.15.3",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-x5fp-wj9c-mxmx"
+        },
+        {
+          "id": "GHSA-4mjr-xmp4-gh2g",
+          "source": 1158507,
+          "title": "qs: Denial of Service via Attacker Controlled isBuffer",
+          "severity": "moderate",
+          "range": ">=2.2.5 <6.16.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4mjr-xmp4-gh2g"
+        },
+        {
+          "id": "GHSA-6pq8-jhm2-2vcw",
+          "source": 1243687,
+          "title": "qs : qs.stringify with arrayFormat 'comma' throws an uncaught TypeError on array elements carrying a non-callable own toString (DoS)",
+          "severity": "moderate",
+          "range": ">=6.7.0 <=6.16.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-6pq8-jhm2-2vcw"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "rimraf",
+      "installedVersion": "5.0.10",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "4.2.0 - 6.1.3",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/resource-detector-gcp",
+        "gcp-metadata",
+        "gaxios",
+        "rimraf"
+      ],
+      "nodes": [
+        "node_modules/rimraf"
+      ],
+      "advisories": [
+        {
+          "id": "glob",
+          "via": "glob"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "4.2.0 - 6.1.3"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "systeminformation",
+      "installedVersion": "5.33.1",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "<=5.33.15",
+      "firstPatchedBounds": [
+        "5.33.14",
+        "5.33.13",
+        "5.33.16"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "inngest",
+        "@opentelemetry/auto-instrumentations-node",
+        "@opentelemetry/instrumentation-host-metrics",
+        "systeminformation"
+      ],
+      "nodes": [
+        "node_modules/systeminformation"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-4vjg-vx72-qq4g",
+          "source": 1243616,
+          "title": "systeminformation has path traversal in Linux networkStats() that allows symlink-based file disclosure outside /sys/class/net",
+          "severity": "low",
+          "range": "<5.33.14",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4vjg-vx72-qq4g"
+        },
+        {
+          "id": "GHSA-7648-jmwf-vw7j",
+          "source": 1243617,
+          "title": "systeminformation has prototype pollution in `networkStats()` via the interface name",
+          "severity": "moderate",
+          "range": "<5.33.13",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-7648-jmwf-vw7j"
+        },
+        {
+          "id": "GHSA-3f7j-7jwc-fxfj",
+          "source": 1243663,
+          "title": "systeminformation vulnerable to Windows command injection in services() through Unicode quotation marks",
+          "severity": "high",
+          "range": "<5.33.16",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3f7j-7jwc-fxfj"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "host metrics via OpenTelemetry/worker diagnostics; not request-driven",
+        "layer": "server-runtime",
+        "remediation": "override to 5.33.23",
+        "breakingRisk": "low - patch release within v5"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "undici",
+      "installedVersion": "7.29.0",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "7.0.0 - 7.30.0",
+      "firstPatchedBounds": [
+        "7.29.1",
+        "7.30.1"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "@ai-sdk/openai",
+        "@ai-sdk/provider-utils",
+        "undici"
+      ],
+      "nodes": [
+        "node_modules/undici"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3wwx-pv8p-q78v",
+          "source": 1239933,
+          "title": "undici vulnerable to Denial of Service via unhandled error in WebSocket permessage-deflate decompression",
+          "severity": "moderate",
+          "range": ">=7.28.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3wwx-pv8p-q78v"
+        },
+        {
+          "id": "GHSA-pmjh-fq2x-6v4x",
+          "source": 1240036,
+          "title": "undici vulnerable to Denial of Service via orphaned RetryHandler response body",
+          "severity": "moderate",
+          "range": ">=7.11.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-pmjh-fq2x-6v4x"
+        },
+        {
+          "id": "GHSA-r53p-7pc4-xj5r",
+          "source": 1240038,
+          "title": "undici vulnerable to downstream response splitting via retry interceptor",
+          "severity": "low",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-r53p-7pc4-xj5r"
+        },
+        {
+          "id": "GHSA-rfgv-xxqx-mfg5",
+          "source": 1240041,
+          "title": "undici vulnerable to Denial of Service via unrequested WebSocket subprotocol",
+          "severity": "high",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rfgv-xxqx-mfg5"
+        },
+        {
+          "id": "GHSA-3xpg-4rpp-hhhm",
+          "source": 1240044,
+          "title": "undici vulnerable to Denial of Service via unbounded decompression of compressed responses",
+          "severity": "moderate",
+          "range": ">=7.15.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3xpg-4rpp-hhhm"
+        },
+        {
+          "id": "GHSA-2jfj-6hjv-fm6j",
+          "source": 1240046,
+          "title": "undici vulnerable to cross-user cookie disclosure via Set-Cookie caching in shared caches",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2jfj-6hjv-fm6j"
+        },
+        {
+          "id": "GHSA-2gqq-gqf2-x968",
+          "source": 1240048,
+          "title": "undici vulnerable to response truncation via oversized chunked responses in the dump interceptor",
+          "severity": "low",
+          "range": ">=7.1.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2gqq-gqf2-x968"
+        },
+        {
+          "id": "GHSA-w293-vg96-wgc3",
+          "source": 1240050,
+          "title": "undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool",
+          "severity": "high",
+          "range": ">=7.24.1 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-w293-vg96-wgc3"
+        },
+        {
+          "id": "GHSA-8436-99hf-9mmv",
+          "source": 1240052,
+          "title": "undici vulnerable to caching and replay of unsafe HTTP method responses",
+          "severity": "low",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-8436-99hf-9mmv"
+        },
+        {
+          "id": "GHSA-rx4f-c7p8-82vq",
+          "source": 1240055,
+          "title": "undici vulnerable to Denial of Service via WebSocketStream unclean close",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rx4f-c7p8-82vq"
+        },
+        {
+          "id": "GHSA-4qv8-2p9j-2685",
+          "source": 1243078,
+          "title": "undici vulnerable to Denial of Service via unbounded memory in the EventSource parser",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4qv8-2p9j-2685"
+        },
+        {
+          "id": "GHSA-f72v-6w45-q472",
+          "source": 1243081,
+          "title": "undici vulnerable to Subresource Integrity bypass via non-lowercase algorithm tokens",
+          "severity": "moderate",
+          "range": ">=7.15.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-f72v-6w45-q472"
+        },
+        {
+          "id": "GHSA-xjj6-f33q-929c",
+          "source": 1243113,
+          "title": "undici vulnerable to Denial of Service via unhandled error on excessive content-encodings",
+          "severity": "high",
+          "range": ">=7.18.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-xjj6-f33q-929c"
+        },
+        {
+          "id": "GHSA-4w7w-5xrc-9h26",
+          "source": 1243473,
+          "title": "undici vulnerable to cache poisoning and cross-user disclosure via cross-origin redirects",
+          "severity": "high",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4w7w-5xrc-9h26"
+        },
+        {
+          "id": "GHSA-2m5v-pch6-74hx",
+          "source": 1243475,
+          "title": "undici vulnerable to TLS certificate validation bypass via dropped tls options in Agent",
+          "severity": "high",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2m5v-pch6-74hx"
+        },
+        {
+          "id": "GHSA-qrxm-fqhp-jwvm",
+          "source": 1243478,
+          "title": "undici vulnerable to Denial of Service via TLS 1.2 certificate-changing renegotiation",
+          "severity": "high",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qrxm-fqhp-jwvm"
+        },
+        {
+          "id": "GHSA-9fm3-97px-rjf6",
+          "source": 1243481,
+          "title": "undici WebSocket client vulnerable to Denial of Service via unbounded automatic PONG buffering",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-9fm3-97px-rjf6"
+        },
+        {
+          "id": "GHSA-55wc-3pg8-jfw6",
+          "source": 1243484,
+          "title": "undici vulnerable to Denial of Service via unhandled exception in the decompress interceptor",
+          "severity": "moderate",
+          "range": ">=7.15.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-55wc-3pg8-jfw6"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "outbound HTTP in AI SDKs and tooling; TLS/redirect/cache advisories",
+        "layer": "server-and-build",
+        "remediation": "override to 7.30.2 (same major line)",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "server",
+      "phase": "before",
+      "package": "zod",
+      "installedVersion": "3.25.76",
+      "severity": "high",
+      "direct": true,
+      "vulnerableRange": "<4.6.6",
+      "firstPatchedBounds": [
+        "4.6.6"
+      ],
+      "fixAvailable": {
+        "name": "inngest",
+        "version": "0.3.0",
+        "isSemVerMajor": true
+      },
+      "dependencyChain": [
+        "firecrawl",
+        "zod"
+      ],
+      "nodes": [
+        "node_modules/firecrawl/node_modules/zod",
+        "node_modules/inngest/node_modules/zod",
+        "node_modules/mem0ai/node_modules/zod",
+        "node_modules/zod"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-mrhx-c7xc-m3w5",
+          "source": 1243066,
+          "title": "Zod can exhaust memory while validating oversized constrained collections",
+          "severity": "high",
+          "range": "<4.6.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "request/schema validation; oversized constrained collections can exhaust memory",
+        "layer": "server-and-browser-runtime",
+        "remediation": "direct upgrade to 4.6.7 plus override forcing nested 3.x copies to 4.6.7",
+        "breakingRisk": "medium - nested consumers previously used zod 3.x; typecheck/build/tests passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@better-auth/drizzle-adapter",
+      "installedVersion": "1.6.28",
+      "severity": "low",
+      "direct": false,
+      "vulnerableRange": "1.6.17 - 1.7.6",
+      "firstPatchedBounds": [
+        "1.7.7"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "better-auth",
+        "@better-auth/drizzle-adapter"
+      ],
+      "nodes": [
+        "node_modules/@better-auth/drizzle-adapter"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-44jh-23m7-hpcf",
+          "source": 1243465,
+          "title": "@better-auth/drizzle-adapter: Concurrent requests can exceed rate limits on PostgreSQL",
+          "severity": "low",
+          "range": ">=1.6.17 <1.7.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-44jh-23m7-hpcf"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@better-auth/kysely-adapter",
+      "installedVersion": "1.6.28",
+      "severity": "low",
+      "direct": false,
+      "vulnerableRange": ">=1.6.17 <1.7.0",
+      "firstPatchedBounds": [
+        "1.7.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "better-auth",
+        "@better-auth/kysely-adapter"
+      ],
+      "nodes": [
+        "node_modules/@better-auth/kysely-adapter"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-44jh-23m7-hpcf",
+          "source": 1243464,
+          "title": "@better-auth/drizzle-adapter: Concurrent requests can exceed rate limits on PostgreSQL",
+          "severity": "low",
+          "range": ">=1.6.17 <1.7.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-44jh-23m7-hpcf"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@hono/node-server",
+      "installedVersion": "2.1.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "1.19.10 - 2.1.5",
+      "firstPatchedBounds": [
+        "2.1.3",
+        "2.1.6"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@modelcontextprotocol/sdk",
+        "@hono/node-server"
+      ],
+      "nodes": [
+        "node_modules/@hono/node-server"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-rmxm-3fg6-px4f",
+          "source": 1243661,
+          "title": "@hono/node-server: `serveStatic` decodes the request path a second time, leading to bypass of middleware on static paths",
+          "severity": "moderate",
+          "range": ">=1.19.10 <2.1.3",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rmxm-3fg6-px4f"
+        },
+        {
+          "id": "GHSA-qv5m-9pm6-hqp3",
+          "source": 1246356,
+          "title": "@hono/node-server: Unhandled `ECONNRESET` on the socket during an asynchronous WebSocket upgrade crashes the process",
+          "severity": "moderate",
+          "range": ">=2.0.0 <2.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qv5m-9pm6-hqp3"
+        },
+        {
+          "id": "GHSA-jpvv-r467-5p4w",
+          "source": 1246358,
+          "title": "@hono/node-server: Backslash in the request path is parsed as a path separator, bypassing path-based access control at a reverse proxy",
+          "severity": "moderate",
+          "range": ">=2.0.0 <2.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-jpvv-r467-5p4w"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@modelcontextprotocol/sdk",
+      "installedVersion": "1.30.0",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "<=1.31.0",
+      "firstPatchedBounds": [
+        "1.31.0",
+        "1.32.0",
+        "1.30.1"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@modelcontextprotocol/sdk"
+      ],
+      "nodes": [
+        "node_modules/@modelcontextprotocol/sdk"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-6qxp-vccf-f47h",
+          "source": 1241339,
+          "title": "MCP TypeScript SDK: OAuth client could send credentials to an authorization server chosen by the MCP server",
+          "severity": "high",
+          "range": ">=1.12.0 <1.31.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-6qxp-vccf-f47h"
+        },
+        {
+          "id": "GHSA-22jm-h49p-29qw",
+          "source": 1242628,
+          "title": "MCP TypeScript SDK: Experimental tasks were not tied to the session that created them",
+          "severity": "high",
+          "range": ">=1.24.0 <1.32.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-22jm-h49p-29qw"
+        },
+        {
+          "id": "GHSA-46jr-4wx8-v453",
+          "source": 1242649,
+          "title": "MCP TypeScript SDK: One HTTP request within the default size limit could exhaust server memory during validation",
+          "severity": "high",
+          "range": ">=1.3.0 <1.32.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-46jr-4wx8-v453"
+        },
+        {
+          "id": "GHSA-rvq5-wwqv-78pq",
+          "source": 1242667,
+          "title": "MCP TypeScript SDK: Server bearer authentication accepted tokens issued for another service",
+          "severity": "moderate",
+          "range": ">=1.6.0 <1.32.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rvq5-wwqv-78pq"
+        },
+        {
+          "id": "GHSA-f897-62hf-6gxq",
+          "source": 1243488,
+          "title": "MCP TypeScript SDK: HTTP server transports and handlers did not limit request body size or JSON-RPC batch length",
+          "severity": "high",
+          "range": ">=1.10.0 <1.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-f897-62hf-6gxq"
+        },
+        {
+          "id": "GHSA-6prh-2h8m-c8cw",
+          "source": 1244498,
+          "title": "MCP TypeScript client SDK: HTTP client transports and OAuth requests followed cross-origin redirects and re-sent custom headers and request bodies",
+          "severity": "moderate",
+          "range": "<1.32.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-6prh-2h8m-c8cw"
+        }
+      ],
+      "review": {
+        "reachable": "partial",
+        "exposure": "CLI provider SDK used by shadcn generator, not a Kairos request path",
+        "layer": "build-tooling",
+        "remediation": "override to 1.32.2",
+        "breakingRisk": "low - patch/minor within v1"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@ts-morph/common",
+      "installedVersion": "0.27.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "0.19.0 - 0.29.0",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "ts-morph",
+        "@ts-morph/common"
+      ],
+      "nodes": [
+        "node_modules/@ts-morph/common"
+      ],
+      "advisories": [
+        {
+          "id": "minimatch",
+          "via": "minimatch"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "0.19.0 - 0.29.0"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@typescript-eslint/eslint-plugin",
+      "installedVersion": "8.66.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "6.16.0 - 8.72.2",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "eslint-config-next",
+        "typescript-eslint",
+        "@typescript-eslint/eslint-plugin"
+      ],
+      "nodes": [
+        "node_modules/@typescript-eslint/eslint-plugin"
+      ],
+      "advisories": [
+        {
+          "id": "@typescript-eslint/type-utils",
+          "via": "@typescript-eslint/type-utils"
+        },
+        {
+          "id": "@typescript-eslint/utils",
+          "via": "@typescript-eslint/utils"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "6.16.0 - 8.72.2"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@typescript-eslint/parser",
+      "installedVersion": "8.66.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "6.16.0 - 8.72.2",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "eslint-config-next",
+        "typescript-eslint",
+        "@typescript-eslint/parser"
+      ],
+      "nodes": [
+        "node_modules/@typescript-eslint/parser"
+      ],
+      "advisories": [
+        {
+          "id": "@typescript-eslint/typescript-estree",
+          "via": "@typescript-eslint/typescript-estree"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "6.16.0 - 8.72.2"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@typescript-eslint/type-utils",
+      "installedVersion": "8.66.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "6.16.0 - 8.72.2",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "eslint-config-next",
+        "typescript-eslint",
+        "@typescript-eslint/eslint-plugin",
+        "@typescript-eslint/type-utils"
+      ],
+      "nodes": [
+        "node_modules/@typescript-eslint/type-utils"
+      ],
+      "advisories": [
+        {
+          "id": "@typescript-eslint/typescript-estree",
+          "via": "@typescript-eslint/typescript-estree"
+        },
+        {
+          "id": "@typescript-eslint/utils",
+          "via": "@typescript-eslint/utils"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "6.16.0 - 8.72.2"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@typescript-eslint/typescript-estree",
+      "installedVersion": "8.66.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "6.16.0 - 8.72.2",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "eslint-config-next",
+        "typescript-eslint",
+        "@typescript-eslint/typescript-estree"
+      ],
+      "nodes": [
+        "node_modules/@typescript-eslint/typescript-estree"
+      ],
+      "advisories": [
+        {
+          "id": "minimatch",
+          "via": "minimatch"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "6.16.0 - 8.72.2"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "@typescript-eslint/utils",
+      "installedVersion": "8.66.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "6.16.0 - 8.72.2",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "eslint-config-next",
+        "typescript-eslint",
+        "@typescript-eslint/utils"
+      ],
+      "nodes": [
+        "node_modules/@typescript-eslint/utils"
+      ],
+      "advisories": [
+        {
+          "id": "@typescript-eslint/typescript-estree",
+          "via": "@typescript-eslint/typescript-estree"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "6.16.0 - 8.72.2"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "better-auth",
+      "installedVersion": "1.6.28",
+      "severity": "critical",
+      "direct": true,
+      "vulnerableRange": "1.3.8-beta.3 - 1.7.6",
+      "firstPatchedBounds": [
+        "1.7.0-rc.3",
+        "1.7.7"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "better-auth"
+      ],
+      "nodes": [
+        "node_modules/better-auth"
+      ],
+      "advisories": [
+        {
+          "id": "@better-auth/drizzle-adapter",
+          "via": "@better-auth/drizzle-adapter"
+        },
+        {
+          "id": "@better-auth/kysely-adapter",
+          "via": "@better-auth/kysely-adapter"
+        },
+        {
+          "id": "GHSA-q84f-53jg-9ppm",
+          "source": 1243435,
+          "title": "better-auth: Device login approval does not show the requesting client or permissions",
+          "severity": "high",
+          "range": ">=1.3.8-beta.3 <1.7.0-rc.3",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-q84f-53jg-9ppm"
+        },
+        {
+          "id": "GHSA-44jh-23m7-hpcf",
+          "source": 1243463,
+          "title": "@better-auth/drizzle-adapter: Concurrent requests can exceed rate limits on PostgreSQL",
+          "severity": "low",
+          "range": ">=1.6.17 <1.7.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-44jh-23m7-hpcf"
+        },
+        {
+          "id": "GHSA-r4xp-prcw-77qf",
+          "source": 1243466,
+          "title": "better-auth: OAuth Proxy lets an attacker sign in as another user",
+          "severity": "high",
+          "range": ">=1.5.0-beta.12 <1.7.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-r4xp-prcw-77qf"
+        },
+        {
+          "id": "GHSA-965c-763c-88jm",
+          "source": 1243467,
+          "title": "better-auth: OAuth state can be used as a Magic Link to sign in as another user",
+          "severity": "critical",
+          "range": ">=1.4.0-beta.18 <1.7.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-965c-763c-88jm"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "unauthenticated-request: OAuth callback / state / social login endpoints",
+        "layer": "server-and-browser-runtime",
+        "remediation": "direct upgrade 1.6.x/1.6.28 -> 1.7.27",
+        "breakingRisk": "low - minor release within v1; full auth E2E suite passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "body-parser",
+      "installedVersion": "2.3.0",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "2.0.0 - 2.3.0",
+      "firstPatchedBounds": [
+        "2.4.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@modelcontextprotocol/sdk",
+        "express",
+        "body-parser"
+      ],
+      "nodes": [
+        "node_modules/body-parser"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-27r3-jxmh-p828",
+          "source": 1243074,
+          "title": "body-parser vulnerable to Denial of Service via trailing bytes after a compressed request body",
+          "severity": "high",
+          "range": ">=2.0.0 <2.4.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-27r3-jxmh-p828"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "unauthenticated-request: compressed request bodies",
+        "layer": "server-runtime",
+        "remediation": "override to 2.4.0",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "brace-expansion",
+      "installedVersion": "5.0.9",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "<=1.1.20 || 4.0.0 - 5.0.11",
+      "firstPatchedBounds": [
+        "1.1.21",
+        "5.0.12",
+        "1.1.20",
+        "5.0.11",
+        "1.1.19",
+        "5.0.10"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "ts-morph",
+        "@ts-morph/common",
+        "minimatch",
+        "brace-expansion"
+      ],
+      "nodes": [
+        "node_modules/@ts-morph/common/node_modules/brace-expansion",
+        "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion",
+        "node_modules/brace-expansion"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-q2hr-2g5m-vwhr",
+          "source": 1240100,
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+          "severity": "moderate",
+          "range": "<1.1.21",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr"
+        },
+        {
+          "id": "GHSA-q2hr-2g5m-vwhr",
+          "source": 1240103,
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+          "severity": "moderate",
+          "range": ">=4.0.0 <5.0.12",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr"
+        },
+        {
+          "id": "GHSA-qhr7-859c-m2p7",
+          "source": 1240104,
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+          "severity": "high",
+          "range": "<1.1.20",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7"
+        },
+        {
+          "id": "GHSA-qhr7-859c-m2p7",
+          "source": 1240107,
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.11",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7"
+        },
+        {
+          "id": "GHSA-6j4f-fj2g-mc7p",
+          "source": 1240108,
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+          "severity": "high",
+          "range": "<1.1.19",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p"
+        },
+        {
+          "id": "GHSA-6j4f-fj2g-mc7p",
+          "source": 1240111,
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.10",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "glob expansion in tooling; untrusted input only if tool processes attacker-controlled patterns",
+        "layer": "build/test tooling",
+        "remediation": "scoped overrides: 2.1.7 (server), 1.1.21 and 5.0.12 (client major lines)",
+        "breakingRisk": "low - patch releases within each major line"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "dompurify",
+      "installedVersion": "3.4.13",
+      "severity": "low",
+      "direct": false,
+      "vulnerableRange": "<=3.4.16",
+      "firstPatchedBounds": [
+        "3.4.15",
+        "3.4.16"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "streamdown",
+        "mermaid",
+        "dompurify"
+      ],
+      "nodes": [
+        "node_modules/dompurify"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-p98j-92pf-mc4p",
+          "source": 1240621,
+          "title": "DOMPurify: IN_PLACE: node-removing afterSanitize hook leaves detached subtree event handlers armed, causing DOM XSS",
+          "severity": "low",
+          "range": ">=3.4.13 <=3.4.15",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-p98j-92pf-mc4p"
+        },
+        {
+          "id": "GHSA-6688-9rhm-gjv2",
+          "source": 1241204,
+          "title": "DOMPurify: IN_PLACE returns a force-removed rawtext root whose text carries attacker markup ΓÇö pure HTML reparse executes",
+          "severity": "low",
+          "range": "<=3.4.15",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-6688-9rhm-gjv2"
+        },
+        {
+          "id": "GHSA-c6gr-qvv4-5v3f",
+          "source": 1242882,
+          "title": "DOMPurify: SMIL attributeName=href guard is skipped when PARSER_MEDIA_TYPE is application/xhtml+xml",
+          "severity": "low",
+          "range": "<=3.4.16",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-c6gr-qvv4-5v3f"
+        },
+        {
+          "id": "GHSA-cg2g-xh64-v4q7",
+          "source": 1247849,
+          "title": "DOMPurify SAFE_FOR_TEMPLATES bypass: split template expressions survive in attached shadow root content on DOM output modes",
+          "severity": "low",
+          "range": ">=3.4.4 <=3.4.16",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-cg2g-xh64-v4q7"
+        },
+        {
+          "id": "GHSA-mrv2-3pqr-j5jr",
+          "source": 1247850,
+          "title": "DOMPurify IN_PLACE: hook that removes a parent or sibling leaves the detached subtree's event handlers armed (incomplete fix for GHSA-p98j-92pf-mc4p)",
+          "severity": "low",
+          "range": "<=3.4.16",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-mrv2-3pqr-j5jr"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "low",
+        "vulnerableRange": "<=3.4.16"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "fast-uri",
+      "installedVersion": "3.1.5",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "3.0.0 - 3.1.8",
+      "firstPatchedBounds": [
+        "3.1.6",
+        "3.1.7",
+        "3.1.8",
+        "3.1.9"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@modelcontextprotocol/sdk",
+        "ajv",
+        "fast-uri"
+      ],
+      "nodes": [
+        "node_modules/fast-uri"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5jgf-p345-68v8",
+          "source": 1158521,
+          "title": "fast-uri vulnerable to host confusion via skipped IDN canonicalization on scheme-relative references",
+          "severity": "high",
+          "range": ">=3.1.3 <3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-5jgf-p345-68v8"
+        },
+        {
+          "id": "GHSA-f65p-4m7j-42xc",
+          "source": 1158524,
+          "title": "fast-uri vulnerable to server-side request forgery via malformed IPv6 normalization",
+          "severity": "high",
+          "range": ">=3.0.0 <3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-f65p-4m7j-42xc"
+        },
+        {
+          "id": "GHSA-fph4-wmhf-6fwf",
+          "source": 1158527,
+          "title": "fast-uri vulnerable to server-side request forgery via repeated hostname percent-decoding",
+          "severity": "high",
+          "range": ">=3.1.2 <3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-fph4-wmhf-6fwf"
+        },
+        {
+          "id": "GHSA-jqff-g426-hqxp",
+          "source": 1158530,
+          "title": "fast-uri vulnerable to host confusion via percent-encoded scheme normalization",
+          "severity": "high",
+          "range": ">=3.0.0 <3.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-jqff-g426-hqxp"
+        },
+        {
+          "id": "GHSA-qw65-cvwx-89v3",
+          "source": 1239943,
+          "title": "fast-uri vulnerable to authority injection via an unvalidated port in serialize",
+          "severity": "high",
+          "range": ">=3.0.0 <3.1.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qw65-cvwx-89v3"
+        },
+        {
+          "id": "GHSA-hrr3-gc8f-f4qj",
+          "source": 1240091,
+          "title": "fast-uri vulnerable to inconsistent host case normalization via percent-encoded octets",
+          "severity": "moderate",
+          "range": ">=3.0.0 <3.1.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-hrr3-gc8f-f4qj"
+        },
+        {
+          "id": "GHSA-w74x-v6f9-j3xg",
+          "source": 1243098,
+          "title": "fast-uri vulnerable to URI scheme spoofing via percent-encoded scheme decoding",
+          "severity": "moderate",
+          "range": ">=3.0.0 <3.1.9",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-w74x-v6f9-j3xg"
+        },
+        {
+          "id": "GHSA-xhq7-xmqj-769h",
+          "source": 1243101,
+          "title": "fast-uri vulnerable to improper path equivalence in relative reference normalization",
+          "severity": "low",
+          "range": ">=3.0.0 <3.1.9",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-xhq7-xmqj-769h"
+        },
+        {
+          "id": "GHSA-wjr9-j795-jxcr",
+          "source": 1243104,
+          "title": "fast-uri vulnerable to host confusion via unchecked WHATWG host canonicalization",
+          "severity": "moderate",
+          "range": ">=3.1.3 <3.1.9",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-wjr9-j795-jxcr"
+        },
+        {
+          "id": "GHSA-333x-w4r6-6crp",
+          "source": 1243107,
+          "title": "fast-uri vulnerable to scheme injection via an unescaped first-segment colon in suffix references",
+          "severity": "low",
+          "range": ">=3.0.0 <3.1.9",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-333x-w4r6-6crp"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "URI parsing in ajv; can influence SSRF-sensitive URL handling",
+        "layer": "server-and-build",
+        "remediation": "override to 3.1.9 (first patched 3.x line)",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "hono",
+      "installedVersion": "4.13.1",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "<=4.13.15",
+      "firstPatchedBounds": [
+        "4.13.5",
+        "4.13.7",
+        "4.13.11",
+        "4.13.16",
+        "4.13.15"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@modelcontextprotocol/sdk",
+        "hono"
+      ],
+      "nodes": [
+        "node_modules/hono"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-gqvv-2mrq-wpjv",
+          "source": 1193729,
+          "title": "Hono: Incomplete fix for CVE-2026-39408: `toSSG()` still writes files outside the output directory",
+          "severity": "moderate",
+          "range": "<4.13.5",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-gqvv-2mrq-wpjv"
+        },
+        {
+          "id": "GHSA-g6gw-c38x-mqfc",
+          "source": 1193730,
+          "title": "Hono: Unbounded dot-notation nesting in `parseBody()` can cause memory exhaustion",
+          "severity": "moderate",
+          "range": "<4.13.5",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-g6gw-c38x-mqfc"
+        },
+        {
+          "id": "GHSA-crvj-82cr-hjcx",
+          "source": 1193731,
+          "title": "Hono: Query parser reads parameters after the URL fragment, causing cache-key and proxy interpretation differentials",
+          "severity": "moderate",
+          "range": "<4.13.5",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-crvj-82cr-hjcx"
+        },
+        {
+          "id": "GHSA-hxh3-vqpv-xpqv",
+          "source": 1240640,
+          "title": "hono/jsx renders plain strings unescaped in boundary components, leading to XSS",
+          "severity": "moderate",
+          "range": "<4.13.7",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-hxh3-vqpv-xpqv"
+        },
+        {
+          "id": "GHSA-5r4p-p66f-jhc7",
+          "source": 1242595,
+          "title": "Hono: `serveStatic` decodes the request path a second time, leading to bypass of middleware on static paths",
+          "severity": "moderate",
+          "range": ">=4.12.4 <4.13.11",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-5r4p-p66f-jhc7"
+        },
+        {
+          "id": "GHSA-4m76-xfj5-7975",
+          "source": 1246368,
+          "title": "Hono: `mount()` and `app.mount()` can forward a path that bypasses middleware scoped inside the mount prefix",
+          "severity": "moderate",
+          "range": "<4.13.16",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4m76-xfj5-7975"
+        },
+        {
+          "id": "GHSA-h7mg-cq63-vhpq",
+          "source": 1246369,
+          "title": "Hono: RegExpRouter skips wildcard middleware for some route sets and for paths with an encoded line terminator",
+          "severity": "moderate",
+          "range": ">=4.1.4 <=4.13.15",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-h7mg-cq63-vhpq"
+        },
+        {
+          "id": "GHSA-3gg2-335m-rxc6",
+          "source": 1246370,
+          "title": "Hono: `css` helper does not escape a closing tag split between the template and an interpolated value, allowing HTML injection",
+          "severity": "low",
+          "range": ">=3.12.0 <=4.13.15",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3gg2-335m-rxc6"
+        },
+        {
+          "id": "GHSA-46wx-v44x-9hh2",
+          "source": 1246373,
+          "title": "Hono: `csrf()` does not check requests sent by hyperlink auditing (`text/ping`)",
+          "severity": "moderate",
+          "range": "<4.13.16",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-46wx-v44x-9hh2"
+        },
+        {
+          "id": "GHSA-4h7h-rv7c-7m2v",
+          "source": 1246374,
+          "title": "Hono: `validator('form')` skips validation for `multipart/form-data` requests with extra parameters",
+          "severity": "moderate",
+          "range": ">=4.5.1 <=4.13.15",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4h7h-rv7c-7m2v"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "ip-address",
+      "installedVersion": "10.4.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "<=10.7.3",
+      "firstPatchedBounds": [
+        "10.5.0",
+        "10.7.0",
+        "10.7.3"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@modelcontextprotocol/sdk",
+        "express-rate-limit",
+        "ip-address"
+      ],
+      "nodes": [
+        "node_modules/ip-address"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-rpw4-54j3-4h4q",
+          "source": 1239948,
+          "title": "ip-address: Address6.isLinkLocal() recognizes fe80::/64 rather than fe80::/10, allowing SSRF and trust-boundary bypass to on-link hosts",
+          "severity": "moderate",
+          "range": "<=10.5.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rpw4-54j3-4h4q"
+        },
+        {
+          "id": "GHSA-2vr4-cq9g-pvrc",
+          "source": 1239949,
+          "title": "ip-address: no classifier recognizes the NAT64 local-use range 64:ff9b:1::/48, allowing SSRF and trust-boundary bypass",
+          "severity": "moderate",
+          "range": ">=10.2.0 <=10.5.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2vr4-cq9g-pvrc"
+        },
+        {
+          "id": "GHSA-j6r3-76f7-8jcv",
+          "source": 1240097,
+          "title": "ip-address: isInSubnet() and isHostInSubnet() compare addresses of different families as if they shared an address space, allowing an allowlist check to admit an address outside its range",
+          "severity": "moderate",
+          "range": "<=10.7.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-j6r3-76f7-8jcv"
+        },
+        {
+          "id": "GHSA-h3mg-xc3c-68pw",
+          "source": 1240098,
+          "title": "ip-address: Address6 builds a parse diagnostic proportional to the input with no length bound, allowing a single long string to stall or crash the process",
+          "severity": "moderate",
+          "range": "<=10.7.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-h3mg-xc3c-68pw"
+        },
+        {
+          "id": "GHSA-rxp7-6hxx-x8q5",
+          "source": 1242883,
+          "title": "ip-address: Address6 matches a zone identifier in quadratic time ahead of its length limit, allowing a single long string to stall the process",
+          "severity": "moderate",
+          "range": "<=10.7.3",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rxp7-6hxx-x8q5"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "js-yaml",
+      "installedVersion": "4.3.1",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "4.0.0 - 4.3.1",
+      "firstPatchedBounds": [
+        "4.3.2"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "cosmiconfig",
+        "js-yaml"
+      ],
+      "nodes": [
+        "node_modules/js-yaml"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-2883-xcg3-v3hh",
+          "source": 1193727,
+          "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources",
+          "severity": "high",
+          "range": ">=4.0.0 <4.3.2",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2883-xcg3-v3hh"
+        }
+      ],
+      "review": {
+        "reachable": "partial",
+        "exposure": "config parsing in build tooling; config files are repository-controlled",
+        "layer": "build-tooling",
+        "remediation": "override to 4.3.2",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "katex",
+      "installedVersion": "0.16.47",
+      "severity": "low",
+      "direct": false,
+      "vulnerableRange": "0.11.0 - 0.18.1",
+      "firstPatchedBounds": [
+        "0.18.2"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "streamdown",
+        "mermaid",
+        "katex"
+      ],
+      "nodes": [
+        "node_modules/katex"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-238p-pmpm-9mq7",
+          "source": 1241206,
+          "title": "KaTeX: Existing prototype pollution can bypass trust restrictions",
+          "severity": "low",
+          "range": ">=0.11.0 <0.18.2",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-238p-pmpm-9mq7"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "low",
+        "vulnerableRange": "0.11.0 - 0.18.1"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "mermaid",
+      "installedVersion": "11.16.1",
+      "severity": "low",
+      "direct": false,
+      "vulnerableRange": "10.9.0-rc.1 - 12.1.0",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "streamdown",
+        "mermaid"
+      ],
+      "nodes": [
+        "node_modules/mermaid"
+      ],
+      "advisories": [
+        {
+          "id": "katex",
+          "via": "katex"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "low",
+        "vulnerableRange": "10.9.0-rc.1 - 12.1.0"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "minimatch",
+      "installedVersion": "10.2.6",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "7.0.0 - 11.0.0",
+      "firstPatchedBounds": [
+        "11.0.1"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "ts-morph",
+        "@ts-morph/common",
+        "minimatch"
+      ],
+      "nodes": [
+        "node_modules/@ts-morph/common/node_modules/minimatch",
+        "node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-g3hv-75wg-m249",
+          "source": 1244623,
+          "title": "minimatch has potential denial of service via globparts amplification",
+          "severity": "moderate",
+          "range": ">=7.0.0 <11.0.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "7.0.0 - 11.0.0"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "next",
+      "installedVersion": "16.3.0",
+      "severity": "critical",
+      "direct": true,
+      "vulnerableRange": "16.0.0 - 16.4.4",
+      "firstPatchedBounds": [
+        "16.3.3",
+        "16.3.6",
+        "16.3.8",
+        "16.4.0",
+        "16.4.4"
+      ],
+      "fixAvailable": {
+        "name": "next",
+        "version": "16.4.6",
+        "isSemVerMajor": false
+      },
+      "dependencyChain": [
+        "next"
+      ],
+      "nodes": [
+        "node_modules/next"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-p293-qw3h-jr36",
+          "source": 1193676,
+          "title": "Next.js: Unauthenticated Remote Code Execution on windows-hosted servers",
+          "severity": "critical",
+          "range": ">=16.0.0 <16.3.3",
+          "cve": "CVE-2026-75604",
+          "url": "https://github.com/advisories/GHSA-p293-qw3h-jr36"
+        },
+        {
+          "id": "GHSA-2xp9-vwfh-vxw4",
+          "source": 1193732,
+          "title": "Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used",
+          "severity": "critical",
+          "range": ">=16.0.0 <16.3.3",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2xp9-vwfh-vxw4"
+        },
+        {
+          "id": "GHSA-vcvr-r3jv-pc5j",
+          "source": 1240609,
+          "title": "Next.js: Remote Code Execution in next/og ImageResponse",
+          "severity": "critical",
+          "range": ">=16.2.0 <16.3.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-vcvr-r3jv-pc5j"
+        },
+        {
+          "id": "GHSA-3w37-wq28-93x7",
+          "source": 1241489,
+          "title": "Next.js: Pending `use cache` fill can leak Draft Mode content into regular responses and persisted pages",
+          "severity": "moderate",
+          "range": ">=16.3.0 <16.3.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3w37-wq28-93x7"
+        },
+        {
+          "id": "GHSA-4jqv-mc3x-m676",
+          "source": 1241490,
+          "title": "Next.js has cache poisoning of SSG and ISR pages in self-hosted applications",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.3.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4jqv-mc3x-m676"
+        },
+        {
+          "id": "GHSA-39w2-rjm5-chcv",
+          "source": 1241492,
+          "title": "Next.js has information disclosure in development server's Model Context Protocol endpoint",
+          "severity": "low",
+          "range": ">=16.0.0 <16.3.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-39w2-rjm5-chcv"
+        },
+        {
+          "id": "GHSA-f87g-xv8r-7p7x",
+          "source": 1241493,
+          "title": "Next.js has information disclosure in App Router metadata image routes via dynamicParams bypass",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.3.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-f87g-xv8r-7p7x"
+        },
+        {
+          "id": "GHSA-mcj8-r9mp-w47p",
+          "source": 1241495,
+          "title": "Next.js has cache poisoning in SSG/ISR rendering that leads to cross-user content substitution and persistent denial of service",
+          "severity": "moderate",
+          "range": ">=16.0.0 <16.3.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-mcj8-r9mp-w47p"
+        },
+        {
+          "id": "GHSA-cjq9-62q9-8jv4",
+          "source": 1241496,
+          "title": "Next.js has Server-Side Request Forgery in Image Optimization",
+          "severity": "high",
+          "range": ">=16.0.0 <16.3.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-cjq9-62q9-8jv4"
+        },
+        {
+          "id": "GHSA-2464-fhr4-w9xw",
+          "source": 1242816,
+          "title": "Next.js: Unauthenticated Remote Code Execution in Image Optimization API when SVG files are used",
+          "severity": "critical",
+          "range": ">=16.0.0 <=16.4.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2464-fhr4-w9xw"
+        },
+        {
+          "id": "GHSA-p3m5-59mp-jv5r",
+          "source": 1242818,
+          "title": "Next.js: Denial of Service in App Router using Server Actions",
+          "severity": "high",
+          "range": ">=16.0.0 <=16.4.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-p3m5-59mp-jv5r"
+        },
+        {
+          "id": "GHSA-h694-7cp9-m8p3",
+          "source": 1242825,
+          "title": "next.js cache leak across root param values in nested 'use cache' functions",
+          "severity": "moderate",
+          "range": ">=16.3.0 <16.3.8",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-h694-7cp9-m8p3"
+        },
+        {
+          "id": "GHSA-673q-mjm6-r5xr",
+          "source": 1242859,
+          "title": "Next.js: Unauthenticated Remote Code Execution in `use cache` functions returning typed arrays",
+          "severity": "critical",
+          "range": ">=16.0.0 <=16.4.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-673q-mjm6-r5xr"
+        },
+        {
+          "id": "GHSA-mfr8-8qww-v76h",
+          "source": 1247486,
+          "title": "Next.js: Information disclosure across root params when a 'use cache' function is called through unstable_cache()",
+          "severity": "moderate",
+          "range": ">=16.3.0 <=16.4.4",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-mfr8-8qww-v76h"
+        },
+        {
+          "id": "GHSA-vc7v-qv4w-wrv8",
+          "source": 1247712,
+          "title": "Next.js: Cache leak across root param values in nested 'use cache' functions via delayed inner stream metadata",
+          "severity": "moderate",
+          "range": ">=16.2.0 <=16.4.4",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-vc7v-qv4w-wrv8"
+        },
+        {
+          "id": "GHSA-7qx7-33qx-rqx2",
+          "source": 1248078,
+          "title": "Next.js: SVG rejection bypass in the image optimization",
+          "severity": "moderate",
+          "range": ">=16.0.0 <=16.4.4",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-7qx7-33qx-rqx2"
+        },
+        {
+          "id": "GHSA-f3mh-rxg3-f5g2",
+          "source": 1248080,
+          "title": "Next.js: HttpOnly cookie exposure through internal response header on Next.js Edge runtime routes",
+          "severity": "moderate",
+          "range": ">=16.0.0 <=16.4.4",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-f3mh-rxg3-f5g2"
+        },
+        {
+          "id": "GHSA-pc58-hwjq-p385",
+          "source": 1248083,
+          "title": "Next.js: Cross-client response injection and disclosure in self-hosted Next.js applications forwarding fetched responses",
+          "severity": "moderate",
+          "range": ">=16.0.0 <=16.4.4",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-pc58-hwjq-p385"
+        },
+        {
+          "id": "GHSA-rhh4-g77r-r9qj",
+          "source": 1248084,
+          "title": "Next.js: Cross-user cache disclosure and poisoning in Next.js use cache with binary arguments",
+          "severity": "moderate",
+          "range": ">=16.0.0 <=16.4.4",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rhh4-g77r-r9qj"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "unauthenticated-request: image optimization, routing, cache and server rendering",
+        "layer": "browser-and-server-runtime",
+        "remediation": "direct upgrade 16.3.0 -> 16.4.6 (same major)",
+        "breakingRisk": "low - same major; build, Playwright and route generation passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "postcss-selector-parser",
+      "installedVersion": "7.1.5",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "7.0.0 - 7.1.5",
+      "firstPatchedBounds": [
+        "7.1.6"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "postcss-selector-parser"
+      ],
+      "nodes": [
+        "node_modules/postcss-selector-parser"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-rj75-hqrm-r3gf",
+          "source": 1243380,
+          "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.1.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rj75-hqrm-r3gf"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "proxy-addr",
+      "installedVersion": "2.0.7",
+      "severity": "critical",
+      "direct": false,
+      "vulnerableRange": "1.1.0 - 2.0.7",
+      "firstPatchedBounds": [
+        "2.0.8"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@modelcontextprotocol/sdk",
+        "express",
+        "proxy-addr"
+      ],
+      "nodes": [
+        "node_modules/proxy-addr"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-jqcg-44mw-7w3h",
+          "source": 1241210,
+          "title": "proxy-addr vulnerable to IP spoofing via IPv4-mapped IPv6 trust subnet",
+          "severity": "critical",
+          "range": ">=1.1.0 <2.0.8",
+          "cve": "CVE-2026-90711",
+          "url": "https://github.com/advisories/GHSA-jqcg-44mw-7w3h"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "unauthenticated-request: X-Forwarded-For affects req.ip, rate-limit keys and logging",
+        "layer": "server-runtime",
+        "remediation": "override to 2.0.8 (patched upstream release), plus proxy regression tests",
+        "breakingRisk": "low - patch release, same API"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "qs",
+      "installedVersion": "6.15.3",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "2.2.5 - 6.16.0",
+      "firstPatchedBounds": [
+        "6.15.3",
+        "6.16.0"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@modelcontextprotocol/sdk",
+        "express",
+        "qs"
+      ],
+      "nodes": [
+        "node_modules/qs"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-x5fp-wj9c-mxmx",
+          "source": 1158506,
+          "title": "qs array-limit bypass via bracket-key comma parsing",
+          "severity": "moderate",
+          "range": ">=6.14.2 <=6.15.3",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-x5fp-wj9c-mxmx"
+        },
+        {
+          "id": "GHSA-4mjr-xmp4-gh2g",
+          "source": 1158507,
+          "title": "qs: Denial of Service via Attacker Controlled isBuffer",
+          "severity": "moderate",
+          "range": ">=2.2.5 <6.16.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4mjr-xmp4-gh2g"
+        },
+        {
+          "id": "GHSA-6pq8-jhm2-2vcw",
+          "source": 1243687,
+          "title": "qs : qs.stringify with arrayFormat 'comma' throws an uncaught TypeError on array elements carrying a non-callable own toString (DoS)",
+          "severity": "moderate",
+          "range": ">=6.7.0 <=6.16.0",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-6pq8-jhm2-2vcw"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "shadcn",
+      "installedVersion": "4.16.2",
+      "severity": "high",
+      "direct": true,
+      "vulnerableRange": "<=0.0.0-rc-20261007105214 || >=2.0.0",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn"
+      ],
+      "nodes": [
+        "node_modules/shadcn"
+      ],
+      "advisories": [
+        {
+          "id": "ts-morph",
+          "via": "ts-morph"
+        },
+        {
+          "id": "zod",
+          "via": "zod"
+        }
+      ],
+      "review": {
+        "reachable": "no-runtime",
+        "exposure": "component generator CLI; not imported by the running app",
+        "layer": "build-tooling",
+        "remediation": "direct upgrade 4.16.2 -> 4.23.0; residual moderate advisories are transitive CLI-only",
+        "breakingRisk": "low - same major"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "<=0.0.0-rc-20261007105214 || >=2.0.0"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "source-map-js",
+      "installedVersion": "1.2.1",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "1.0.0 - 1.2.1",
+      "firstPatchedBounds": [
+        "1.2.2"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "next",
+        "postcss",
+        "source-map-js"
+      ],
+      "nodes": [
+        "node_modules/source-map-js"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-68fv-2mgg-jv7q",
+          "source": 1241209,
+          "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+          "severity": "high",
+          "range": ">=1.0.0 <1.2.2",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q"
+        }
+      ],
+      "review": {
+        "reachable": "partial",
+        "exposure": "build-time source map consumption; build inputs are repository-controlled",
+        "layer": "build-only",
+        "remediation": "override to 1.2.4",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "streamdown",
+      "installedVersion": "2.5.0",
+      "severity": "low",
+      "direct": true,
+      "vulnerableRange": "0.0.0-canary-20251123051009 || 1.1.0 - 2.0.0-canary.3 || 2.5.0",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "streamdown"
+      ],
+      "nodes": [
+        "node_modules/streamdown"
+      ],
+      "advisories": [
+        {
+          "id": "mermaid",
+          "via": "mermaid"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "low",
+        "vulnerableRange": "0.0.0-canary-20251123051009 || 1.1.0 - 2.0.0-canary.3 || 2.5.0"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "systeminformation",
+      "installedVersion": "5.33.1",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "<=5.33.15",
+      "firstPatchedBounds": [
+        "5.33.14",
+        "5.33.13",
+        "5.33.16"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "@dotenvx/dotenvx",
+        "systeminformation"
+      ],
+      "nodes": [
+        "node_modules/systeminformation"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-4vjg-vx72-qq4g",
+          "source": 1243616,
+          "title": "systeminformation has path traversal in Linux networkStats() that allows symlink-based file disclosure outside /sys/class/net",
+          "severity": "low",
+          "range": "<5.33.14",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4vjg-vx72-qq4g"
+        },
+        {
+          "id": "GHSA-7648-jmwf-vw7j",
+          "source": 1243617,
+          "title": "systeminformation has prototype pollution in `networkStats()` via the interface name",
+          "severity": "moderate",
+          "range": "<5.33.13",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-7648-jmwf-vw7j"
+        },
+        {
+          "id": "GHSA-3f7j-7jwc-fxfj",
+          "source": 1243663,
+          "title": "systeminformation vulnerable to Windows command injection in services() through Unicode quotation marks",
+          "severity": "high",
+          "range": "<5.33.16",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3f7j-7jwc-fxfj"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "host metrics via OpenTelemetry/worker diagnostics; not request-driven",
+        "layer": "server-runtime",
+        "remediation": "override to 5.33.23",
+        "breakingRisk": "low - patch release within v5"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "ts-morph",
+      "installedVersion": "26.0.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "18.0.0 - 27.0.2",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "ts-morph"
+      ],
+      "nodes": [
+        "node_modules/ts-morph"
+      ],
+      "advisories": [
+        {
+          "id": "@ts-morph/common",
+          "via": "@ts-morph/common"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "18.0.0 - 27.0.2"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "typescript-eslint",
+      "installedVersion": "8.66.0",
+      "severity": "moderate",
+      "direct": false,
+      "vulnerableRange": "<=8.72.2",
+      "firstPatchedBounds": [],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "eslint-config-next",
+        "typescript-eslint"
+      ],
+      "nodes": [
+        "node_modules/typescript-eslint"
+      ],
+      "advisories": [
+        {
+          "id": "@typescript-eslint/eslint-plugin",
+          "via": "@typescript-eslint/eslint-plugin"
+        },
+        {
+          "id": "@typescript-eslint/parser",
+          "via": "@typescript-eslint/parser"
+        },
+        {
+          "id": "@typescript-eslint/typescript-estree",
+          "via": "@typescript-eslint/typescript-estree"
+        },
+        {
+          "id": "@typescript-eslint/utils",
+          "via": "@typescript-eslint/utils"
+        }
+      ],
+      "review": {
+        "reachable": "unknown",
+        "exposure": "requires-package-specific-review",
+        "layer": "unknown",
+        "remediation": "upgraded-or-overridden-where-compatibly-patched",
+        "breakingRisk": "low"
+      },
+      "finalStatus": {
+        "state": "remaining",
+        "severity": "moderate",
+        "vulnerableRange": "<=8.72.2"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "undici",
+      "installedVersion": "7.29.0",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "7.0.0 - 7.30.0",
+      "firstPatchedBounds": [
+        "7.29.1",
+        "7.30.1"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "undici"
+      ],
+      "nodes": [
+        "node_modules/undici"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3wwx-pv8p-q78v",
+          "source": 1239933,
+          "title": "undici vulnerable to Denial of Service via unhandled error in WebSocket permessage-deflate decompression",
+          "severity": "moderate",
+          "range": ">=7.28.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3wwx-pv8p-q78v"
+        },
+        {
+          "id": "GHSA-pmjh-fq2x-6v4x",
+          "source": 1240036,
+          "title": "undici vulnerable to Denial of Service via orphaned RetryHandler response body",
+          "severity": "moderate",
+          "range": ">=7.11.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-pmjh-fq2x-6v4x"
+        },
+        {
+          "id": "GHSA-r53p-7pc4-xj5r",
+          "source": 1240038,
+          "title": "undici vulnerable to downstream response splitting via retry interceptor",
+          "severity": "low",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-r53p-7pc4-xj5r"
+        },
+        {
+          "id": "GHSA-rfgv-xxqx-mfg5",
+          "source": 1240041,
+          "title": "undici vulnerable to Denial of Service via unrequested WebSocket subprotocol",
+          "severity": "high",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rfgv-xxqx-mfg5"
+        },
+        {
+          "id": "GHSA-3xpg-4rpp-hhhm",
+          "source": 1240044,
+          "title": "undici vulnerable to Denial of Service via unbounded decompression of compressed responses",
+          "severity": "moderate",
+          "range": ">=7.15.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-3xpg-4rpp-hhhm"
+        },
+        {
+          "id": "GHSA-2jfj-6hjv-fm6j",
+          "source": 1240046,
+          "title": "undici vulnerable to cross-user cookie disclosure via Set-Cookie caching in shared caches",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2jfj-6hjv-fm6j"
+        },
+        {
+          "id": "GHSA-2gqq-gqf2-x968",
+          "source": 1240048,
+          "title": "undici vulnerable to response truncation via oversized chunked responses in the dump interceptor",
+          "severity": "low",
+          "range": ">=7.1.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2gqq-gqf2-x968"
+        },
+        {
+          "id": "GHSA-w293-vg96-wgc3",
+          "source": 1240050,
+          "title": "undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool",
+          "severity": "high",
+          "range": ">=7.24.1 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-w293-vg96-wgc3"
+        },
+        {
+          "id": "GHSA-8436-99hf-9mmv",
+          "source": 1240052,
+          "title": "undici vulnerable to caching and replay of unsafe HTTP method responses",
+          "severity": "low",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-8436-99hf-9mmv"
+        },
+        {
+          "id": "GHSA-rx4f-c7p8-82vq",
+          "source": 1240055,
+          "title": "undici vulnerable to Denial of Service via WebSocketStream unclean close",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.29.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-rx4f-c7p8-82vq"
+        },
+        {
+          "id": "GHSA-4qv8-2p9j-2685",
+          "source": 1243078,
+          "title": "undici vulnerable to Denial of Service via unbounded memory in the EventSource parser",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4qv8-2p9j-2685"
+        },
+        {
+          "id": "GHSA-f72v-6w45-q472",
+          "source": 1243081,
+          "title": "undici vulnerable to Subresource Integrity bypass via non-lowercase algorithm tokens",
+          "severity": "moderate",
+          "range": ">=7.15.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-f72v-6w45-q472"
+        },
+        {
+          "id": "GHSA-xjj6-f33q-929c",
+          "source": 1243113,
+          "title": "undici vulnerable to Denial of Service via unhandled error on excessive content-encodings",
+          "severity": "high",
+          "range": ">=7.18.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-xjj6-f33q-929c"
+        },
+        {
+          "id": "GHSA-4w7w-5xrc-9h26",
+          "source": 1243473,
+          "title": "undici vulnerable to cache poisoning and cross-user disclosure via cross-origin redirects",
+          "severity": "high",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-4w7w-5xrc-9h26"
+        },
+        {
+          "id": "GHSA-2m5v-pch6-74hx",
+          "source": 1243475,
+          "title": "undici vulnerable to TLS certificate validation bypass via dropped tls options in Agent",
+          "severity": "high",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-2m5v-pch6-74hx"
+        },
+        {
+          "id": "GHSA-qrxm-fqhp-jwvm",
+          "source": 1243478,
+          "title": "undici vulnerable to Denial of Service via TLS 1.2 certificate-changing renegotiation",
+          "severity": "high",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-qrxm-fqhp-jwvm"
+        },
+        {
+          "id": "GHSA-9fm3-97px-rjf6",
+          "source": 1243481,
+          "title": "undici WebSocket client vulnerable to Denial of Service via unbounded automatic PONG buffering",
+          "severity": "moderate",
+          "range": ">=7.0.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-9fm3-97px-rjf6"
+        },
+        {
+          "id": "GHSA-55wc-3pg8-jfw6",
+          "source": 1243484,
+          "title": "undici vulnerable to Denial of Service via unhandled exception in the decompress interceptor",
+          "severity": "moderate",
+          "range": ">=7.15.0 <7.30.1",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-55wc-3pg8-jfw6"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "outbound HTTP in AI SDKs and tooling; TLS/redirect/cache advisories",
+        "layer": "server-and-build",
+        "remediation": "override to 7.30.2 (same major line)",
+        "breakingRisk": "low - patch release"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    },
+    {
+      "workspace": "client",
+      "phase": "before",
+      "package": "zod",
+      "installedVersion": "3.25.76",
+      "severity": "high",
+      "direct": false,
+      "vulnerableRange": "<4.6.6",
+      "firstPatchedBounds": [
+        "4.6.6"
+      ],
+      "fixAvailable": true,
+      "dependencyChain": [
+        "shadcn",
+        "zod"
+      ],
+      "nodes": [
+        "node_modules/shadcn/node_modules/zod",
+        "node_modules/zod"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-mrhx-c7xc-m3w5",
+          "source": 1243066,
+          "title": "Zod can exhaust memory while validating oversized constrained collections",
+          "severity": "high",
+          "range": "<4.6.6",
+          "cve": null,
+          "url": "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5"
+        }
+      ],
+      "review": {
+        "reachable": "yes",
+        "exposure": "request/schema validation; oversized constrained collections can exhaust memory",
+        "layer": "server-and-browser-runtime",
+        "remediation": "direct upgrade to 4.6.7 plus override forcing nested 3.x copies to 4.6.7",
+        "breakingRisk": "medium - nested consumers previously used zod 3.x; typecheck/build/tests passed"
+      },
+      "finalStatus": {
+        "state": "resolved"
+      }
+    }
+  ]
+}

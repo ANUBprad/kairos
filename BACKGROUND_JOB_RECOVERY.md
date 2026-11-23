@@ -1,4 +1,4 @@
-# Background job recovery (Round 5)
+# Background job recovery (Phase 06)
 
 **Status: PASSED against disposable PostgreSQL; live Inngest validation
 `BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED`.**
@@ -32,7 +32,10 @@ Durable jobs live in the `durable_job` table and move through
 
 Inngest remains opt-in (`INNGEST_*`). With no configuration, dispatch uses the
 in-process local fallback; `DELIVERED` still depends only on the committed
-outbox row, not on the dispatch return value.
+outbox row, not on the dispatch return value. Phase 06 upgraded `inngest` to
+4.26.2 and forced its nested `zod` copy to 4.6.7 to close critical/high
+advisories; typecheck, build and the real-PostgreSQL job suite pass, but live
+Inngest dispatch remains **BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**.
 
 ## 3. `job-recovery.integration.test.ts` — 6/6 PASS
 

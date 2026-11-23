@@ -185,3 +185,38 @@ services:
         sync: false
       - key: TRUST_PROXY
         sync: false
+      # Mandatory staging identity gates. STAGING_DATABASE_ID must appear in the
+      # staging DATABASE_URL; STAGING_RESOURCE_PREFIX must appear in staging
+      # Cloudinary resources. Both are checked at startup (fail closed).
+      - key: STAGING_DATABASE_ID
+        sync: false
+      - key: STAGING_RESOURCE_PREFIX
+        sync: false
+      # Optional explicit denylist of production URLs/hosts/db names and an
+      # exact production DB URL that staging may never reuse.
+      - key: STAGING_FORBIDDEN_ENDPOINTS
+        sync: false
+      - key: PRODUCTION_DATABASE_URL
+        sync: false
+
+  # ---------------------------------------------------------------------------
+  # STAGING FRONTEND — dedicated Next.js service. Its browser-facing API URL is
+  # public; BACKEND_INTERNAL_URL is used only by Next.js rewrites on the server.
+  # Point the staging backend's CLIENT_URL at this service's public URL.
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: kairos-client-staging
+    runtime: node
+    rootDir: client
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_BETTER_AUTH_URL
+        sync: false
+      - key: BACKEND_INTERNAL_URL
+        sync: false
