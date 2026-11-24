@@ -10,7 +10,7 @@ export function HowItWorks() {
       icon: <UploadCloud className="w-6 h-6 text-foreground" />,
       title: "Add Your Sources",
       description:
-        "Drop PDFs, paste YouTube video URLs, or enter website links. OpenBook parses, extracts text, and vectorizes content in seconds.",
+        "Drop PDFs, paste YouTube video URLs, or enter website links. Kairos parses, extracts text, and vectorizes content in seconds.",
     },
     {
       number: "02",

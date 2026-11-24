@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { OpenBookLogo } from "./openbook-logo";
+import { KairosLogo } from "@/components/brand/kairos-logo";
 import { useAuth } from "../hooks/use-auth";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
@@ -12,6 +12,9 @@ import { GithubIcon } from "@/components/ui/github-icon";
 interface AuthFormProps {
   initialMode?: "login" | "signup";
 }
+
+const fieldClass =
+  "w-full rounded-xl border border-input bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-60";
 
 export function AuthForm({ initialMode = "login" }: AuthFormProps) {
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
@@ -61,78 +64,68 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
   };
 
   return (
-    <div className="w-full max-w-110 px-6 sm:px-10 py-10 flex flex-col items-center justify-between min-h-160 text-zinc-900 dark:text-zinc-100">
-      {/* Brand Header */}
-      <div className="flex flex-col items-center text-center w-full">
-        <OpenBookLogo size={32} textSize="text-2xl" className="mb-8" />
+    <div className="flex w-full max-w-105 flex-col justify-center px-6 py-10 sm:px-10">
+      <div className="flex flex-col items-center text-center">
+        <KairosLogo size={34} textSize="text-2xl" className="mb-8" />
 
-        <h1 className="text-2xl sm:text-[26px] font-normal tracking-tight text-zinc-900 dark:text-zinc-100 font-sans">
-          {mode === "login" ? "Access your OpenBook" : "Create your OpenBook"}
+        <h1 className="kairos-display text-[28px] sm:text-[32px]">
+          {mode === "login" ? "Welcome back." : "Start with the sources."}
         </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 font-normal">
+        <p className="mt-2 text-sm text-muted-foreground">
           {mode === "login"
-            ? "Get started with OpenBook"
-            : "Sign up to start organizing insights"}
+            ? "Sign in to continue your research."
+            : "Create a workspace and bring your material together."}
         </p>
       </div>
 
-      {/* Form Container */}
-      <form onSubmit={handleSubmit} className="w-full mt-7 space-y-4">
-        {/* Error Alert */}
-        {authError && (
-          <div className="p-3 text-xs text-red-600 bg-red-50 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg text-center font-medium animate-fadeIn">
+      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        {authError ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-danger/25 bg-danger/10 px-3 py-2.5 text-center text-xs font-medium text-danger"
+          >
             {authError}
           </div>
-        )}
+        ) : null}
 
-        {/* Name input (only for signup) */}
-        {mode === "signup" && (
+        {mode === "signup" ? (
           <div className="space-y-1.5 text-left">
-            <label
-              htmlFor="name"
-              className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block"
-            >
-              Full Name
+            <label htmlFor="name" className="text-xs font-semibold text-foreground">
+              Full name
             </label>
             <input
               id="name"
               type="text"
               required
+              autoComplete="name"
               disabled={isLoading}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jane Doe"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-background dark:bg-zinc-900/80 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 dark:focus:ring-zinc-300 transition-colors"
+              className={fieldClass}
             />
           </div>
-        )}
+        ) : null}
 
-        {/* Email input */}
         <div className="space-y-1.5 text-left">
-          <label
-            htmlFor="email"
-            className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block"
-          >
-            Email Address
+          <label htmlFor="email" className="text-xs font-semibold text-foreground">
+            Email address
           </label>
           <input
             id="email"
             type="email"
             required
+            autoComplete="email"
             disabled={isLoading}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="e.g., mail@example.com"
-            className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-background dark:bg-zinc-900/80 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 dark:focus:ring-zinc-300 transition-colors"
+            placeholder="you@example.com"
+            className={fieldClass}
           />
         </div>
 
-        {/* Password input */}
         <div className="space-y-1.5 text-left">
-          <label
-            htmlFor="password"
-            className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block"
-          >
+          <label htmlFor="password" className="text-xs font-semibold text-foreground">
             Password
           </label>
           <div className="relative">
@@ -140,91 +133,69 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
               id="password"
               type={showPassword ? "text" : "password"}
               required
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
               disabled={isLoading}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-background dark:bg-zinc-900/80 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950 dark:focus:ring-zinc-300 transition-colors"
+              placeholder="Enter your password"
+              className={`${fieldClass} pr-11`}
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
             >
               {showPassword ? (
-                <EyeOff className="w-4 h-4" />
+                <EyeOff className="size-4" />
               ) : (
-                <Eye className="w-4 h-4" />
+                <Eye className="size-4" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="pt-2">
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoading ? (
+            <ThemeLoader size={18} />
+          ) : (
+            <>
+              <span>{mode === "login" ? "Log in" : "Create account"}</span>
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </>
+          )}
+        </button>
+
+        <p className="text-center text-xs text-muted-foreground">
+          {mode === "login" ? "New to Kairos?" : "Already have an account?"}{" "}
           <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-zinc-800 hover:bg-zinc-900 active:scale-[0.99] text-white font-medium text-sm rounded-lg shadow-sm transition-all duration-150 disabled:opacity-70 disabled:cursor-not-allowed"
+            type="button"
+            onClick={toggleMode}
+            className="font-semibold text-primary hover:underline"
           >
-            {isLoading ? (
-              <ThemeLoader size={18} />
-            ) : (
-              <>
-                <span>{mode === "login" ? "Log in" : "Sign up"}</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
+            {mode === "login" ? "Create an account" : "Log in"}
           </button>
-        </div>
+        </p>
 
-        {/* Mode Switch */}
-        <div className="text-center pt-2">
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">
-            {mode === "login" ? (
-              <>
-                Don&apos;t have an account?{" "}
-                <button
-                  type="button"
-                  onClick={toggleMode}
-                  className="font-semibold text-zinc-900 dark:text-zinc-100 hover:underline inline"
-                >
-                  Sign up
-                </button>
-              </>
-            ) : (
-              <>
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={toggleMode}
-                  className="font-semibold text-zinc-900 dark:text-zinc-100 hover:underline inline"
-                >
-                  Log in
-                </button>
-              </>
-            )}
-          </p>
-        </div>
-
-        {/* Divider */}
-        <div className="relative my-4 flex items-center justify-center">
-          <div className="border-t border-zinc-200 dark:border-zinc-800 w-full" />
-          <span className="bg-transparent px-3 text-[11px] font-medium tracking-wider text-zinc-400 uppercase absolute">
-            — OR —
+        <div className="relative flex items-center justify-center py-2">
+          <div className="w-full border-t border-border" />
+          <span className="absolute bg-surface px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            or continue with
           </span>
         </div>
 
-        {/* Social Logins */}
-        <div className="pt-1 space-y-2.5">
-          {/* Google */}
+        <div className="space-y-2.5">
           <button
             type="button"
             onClick={() => void signInWithGoogle()}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900/60 text-xs font-medium text-zinc-700 dark:text-zinc-300 transition-colors shadow-xs"
+            className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="currentColor"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -242,34 +213,30 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
               />
             </svg>
-            <span>Continue with Google</span>
+            Continue with Google
           </button>
 
-          {/* GitHub */}
           <button
             type="button"
             onClick={() => void signInWithGithub()}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900/60 text-xs font-medium text-zinc-700 dark:text-zinc-300 transition-colors shadow-xs"
+            className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           >
             <GithubIcon size={16} />
-            <span>Continue with GitHub</span>
+            Continue with GitHub
           </button>
         </div>
       </form>
 
-      {/* Footer Legal */}
-      <div className="mt-8 text-center">
-        <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
-          By creating account, you agree to our{" "}
-          <Link
-            href="/terms"
-            className="text-zinc-600 dark:text-zinc-400 font-medium hover:underline"
-          >
-            terms &amp; conditions
-          </Link>
-        </p>
-      </div>
+      <p className="mt-7 text-center text-[11px] text-muted-foreground">
+        By continuing, you agree to our{" "}
+        <Link
+          href="/terms"
+          className="font-semibold text-foreground transition-colors hover:text-primary"
+        >
+          terms &amp; conditions
+        </Link>
+      </p>
     </div>
   );
 }

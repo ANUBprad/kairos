@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Sparkles, Brain, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,16 +33,17 @@ export function ReasoningText({
   icon,
 }: ReasoningTextProps) {
   const [index, setIndex] = useState(0);
+  const reduce = useReducedMotion() ?? false;
 
   useEffect(() => {
-    if (!phrases || phrases.length <= 1) return;
+    if (reduce || !phrases || phrases.length <= 1) return;
 
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % phrases.length);
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [phrases, intervalMs]);
+  }, [phrases, intervalMs, reduce]);
 
   const currentPhrase = phrases[index] || phrases[0] || "Thinking";
 
@@ -60,8 +61,8 @@ export function ReasoningText({
             icon
           ) : (
             <div className="relative flex items-center justify-center">
-              <span className="absolute w-2.5 h-2.5 rounded-full bg-primary/20 animate-ping" />
-              <span className="relative w-1.5 h-1.5 rounded-full bg-primary" />
+              <span className="absolute size-2.5 rounded-full bg-brand/20 motion-safe:animate-ping" />
+              <span className="relative size-1.5 rounded-full bg-brand" />
             </div>
           )}
         </div>
@@ -73,17 +74,25 @@ export function ReasoningText({
           {variant === "cascade" && (
             <motion.span
               key={index}
-              initial={{ opacity: 0, y: 6, filter: "blur(2px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -6, filter: "blur(2px)" }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
+              initial={reduce ? false : { opacity: 0, y: 6, filter: "blur(2px)" }}
+              animate={
+                reduce
+                  ? { opacity: 1 }
+                  : { opacity: 1, y: 0, filter: "blur(0px)" }
+              }
+              exit={
+                reduce
+                  ? { opacity: 1 }
+                  : { opacity: 0, y: -6, filter: "blur(2px)" }
+              }
+              transition={{ duration: reduce ? 0 : 0.28, ease: "easeOut" }}
               className="font-medium tracking-tight truncate text-foreground/85 inline-flex items-center gap-1"
             >
               <span>{currentPhrase}</span>
               <span className="inline-flex gap-0.5 ml-0.5">
-                <span className="w-1 h-1 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-1 h-1 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-1 h-1 rounded-full bg-muted-foreground/60 animate-bounce" />
+                <span className="size-1 rounded-full bg-muted-foreground/60 motion-safe:animate-bounce [animation-delay:-0.3s]" />
+                <span className="size-1 rounded-full bg-muted-foreground/60 motion-safe:animate-bounce [animation-delay:-0.15s]" />
+                <span className="size-1 rounded-full bg-muted-foreground/60 motion-safe:animate-bounce" />
               </span>
             </motion.span>
           )}
@@ -91,11 +100,11 @@ export function ReasoningText({
           {variant === "shimmer" && (
             <motion.span
               key={index}
-              initial={{ opacity: 0 }}
+              initial={reduce ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="font-medium bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-[length:200%_auto] animate-shimmer bg-clip-text text-transparent"
+              exit={reduce ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: reduce ? 0 : 0.3 }}
+              className="bg-gradient-to-r from-muted-foreground via-foreground to-muted-foreground bg-[length:200%_auto] font-medium motion-safe:animate-shimmer bg-clip-text text-transparent"
             >
               {currentPhrase}...
             </motion.span>
@@ -104,9 +113,12 @@ export function ReasoningText({
           {variant === "pulse" && (
             <motion.span
               key={index}
-              initial={{ opacity: 0.4 }}
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              initial={reduce ? { opacity: 1 } : { opacity: 0.4 }}
+              animate={reduce ? { opacity: 1 } : { opacity: [0.4, 1, 0.4] }}
+              transition={{
+                duration: reduce ? 0 : 1.5,
+                repeat: reduce ? 0 : Infinity,
+              }}
               className="font-medium text-foreground/80"
             >
               {currentPhrase}...
@@ -116,10 +128,10 @@ export function ReasoningText({
           {variant === "fade" && (
             <motion.span
               key={index}
-              initial={{ opacity: 0 }}
+              initial={reduce ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              exit={reduce ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: reduce ? 0 : 0.25 }}
               className="font-medium text-foreground/85"
             >
               {currentPhrase}...

@@ -10,9 +10,9 @@ import {
 } from "@/components/home";
 
 export const metadata = {
-  title: "OpenBook - The research notebook that talks back",
+  title: "Research with receipts",
   description:
-    "Bring your PDFs, articles, and videos. OpenBook answers with citations, builds your flashcards, quizzes, and mind maps, and turns your library into a podcast you can interrupt.",
+    "Kairos turns your PDFs, pages, and transcripts into cited answers, study material, and a podcast you can interrupt.",
 };
 
 export default async function HomePage() {

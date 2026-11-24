@@ -29,46 +29,60 @@ export function WorkspacesGrid({
   onDelete,
 }: WorkspacesGridProps) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">
-          Your Workspaces ({workspaces.length})
-        </h2>
+    <section className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="kairos-eyebrow">Library</p>
+          <h2 className="kairos-section-title mt-1.5 text-xl text-foreground sm:text-2xl">
+            Your notebooks
+          </h2>
+        </div>
+        <span className="kairos-tag">{workspaces.length} total</span>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-44 rounded-xl border border-border bg-card animate-pulse p-5 space-y-3"
-            >
-              <div className="h-5 w-32 bg-muted rounded" />
-              <div className="h-4 w-48 bg-muted/60 rounded" />
-              <div className="h-4 w-20 bg-muted/40 rounded mt-8" />
-            </div>
-          ))}
+        <div role="status" aria-live="polite">
+          <span className="sr-only">Loading notebooks…</span>
+          <div
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
+            aria-hidden="true"
+          >
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="kairos-inset h-44 space-y-3 p-5">
+                <div className="kairos-shimmer h-5 w-2/3 rounded-lg" />
+                <div className="kairos-shimmer h-4 w-4/5 rounded-lg" />
+                <div className="kairos-shimmer mt-8 h-3 w-20 rounded-lg" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Create New Notebook Card */}
-          <CreateWorkspaceCard onClick={onCreateClick} />
+        <>
+          {workspaces.length === 0 && (
+            <p className="kairos-panel px-5 py-4 text-sm text-muted-foreground">
+              No notebooks to show. Create one to get started, or try a different search.
+            </p>
+          )}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+            {/* Create New Notebook Card */}
+            <CreateWorkspaceCard onClick={onCreateClick} />
 
-          {/* Workspace Cards */}
-          {workspaces.map((ws) => (
-            <WorkspaceCard
-              key={ws.id}
-              workspace={ws}
-              isPinned={pinnedIds.includes(ws.id)}
-              isMenuOpen={menuOpenId === ws.id}
-              onMenuToggle={onMenuToggle}
-              onEdit={onEdit}
-              onTogglePin={onTogglePin}
-              onDelete={onDelete}
-            />
-          ))}
-        </div>
+            {/* Workspace Cards */}
+            {workspaces.map((ws) => (
+              <WorkspaceCard
+                key={ws.id}
+                workspace={ws}
+                isPinned={pinnedIds.includes(ws.id)}
+                isMenuOpen={menuOpenId === ws.id}
+                onMenuToggle={onMenuToggle}
+                onEdit={onEdit}
+                onTogglePin={onTogglePin}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        </>
       )}
-    </div>
+    </section>
   );
 }

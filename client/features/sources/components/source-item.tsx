@@ -2,15 +2,10 @@
 
 import React from "react";
 import { Source } from "../lib/types";
-import {
-  Trash2,
-  Check,
-  AlertCircle,
-  Eye,
-  RefreshCw,
-} from "lucide-react";
-import { CircularLoader } from "@/components/ui/circular-loader";
+import { Trash2, Check, Eye, RefreshCw } from "lucide-react";
 import { SourceTypeIcon } from "./source-type-icon";
+import { SourceStatusBadge } from "./source-status-badge";
+import { SOURCE_TYPE_LABELS } from "../lib/constants";
 import { cn } from "@/lib/utils";
 
 interface SourceItemProps {
@@ -32,54 +27,13 @@ export function SourceItem({
   onRetry,
   isRetrying = false,
 }: SourceItemProps) {
-  const getStatusBadge = () => {
-    switch (source.status) {
-      case "READY":
-        return null;
-      case "PROCESSING":
-      case "PENDING":
-        return (
-          <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
-            <CircularLoader size={12} />
-            Indexing
-          </span>
-        );
-      case "FAILED":
-        return (
-          <div className="flex items-center gap-1">
-            <span className="flex items-center gap-1 text-[10px] text-destructive bg-destructive/10 px-1.5 py-0.5 rounded border border-destructive/30">
-              <AlertCircle className="w-2.5 h-2.5" />
-              Failed
-            </span>
-            {onRetry && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRetry(source.id);
-                }}
-                disabled={isRetrying}
-                title="Retry processing"
-                className="flex items-center gap-1 text-[10px] font-medium text-foreground bg-muted hover:bg-muted/80 px-1.5 py-0.5 rounded border border-border disabled:opacity-50"
-              >
-                <RefreshCw
-                  className={cn("w-2.5 h-2.5", isRetrying && "animate-spin")}
-                />
-                Retry
-              </button>
-            )}
-          </div>
-        );
-    }
-  };
-
   return (
     <div
       className={cn(
-        "group relative flex items-center justify-between p-2.5 rounded-xl border transition-all duration-150 select-none",
+        "group relative flex items-center justify-between rounded-xl border p-2.5 select-none transition-colors duration-150 motion-reduce:transition-none",
         isSelected
-          ? "border-border bg-muted/60 dark:bg-muted/30 shadow-xs"
-          : "border-border hover:border-zinc-300 dark:hover:border-zinc-700 bg-card hover:bg-muted/30"
+          ? "border-brand/35 bg-brand-soft/60 shadow-[var(--shadow-panel)]"
+          : "border-border bg-panel hover:border-brand/30 hover:bg-brand-quiet/60"
       )}
     >
       <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
@@ -87,27 +41,23 @@ export function SourceItem({
         <button
           type="button"
           onClick={() => onToggleSelect(source.id)}
+          aria-label={
+            isSelected ? `Deselect ${source.title}` : `Select ${source.title}`
+          }
+          aria-pressed={isSelected}
           className={cn(
-            "w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0",
+            "flex size-4 shrink-0 items-center justify-center rounded border transition-colors motion-reduce:transition-none",
             isSelected
-              ? "bg-primary border-primary text-primary-foreground"
-              : "border-border bg-card hover:border-muted-foreground"
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-surface hover:border-brand"
           )}
         >
           {isSelected && <Check className="w-3 h-3 stroke-3" />}
         </button>
 
         {/* Source Icon */}
-        <div className="w-7 h-7 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
-          <SourceTypeIcon
-            type={source.type}
-            source={source}
-            className={
-              source.type === "YOUTUBE"
-                ? "text-red-500 dark:text-red-400"
-                : undefined
-            }
-          />
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-brand/20 bg-brand-quiet">
+          <SourceTypeIcon type={source.type} source={source} />
         </div>
 
         {/* Title & Status */}
@@ -120,24 +70,46 @@ export function SourceItem({
               {source.title}
             </p>
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
-              {source.type}
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              {SOURCE_TYPE_LABELS[source.type]}
             </span>
-            {getStatusBadge()}
+            <SourceStatusBadge status={source.status} />
+            {source.status === "FAILED" && onRetry && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRetry(source.id);
+                }}
+                disabled={isRetrying}
+                title="Retry processing"
+                aria-label={`Retry processing ${source.title}`}
+                className="inline-flex items-center gap-1 rounded-full border border-brand/25 bg-surface px-1.5 py-0.5 text-[10px] font-medium text-brand transition-colors hover:bg-brand-soft disabled:opacity-50 motion-reduce:transition-none"
+              >
+                <RefreshCw
+                  className={cn(
+                    "size-2.5",
+                    isRetrying && "motion-safe:animate-spin",
+                  )}
+                />
+                Retry
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 transition-opacity motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
         <button
           type="button"
           onClick={() => onPreview(source)}
           title="Preview source content"
-          className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          aria-label={`Preview ${source.title}`}
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand motion-reduce:transition-none"
         >
-          <Eye className="w-3.5 h-3.5" />
+          <Eye className="size-3.5" />
         </button>
         <button
           type="button"
@@ -147,9 +119,10 @@ export function SourceItem({
             }
           }}
           title="Delete source"
-          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
+          aria-label={`Remove ${source.title}`}
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger motion-reduce:transition-none"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="size-3.5" />
         </button>
       </div>
     </div>

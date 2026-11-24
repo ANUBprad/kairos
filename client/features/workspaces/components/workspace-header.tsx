@@ -3,21 +3,18 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { OpenBookLogo } from "@/features/auth";
+import { KairosLogo } from "@/components/brand/kairos-logo";
 import { useAuth } from "@/features/auth";
 import { WorkspaceDetail } from "../hooks/use-workspace";
 import { useWorkspaces, Workspace } from "../hooks/use-workspaces";
 import {
   ChevronDown,
-  Sparkles,
   Layers,
   Check,
   LogOut,
-  User,
   Brain,
   CreditCard,
   LayoutGrid,
-  Zap,
   Puzzle,
   Coins,
 } from "lucide-react";
@@ -71,41 +68,48 @@ export function WorkspaceHeader({
   }, []);
 
   return (
-    <header className="h-14 border-b border-border bg-card px-4 flex items-center justify-between select-none shrink-0 z-20">
-      {/* Left: OpenBook logo + Workspace Switcher Dropdown */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        <Link href="/dashboard" className="shrink-0 flex items-center gap-2" title="Go to Dashboard">
-          <OpenBookLogo size={22} textSize="text-base" textColor="text-foreground" textClassName="hidden sm:inline" />
+    <header className="z-30 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
+      {/* Left: Kairos logo + Workspace Switcher Dropdown */}
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <Link
+          href="/dashboard"
+          aria-label="Kairos dashboard"
+          title="Go to Dashboard"
+          className="flex shrink-0 items-center gap-2 rounded-lg"
+        >
+          <KairosLogo size={22} textSize="text-base" textColor="text-foreground" textClassName="hidden sm:inline" />
         </Link>
 
-        <div className="h-4 w-px bg-border shrink-0" />
+        <div className="h-4 w-px shrink-0 bg-border" aria-hidden="true" />
 
         {/* Workspace Dropdown Switcher */}
         <div className="relative min-w-0" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-1.5 sm:gap-2 py-1 px-2 sm:px-2.5 rounded-xl border border-border bg-muted/40 hover:bg-muted text-foreground transition-all cursor-pointer group max-w-[130px] xs:max-w-[180px] sm:max-w-[240px] md:max-w-[320px]"
+            className="flex max-w-[140px] items-center gap-1.5 rounded-xl border border-border bg-panel px-2 py-1.5 text-foreground shadow-[var(--shadow-panel)] transition-colors hover:bg-brand-quiet sm:max-w-[240px] sm:gap-2 sm:px-2.5 md:max-w-[320px]"
             title="Switch Workspace"
+            aria-expanded={isDropdownOpen}
           >
-            <span className="text-sm shrink-0">{workspace?.icon || "📚"}</span>
-            <span className="text-xs sm:text-sm font-semibold truncate">
+            <span className="shrink-0 text-sm">{workspace?.icon || "📚"}</span>
+            <span className="truncate text-xs font-semibold sm:text-sm">
               {workspace?.title || "Untitled Notebook"}
             </span>
             <ChevronDown
               className={cn(
-                "w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 shrink-0",
+                "h-3.5 w-3.5 shrink-0 text-muted-foreground",
                 isDropdownOpen && "rotate-180"
               )}
+              aria-hidden="true"
             />
           </button>
 
           {/* Dropdown Menu */}
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-72 rounded-2xl border border-border bg-card shadow-2xl p-2 z-50 animate-fadeIn space-y-1">
-              <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between border-b border-border">
+            <div className="kairos-panel absolute left-0 top-full z-50 mt-2 w-72 animate-fadeIn motion-reduce:animate-none space-y-1 p-2">
+              <div className="flex items-center justify-between border-b border-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <span>Switch Notebook</span>
-                <span className="font-mono text-[10px]">{workspaces.length} total</span>
+                <span className="font-mono text-[10px] normal-case tracking-normal">{workspaces.length} total</span>
               </div>
 
               {/* Workspaces List */}
@@ -123,29 +127,30 @@ export function WorkspaceHeader({
                         }
                       }}
                       className={cn(
-                        "w-full flex items-center justify-between gap-2.5 p-2 rounded-xl text-left text-xs transition-colors cursor-pointer",
+                        "flex w-full items-center justify-between gap-2.5 rounded-xl border border-transparent p-2 text-left text-xs transition-colors",
                         isCurrent
-                          ? "bg-foreground text-background font-semibold"
-                          : "text-foreground hover:bg-muted"
+                          ? "border-brand/20 bg-brand-soft font-semibold text-foreground"
+                          : "text-foreground hover:bg-brand-quiet"
                       )}
+                      aria-current={isCurrent ? "true" : undefined}
                     >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <span className="text-sm shrink-0">{ws.icon || "📚"}</span>
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="shrink-0 text-sm">{ws.icon || "📚"}</span>
                         <span className="truncate">{ws.title}</span>
                       </div>
-                      {isCurrent && <Check className="w-3.5 h-3.5 shrink-0" />}
+                      {isCurrent && <Check className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />}
                     </button>
                   );
                 })}
               </div>
 
               {/* Footer Actions */}
-              <div className="pt-1.5 border-t border-border space-y-1">
+              <div className="space-y-1 border-t border-border pt-1.5">
                 {workspaceId && (
                   <Link
                     href={`/workspace/${workspaceId}/settings`}
                     onClick={() => setIsDropdownOpen(false)}
-                    className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand"
                   >
                     <span>Notebook settings</span>
                   </Link>
@@ -153,9 +158,9 @@ export function WorkspaceHeader({
                 <Link
                   href="/dashboard"
                   onClick={() => setIsDropdownOpen(false)}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Dashboard · All Notebooks</span>
                 </Link>
               </div>
@@ -174,15 +179,17 @@ export function WorkspaceHeader({
 
         {/* User profile dropdown button & popover menu */}
         {session?.user && (
-          <div className="relative pl-1 sm:pl-2 border-l border-border" ref={profileMenuRef}>
+          <div className="relative border-l border-border pl-1 sm:pl-2" ref={profileMenuRef}>
             <button
               type="button"
               onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-              className="rounded-full transition-transform hover:scale-105 active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 shrink-0"
+              className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               title={session.user.name || "User menu"}
+              aria-label="Open user menu"
+                aria-expanded={isProfileMenuOpen}
             >
-              <PremiumAvatar plan={plan} size="sm" className="w-7 h-7">
-                <div className="w-full h-full rounded-full bg-muted border border-border flex items-center justify-center text-xs font-semibold text-foreground overflow-hidden">
+              <PremiumAvatar plan={plan} size="sm" className="h-7 w-7">
+                <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-xs font-semibold text-foreground">
                   <UserAvatar src={session.user.image} name={session.user.name} />
                 </div>
               </PremiumAvatar>
@@ -190,41 +197,41 @@ export function WorkspaceHeader({
 
             {/* Profile Dropdown Popover Menu */}
             {isProfileMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-border bg-card shadow-2xl p-1.5 z-50 animate-fadeIn text-xs space-y-1">
+              <div className="kairos-panel absolute right-0 top-full z-50 mt-2 w-56 animate-fadeIn motion-reduce:animate-none space-y-1 p-1.5 text-xs">
                 {/* Header User Info */}
-                <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border">
-                  <PremiumAvatar plan={plan} size="md" className="w-8 h-8">
-                    <div className="w-full h-full rounded-full bg-muted border border-border flex items-center justify-center text-xs font-semibold text-foreground overflow-hidden">
+                <div className="flex items-center gap-2.5 border-b border-border px-3 py-2.5">
+                  <PremiumAvatar plan={plan} size="md" className="h-8 w-8">
+                    <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-xs font-semibold text-foreground">
                       <UserAvatar src={session.user.image} name={session.user.name} />
                     </div>
                   </PremiumAvatar>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground truncate">
+                    <p className="truncate font-semibold text-foreground">
                       {session.user.name || "User"}
                     </p>
-                    <p className="text-[11px] text-muted-foreground truncate">
+                    <p className="truncate text-[11px] text-muted-foreground">
                       {session.user.email}
                     </p>
                   </div>
                 </div>
 
                 {/* Top Up Credits Button */}
-                <div className="p-1 border-b border-border">
+                <div className="border-b border-border p-1">
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       openUpgradeModal({
-                        reason: "Top up your OpenBook credits to upload sources, chat, and generate artifacts.",
+                        reason: "Top up your Kairos credits to upload sources, chat, and generate artifacts.",
                       });
                     }}
-                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-foreground border border-amber-500/25 transition-colors font-medium cursor-pointer"
+                    className="flex w-full items-center justify-between rounded-lg border border-brand/20 bg-brand-quiet px-2.5 py-1.5 font-medium text-foreground transition-colors hover:bg-brand-soft"
                   >
                     <div className="flex items-center gap-1.5">
-                      <Coins className="w-3.5 h-3.5 text-amber-500" />
+                      <Coins className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
                       <span className="text-xs font-semibold">Top Up Credits</span>
                     </div>
-                    <span className="text-[10px] font-mono font-semibold bg-background border border-border px-1.5 py-0.5 rounded text-foreground">
+                    <span className="kairos-tag font-mono">
                       Min ₹50
                     </span>
                   </button>
@@ -235,13 +242,13 @@ export function WorkspaceHeader({
                     <Link
                       href={`/workspace/${workspaceId}/sources`}
                       onClick={() => setIsProfileMenuOpen(false)}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-foreground hover:bg-muted transition-colors font-medium"
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 font-medium text-foreground transition-colors hover:bg-brand-soft"
                     >
                       <div className="flex items-center gap-2">
-                        <Layers className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Layers className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                         <span>Library</span>
                       </div>
-                      <span className="text-[10px] font-mono text-muted-foreground px-1.5 py-0.5 bg-muted rounded">
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
                         {sourcesCount}
                       </span>
                     </Link>
@@ -249,44 +256,43 @@ export function WorkspaceHeader({
                     <Link
                       href={`/workspace/${workspaceId}/memory`}
                       onClick={() => setIsProfileMenuOpen(false)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-muted transition-colors font-medium"
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 font-medium text-foreground transition-colors hover:bg-brand-soft"
                     >
-                      <Brain className="w-3.5 h-3.5 text-muted-foreground" />
+                      <Brain className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                       <span>Memory</span>
                     </Link>
 
                     <Link
                       href={`/workspace/${workspaceId}/billing`}
                       onClick={() => setIsProfileMenuOpen(false)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-muted transition-colors font-medium"
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 font-medium text-foreground transition-colors hover:bg-brand-soft"
                     >
-                      <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+                      <CreditCard className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                       <span>Credits &amp; billing</span>
                     </Link>
 
                     <Link
                       href={`/workspace/${workspaceId}/integrations`}
                       onClick={() => setIsProfileMenuOpen(false)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-foreground hover:bg-muted transition-colors font-medium"
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 font-medium text-foreground transition-colors hover:bg-brand-soft"
                     >
-                      <Puzzle className="w-3.5 h-3.5 text-muted-foreground" />
+                      <Puzzle className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                       <span>Integrations</span>
                     </Link>
                   </div>
                 )}
 
                 {/* Divider & Logout */}
-                <div className="pt-1 border-t border-border">
-
+                <div className="border-t border-border pt-1">
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       logoutMutation.mutate();
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-destructive hover:bg-destructive/10 transition-colors font-medium text-left cursor-pointer"
+                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left font-medium text-danger transition-colors hover:bg-danger/10"
                   >
-                    <LogOut className="w-3.5 h-3.5" />
+                    <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>Sign Out</span>
                   </button>
                 </div>

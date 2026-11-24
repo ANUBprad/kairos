@@ -12,7 +12,7 @@ export default function WorkspaceBillingPage({
   const { workspaceId } = use(params);
 
   return (
-    <WorkspacePageShell workspaceId={workspaceId} sectionLabel="Billing & Plan">
+    <WorkspacePageShell workspaceId={workspaceId} sectionLabel="Credits & Billing">
       <BillingSettingsView workspaceId={workspaceId} />
     </WorkspacePageShell>
   );

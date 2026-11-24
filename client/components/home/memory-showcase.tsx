@@ -39,7 +39,7 @@ export function MemoryShowcase() {
             </h2>
 
             <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-normal">
-              Unlike ordinary chat models that start blank with every message, OpenBook builds a
+              Unlike ordinary chat models that start blank with every message, Kairos builds a
               personalized knowledge profile across your notebooks. It recalls your expertise,
               study preferences, and project background.
             </p>

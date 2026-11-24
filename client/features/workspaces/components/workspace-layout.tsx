@@ -156,14 +156,14 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
 
   if (isWorkspaceLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground">
+      <div className="flex min-h-screen w-full items-center justify-center bg-background text-foreground">
         <ThemeLoader size={36} />
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-full bg-background text-foreground flex flex-col overflow-hidden font-sans">
+    <div className="flex h-screen w-full flex-col overflow-hidden bg-background font-sans text-foreground">
       {/* Workspace Header */}
       <WorkspaceHeader
         workspace={workspace || null}
@@ -319,49 +319,55 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
 
 
         {/* Mobile Navigation Tabs */}
-        <div className="h-14 border-t border-border bg-card flex items-center justify-around px-4 z-20 shrink-0">
+        <nav
+          aria-label="Workspace panels"
+          className="z-20 flex h-16 shrink-0 items-center justify-around border-t border-border bg-panel px-2"
+        >
           <button
             type="button"
             onClick={() => setMobileTab("sources")}
+            aria-pressed={mobileTab === "sources"}
             className={cn(
-              "flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-xs font-medium transition-colors",
+              "flex min-w-24 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
               mobileTab === "sources"
-                ? "text-foreground font-semibold"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-brand-soft text-brand"
+                : "text-muted-foreground hover:bg-brand-quiet hover:text-foreground"
             )}
           >
-            <Layers className="w-4 h-4" />
+            <Layers className="h-4 w-4" aria-hidden="true" />
             <span>Sources ({sources.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMobileTab("chat")}
+            aria-pressed={mobileTab === "chat"}
             className={cn(
-              "flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-xs font-medium transition-colors",
+              "flex min-w-24 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
               mobileTab === "chat"
-                ? "text-foreground font-semibold"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-brand-soft text-brand"
+                : "text-muted-foreground hover:bg-brand-quiet hover:text-foreground"
             )}
           >
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="h-4 w-4" aria-hidden="true" />
             <span>Chat</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMobileTab("studio")}
+            aria-pressed={mobileTab === "studio"}
             className={cn(
-              "flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-xs font-medium transition-colors",
+              "flex min-w-24 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
               mobileTab === "studio"
-                ? "text-foreground font-semibold"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-brand-soft text-brand"
+                : "text-muted-foreground hover:bg-brand-quiet hover:text-foreground"
             )}
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
             <span>Studio ({artifacts.length})</span>
           </button>
-        </div>
+        </nav>
       </div>
     </div>
   );

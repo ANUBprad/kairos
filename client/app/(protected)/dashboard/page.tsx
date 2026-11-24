@@ -157,7 +157,7 @@ export default function DashboardPage() {
 
   if (isAuthPending) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground">
+      <div className="flex min-h-screen w-full items-center justify-center bg-background text-foreground">
         <ThemeLoader size={36} />
       </div>
     );
@@ -168,7 +168,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
       {/* 1. Header Bar */}
       <DashboardHeader
         user={session.user}
@@ -176,7 +176,7 @@ export default function DashboardPage() {
       />
 
       {/* 2. Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-10 space-y-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         {/* Welcome Banner & Search */}
         <DashboardBanner
           userName={session.user.name}

@@ -54,7 +54,7 @@ export function BillingSettingsView({
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center">
+      <div className="kairos-panel flex min-h-64 items-center justify-center">
         <ThemeLoader />
       </div>
     );
@@ -62,191 +62,228 @@ export function BillingSettingsView({
 
   if (isError) {
     return (
-      <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6 text-center">
-        <p className="text-sm text-destructive">
-          Failed to load credit details. Please refresh the page.
-        </p>
+      <div
+        role="alert"
+        className="kairos-panel border-danger/25 bg-danger/5 p-6 text-center text-sm text-danger"
+      >
+        We couldn&apos;t load your credit details. Please refresh the page.
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+    <div className="mx-auto max-w-5xl space-y-8 pb-12">
       {/* Navigation Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Link
           href={backHref}
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
-            "gap-1.5 text-muted-foreground hover:text-foreground",
+            "w-fit gap-1.5 text-muted-foreground hover:text-foreground",
           )}
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back</span>
         </Link>
-        <span className="text-muted-foreground">/</span>
-        <h1 className="text-lg font-semibold tracking-tight">Credits & Billing</h1>
+        <span className="hidden text-muted-foreground sm:inline">/</span>
+        <h1 className="kairos-section-title text-2xl text-foreground">
+          Credits &amp; Billing
+        </h1>
       </div>
 
       {/* Credit Balance Overview Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 p-6 rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/20 shadow-xs flex flex-col justify-between">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
+        <section className="kairos-aurora flex flex-col justify-between overflow-hidden p-6 sm:p-7 md:col-span-2">
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Badge variant="outline" className="gap-1.5 py-1 px-3 text-xs bg-muted/50">
-                <Coins className="w-3.5 h-3.5 text-amber-500" />
-                <span>Available Balance</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Badge
+                variant="outline"
+                className="kairos-tag gap-1.5 border-brand/30 bg-brand-quiet px-3 py-1 text-brand"
+              >
+                <Coins className="size-3.5 text-primary" />
+                Available balance
               </Badge>
-              <span className="text-xs text-muted-foreground">Pay-As-You-Go</span>
+              <span className="kairos-eyebrow">Pay as you go</span>
             </div>
 
-            <div className="flex items-baseline gap-3">
-              <span className="text-5xl font-extrabold tracking-tight text-foreground">
+            <div className="flex flex-wrap items-baseline gap-3">
+              <span className="kairos-display text-5xl text-foreground sm:text-6xl">
                 {credits.toLocaleString("en-IN")}
               </span>
-              <span className="text-base text-muted-foreground font-medium">Credits</span>
+              <span className="text-base font-medium text-muted-foreground">
+                credits
+              </span>
             </div>
 
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Credits never expire. Top up anytime starting from ₹50 for 100 credits.
+            <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
+              New accounts start with welcome credits. Top-ups begin at ₹50, and
+              your credits never expire.
             </p>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-border/60 flex flex-wrap items-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border pt-4">
             <Button
               type="button"
-              onClick={() => openUpgradeModal({ reason: "Top up your OpenBook credits", currentCredits: credits })}
-              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() =>
+                openUpgradeModal({
+                  reason: "Top up your Kairos credits",
+                  currentCredits: credits,
+                })
+              }
+              className="gap-2"
             >
-              <Plus className="w-4 h-4" />
-              <span>Top Up Credits (Min ₹50)</span>
+              <Plus className="size-4" />
+              Top up credits (min ₹50)
             </Button>
             <Link
               href="/pricing"
               className={cn(buttonVariants({ variant: "outline" }), "text-sm")}
             >
-              View Credit Packs & Pricing
+              View credit packs &amp; pricing
             </Link>
           </div>
-        </div>
+        </section>
 
         {/* Action Cost Reference */}
-        <div className="p-6 rounded-2xl border border-border/80 bg-card shadow-xs flex flex-col justify-between space-y-4">
-          <h2 className="text-sm font-semibold tracking-tight flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span>Credit Rates</span>
-          </h2>
+        <section className="kairos-panel flex flex-col justify-between space-y-5 p-6">
+          <div className="flex items-center gap-2 border-b border-border pb-3">
+            <Sparkles className="size-4 text-primary" />
+            <h2 className="kairos-section-title text-lg text-foreground">
+              Credit rates
+            </h2>
+          </div>
 
           <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-border/40">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Upload className="w-3.5 h-3.5 text-blue-500" />
-                <span>Source Upload</span>
-              </div>
-              <strong className="text-foreground">{CREDIT_COSTS.SOURCE_UPLOAD} credits</strong>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Upload className="size-3.5 text-primary" />
+                Source upload
+              </span>
+              <strong className="font-semibold text-foreground">
+                {CREDIT_COSTS.SOURCE_UPLOAD} credits
+              </strong>
             </div>
 
-            <div className="flex items-center justify-between pb-2 border-b border-border/40">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Chat Message</span>
-              </div>
-              <strong className="text-foreground">{CREDIT_COSTS.CHAT_MESSAGE} credit</strong>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <MessageSquare className="size-3.5 text-primary" />
+                Chat query
+              </span>
+              <strong className="font-semibold text-foreground">
+                {CREDIT_COSTS.CHAT_MESSAGE} credit
+              </strong>
             </div>
 
-            <div className="flex items-center justify-between pb-2 border-b border-border/40">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <BookOpen className="w-3.5 h-3.5 text-purple-500" />
-                <span>Study Artifact</span>
-              </div>
-              <strong className="text-foreground">{CREDIT_COSTS.ARTIFACT_GENERATE} credits</strong>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <BookOpen className="size-3.5 text-primary" />
+                Study artifact
+              </span>
+              <strong className="font-semibold text-foreground">
+                {CREDIT_COSTS.ARTIFACT_GENERATE} credits
+              </strong>
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Headphones className="w-3.5 h-3.5 text-rose-500" />
-                <span>Audio Debate</span>
-              </div>
-              <strong className="text-foreground">{CREDIT_COSTS.AUDIO_DEBATE} credits</strong>
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Headphones className="size-3.5 text-primary" />
+                Audio debate
+              </span>
+              <strong className="font-semibold text-foreground">
+                {CREDIT_COSTS.AUDIO_DEBATE} credits
+              </strong>
             </div>
           </div>
 
-          <div className="pt-2 text-[11px] text-muted-foreground/80">
-            Failed generations are automatically refunded in full.
-          </div>
-        </div>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Failed generations are refunded in full.
+          </p>
+        </section>
       </div>
 
       {/* Credit Packs Section */}
-      <div className="pt-2">
-        <PricingPlans
-          variant="page"
-          showHeader={false}
-          className="space-y-6"
-        />
-      </div>
+      <section className="space-y-4 pt-2">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="kairos-eyebrow">Top up anytime</p>
+            <h2 className="kairos-section-title mt-1 text-xl text-foreground">
+              Choose a credit pack
+            </h2>
+          </div>
+          <span className="kairos-tag">No recurring billing</span>
+        </div>
+        <PricingPlans variant="page" showHeader={false} className="space-y-6" />
+      </section>
 
       {/* Credit Transaction History */}
-      <div className="space-y-4 pt-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold tracking-tight flex items-center gap-2">
-            <History className="w-4 h-4 text-muted-foreground" />
-            <span>Credit Transaction History</span>
+      <section className="space-y-4 pt-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <h2 className="kairos-section-title flex items-center gap-2 text-xl text-foreground">
+            <History className="size-4 text-primary" />
+            Credit transaction history
           </h2>
-          <span className="text-xs text-muted-foreground">Last 50 transactions</span>
+          <span className="text-xs text-muted-foreground">
+            Last 50 transactions
+          </span>
         </div>
 
         {creditHistory.length === 0 ? (
-          <div className="p-8 rounded-xl border border-dashed border-border text-center text-sm text-muted-foreground">
-            No credit transactions recorded yet. Welcome credits were added upon registration.
+          <div className="kairos-panel border-dashed p-10 text-center text-sm text-muted-foreground">
+            No transactions yet. Welcome credits are added when your account is
+            created.
           </div>
         ) : (
-          <div className="rounded-xl border border-border/80 overflow-hidden bg-card shadow-2xs">
+          <div className="kairos-panel overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-muted/50 border-b border-border/60 text-muted-foreground font-medium">
+              <table className="w-full min-w-[42rem] text-left text-xs">
+                <thead className="border-b border-border bg-brand-quiet font-medium text-muted-foreground">
                   <tr>
-                    <th className="py-2.5 px-4">Date</th>
-                    <th className="py-2.5 px-4">Type</th>
-                    <th className="py-2.5 px-4">Description</th>
-                    <th className="py-2.5 px-4 text-right">Amount</th>
-                    <th className="py-2.5 px-4 text-right">Balance After</th>
+                    <th scope="col" className="px-4 py-2.5">Date</th>
+                    <th scope="col" className="px-4 py-2.5">Type</th>
+                    <th scope="col" className="px-4 py-2.5">Description</th>
+                    <th scope="col" className="px-4 py-2.5 text-right">Amount</th>
+                    <th scope="col" className="px-4 py-2.5 text-right">
+                      Balance after
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/40">
+                <tbody className="divide-y divide-border">
                   {creditHistory.map((tx) => {
                     const isCredit = tx.amount > 0;
                     return (
-                      <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="py-2.5 px-4 text-muted-foreground whitespace-nowrap">
+                      <tr
+                        key={tx.id}
+                        className="transition-colors hover:bg-muted/40 motion-reduce:transition-none"
+                      >
+                        <td className="whitespace-nowrap px-4 py-2.5 text-muted-foreground">
                           {formatDate(tx.createdAt)}
                         </td>
-                        <td className="py-2.5 px-4">
+                        <td className="px-4 py-2.5">
                           <span
                             className={cn(
-                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-medium text-[11px]",
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
                               isCredit
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                : "bg-muted text-foreground"
+                                ? "bg-success/10 text-success"
+                                : "bg-muted text-muted-foreground"
                             )}
                           >
                             {isCredit ? (
-                              <ArrowDownLeft className="w-3 h-3" />
+                              <ArrowDownLeft className="size-3" />
                             ) : (
-                              <ArrowUpRight className="w-3 h-3 text-muted-foreground" />
+                              <ArrowUpRight className="size-3" />
                             )}
                             {tx.type}
                           </span>
                         </td>
-                        <td className="py-2.5 px-4 text-foreground max-w-xs truncate">
+                        <td className="max-w-xs truncate px-4 py-2.5 text-foreground">
                           {tx.description}
                         </td>
-                        <td className="py-2.5 px-4 text-right font-semibold whitespace-nowrap">
-                          <span className={isCredit ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}>
+                        <td className="whitespace-nowrap px-4 py-2.5 text-right font-semibold">
+                          <span className={isCredit ? "text-success" : "text-foreground"}>
                             {isCredit ? `+${tx.amount}` : tx.amount}
                           </span>
                         </td>
-                        <td className="py-2.5 px-4 text-right text-muted-foreground font-mono">
+                        <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">
                           {tx.balanceAfter}
                         </td>
                       </tr>
@@ -257,7 +294,7 @@ export function BillingSettingsView({
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -85,62 +85,73 @@ export default function WorkspaceSettingsPage({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <ThemeLoader size={36} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="border-b border-border px-6 py-3.5 flex items-center justify-between bg-card">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-panel px-4 py-3.5 sm:px-6">
         <Link
           href={`/workspace/${workspaceId}`}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Workspace Chat</span>
+          <ArrowLeft className="size-4 shrink-0" />
+          <span className="truncate">Back to workspace chat</span>
         </Link>
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Workspace Settings
-        </span>
+        <span className="kairos-eyebrow">Workspace settings</span>
       </div>
 
-      <div className="flex-1 max-w-2xl mx-auto w-full p-6 md:p-8 space-y-8">
+      <div className="mx-auto w-full max-w-2xl flex-1 space-y-8 p-4 sm:p-6 md:p-8">
         <div>
-          <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-foreground" />
-            <h1 className="text-xl font-semibold text-foreground">Workspace Configuration</h1>
+          <p className="kairos-eyebrow">Preferences</p>
+          <div className="mt-2 flex items-center gap-3">
+            <span className="kairos-inset flex size-10 items-center justify-center text-primary">
+              <Settings className="size-5" />
+            </span>
+            <h1 className="kairos-section-title text-2xl text-foreground sm:text-3xl">
+              Workspace configuration
+            </h1>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Manage your workspace name, default grounding model, and lifecycle settings.
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            Manage the workspace name, icon, default grounding model, and
+            lifecycle settings.
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSave} className="space-y-6 p-6 rounded-2xl border border-border bg-card">
+        <form onSubmit={handleSave} className="kairos-panel space-y-6 p-5 sm:p-6">
           {/* Icon Picker */}
-          <NotebookIconPicker value={icon} onChange={setIcon} label="Notebook Icon" />
+          <NotebookIconPicker value={icon} onChange={setIcon} label="Notebook icon" />
 
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground">Workspace Title</label>
+          <div className="space-y-2">
+            <label htmlFor="workspace-title" className="text-xs font-medium text-foreground">
+              Workspace title
+            </label>
             <input
+              id="workspace-title"
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring/40"
             />
           </div>
 
-          <div className="space-y-1.5" ref={modelRef}>
-            <label className="text-xs font-medium text-foreground">Default AI Model</label>
+          <div className="space-y-2" ref={modelRef}>
+            <span id="default-model-label" className="text-xs font-medium text-foreground">
+              Default AI model
+            </span>
             <div className="relative">
               <button
                 type="button"
+                aria-haspopup="listbox"
+                aria-expanded={isModelOpen}
+                aria-labelledby="default-model-label"
                 onClick={() => setIsModelOpen(!isModelOpen)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-border bg-background hover:bg-muted/40 text-foreground flex items-center justify-between transition-colors cursor-pointer text-left"
+                className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-border bg-background px-3.5 py-2.5 text-left text-xs text-foreground transition-colors hover:bg-muted/40 motion-reduce:transition-none"
               >
                 <div>
                   <span className="font-semibold block text-xs">
@@ -159,22 +170,28 @@ export default function WorkspaceSettingsPage({
               </button>
 
               {isModelOpen && (
-                <div className="absolute left-0 top-full mt-1.5 w-full rounded-xl border border-border bg-card shadow-2xl p-1.5 z-30 animate-fadeIn space-y-1">
+                <div
+                  role="listbox"
+                  aria-labelledby="default-model-label"
+                  className="kairos-panel absolute left-0 top-full z-30 mt-1.5 w-full animate-fadeIn space-y-1 bg-surface p-1.5 motion-reduce:animate-none"
+                >
                   {MODEL_OPTIONS.map((opt) => {
                     const isSelected = opt.id === defaultModel;
                     return (
                       <button
                         key={opt.id}
                         type="button"
+                        role="option"
+                        aria-selected={isSelected}
                         onClick={() => {
                           setDefaultModel(opt.id);
                           setIsModelOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-colors cursor-pointer",
+                          "flex w-full cursor-pointer items-center justify-between rounded-lg p-2.5 text-left transition-colors motion-reduce:transition-none",
                           isSelected
-                            ? "bg-foreground text-background font-semibold"
-                            : "hover:bg-muted text-foreground"
+                            ? "bg-primary font-semibold text-primary-foreground"
+                            : "text-foreground hover:bg-muted"
                         )}
                       >
                         <div>
@@ -182,7 +199,7 @@ export default function WorkspaceSettingsPage({
                           <p
                             className={cn(
                               "text-[11px] mt-0.5",
-                              isSelected ? "text-background/80" : "text-muted-foreground"
+                              isSelected ? "text-primary-foreground/80" : "text-muted-foreground"
                             )}
                           >
                             {opt.desc}
@@ -197,38 +214,39 @@ export default function WorkspaceSettingsPage({
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-border">
-            <span className="text-xs text-emerald-500 font-medium">
-              {isSaved ? "Settings saved successfully!" : ""}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <span role="status" className="text-xs font-medium text-success">
+              {isSaved ? "Settings saved successfully." : ""}
             </span>
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-foreground text-background hover:opacity-90 transition-all shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-opacity hover:opacity-90 motion-reduce:transition-none"
             >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save Changes</span>
+              <Save className="size-3.5" />
+              Save changes
             </button>
           </div>
         </form>
 
         {/* Danger Zone */}
-        <div className="p-6 rounded-2xl border border-destructive/30 bg-destructive/5 space-y-4">
+        <section className="space-y-4 rounded-[var(--radius-card)] border border-danger/25 bg-danger/5 p-5 sm:p-6">
           <div>
-            <h3 className="text-sm font-semibold text-destructive">Danger Zone</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Deleting this workspace will permanently erase all uploaded PDFs, vector indexes, generated study artifacts, and message transcripts.
+            <h3 className="kairos-section-title text-lg text-danger">Danger zone</h3>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Deleting this workspace permanently removes its sources, indexes,
+              study artifacts, and message transcripts.
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleDelete}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-4 py-2 text-xs font-semibold text-destructive-foreground shadow-[var(--shadow-panel)] transition-colors hover:bg-destructive/90 motion-reduce:transition-none"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Delete Workspace</span>
+            <Trash2 className="size-3.5" />
+            Delete workspace
           </button>
-        </div>
+        </section>
       </div>
     </div>
   );

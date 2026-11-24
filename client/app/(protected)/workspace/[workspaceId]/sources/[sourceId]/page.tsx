@@ -15,14 +15,14 @@ export default async function WorkspaceSourceDetailPage({
   const { workspaceId, sourceId } = await params;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="border-b border-border px-6 py-3.5 flex items-center justify-between bg-card">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 sm:px-6">
         <Link
           href={`/workspace/${workspaceId}/sources`}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-brand transition-colors hover:text-primary motion-reduce:transition-none"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Sources Library</span>
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          <span>Back to source library</span>
         </Link>
       </div>
       <SourceDetail workspaceId={workspaceId} sourceId={sourceId} />

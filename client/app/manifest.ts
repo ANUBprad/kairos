@@ -2,13 +2,14 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "OpenBook",
-    short_name: "OpenBook",
-    description: "AI-Powered Research & Interactive Notebook",
+    name: "Kairos",
+    short_name: "Kairos",
+    description:
+      "Kairos turns your sources into grounded answers, study material, and conversations you can trust.",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#0f172a",
+    background_color: "#0a0f14",
+    theme_color: "#0a0f14",
     orientation: "portrait-primary",
     icons: [
       {
@@ -27,7 +28,12 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/png",
         purpose: "maskable",
       },
+      {
+        src: "/logo.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "any",
+      },
     ],
   };
 }
-

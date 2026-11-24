@@ -16,9 +16,14 @@ export function CreditBadge({ className, showPlusButton = true }: CreditBadgePro
 
   if (isLoading) {
     return (
-      <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-muted/60 text-muted-foreground animate-pulse border border-border/50", className)}>
-        <Coins className="w-3.5 h-3.5" />
-        <span>Loading...</span>
+      <div
+        className={cn(
+          "kairos-tag animate-pulse motion-reduce:animate-none",
+          className
+        )}
+      >
+        <Coins className="size-3.5" />
+        <span>Loading credits…</span>
       </div>
     );
   }
@@ -28,27 +33,32 @@ export function CreditBadge({ className, showPlusButton = true }: CreditBadgePro
   const isMedium = credits >= 10 && credits <= 50;
 
   const colorClasses = isLow
-    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
+    ? "border-danger/30 bg-danger/10 text-danger hover:bg-danger/15"
     : isMedium
-    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20"
-    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20";
+    ? "border-warning/30 bg-warning/10 text-warning hover:bg-warning/15"
+    : "border-success/30 bg-success/10 text-success hover:bg-success/15";
 
   return (
     <button
       type="button"
-      onClick={() => openUpgradeModal({ reason: "Top up your OpenBook credits", currentCredits: credits })}
+      onClick={() =>
+        openUpgradeModal({
+          reason: "Top up your Kairos credits",
+          currentCredits: credits,
+        })
+      }
       title={`${credits} credits available. Click to top up.`}
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer group shadow-2xs",
+        "group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shadow-[var(--shadow-panel)] transition-colors motion-reduce:transition-none",
         colorClasses,
         className
       )}
     >
-      <Coins className={cn("w-3.5 h-3.5", isLow && "animate-bounce")} />
-      <span>{credits.toLocaleString("en-IN")} Credits</span>
+      <Coins className={cn("size-3.5", isLow && "animate-bounce motion-reduce:animate-none")} />
+      <span>{credits.toLocaleString("en-IN")} credits</span>
       {showPlusButton && (
-        <span className="w-4 h-4 rounded-full bg-background/50 flex items-center justify-center ml-0.5 group-hover:scale-110 transition-transform">
-          <Plus className="w-2.5 h-2.5" />
+        <span className="ml-0.5 flex size-4 items-center justify-center rounded-full bg-surface/70 transition-transform group-hover:scale-110 motion-reduce:transition-none">
+          <Plus className="size-2.5" />
         </span>
       )}
     </button>

@@ -1,10 +1,10 @@
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { BillingSettingsView } from "@/features/billing";
 
 export const metadata: Metadata = {
-  title: "Billing & Plan - OpenBook",
+  title: "Credits & Billing — Kairos",
   description:
-    "View your OpenBook subscription, usage limits, and upgrade to Pro or Pro+.",
+    "Review your Kairos credits, transaction history, and top-up options. Credits never expire, with no recurring subscription.",
 };
 
 export default function BillingSettingsPage() {

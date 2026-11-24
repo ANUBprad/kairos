@@ -118,12 +118,12 @@ export function ChatInput({
   };
 
   return (
-    <div className="p-4 border-t border-border bg-card/40 space-y-2">
+    <div className="space-y-2 border-t border-border bg-panel/80 p-3.5 backdrop-blur-sm sm:p-4">
       {/* Insufficient credits banner */}
       {isOutOfCredits && (
-        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/25 text-foreground text-xs font-medium animate-fadeIn">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-warning/25 bg-warning/10 px-3 py-2 text-xs font-medium text-foreground motion-safe:animate-fadeIn">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+            <Zap className="size-4 shrink-0 text-warning" />
             <span>
               You have 0 credits remaining. Chats cost 1 credit each.
             </span>
@@ -140,7 +140,7 @@ export function ChatInput({
                 currentCredits: credits,
               })
             }
-            className="font-semibold text-xs gap-1 shadow-xs cursor-pointer"
+            className="gap-1 text-xs font-semibold shadow-[var(--shadow-panel)]"
           >
             Top Up Credits
           </Button>
@@ -150,15 +150,15 @@ export function ChatInput({
 
       <div
         className={cn(
-          "rounded-2xl p-[1.5px] transition-all duration-300",
+          "rounded-2xl p-[1.5px] transition-colors duration-300 motion-reduce:transition-none",
           isEnhancing
-            ? "bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_45%,#ec4899_100%)] shadow-[0_0_24px_rgba(139,92,246,0.25)]"
-            : "bg-border focus-within:bg-zinc-400 dark:focus-within:bg-zinc-600 has-[:focus]:bg-zinc-400 dark:has-[:focus]:bg-zinc-600",
+            ? "bg-brand/50 shadow-[var(--shadow-lift)]"
+            : "bg-border focus-within:bg-brand/50 has-[:focus]:bg-brand/50",
         )}
       >
       <form
         onSubmit={handleSubmit}
-        className="relative rounded-[calc(1rem-1px)] bg-card shadow-lg p-3 space-y-2.5"
+        className="relative space-y-2.5 rounded-[calc(1rem-1px)] bg-panel p-3 shadow-[var(--shadow-panel)]"
       >
         {/* Text input area */}
         <textarea
@@ -180,7 +180,8 @@ export function ChatInput({
           }
           rows={1}
           disabled={isStreaming || isOutOfCredits}
-          className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none resize-none max-h-44 leading-relaxed font-sans disabled:opacity-60 disabled:cursor-not-allowed"
+          aria-label="Chat message"
+          className="w-full resize-none bg-transparent font-sans text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
         />
 
         {/* Bottom toolbar */}
@@ -191,11 +192,12 @@ export function ChatInput({
               type="button"
               onClick={onToggleWebSearch}
               title="Toggle Tavily live web search"
+              aria-pressed={webSearchEnabled}
               className={cn(
-                "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer",
+                "flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-colors motion-reduce:transition-none",
                 webSearchEnabled
-                  ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                  : "bg-muted/70 border-border text-muted-foreground hover:text-foreground"
+                  ? "border-primary bg-primary text-primary-foreground shadow-[var(--shadow-panel)]"
+                  : "border-border bg-brand-soft/60 text-brand hover:bg-brand-soft"
               )}
             >
               <Globe className="w-3 h-3" />
@@ -206,11 +208,11 @@ export function ChatInput({
           <div className="flex items-center gap-1.5">
             {isEnhancing && (
               <div
-                className="flex items-center justify-center w-8 h-8 rounded-full bg-muted/80 border border-border"
+                className="flex size-8 items-center justify-center rounded-full border border-border bg-brand-soft"
                 aria-label="Enhancing prompt"
                 aria-busy="true"
               >
-                <LoaderCircle className="w-4 h-4 text-muted-foreground animate-spin" />
+                <LoaderCircle className="size-4 text-brand motion-safe:animate-spin" />
               </div>
             )}
 
@@ -224,10 +226,10 @@ export function ChatInput({
                     : "Improve clarity with Gemini"
                 }
                 className={cn(
-                  "px-2.5 py-1 rounded-md text-[11px] font-medium border border-[#2a2a2a] dark:border-[#333333] transition-colors",
+                  "rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium transition-colors motion-reduce:transition-none",
                   isEnhanced
-                    ? "bg-muted/50 text-foreground hover:bg-muted/80"
-                    : "bg-transparent text-muted-foreground hover:text-foreground",
+                    ? "bg-brand-soft text-brand hover:bg-brand-soft/80"
+                    : "bg-transparent text-muted-foreground hover:text-brand",
                 )}
               >
                 {isEnhanced ? "Revert" : "Enhance prompt"}
@@ -240,7 +242,7 @@ export function ChatInput({
               type="button"
               onClick={onStopStreaming}
               title="Stop generating"
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-foreground text-background hover:opacity-90 active:scale-95 transition-all shadow-md cursor-pointer"
+              className="flex size-8 items-center justify-center rounded-full bg-foreground text-background shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
             >
               <span className="w-2.5 h-2.5 rounded-[2px] bg-background" />
             </button>
@@ -249,7 +251,7 @@ export function ChatInput({
               type="submit"
               disabled={!input.trim() || isOutOfCredits}
               title={isOutOfCredits ? "Top up credits to send messages" : "Send message (1 credit)"}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-primary hover:opacity-90 active:scale-95 text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
+              className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
             >
               <ArrowUp className="w-4 h-4 stroke-[2.5]" />
             </button>

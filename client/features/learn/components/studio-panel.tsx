@@ -9,9 +9,9 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
-  Crown,
   Coins,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { AudioLinesIcon } from "@/components/ui/audio-lines";
 import {
@@ -51,8 +51,8 @@ const STUDIO_TOOLS: {
     renderIcon: (isHovered) => (
       <AudioLinesIcon
         size={16}
-        className={`text-zinc-800 dark:text-zinc-200 transition-transform ${
-          isHovered ? "scale-110" : ""
+        className={`text-primary transition-transform motion-reduce:transition-none ${
+          isHovered ? "scale-110 motion-reduce:scale-100" : ""
         }`}
       />
     ),
@@ -65,7 +65,7 @@ const STUDIO_TOOLS: {
       <AnimatedBookOpen
         size={16}
         isHovered={isHovered}
-        className="text-zinc-800 dark:text-zinc-200"
+        className="text-primary"
       />
     ),
   },
@@ -77,7 +77,7 @@ const STUDIO_TOOLS: {
       <AnimatedListChecks
         size={16}
         isHovered={isHovered}
-        className="text-zinc-800 dark:text-zinc-200"
+        className="text-primary"
       />
     ),
   },
@@ -89,7 +89,7 @@ const STUDIO_TOOLS: {
       <AnimatedLayers
         size={16}
         isHovered={isHovered}
-        className="text-zinc-800 dark:text-zinc-200"
+        className="text-primary"
       />
     ),
   },
@@ -101,7 +101,7 @@ const STUDIO_TOOLS: {
       <AnimatedHelpCircle
         size={16}
         isHovered={isHovered}
-        className="text-zinc-800 dark:text-zinc-200"
+        className="text-primary"
       />
     ),
   },
@@ -113,11 +113,32 @@ const STUDIO_TOOLS: {
       <AnimatedNetwork
         size={16}
         isHovered={isHovered}
-        className="text-zinc-800 dark:text-zinc-200"
+        className="text-primary"
       />
     ),
   },
 ];
+
+function formatArtifactType(type: ArtifactType) {
+  switch (type) {
+    case "PODCAST":
+      return "Audio podcast";
+    case "TAKEAWAYS":
+      return "Key takeaways";
+    case "FLASHCARDS":
+      return "Flashcards";
+    case "QUIZ":
+      return "Practice quiz";
+    case "MINDMAP":
+      return "Mind map";
+    case "DIAGRAM":
+      return "Diagram";
+    case "REPORT":
+      return "Report";
+    default:
+      return "Summary";
+  }
+}
 
 export function StudioPanel({
   artifacts,
@@ -162,8 +183,8 @@ export function StudioPanel({
 
     return (
       <div className="flex items-center gap-1">
-        <span className="flex items-center gap-1 text-[10px] text-destructive bg-destructive/10 px-1.5 py-0.5 rounded border border-destructive/30">
-          <AlertCircle className="w-2.5 h-2.5" />
+        <span className="inline-flex items-center gap-1 rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-[10px] font-medium text-danger">
+          <AlertCircle className="size-2.5" />
           Failed
         </span>
         {onRetryArtifact && (
@@ -175,10 +196,13 @@ export function StudioPanel({
             }}
             disabled={isThisRetrying}
             title="Retry generation"
-            className="flex items-center gap-1 text-[10px] font-medium text-foreground bg-muted hover:bg-muted/80 px-2 py-0.5 rounded border border-border disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium text-foreground transition-colors hover:bg-brand-soft disabled:opacity-50 motion-reduce:transition-none"
           >
             <RefreshCw
-              className={cn("w-2.5 h-2.5", isThisRetrying && "animate-spin")}
+              className={cn(
+                "size-2.5",
+                isThisRetrying && "animate-spin motion-reduce:animate-none"
+              )}
             />
             Retry
           </button>
@@ -190,56 +214,61 @@ export function StudioPanel({
   const getTypeIcon = (type: ArtifactType) => {
     switch (type) {
       case "PODCAST":
-        return <AudioLinesIcon size={14} className="text-zinc-800 dark:text-zinc-200" />;
+        return <AudioLinesIcon size={14} className="text-primary" />;
       case "SUMMARY":
-        return <AnimatedBookOpen size={14} className="text-zinc-800 dark:text-zinc-200" />;
+        return <AnimatedBookOpen size={14} className="text-primary" />;
       case "FLASHCARDS":
-        return <AnimatedLayers size={14} className="text-zinc-800 dark:text-zinc-200" />;
+        return <AnimatedLayers size={14} className="text-primary" />;
       case "QUIZ":
-        return <AnimatedHelpCircle size={14} className="text-zinc-800 dark:text-zinc-200" />;
+        return <AnimatedHelpCircle size={14} className="text-primary" />;
       case "MINDMAP":
-        return <AnimatedNetwork size={14} className="text-zinc-800 dark:text-zinc-200" />;
+        return <AnimatedNetwork size={14} className="text-primary" />;
       case "TAKEAWAYS":
-        return <AnimatedListChecks size={14} className="text-zinc-800 dark:text-zinc-200" />;
+        return <AnimatedListChecks size={14} className="text-primary" />;
       case "REPORT":
-        return <AnimatedFileText size={14} className="text-zinc-800 dark:text-zinc-200" />;
+        return <AnimatedFileText size={14} className="text-primary" />;
       default:
-        return <AnimatedBookOpen size={14} className="text-zinc-800 dark:text-zinc-200" />;
+        return <AnimatedBookOpen size={14} className="text-primary" />;
     }
   };
 
   return (
-    <div className="h-full flex flex-col bg-card border-l border-border text-foreground select-none">
+    <div className="flex h-full min-h-0 flex-col bg-panel text-foreground select-none">
       {/* Studio Header */}
-      <div className="p-3.5 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-            Studio
-          </span>
-          <span className="px-1.5 py-0.2 bg-muted text-[11px] rounded text-muted-foreground font-mono">
-            {artifacts.length}
-          </span>
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3.5 sm:px-5">
+        <div className="flex items-center gap-2.5">
+          <div className="kairos-inset flex size-8 items-center justify-center rounded-xl text-primary">
+            <Sparkles className="size-4" />
+          </div>
+          <div>
+            <p className="kairos-eyebrow">Kairos Studio</p>
+            <p className="text-[11px] text-muted-foreground">Artifact workspace</p>
+          </div>
+          <span className="kairos-tag font-mono">{artifacts.length}</span>
         </div>
 
-        <span className="text-[11px] text-muted-foreground font-mono">
-          Learning Tools
+        <span className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground sm:block">
+          generate · review · revisit
         </span>
       </div>
 
       {/* Main Studio Scroll Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4 sm:p-5">
         {/* Quick Tools Section */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Generate from Sources
-            </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="kairos-eyebrow">Create from sources</p>
+              <h3 className="kairos-section-title mt-1 text-base">
+                Choose an artifact
+              </h3>
+            </div>
             {selectedSourcesCount === 0 ? (
-              <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md font-medium border border-amber-500/20 animate-fadeIn">
+              <span className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-[10px] font-medium text-warning animate-fadeIn motion-reduce:animate-none">
                 Select sources to enable
               </span>
             ) : (
-              <span className="text-[10px] text-muted-foreground font-mono">
+              <span className="kairos-tag font-mono">
                 {selectedSourcesCount} selected
               </span>
             )}
@@ -252,9 +281,9 @@ export function StudioPanel({
               const hasInsufficientCredits = credits < requiredCost;
 
               const cardContent = (
-                <div className="p-3 flex flex-col justify-between h-full w-full">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-7 h-7 rounded-lg bg-muted border border-border flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+                <div className="flex h-full w-full flex-col justify-between p-3.5">
+                  <div className="mb-3 flex items-start justify-between gap-2">
+                    <div className="flex size-8 items-center justify-center rounded-xl border border-border bg-brand-quiet text-primary transition-colors motion-reduce:transition-none">
                       {isThisGenerating ? (
                         <ThemeLoader size={16} />
                       ) : (
@@ -263,22 +292,22 @@ export function StudioPanel({
                     </div>
                     <span
                       className={cn(
-                        "text-[9px] font-semibold px-1.5 py-0.5 rounded-sm border flex items-center gap-1 font-mono",
+                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-semibold",
                         tool.type === "PODCAST"
-                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                          : "bg-muted text-muted-foreground border-border"
+                          ? "border-warning/30 bg-warning/10 text-warning"
+                          : "border-border bg-muted/60 text-muted-foreground"
                       )}
                     >
-                      <Coins className="w-2.5 h-2.5 text-amber-500" />
+                      <Coins className="size-2.5 text-warning" />
                       {requiredCost} cr
                     </span>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-foreground block truncate">
+                    <span className="block truncate text-xs font-semibold text-foreground">
                       {tool.title}
                     </span>
-                    <span className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
-                      {isThisGenerating ? "Generating..." : tool.desc}
+                    <span className="mt-0.5 line-clamp-2 text-[10px] leading-relaxed text-muted-foreground">
+                      {isThisGenerating ? "Generating…" : tool.desc}
                     </span>
                   </div>
                 </div>
@@ -290,8 +319,8 @@ export function StudioPanel({
                     key={tool.type}
                     borderRadius="0.75rem"
                     duration={2000}
-                    className="bg-card text-left"
-                    containerClassName="w-full h-full min-h-[92px]"
+                    className="bg-brand-quiet/40 text-left"
+                    containerClassName="h-full min-h-[104px] w-full"
                   >
                     {cardContent}
                   </MovingBorderCard>
@@ -313,34 +342,35 @@ export function StudioPanel({
                       ? `${tool.title} requires ${requiredCost} credits (Current balance: ${credits})`
                       : `Generate ${tool.title} (${requiredCost} credits)`
                   }
+                  aria-label={`Generate ${tool.title}`}
                   className={cn(
-                    "p-3 rounded-xl border text-left transition-all flex flex-col justify-between group min-h-[92px]",
+                    "group flex min-h-[104px] flex-col justify-between rounded-2xl border p-3.5 text-left transition-all motion-reduce:transition-none",
                     !hasInsufficientCredits && selectedSourcesCount === 0
-                      ? "border-border/60 bg-muted/20 opacity-40 cursor-not-allowed select-none"
-                      : "border-border bg-card hover:bg-muted/40 hover:border-zinc-400 dark:hover:border-zinc-600 active:scale-[0.99] cursor-pointer"
+                      ? "border-border bg-muted/20 opacity-45 shadow-none cursor-not-allowed select-none"
+                      : "kairos-card border-border bg-surface hover:border-brand/40 hover:bg-brand-quiet/60 active:scale-[0.99] motion-reduce:active:scale-100"
                   )}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-7 h-7 rounded-lg bg-muted border border-border flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+                  <div className="mb-3 flex items-start justify-between gap-2">
+                    <div className="flex size-8 items-center justify-center rounded-xl border border-border bg-brand-quiet text-primary transition-colors motion-reduce:transition-none group-hover:bg-brand-soft">
                       {tool.renderIcon(hoveredTool === tool.type)}
                     </div>
                     <span
                       className={cn(
-                        "text-[9px] font-semibold px-1.5 py-0.5 rounded-sm border flex items-center gap-1 font-mono",
+                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9px] font-semibold",
                         tool.type === "PODCAST"
-                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                          : "bg-muted text-muted-foreground border-border"
+                          ? "border-warning/30 bg-warning/10 text-warning"
+                          : "border-border bg-muted/60 text-muted-foreground"
                       )}
                     >
-                      <Coins className="w-2.5 h-2.5 text-amber-500" />
+                      <Coins className="size-2.5 text-warning" />
                       {requiredCost} cr
                     </span>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-foreground block truncate">
+                    <span className="block truncate text-xs font-semibold text-foreground">
                       {tool.title}
                     </span>
-                    <span className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">
+                    <span className="mt-0.5 line-clamp-2 text-[10px] leading-relaxed text-muted-foreground">
                       {tool.desc}
                     </span>
                   </div>
@@ -353,15 +383,26 @@ export function StudioPanel({
 
         {/* Artifacts History List */}
         <div className="space-y-3 pt-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Created Artifacts ({artifacts.length})
-          </h3>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="kairos-eyebrow">Your library</p>
+              <h3 className="kairos-section-title mt-1 text-base">
+                Created artifacts
+              </h3>
+            </div>
+            <span className="kairos-tag font-mono">{artifacts.length}</span>
+          </div>
 
           {artifacts.length === 0 ? (
-            <div className="p-6 text-center border border-dashed border-border rounded-2xl text-muted-foreground space-y-1 bg-card">
-              <p className="text-xs font-medium text-foreground">No artifacts generated yet</p>
-              <p className="text-[11px] text-muted-foreground max-w-50 mx-auto">
-                Click any tool above to synthesize notes, quizzes, or flashcards.
+            <div className="kairos-inset space-y-2 rounded-2xl px-5 py-7 text-center text-muted-foreground">
+              <div className="mx-auto flex size-9 items-center justify-center rounded-xl bg-brand-soft text-primary">
+                <Sparkles className="size-4" />
+              </div>
+              <p className="text-xs font-semibold text-foreground">
+                No artifacts yet
+              </p>
+              <p className="mx-auto max-w-56 text-[11px] leading-relaxed">
+                Choose a tool above to turn your sources into study material.
               </p>
             </div>
           ) : (
@@ -373,32 +414,32 @@ export function StudioPanel({
                   artifact.status === "PROCESSING";
 
                 const artifactCardBody = (
-                  <div className="p-3 flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className="w-7 h-7 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
+                  <div className="flex w-full items-center justify-between gap-2 p-3.5">
+                    <div className="flex min-w-0 items-center gap-2.5 pr-2">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border bg-brand-quiet text-primary">
                         {getTypeIcon(artifact.type)}
                       </div>
 
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">
+                        <p className="truncate text-xs font-semibold text-foreground">
                           {artifact.title}
                         </p>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
-                          <span className="font-mono">{artifact.type}</span>
-                          <span>•</span>
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <span>{formatArtifactType(artifact.type)}</span>
+                          <span aria-hidden="true">·</span>
                           <span className="flex items-center gap-1">
-                            <Clock className="w-2.5 h-2.5" />
+                            <Clock className="size-2.5" />
                             {formatDate(artifact.createdAt)}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       {isPending && (
-                        <span className="flex items-center gap-1.5 text-[10px] text-amber-700 dark:text-amber-300 font-medium bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
                           <ThemeLoader size={12} />
-                          Generating...
+                          Generating…
                         </span>
                       )}
 
@@ -407,8 +448,8 @@ export function StudioPanel({
 
                       {isReady && (
                         <div className="flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground opacity-60" />
-                          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                          <CheckCircle2 className="size-3.5 text-success/80" />
+                          <ChevronRight className="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground motion-reduce:transition-none" />
                         </div>
                       )}
 
@@ -421,9 +462,10 @@ export function StudioPanel({
                           }
                         }}
                         title="Delete artifact"
-                        className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-opacity rounded cursor-pointer"
+                        aria-label={`Delete ${artifact.title}`}
+                        className="rounded-lg p-1.5 text-muted-foreground opacity-60 transition-colors hover:bg-danger/10 hover:text-danger focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 motion-reduce:transition-none"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="size-3.5" />
                       </button>
                     </div>
                   </div>
@@ -435,7 +477,7 @@ export function StudioPanel({
                       key={artifact.id}
                       borderRadius="0.75rem"
                       duration={2200}
-                      className="bg-card"
+                      className="bg-brand-quiet/40"
                       containerClassName="w-full"
                     >
                       {artifactCardBody}
@@ -447,43 +489,44 @@ export function StudioPanel({
                   <div
                     key={artifact.id}
                     className={cn(
-                      "group p-3 rounded-xl border transition-all flex items-center justify-between select-none",
+                      "group flex items-center justify-between rounded-2xl border p-3.5 transition-all select-none motion-reduce:transition-none",
                       isReady
-                        ? "border-border hover:border-zinc-400 dark:hover:border-zinc-600 bg-card hover:bg-muted/40 cursor-pointer"
-                        : "border-border bg-muted/20"
+                        ? "kairos-card border-border bg-surface hover:border-brand/40 hover:bg-brand-quiet/50 cursor-pointer"
+                        : "border-border bg-muted/20 shadow-none"
                     )}
+                    title={isReady ? `Open ${artifact.title}` : undefined}
                     onClick={() => {
                       if (isReady) setSelectedArtifact(artifact);
                     }}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className="w-7 h-7 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
+                    <div className="flex min-w-0 items-center gap-2.5 pr-2">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-border bg-brand-quiet text-primary">
                         {getTypeIcon(artifact.type)}
                       </div>
 
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">
+                        <p className="truncate text-xs font-semibold text-foreground">
                           {artifact.title}
                         </p>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
-                          <span className="font-mono">{artifact.type}</span>
-                          <span>•</span>
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <span>{formatArtifactType(artifact.type)}</span>
+                          <span aria-hidden="true">·</span>
                           <span className="flex items-center gap-1">
-                            <Clock className="w-2.5 h-2.5" />
+                            <Clock className="size-2.5" />
                             {formatDate(artifact.createdAt)}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       {artifact.status === "FAILED" &&
                         renderFailedActions(artifact.id)}
 
                       {isReady && (
                         <div className="flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground opacity-60" />
-                          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                          <CheckCircle2 className="size-3.5 text-success/80" />
+                          <ChevronRight className="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground motion-reduce:transition-none" />
                         </div>
                       )}
 
@@ -496,9 +539,10 @@ export function StudioPanel({
                           }
                         }}
                         title="Delete artifact"
-                        className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-opacity rounded cursor-pointer"
+                        aria-label={`Delete ${artifact.title}`}
+                        className="rounded-lg p-1.5 text-muted-foreground opacity-60 transition-colors hover:bg-danger/10 hover:text-danger focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 motion-reduce:transition-none"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="size-3.5" />
                       </button>
                     </div>
                   </div>

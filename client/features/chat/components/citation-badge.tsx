@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { Citation } from "../types";
 import { FileText, Globe, ExternalLink } from "lucide-react";
 
@@ -11,13 +11,17 @@ interface CitationBadgeProps {
 
 export function CitationBadge({ citation, index }: CitationBadgeProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const popoverId = useId();
 
   return (
     <span className="relative inline-block align-baseline mx-0.5">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-medium border border-zinc-300 dark:border-zinc-700 transition-colors cursor-pointer"
+        aria-expanded={isOpen}
+        aria-controls={popoverId}
+        aria-label={`Source citation ${index + 1}`}
+        className="inline-flex h-4 min-w-4 items-center justify-center rounded border border-brand/25 bg-brand-soft px-1 font-mono text-[10px] font-medium text-brand transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
         title={citation.sourceTitle || "Source Citation"}
       >
         {index + 1}
@@ -29,7 +33,10 @@ export function CitationBadge({ citation, index }: CitationBadgeProps) {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute left-0 bottom-full mb-2 w-72 p-3 bg-card border border-border text-foreground rounded-xl shadow-2xl z-50 text-left space-y-2 animate-fadeIn">
+          <div
+            id={popoverId}
+            className="kairos-panel absolute bottom-full left-0 z-50 mb-2 w-72 space-y-2 p-3 text-left text-foreground motion-safe:animate-fadeIn"
+          >
             <div className="flex items-center justify-between gap-2 border-b border-border pb-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 {citation.url ? (
@@ -57,7 +64,7 @@ export function CitationBadge({ citation, index }: CitationBadgeProps) {
                 href={citation.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline pt-1"
+                className="inline-flex items-center gap-1 pt-1 text-[11px] text-brand hover:underline"
               >
                 <span>Open original link</span>
                 <ExternalLink className="w-3 h-3" />

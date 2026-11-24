@@ -127,53 +127,59 @@ export function ArtifactModal({ artifact, onClose }: ArtifactModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 backdrop-blur-sm sm:p-6"
       onMouseDown={(e) => dismissOnBackdropClick(e, onClose)}
     >
-      <div className="w-full max-w-4xl max-h-[90vh] bg-card border border-border rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-fadeIn text-foreground">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${artifact.title} artifact`}
+        className="kairos-panel flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden animate-fadeIn text-foreground motion-reduce:animate-none"
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-          <div className="flex items-center gap-3 min-w-0 pr-4">
-            <div className="w-9 h-9 rounded-xl bg-muted border border-border flex items-center justify-center shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-panel/80 px-5 py-4 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3 pr-2">
+            <div className="kairos-inset flex size-10 shrink-0 items-center justify-center rounded-xl text-primary">
               {getTypeIcon()}
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-foreground truncate">
+              <h2 className="kairos-section-title truncate text-base sm:text-lg">
                 {artifact.title}
               </h2>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5 font-mono">
-                <span>{artifact.type === "PODCAST" ? "AUDIO PODCAST" : artifact.type}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1 font-sans">
-                  <Calendar className="w-3 h-3" />
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                <span className="kairos-tag font-mono">
+                  {artifact.type === "PODCAST" ? "Audio podcast" : artifact.type}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="size-3" />
                   {formatDate(artifact.createdAt)}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {/* Export to Notion */}
             <button
+              type="button"
               onClick={handleExportNotion}
-
               disabled={isExportingNotion}
-              title="1-Click Export to connected Notion Workspace"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground text-xs transition-colors cursor-pointer disabled:opacity-50"
+              title="Export to your connected Notion workspace"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-brand-soft hover:text-foreground disabled:opacity-50 motion-reduce:transition-none"
             >
               {isExportingNotion ? (
                 <ThemeLoader size={13} />
               ) : exportedNotionUrl ? (
-                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <Check className="size-3.5 text-success" />
               ) : (
-                <BookOpen className="w-3.5 h-3.5" />
+                <BookOpen className="size-3.5" />
               )}
               <span>
                 {isExportingNotion
-                  ? "Exporting..."
+                  ? "Exporting…"
                   : exportedNotionUrl
-                  ? "Exported!"
-                  : "Export Notion"}
+                  ? "Exported"
+                  : "Export to Notion"}
               </span>
             </button>
 
@@ -182,38 +188,41 @@ export function ArtifactModal({ artifact, onClose }: ArtifactModalProps) {
                 href={exportedNotionUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold hover:opacity-90 transition-opacity"
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 motion-reduce:transition-none"
               >
                 <span>Open</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="size-3" />
               </a>
             )}
 
             <button
+              type="button"
               onClick={handleCopyMarkdown}
-              title="Copy content"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground text-xs transition-colors cursor-pointer"
+              title="Copy artifact content"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-brand-soft hover:text-foreground motion-reduce:transition-none"
             >
               {copied ? (
-                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <Check className="size-3.5 text-success" />
               ) : (
-                <Copy className="w-3.5 h-3.5" />
+                <Copy className="size-3.5" />
               )}
               <span>{copied ? "Copied" : "Copy"}</span>
             </button>
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              aria-label="Close artifact"
+              className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-foreground motion-reduce:transition-none"
             >
-              <X className="w-4 h-4" />
+              <X className="size-4" />
             </button>
           </div>
         </div>
 
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-brand-quiet/30 p-4 sm:p-6">
           {/* Podcast Debate View */}
           {artifact.type === "PODCAST" && (
             <PodcastViewer
@@ -250,6 +259,21 @@ export function ArtifactModal({ artifact, onClose }: ArtifactModalProps) {
           {/* Mindmap Nodes View */}
           {(artifact.type === "MINDMAP" || artifact.type === "DIAGRAM") && (
             <MindmapViewer content={artifact.content} />
+          )}
+
+          {((artifact.type === "FLASHCARDS" && !artifact.content?.cards) ||
+            (artifact.type === "QUIZ" && !artifact.content?.questions)) && (
+            <div className="kairos-inset space-y-2 px-5 py-8 text-center">
+              <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
+                <FileText className="size-5" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                No reviewable content yet
+              </p>
+              <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
+                This artifact was created, but its content isn’t available in this view.
+              </p>
+            </div>
           )}
         </div>
       </div>

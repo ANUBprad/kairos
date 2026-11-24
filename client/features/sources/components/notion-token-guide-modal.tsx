@@ -20,21 +20,22 @@ export function NotionTokenGuideModal({
       className="fixed inset-0 z-60 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
       onMouseDown={(e) => dismissOnBackdropClick(e, onClose)}
     >
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-4 animate-fadeIn text-foreground relative">
+      <div className="kairos-panel relative max-h-[calc(100vh-2rem)] w-full max-w-md animate-fadeIn space-y-4 overflow-y-auto p-6 text-foreground shadow-[var(--shadow-lift)] motion-reduce:animate-none">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-foreground" />
-            <h3 className="text-xs font-bold text-foreground">
-              How to Get Your Notion Token
+            <BookOpen className="size-4 text-brand" aria-hidden="true" />
+            <h3 className="kairos-section-title text-sm text-primary">
+              How to get your Notion token
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            aria-label="Close Notion token guide"
+            className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-brand-quiet hover:text-brand motion-reduce:transition-none"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" aria-hidden="true" />
           </button>
         </div>
 
@@ -42,11 +43,11 @@ export function NotionTokenGuideModal({
         <div className="space-y-3 text-xs">
           {/* Step 1 */}
           <div className="flex items-start gap-2.5">
-            <div className="w-5 h-5 rounded-full bg-foreground text-background text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+            <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
               1
             </div>
             <div className="space-y-0.5">
-              <p className="font-semibold text-foreground">
+              <p className="font-semibold text-primary">
                 Create an Integration
               </p>
               <p className="text-[11px] text-muted-foreground">
@@ -55,53 +56,53 @@ export function NotionTokenGuideModal({
                   href="https://www.notion.so/my-integrations"
                   target="_blank"
                   rel="noreferrer"
-                  className="underline hover:text-foreground inline-flex items-center gap-0.5 font-medium text-foreground"
+                  className="inline-flex items-center gap-0.5 font-medium text-brand underline underline-offset-4 hover:text-primary"
                 >
                   notion.so/my-integrations
-                  <ExternalLink className="w-2.5 h-2.5" />
+                  <ExternalLink className="size-2.5" aria-hidden="true" />
                 </a>{" "}
-                and click <strong>&quot;+ New integration&quot;</strong>. Name it <em>OpenBook</em>.
+                and click <strong>&quot;+ New integration&quot;</strong>. Name it <em>Kairos</em>.
               </p>
             </div>
           </div>
 
           {/* Step 2 */}
           <div className="flex items-start gap-2.5">
-            <div className="w-5 h-5 rounded-full bg-foreground text-background text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+            <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
               2
             </div>
             <div className="space-y-0.5">
-              <p className="font-semibold text-foreground">
+              <p className="font-semibold text-primary">
                 Connect Notion Pages
               </p>
               <p className="text-[11px] text-muted-foreground">
-                In Notion, open any page you want to access, click the top-right <strong>···</strong> menu ➔ <strong>Connections</strong> ➔ select <em>OpenBook</em>.
+                In Notion, open any page you want to access, click the top-right <strong>···</strong> menu ➔ <strong>Connections</strong> ➔ select <em>Kairos</em>.
               </p>
             </div>
           </div>
 
           {/* Step 3 */}
           <div className="flex items-start gap-2.5">
-            <div className="w-5 h-5 rounded-full bg-foreground text-background text-[11px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+            <div className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
               3
             </div>
             <div className="space-y-0.5">
-              <p className="font-semibold text-foreground">
+              <p className="font-semibold text-primary">
                 Copy Secret Token
               </p>
               <p className="text-[11px] text-muted-foreground">
-                Under <strong>Secrets</strong>, copy the <strong>Internal Integration Secret</strong> (starts with <code className="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">secret_...</code>) and paste it into OpenBook.
+                Under <strong>Secrets</strong>, copy the <strong>Internal Integration Secret</strong> (starts with <code className="rounded bg-brand-quiet px-1 py-0.5 font-mono text-[10px] text-brand">secret_...</code>) and paste it into Kairos.
               </p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="pt-2 border-t border-border flex justify-end">
+        <div className="flex justify-end border-t border-border pt-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 bg-foreground text-background text-xs font-semibold rounded-xl hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+            className="cursor-pointer rounded-xl bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
           >
             Got it
           </button>

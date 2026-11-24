@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { OpenBookLogo } from "@/features/auth";
+import { KairosLogo } from "@/components/brand/kairos-logo";
 
 export function LandingFooter() {
   return (
@@ -11,7 +11,7 @@ export function LandingFooter() {
         {/* Brand & Tagline */}
         <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
           <Link href="/">
-            <OpenBookLogo size={22} textSize="text-base" textColor="text-foreground" />
+            <KairosLogo size={22} textSize="text-base" textColor="text-foreground" />
           </Link>
           <span className="hidden sm:inline text-border">|</span>
           <p className="text-xs text-muted-foreground">
@@ -34,7 +34,7 @@ export function LandingFooter() {
             Sign In
           </Link>
           <span className="text-zinc-600 dark:text-zinc-400">
-            &copy; {new Date().getFullYear()} OpenBook. All rights reserved.
+            &copy; {new Date().getFullYear()} Kairos. All rights reserved.
           </span>
         </div>
       </div>

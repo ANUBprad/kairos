@@ -18,14 +18,14 @@ export function ThemeBlob({ size = 20, className }: ThemeBlobProps) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/bloub.gif"
-        alt="OpenBook AI"
+        alt="Kairos AI"
         className="w-full h-full object-contain block dark:hidden select-none pointer-events-none"
       />
       {/* Dark theme: uses bloub-light.gif on dark background */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/bloub.gif"
-        alt="OpenBook AI"
+        alt="Kairos AI"
         className="w-full h-full object-contain hidden dark:block select-none pointer-events-none"
       />
     </span>

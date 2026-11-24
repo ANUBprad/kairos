@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Coins, Plus } from "lucide-react";
+import { Coins, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -41,36 +41,40 @@ export function InsufficientCreditsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md bg-background text-foreground border-border rounded-2xl shadow-xl">
-        <DialogHeader className="flex flex-col items-center text-center pt-2">
-          <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-3 border border-rose-500/20">
-            <Coins className="w-6 h-6 animate-pulse" />
+      <DialogContent className="kairos-panel max-w-md bg-surface text-foreground">
+        <DialogHeader className="flex flex-col items-center pt-2 text-center">
+          <div className="kairos-inset mb-3 flex size-12 items-center justify-center border-danger/20 bg-danger/10 text-danger">
+            <Coins className="size-6" />
           </div>
-          <DialogTitle className="text-xl font-semibold tracking-tight">
-            Insufficient Credits
+          <DialogTitle className="kairos-section-title text-2xl">
+            Not enough credits
           </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground mt-1 text-center">
-            You don't have enough credits to complete {actionName}.
+          <DialogDescription className="mt-1 text-center text-sm text-muted-foreground">
+            You don&apos;t have enough credits to complete {actionName}.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-4 rounded-xl bg-muted/40 border border-border/60 my-2 space-y-2.5">
+        <div className="kairos-inset my-2 space-y-2.5 p-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Required Credits:</span>
-            <span className="font-semibold text-foreground">{requiredCredits} credits</span>
+            <span className="text-muted-foreground">Required credits</span>
+            <span className="font-semibold text-foreground">
+              {requiredCredits} credits
+            </span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Your Balance:</span>
-            <span className="font-semibold text-foreground">{currentCredits} credits</span>
+            <span className="text-muted-foreground">Your balance</span>
+            <span className="font-semibold text-foreground">
+              {currentCredits} credits
+            </span>
           </div>
-          <div className="h-px bg-border/60 my-1" />
+          <div className="my-1 h-px bg-border" />
           <div className="flex items-center justify-between text-sm">
-            <span className="text-rose-600 dark:text-rose-400 font-medium">Credits Needed:</span>
-            <span className="font-bold text-rose-600 dark:text-rose-400">+{deficit} credits</span>
+            <span className="font-medium text-danger">Credits needed</span>
+            <span className="font-bold text-danger">+{deficit} credits</span>
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-2">
+        <DialogFooter className="mt-2 flex flex-col gap-2 sm:flex-row">
           <Button
             type="button"
             variant="outline"
@@ -82,10 +86,10 @@ export function InsufficientCreditsDialog({
           <Button
             type="button"
             onClick={handleTopUp}
-            className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5"
+            className="w-full gap-1.5 sm:w-auto"
           >
-            <Plus className="w-4 h-4" />
-            <span>Top Up Credits (Min ₹50)</span>
+            <Plus className="size-4" />
+            <span>Top up credits (min ₹50)</span>
           </Button>
         </DialogFooter>
       </DialogContent>

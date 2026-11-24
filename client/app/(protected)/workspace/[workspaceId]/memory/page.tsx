@@ -12,7 +12,7 @@ export default function WorkspaceMemoryPage({
   const { workspaceId } = use(params);
 
   return (
-    <WorkspacePageShell workspaceId={workspaceId} sectionLabel="Memory">
+    <WorkspacePageShell workspaceId={workspaceId} sectionLabel="Memory & Insights">
       <MemorySettingsView workspaceId={workspaceId} />
     </WorkspacePageShell>
   );

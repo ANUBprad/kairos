@@ -59,56 +59,59 @@ export function SourcesPanel({
     sources.length > 0 && selectedSourceIds.length === sources.length;
 
   return (
-    <div className="h-full flex flex-col bg-card border-r border-border text-foreground select-none">
+    <div className="flex h-full select-none flex-col border-r border-border bg-panel text-foreground">
       {/* Header */}
-      <div className="p-3.5 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-foreground" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-            Sources
-          </span>
-          <span className="px-1.5 py-0.2 bg-muted text-[11px] rounded text-muted-foreground font-mono">
-            {sources.length}
-          </span>
+      <div className="flex items-center justify-between border-b border-border p-3.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <Layers className="size-4 text-brand" />
+          <span className="kairos-eyebrow">Sources</span>
+          <span className="kairos-tag font-mono">{sources.length}</span>
         </div>
 
         <button
+          type="button"
           onClick={() => setIsAddOpen(true)}
-          className="flex items-center gap-1 px-2.5 py-1 bg-primary hover:opacity-90 text-primary-foreground rounded-lg text-xs font-medium transition-colors shadow-xs"
+          aria-label="Add source"
+          className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="size-3.5" aria-hidden="true" />
           <span>Add</span>
         </button>
       </div>
 
       {/* Sub-header: Search & Select All toggle */}
-      <div className="p-3 border-b border-border space-y-2">
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+      <div className="space-y-2 border-b border-border bg-surface/60 p-3">
+        <label className="relative block">
+          <span className="sr-only">Search sources</span>
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search sources..."
-            className="w-full pl-8 pr-3 py-1 bg-muted/60 border border-border rounded-md text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="kairos-inset w-full py-1.5 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           />
-        </div>
+        </label>
 
         {sources.length > 0 && (
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground px-0.5">
+          <div className="flex items-center justify-between rounded-lg bg-brand-quiet px-2 py-1.5 text-[11px] text-muted-foreground">
             <button
+              type="button"
               onClick={allSelected ? onDeselectAll : onSelectAll}
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 transition-colors hover:text-brand motion-reduce:transition-none"
             >
               {allSelected ? (
-                <CheckSquare className="w-3.5 h-3.5 text-foreground" />
+                <CheckSquare className="size-3.5 text-brand" aria-hidden="true" />
               ) : (
-                <Square className="w-3.5 h-3.5 text-muted-foreground" />
+                <Square className="size-3.5" aria-hidden="true" />
               )}
               <span>{allSelected ? "Deselect all" : "Select all"}</span>
             </button>
 
-            <span className="font-mono text-muted-foreground">
+            <span className="kairos-tag px-1.5 py-0 font-mono text-[10px]">
               {selectedSourceIds.length}/{sources.length} active
             </span>
           </div>
@@ -118,31 +121,34 @@ export function SourcesPanel({
       {/* Sources List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-2" role="status" aria-label="Loading sources">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-14 rounded-xl bg-muted/40 border border-border animate-pulse"
+                className="kairos-panel h-14 animate-pulse motion-reduce:animate-none"
               />
             ))}
           </div>
         ) : filteredSources.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center p-6 text-center text-muted-foreground space-y-3">
-            <div className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground">
-              <FileBox className="w-5 h-5" />
+          <div className="flex h-full flex-col items-center justify-center space-y-3 p-6 text-center text-muted-foreground">
+            <div className="flex size-11 items-center justify-center rounded-full bg-brand-soft text-brand">
+              <FileBox className="size-5" aria-hidden="true" />
             </div>
-            <div>
-              <p className="text-xs font-medium text-foreground">No sources yet</p>
-              <p className="text-[11px] text-muted-foreground mt-1 max-w-45">
-                Add PDFs, websites, or YouTube links to ground this notebook.
+            <div className="space-y-1">
+              <p className="kairos-section-title text-sm text-primary">
+                No sources yet
+              </p>
+              <p className="mx-auto max-w-52 text-[11px] text-muted-foreground">
+                Add PDFs, websites, or YouTube links to ground this workspace.
               </p>
             </div>
             <button
+              type="button"
               onClick={() => setIsAddOpen(true)}
-              className="px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground rounded-lg text-xs font-medium transition-colors flex items-center gap-1 border border-border"
+              className="flex items-center gap-1 rounded-lg border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add First Source</span>
+              <Plus className="size-3.5" aria-hidden="true" />
+              <span>Add first source</span>
             </button>
           </div>
         ) : (

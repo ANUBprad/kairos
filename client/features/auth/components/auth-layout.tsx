@@ -1,57 +1,64 @@
 import React from "react";
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowUpRight, Layers3, Quote, Sparkles } from "lucide-react";
+import { KairosLogo } from "@/components/brand/kairos-logo";
 import { AuthForm } from "./auth-form";
 
 interface AuthLayoutProps {
   mode: "login" | "signup";
 }
 
+const PRINCIPLES = [
+  { icon: Quote, label: "Cited by default" },
+  { icon: Layers3, label: "One source library" },
+  { icon: Sparkles, label: "Study material on demand" },
+];
+
 export function AuthLayout({ mode }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen w-full bg-[#0a0a0c] text-foreground flex items-center justify-center p-3 sm:p-5 lg:p-6 select-none relative">
-      {/* Outer Shell container */}
-      <div className="w-full max-w-350 h-[calc(100vh-2rem)] min-h-160 max-h-230 rounded-8 sm:rounded-8 overflow-hidden border border-zinc-800/60 bg-black flex flex-col lg:flex-row shadow-2xl relative">
-        {/* Left Section - Cosmic Halftone Pillars Illustration */}
-        <div className="relative flex-1 hidden lg:flex flex-col justify-end p-10 xl:p-14 overflow-hidden bg-black">
-          {/* Background Artwork */}
-          <div className="absolute inset-0 z-0">
-            <Image
-              src="/login.jpg"
-              alt="Cosmic Pillars Halftone Illustration"
-              fill
-              sizes="(max-width: 1024px) 100vw, 60vw"
-              priority
-              className="object-cover object-center scale-[1.02] filter contrast-125 brightness-95"
-            />
-            {/* Subtle Gradient Shadow Vignette to ensure maximum text clarity */}
-            <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-transparent opacity-90" />
-            <div className="absolute inset-0 bg-linear-to-r from-black/20 via-transparent to-black/60" />
+    <main className="kairos-aurora flex min-h-screen w-full items-center justify-center bg-background p-3 text-foreground sm:p-5 lg:p-6">
+      <div className="kairos-panel relative flex w-full max-w-6xl flex-col overflow-hidden lg:flex-row">
+        <section className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-brand-quiet p-10 lg:flex xl:p-14">
+          <div className="kairos-grid pointer-events-none absolute inset-0 opacity-60" />
+          <div className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-brand/10 blur-3xl" />
+          <div className="relative z-10">
+            <KairosLogo size={28} textSize="text-xl" subtitle="Research workspace" />
           </div>
 
-          {/* Left Overlay Content */}
-          <div className="relative z-10 space-y-4 max-w-xl pb-2">
-            <h2 className="text-3xl xl:text-4xl font-normal tracking-tight text-white leading-snug">
-              Unlock insights with your documents and notes.
+          <div className="relative z-10 max-w-xl">
+            <span className="kairos-eyebrow">Evidence-first research</span>
+            <h2 className="kairos-display mt-4 text-[34px] xl:text-[42px]">
+              Good research deserves a trail you can follow.
             </h2>
-            <p className="text-xs xl:text-sm font-light text-zinc-400 tracking-wide flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span>10M+ Documents Analyzed</span>
-              <span className="text-zinc-600">|</span>
-              <span>2M+ User Notes</span>
-              <span className="text-zinc-600">|</span>
-              <span>500k+ Research Summaries Today.</span>
+            <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">
+              Bring your material in once. Ask questions, verify every answer, and
+              turn the same library into material you can study and share.
             </p>
+            <Link
+              href="/#workflow"
+              className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-brand-accent"
+            >
+              Explore the workflow
+              <ArrowUpRight className="size-4" />
+            </Link>
           </div>
-        </div>
 
-        {/* Right Section - Form Panel */}
-        <div className="w-full lg:w-120 xl:w-130 flex items-center justify-center bg-[#09090b] lg:p-4 z-10 shrink-0">
-          <div className="w-full h-full lg:h-auto max-w-110 lg:rounded-8 bg-[#f6efe7] dark:bg-[#121214] border-0 lg:border border-zinc-200/80 dark:border-zinc-800/80 shadow-xl flex items-center justify-center">
-            <React.Suspense fallback={<div className="min-h-160 w-full" />}>
-              <AuthForm initialMode={mode} />
-            </React.Suspense>
+          <div className="relative z-10 flex flex-wrap gap-2">
+            {PRINCIPLES.map((principle) => (
+              <span key={principle.label} className="kairos-tag">
+                <principle.icon className="size-3.5" />
+                {principle.label}
+              </span>
+            ))}
           </div>
-        </div>
+        </section>
+
+        <section className="flex w-full items-center justify-center bg-surface lg:w-125 xl:w-140">
+          <React.Suspense fallback={<div className="min-h-160 w-full" />}>
+            <AuthForm initialMode={mode} />
+          </React.Suspense>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

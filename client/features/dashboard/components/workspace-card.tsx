@@ -37,27 +37,28 @@ export function WorkspaceCard({
   return (
     <div
       className={cn(
-        "group relative h-44 rounded-xl border bg-card p-5 flex flex-col justify-between transition-all duration-200 shadow-xs",
-        isPinned
-          ? "border-primary/40 bg-card hover:border-primary/60"
-          : "border-border hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-muted/30"
+        "kairos-card group relative flex h-44 flex-col justify-between p-5",
+        isPinned && "outline-2 outline-offset-2 outline-brand/40"
       )}
     >
       <div>
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-base shrink-0">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <div className="kairos-inset flex h-9 w-9 shrink-0 items-center justify-center text-base">
               {workspace.icon || "📚"}
             </div>
-            <div className="min-w-0 flex-1 flex items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <Link
                 href={`/workspace/${workspace.id}`}
-                className="font-medium text-sm text-foreground hover:underline truncate"
+                className="kairos-section-title truncate text-sm text-foreground transition-colors hover:text-brand"
               >
                 {workspace.title}
               </Link>
               {isPinned && (
-                <Pin className="w-3 h-3 text-primary fill-primary shrink-0 rotate-45" />
+                <Pin
+                  className="h-3 w-3 shrink-0 rotate-45 fill-brand text-brand"
+                  aria-label="Pinned"
+                />
               )}
             </div>
           </div>
@@ -72,40 +73,42 @@ export function WorkspaceCard({
                 onMenuToggle(workspace.id);
               }}
               title="Notebook actions"
-              className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              aria-label="Notebook actions"
+              aria-expanded={isMenuOpen}
+              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand"
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="h-4 w-4" aria-hidden="true" />
             </button>
 
             {/* Action Dropdown Menu */}
             {isMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-border bg-card shadow-xl py-1.5 z-40 text-xs text-foreground animate-fadeIn">
+              <div className="kairos-panel absolute right-0 top-full z-40 mt-2 w-44 animate-fadeIn motion-reduce:animate-none p-1.5 text-xs text-foreground">
                 <button
                   type="button"
                   onClick={(e) => onEdit(workspace, e)}
-                  className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-muted transition-colors"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-brand-soft"
                 >
-                  <Edit3 className="w-3.5 h-3.5 text-muted-foreground" />
+                  <Edit3 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   <span>Edit Notebook</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={(e) => onTogglePin(workspace.id, e)}
-                  className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-muted transition-colors"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-brand-soft"
                 >
-                  <Pin className="w-3.5 h-3.5 text-muted-foreground" />
+                  <Pin className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   <span>{isPinned ? "Unpin from top" : "Pin to top"}</span>
                 </button>
 
-                <div className="h-px bg-border my-1" />
+                <div className="my-1 h-px bg-border" aria-hidden="true" />
 
                 <button
                   type="button"
                   onClick={(e) => onDelete(workspace, e)}
-                  className="w-full px-3 py-2 text-left flex items-center gap-2 text-destructive hover:bg-destructive/10 transition-colors"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-danger transition-colors hover:bg-danger/10"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>Delete</span>
                 </button>
               </div>
@@ -113,23 +116,23 @@ export function WorkspaceCard({
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground mt-2.5 line-clamp-2 leading-relaxed">
+        <p className="mt-2.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
           {workspace.description || "No description provided."}
         </p>
       </div>
 
-      <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-between border-t border-border pt-3 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
-          <Clock className="w-3 h-3" />
+          <Clock className="h-3 w-3" aria-hidden="true" />
           {formatDate(workspace.updatedAt || workspace.createdAt)}
         </span>
 
         <Link
           href={`/workspace/${workspace.id}`}
-          className="flex items-center gap-1 text-foreground font-medium hover:underline"
+          className="flex items-center gap-1 font-medium text-foreground transition-colors hover:text-brand"
         >
           <span>Open</span>
-          <ChevronRight className="w-3 h-3" />
+          <ChevronRight className="h-3 w-3" aria-hidden="true" />
         </Link>
       </div>
     </div>

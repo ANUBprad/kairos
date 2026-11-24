@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { OpenBookLogo } from "@/features/auth";
+import { KairosLogo } from "@/components/brand/kairos-logo";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { ArrowRight, Menu, X, Sparkles, Layers, Brain, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,7 +42,7 @@ export function LandingNavbar({ isAuthenticated = false }: LandingNavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <OpenBookLogo size={26} textSize="text-xl" textColor="text-foreground" />
+          <KairosLogo size={26} textSize="text-xl" textColor="text-foreground" />
         </Link>
 
         {/* Desktop Navigation Links */}

@@ -32,11 +32,16 @@ export function MemoryList({ memories }: MemoryListProps) {
 
   if (memories.length === 0) {
     return (
-      <div className="p-12 text-center border border-dashed border-border rounded-2xl bg-card space-y-2">
-        <Brain className="w-8 h-8 text-muted-foreground mx-auto" />
-        <p className="text-xs font-medium text-foreground">No memories recorded yet</p>
-        <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
-          As you converse with your notebooks, Memory automatically learns your preferences and domain insights, or you can add custom facts above.
+      <div className="kairos-panel space-y-2 border-dashed p-10 text-center">
+        <span className="kairos-inset mx-auto flex size-11 items-center justify-center text-primary">
+          <Brain className="size-5" />
+        </span>
+        <p className="text-sm font-medium text-foreground">
+          No memories recorded yet
+        </p>
+        <p className="mx-auto max-w-sm text-[11px] leading-relaxed text-muted-foreground">
+          As you work through your sources, Kairos can learn your preferences and
+          domain context. You can also add a fact yourself.
         </p>
       </div>
     );
@@ -50,31 +55,32 @@ export function MemoryList({ memories }: MemoryListProps) {
         return (
           <div
             key={memory.id}
-            className="p-4 rounded-xl border border-border bg-card hover:bg-muted/20 transition-all flex flex-col gap-2 group"
+            className="kairos-card group flex flex-col gap-2 p-4 motion-reduce:transition-none"
           >
             <div className="flex items-start justify-between gap-3">
               {isEditing ? (
                 <div className="flex-1 space-y-2">
                   <textarea
                     rows={2}
+                    aria-label="Edit memory fact"
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                    className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring/40"
                   />
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleSaveEdit(memory.id)}
                       disabled={updateMemory.isPending}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-md bg-foreground text-background"
+                      className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground disabled:opacity-50"
                     >
-                      <Check className="w-3 h-3" />
+                      <Check className="size-3" />
                       Save
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingId(null)}
-                      className="px-2.5 py-1 text-[11px] rounded-md border border-border text-muted-foreground hover:text-foreground"
+                      className="rounded-lg border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
                     >
                       Cancel
                     </button>
@@ -87,14 +93,15 @@ export function MemoryList({ memories }: MemoryListProps) {
               )}
 
               {!isEditing && (
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex shrink-0 items-center gap-1 transition-opacity group-hover:opacity-100 motion-reduce:transition-none sm:opacity-0">
                   <button
                     type="button"
                     onClick={() => handleStartEdit(memory)}
                     title="Edit memory"
-                    className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
+                    aria-label="Edit memory fact"
+                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground motion-reduce:transition-none"
                   >
-                    <Edit2 className="w-3.5 h-3.5" />
+                    <Edit2 className="size-3.5" />
                   </button>
                   <button
                     type="button"
@@ -104,24 +111,25 @@ export function MemoryList({ memories }: MemoryListProps) {
                       }
                     }}
                     title="Delete memory"
-                    className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    aria-label="Delete memory fact"
+                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger motion-reduce:transition-none"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="size-3.5" />
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground border-t border-border/40 pt-2 mt-1">
+            <div className="mt-1 flex items-center gap-2 border-t border-border pt-2 text-[10px] text-muted-foreground">
               <span
                 className={cn(
-                  "px-1.5 py-0.5 rounded text-[9px] font-medium uppercase",
+                  "rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide",
                   memory.source === "learned"
-                    ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                    : "bg-muted text-foreground border border-border"
+                    ? "border border-warning/20 bg-warning/10 text-warning"
+                    : "kairos-tag px-2 py-0.5 text-[9px]"
                 )}
               >
-                {memory.source === "learned" ? "AI Inferred" : "Manual"}
+                {memory.source === "learned" ? "AI inferred" : "Manual"}
               </span>
               <span>·</span>
               <span>

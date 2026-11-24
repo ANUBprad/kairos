@@ -108,11 +108,12 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
     <div className="flex flex-1 flex-col gap-4 sm:gap-6 p-3 sm:p-6 md:p-8 max-w-6xl mx-auto w-full min-w-0 overflow-x-hidden pb-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-0.5 min-w-0">
-          <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-foreground">
-            Source Library
+        <div className="min-w-0 space-y-1">
+          <p className="kairos-eyebrow">Knowledge base</p>
+          <h2 className="kairos-section-title text-xl text-primary sm:text-2xl">
+            Source library
           </h2>
-          <p className="text-[11px] sm:text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground sm:text-xs">
             {sources
               ? `${sources.length} source${sources.length === 1 ? "" : "s"} in this workspace`
               : "All knowledge sources in this workspace"}
@@ -122,10 +123,10 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
         <button
           type="button"
           onClick={() => setAddOpen(true)}
-          className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3.5 py-2.5 sm:py-2 text-xs font-medium rounded-lg bg-foreground text-background hover:opacity-90 active:scale-[0.99] transition-all shadow-xs shrink-0"
+          className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-3.5 py-2.5 text-xs font-medium text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none sm:w-auto sm:py-2"
         >
-          <Plus className="w-4 h-4" />
-          Add Source
+          <Plus className="size-4" aria-hidden="true" />
+          Add source
         </button>
       </div>
 
@@ -133,18 +134,22 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
       <div className="space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           {/* Search Input */}
-          <div className="relative min-w-0 flex-1">
-            <Search className="absolute top-1/2 left-3 w-4 h-4 -translate-y-1/2 text-muted-foreground" />
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search sources</span>
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <input
               type="text"
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="kairos-inset w-full py-2 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               placeholder="Search sources..."
               value={filters.q || ""}
               onChange={(e) =>
                 setFilters((curr) => ({ ...curr, q: e.target.value }))
               }
             />
-          </div>
+          </label>
 
           <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:flex-wrap sm:items-center sm:w-auto">
             {/* Custom Type Dropdown */}
@@ -155,21 +160,21 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                   setIsTypeOpen(!isTypeOpen);
                   setIsStatusOpen(false);
                 }}
-                className="w-full sm:w-auto px-3 py-2 text-xs rounded-xl border border-border bg-card hover:bg-muted/60 text-foreground flex items-center justify-between gap-1.5 transition-colors cursor-pointer min-w-0"
+                className="kairos-panel flex w-full min-w-0 cursor-pointer items-center justify-between gap-1.5 px-3 py-2 text-xs text-foreground transition-colors hover:bg-brand-quiet motion-reduce:transition-none sm:w-auto"
               >
                 <span className="truncate">
                   {filters.type ? SOURCE_TYPE_LABELS[filters.type] : "All Types"}
                 </span>
                 <ChevronDown
                   className={cn(
-                    "w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 shrink-0",
+                    "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
                     isTypeOpen && "rotate-180"
                   )}
                 />
               </button>
 
               {isTypeOpen && (
-                <div className="absolute left-0 right-0 sm:right-auto sm:w-44 top-full mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-border bg-card shadow-2xl p-1 z-30 animate-fadeIn space-y-0.5 text-xs">
+                <div className="kairos-panel absolute left-0 right-0 top-full z-30 mt-1.5 max-h-56 animate-fadeIn space-y-0.5 overflow-y-auto p-1 text-xs shadow-[var(--shadow-lift)] motion-reduce:animate-none sm:right-auto sm:w-44">
                   <button
                     type="button"
                     onClick={() => {
@@ -177,14 +182,14 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                       setIsTypeOpen(false);
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
+                      "flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors motion-reduce:transition-none",
                       !filters.type
-                        ? "bg-foreground text-background font-semibold"
-                        : "hover:bg-muted text-foreground"
+                        ? "bg-primary text-primary-foreground font-semibold"
+                        : "hover:bg-brand-quiet text-foreground"
                     )}
                   >
                     <span>All Types</span>
-                    {!filters.type && <Check className="w-3.5 h-3.5 shrink-0" />}
+                    {!filters.type && <Check className="size-3.5 shrink-0" />}
                   </button>
 
                   {SOURCE_TYPES.map((t) => {
@@ -198,14 +203,14 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                           setIsTypeOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
+                          "flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors motion-reduce:transition-none",
                           isSelected
-                            ? "bg-foreground text-background font-semibold"
-                            : "hover:bg-muted text-foreground"
+                            ? "bg-primary text-primary-foreground font-semibold"
+                            : "hover:bg-brand-quiet text-foreground"
                         )}
                       >
                         <span>{SOURCE_TYPE_LABELS[t]}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        {isSelected && <Check className="size-3.5 shrink-0" />}
                       </button>
                     );
                   })}
@@ -221,21 +226,21 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                   setIsStatusOpen(!isStatusOpen);
                   setIsTypeOpen(false);
                 }}
-                className="w-full sm:w-auto px-3 py-2 text-xs rounded-xl border border-border bg-card hover:bg-muted/60 text-foreground flex items-center justify-between gap-1.5 transition-colors cursor-pointer min-w-0"
+                className="kairos-panel flex w-full min-w-0 cursor-pointer items-center justify-between gap-1.5 px-3 py-2 text-xs text-foreground transition-colors hover:bg-brand-quiet motion-reduce:transition-none sm:w-auto"
               >
                 <span className="truncate">
                   {filters.status ? SOURCE_STATUS_LABELS[filters.status] : "All Statuses"}
                 </span>
                 <ChevronDown
                   className={cn(
-                    "w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 shrink-0",
+                    "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
                     isStatusOpen && "rotate-180"
                   )}
                 />
               </button>
 
               {isStatusOpen && (
-                <div className="absolute left-0 right-0 sm:right-auto sm:w-44 top-full mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-border bg-card shadow-2xl p-1 z-30 animate-fadeIn space-y-0.5 text-xs">
+                <div className="kairos-panel absolute left-0 right-0 top-full z-30 mt-1.5 max-h-56 animate-fadeIn space-y-0.5 overflow-y-auto p-1 text-xs shadow-[var(--shadow-lift)] motion-reduce:animate-none sm:right-auto sm:w-44">
                   <button
                     type="button"
                     onClick={() => {
@@ -243,14 +248,14 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                       setIsStatusOpen(false);
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
+                      "flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors motion-reduce:transition-none",
                       !filters.status
-                        ? "bg-foreground text-background font-semibold"
-                        : "hover:bg-muted text-foreground"
+                        ? "bg-primary text-primary-foreground font-semibold"
+                        : "hover:bg-brand-quiet text-foreground"
                     )}
                   >
                     <span>All Statuses</span>
-                    {!filters.status && <Check className="w-3.5 h-3.5 shrink-0" />}
+                    {!filters.status && <Check className="size-3.5 shrink-0" />}
                   </button>
 
                   {SOURCE_STATUSES.map((s) => {
@@ -264,14 +269,14 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                           setIsStatusOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
+                          "flex w-full cursor-pointer items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition-colors motion-reduce:transition-none",
                           isSelected
-                            ? "bg-foreground text-background font-semibold"
-                            : "hover:bg-muted text-foreground"
+                            ? "bg-primary text-primary-foreground font-semibold"
+                            : "hover:bg-brand-quiet text-foreground"
                         )}
                       >
                         <span>{SOURCE_STATUS_LABELS[s]}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        {isSelected && <Check className="size-3.5 shrink-0" />}
                       </button>
                     );
                   })}
@@ -279,32 +284,36 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
               )}
             </div>
 
-            <div className="hidden sm:flex items-center rounded-xl border border-border bg-card p-0.5">
+            <div className="kairos-inset hidden items-center p-0.5 sm:flex">
               <button
                 type="button"
                 onClick={() => setView("grid")}
+                aria-label="Grid view"
+                aria-pressed={view === "grid"}
                 className={cn(
-                  "p-1.5 rounded-lg text-xs transition-colors",
+                  "rounded-lg p-1.5 text-xs transition-colors motion-reduce:transition-none",
                   view === "grid"
-                    ? "bg-muted text-foreground font-semibold"
+                    ? "bg-surface text-brand shadow-[var(--shadow-panel)]"
                     : "text-muted-foreground hover:text-foreground"
                 )}
                 title="Grid view"
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
+                <LayoutGrid className="size-3.5" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => setView("list")}
+                aria-label="List view"
+                aria-pressed={view === "list"}
                 className={cn(
-                  "p-1.5 rounded-lg text-xs transition-colors",
+                  "rounded-lg p-1.5 text-xs transition-colors motion-reduce:transition-none",
                   view === "list"
-                    ? "bg-muted text-foreground font-semibold"
+                    ? "bg-surface text-brand shadow-[var(--shadow-panel)]"
                     : "text-muted-foreground hover:text-foreground"
                 )}
                 title="List view"
               >
-                <List className="w-3.5 h-3.5" />
+                <List className="size-3.5" aria-hidden="true" />
               </button>
             </div>
 
@@ -315,7 +324,10 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                 if (selectionMode) exitSelectionMode();
                 else setSelectionMode(true);
               }}
-              className="col-span-2 sm:col-span-1 px-3 py-2 text-xs rounded-xl border border-border bg-card hover:bg-muted text-foreground transition-colors"
+              className={cn(
+                "col-span-2 rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground transition-colors hover:bg-brand-quiet motion-reduce:transition-none sm:col-span-1",
+                selectionMode && "border-brand/30 bg-brand-soft text-brand"
+              )}
             >
               {selectionMode ? "Done" : "Select"}
             </button>
@@ -325,18 +337,20 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                 type="button"
                 disabled={reprocessFailedMutation.isPending}
                 onClick={() => void reprocessFailedMutation.mutateAsync(undefined)}
-                className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-medium rounded-xl border border-border bg-card hover:bg-muted text-foreground transition-colors disabled:opacity-50"
+                className="col-span-2 inline-flex items-center justify-center gap-1 rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-brand-quiet disabled:opacity-50 motion-reduce:transition-none sm:col-span-1"
               >
                 <RefreshCw
                   className={cn(
-                    "w-3.5 h-3.5 shrink-0",
-                    reprocessFailedMutation.isPending && "animate-spin"
+                    "size-3.5 shrink-0",
+                    reprocessFailedMutation.isPending &&
+                      "animate-spin motion-reduce:animate-none"
                   )}
+                  aria-hidden="true"
                 />
                 <span className="truncate">
                   <span className="sm:hidden">Retry failed ({failedCount})</span>
                   <span className="hidden sm:inline">
-                    Reprocess Failed ({failedCount})
+                    Reprocess failed ({failedCount})
                   </span>
                 </span>
               </button>
@@ -346,16 +360,16 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
 
         {/* Active Filter Chips */}
         {hasActiveFilters && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-brand-quiet px-2.5 py-1.5 text-xs text-muted-foreground">
             <span>
               {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} applied
             </span>
             <button
               type="button"
               onClick={clearFilters}
-              className="inline-flex items-center gap-1 text-xs hover:text-foreground underline"
+              className="inline-flex items-center gap-1 text-xs text-brand underline underline-offset-4 transition-colors hover:text-primary motion-reduce:transition-none"
             >
-              <X className="w-3 h-3" />
+              <X className="size-3" aria-hidden="true" />
               Clear
             </button>
           </div>
@@ -363,11 +377,11 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
 
         {/* Selection Toolbar */}
         {selectionMode && (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-3 rounded-xl border border-border bg-muted/40 text-xs">
-            <span className="text-muted-foreground">
+          <div className="flex flex-col gap-2 rounded-xl border border-brand/20 bg-brand-quiet p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-medium text-brand">
               {selectedIds.length} source{selectedIds.length === 1 ? "" : "s"} selected
             </span>
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               {selectedIds.length > 0 && (
                 <button
                   type="button"
@@ -377,16 +391,16 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                       void bulkDeleteMutation.mutateAsync(selectedIds).then(exitSelectionMode);
                     }
                   }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-lg bg-destructive px-2.5 py-1 text-xs font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50 motion-reduce:transition-none"
                 >
-                  <Trash2 className="w-3 h-3" />
-                  Delete Selected
+                  <Trash2 className="size-3" aria-hidden="true" />
+                  Delete selected
                 </button>
               )}
               <button
                 type="button"
                 onClick={exitSelectionMode}
-                className="px-2.5 py-1 text-xs rounded-lg border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                className="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
               >
                 Cancel
               </button>
@@ -402,19 +416,24 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
             "grid gap-2 sm:gap-3",
             view === "grid" ? "sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1",
           )}
+          role="status"
+          aria-label="Loading sources"
         >
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
               className={cn(
-                "rounded-xl border border-border bg-card animate-pulse",
+                "kairos-panel animate-pulse motion-reduce:animate-none",
                 view === "list" ? "h-14" : "h-32",
               )}
             />
           ))}
         </div>
       ) : error ? (
-        <div className="p-8 text-center border border-dashed border-destructive/30 rounded-2xl bg-destructive/5 text-destructive text-xs">
+        <div
+          className="rounded-2xl border border-dashed border-destructive/30 bg-destructive/5 p-8 text-center text-xs text-destructive"
+          role="alert"
+        >
           Could not load sources. Please try again.
         </div>
       ) : sources && sources.length > 0 ? (
@@ -446,11 +465,13 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
           ))}
         </div>
       ) : (
-        <div className="p-12 text-center border border-dashed border-border rounded-2xl bg-card space-y-3">
-          <BookOpen className="w-8 h-8 text-muted-foreground mx-auto" />
-          <div>
-            <p className="text-sm font-medium text-foreground">No sources found</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+        <div className="space-y-3 rounded-2xl border border-dashed border-border bg-card p-12 text-center shadow-[var(--shadow-panel)]">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-brand-soft text-brand">
+            <BookOpen className="size-6" aria-hidden="true" />
+          </div>
+          <div className="space-y-0.5">
+            <p className="kairos-section-title text-sm text-primary">No sources found</p>
+            <p className="text-xs text-muted-foreground">
               {hasActiveFilters
                 ? "Try adjusting your search or filters."
                 : "Add your first source to ground this workspace."}
@@ -459,10 +480,10 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg bg-foreground text-background hover:opacity-90 transition-all shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Add Source
+            <Plus className="size-3.5" aria-hidden="true" />
+            Add source
           </button>
         </div>
       )}

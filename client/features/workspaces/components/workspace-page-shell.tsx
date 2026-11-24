@@ -14,22 +14,22 @@ export function WorkspacePageShell({
   children,
 }: WorkspacePageShellProps) {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="border-b border-border px-3 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-2 bg-card shrink-0">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-background/85 px-3 py-3 backdrop-blur-md sm:px-6 sm:py-3.5">
         <Link
           href={`/workspace/${workspaceId}`}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-w-0"
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-lg text-xs text-muted-foreground transition-colors hover:text-brand"
         >
-          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="truncate">
             <span className="sm:hidden">Back</span>
             <span className="hidden sm:inline">Back to Workspace Chat</span>
           </span>
         </Link>
-        <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground shrink-0 text-right max-w-[40%] truncate">
+        <span className="kairos-eyebrow max-w-[40%] shrink-0 truncate text-right">
           {sectionLabel}
         </span>
-      </div>
+      </header>
       <div className="flex-1">{children}</div>
     </div>
   );

@@ -9,14 +9,20 @@ import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { UpgradeModal } from "@/features/billing";
 import { Analytics } from "@vercel/analytics/next";
 
-const figtreeHeading = Figtree({ subsets: ['latin'], variable: '--font-heading' });
+const figtreeDisplay = Figtree({
+  subsets: ["latin"],
+  variable: "--font-kairos-display",
+});
 
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono' });
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-kairos-mono",
+});
 
 const newsreader = Newsreader({
   subsets: ["latin"],
   style: ["normal", "italic"],
-  variable: "--font-serif",
+  variable: "--font-kairos-serif",
 });
 
 const geistSans = Geist({
@@ -30,21 +36,26 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f7f4" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0f14" },
+  ],
 };
 
 export const metadata: Metadata = {
-  title: "OpenBook",
-  description: "AI-Powered Research & Interactive Notebook",
+  title: {
+    default: "Kairos — Research with receipts",
+    template: "%s | Kairos",
+  },
+  description:
+    "Kairos turns your sources into grounded answers, study material, and conversations you can trust.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "OpenBook",
+    title: "Kairos",
   },
   icons: {
     icon: [
@@ -55,7 +66,7 @@ export const metadata: Metadata = {
     shortcut: "/logo.svg",
     apple: [
       { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
-      { url: "/logo.svg" },
+      { url: "/logo.svg", type: "image/svg+xml" },
     ],
   },
 };
@@ -68,10 +79,17 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", jetbrainsMono.variable, figtreeHeading.variable, newsreader.variable)}
+      className={cn(
+        "h-full antialiased font-sans",
+        geistSans.variable,
+        geistMono.variable,
+        jetbrainsMono.variable,
+        figtreeDisplay.variable,
+        newsreader.variable
+      )}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-full flex-col bg-background text-foreground">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

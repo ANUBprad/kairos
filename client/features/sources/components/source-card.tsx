@@ -36,11 +36,11 @@ export function SourceCard({
     <div
       onClick={() => onSelect?.(source)}
       className={cn(
-        "group relative flex rounded-xl border border-border bg-card hover:bg-muted/30 transition-all cursor-pointer shadow-xs min-w-0",
+        "kairos-card group relative flex min-w-0 cursor-pointer",
         isList
           ? "flex-row items-center gap-2.5 p-3 sm:p-3.5"
           : "flex-col justify-between p-3.5 sm:p-4",
-        selected && "bg-muted/40 border-border",
+        selected && "border-brand/40 bg-brand-soft/50",
         className
       )}
     >
@@ -57,7 +57,8 @@ export function SourceCard({
               e.stopPropagation();
               onToggleSelect(source.id);
             }}
-            className="w-4 h-4 rounded border-border text-primary focus:ring-0 cursor-pointer shrink-0"
+            aria-label={selected ? `Deselect ${source.title}` : `Select ${source.title}`}
+            className="size-4 shrink-0 cursor-pointer rounded border-border accent-brand focus:ring-0"
           />
         </div>
       )}
@@ -77,11 +78,11 @@ export function SourceCard({
           )}
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="w-7 h-7 sm:w-6 sm:h-6 rounded-md bg-muted border border-border flex items-center justify-center shrink-0">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-md border border-brand/20 bg-brand-quiet sm:size-6">
               <SourceTypeIcon type={source.type} source={source} />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-xs font-semibold text-foreground truncate group-hover:underline">
+              <h4 className="truncate text-xs font-semibold text-foreground group-hover:text-brand group-hover:underline motion-reduce:transition-none">
                 {source.title}
               </h4>
               {isList && (
@@ -106,9 +107,10 @@ export function SourceCard({
                   type="button"
                   onClick={() => onReprocess(source)}
                   title="Retry processing"
-                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={`Retry processing ${source.title}`}
+                  className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand motion-reduce:transition-none"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
+                  <RefreshCw className="size-3.5" />
                 </button>
               )}
               {onDelete && (
@@ -116,9 +118,10 @@ export function SourceCard({
                   type="button"
                   onClick={() => onDelete(source)}
                   title="Delete source"
-                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                  aria-label={`Delete ${source.title}`}
+                  className="rounded-lg p-1.5 text-muted-foreground opacity-100 transition-colors hover:bg-danger/10 hover:text-danger focus-visible:opacity-100 motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="size-3.5" />
                 </button>
               )}
             </div>
@@ -132,7 +135,7 @@ export function SourceCard({
         )}
 
         {!isList && (
-          <div className="pt-3 mt-1 border-t border-border flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-[10px] text-muted-foreground">
             <div className="flex items-center gap-1.5 min-w-0 truncate">
               <span className="shrink-0">{SOURCE_TYPE_LABELS[source.type]}</span>
               <span>·</span>
@@ -151,9 +154,10 @@ export function SourceCard({
                   rel="noreferrer"
                   onClick={(e) => e.stopPropagation()}
                   title="Open original link"
-                  className="hover:text-foreground p-0.5"
+                  aria-label={`Open original link for ${source.title}`}
+                  className="p-0.5 text-muted-foreground transition-colors hover:text-brand motion-reduce:transition-none"
                 >
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="size-3" />
                 </a>
               )}
               <SourceStatusBadge status={source.status} />
@@ -173,9 +177,10 @@ export function SourceCard({
               type="button"
               onClick={() => onReprocess(source)}
               title="Retry processing"
-              className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground"
+              aria-label={`Retry processing ${source.title}`}
+              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand motion-reduce:transition-none"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="size-3.5" />
             </button>
           )}
           {onDelete && (
@@ -183,9 +188,10 @@ export function SourceCard({
               type="button"
               onClick={() => onDelete(source)}
               title="Delete source"
-              className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+              aria-label={`Delete ${source.title}`}
+              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger motion-reduce:transition-none"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="size-3.5" />
             </button>
           )}
         </div>

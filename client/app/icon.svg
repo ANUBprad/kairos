@@ -1,22 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
-  <!-- Solid Black Background with sleek rounded squircle corners -->
-  <rect width="200" height="200" rx="44" fill="#09090b" />
-
-  <!-- White OpenBook Radiating Icon -->
-  <g stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Horizontal Base Line -->
-    <line x1="36" y1="134" x2="164" y2="134" />
-
-    <!-- Radiating Rays from Center (100, 134) -->
-    <!-- Left Ray -->
-    <line x1="100" y1="134" x2="40" y2="100" />
-    <!-- Left-Center Ray -->
-    <line x1="100" y1="134" x2="68" y2="76" />
-    <!-- Center Vertical Ray -->
-    <line x1="100" y1="134" x2="100" y2="66" />
-    <!-- Right-Center Ray -->
-    <line x1="100" y1="134" x2="132" y2="76" />
-    <!-- Right Ray -->
-    <line x1="100" y1="134" x2="160" y2="100" />
-  </g>
+  <rect width="200" height="200" rx="48" fill="#0B1715" />
+  <path d="M66 52V148" stroke="#F3F7F5" stroke-width="16" stroke-linecap="round" />
+  <path d="M145 52L82 100L145 148" stroke="#F3F7F5" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="145" cy="52" r="17" fill="#C8F169" />
 </svg>

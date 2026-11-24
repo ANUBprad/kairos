@@ -69,7 +69,7 @@ export const PRICING_PLANS: PricingPlanConfig[] = [
   {
     id: "FREE",
     name: "Free",
-    description: "50 Free Welcome Credits to explore OpenBook.",
+    description: "50 welcome credits to explore Kairos.",
     monthlyPriceInr: 0,
     yearlyPriceInr: 0,
     features: [

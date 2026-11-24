@@ -105,7 +105,7 @@ export function CodeBlock({
       data-state={status}
       aria-busy={streaming}
       className={cn(
-        "w-full overflow-hidden rounded-2xl bg-muted/80 text-sm",
+        "w-full overflow-hidden rounded-2xl border border-border bg-brand-quiet text-sm",
         className,
       )}
     >
@@ -125,9 +125,7 @@ export function CodeBlock({
         <span
           className={cn(
             "ml-auto inline-flex shrink-0 items-center gap-1 text-[10px] font-medium",
-            streaming
-              ? "text-blue-600 dark:text-blue-400"
-              : "text-emerald-600 dark:text-emerald-400",
+            streaming ? "text-warning" : "text-success",
           )}
         >
           {streaming ? (
@@ -145,7 +143,7 @@ export function CodeBlock({
             onClick={handleCopy}
             whileTap={reduce ? undefined : { scale: 0.9 }}
             transition={SPRING_PRESS}
-            className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-background/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-surface hover:text-brand focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
           >
             {copied ? (
               <Check className="size-3.5" />
@@ -175,7 +173,7 @@ export function CodeBlock({
                     showLineNumbers
                       ? "grid-cols-[2.75rem_minmax(0,1fr)]"
                       : "grid-cols-1",
-                    highlighted.has(lineNumber) && "bg-blue-500/[0.07]",
+                    highlighted.has(lineNumber) && "bg-brand-soft/60",
                   )}
                 >
                   {showLineNumbers ? (

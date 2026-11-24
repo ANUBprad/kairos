@@ -96,15 +96,15 @@ export function useRazorpayCheckout() {
         }
 
         const description = orderData.credits
-          ? `Top up ${orderData.credits} OpenBook Credits`
-          : "OpenBook Credits Top-up";
+          ? `Top up ${orderData.credits} Kairos Credits`
+          : "Kairos Credits Top-up";
 
         // 2. Open Razorpay modal
         const rzpOptions = {
           key: orderData.keyId,
           amount: orderData.amount,
           currency: orderData.currency || "INR",
-          name: "OpenBook",
+          name: "Kairos",
           description,
           order_id: orderData.orderId,
           prefill: {

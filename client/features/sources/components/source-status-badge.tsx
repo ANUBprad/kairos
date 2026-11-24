@@ -19,12 +19,12 @@ export function SourceStatusBadge({
   const getBadgeStyle = () => {
     switch (status) {
       case "READY":
-        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+        return "border-success/25 bg-success/10 text-success";
       case "PROCESSING":
       case "PENDING":
-        return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+        return "border-warning/25 bg-warning/10 text-warning";
       case "FAILED":
-        return "bg-destructive/10 text-destructive border-destructive/20";
+        return "border-danger/25 bg-danger/10 text-danger";
       default:
         return "bg-muted text-muted-foreground border-border";
     }
@@ -48,7 +48,7 @@ export function SourceStatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border capitalize select-none",
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium capitalize select-none",
         getBadgeStyle(),
         className
       )}

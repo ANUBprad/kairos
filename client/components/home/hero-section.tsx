@@ -34,7 +34,7 @@ export function HeroSection({ isAuthenticated = false }: HeroSectionProps) {
         {/* Top Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border bg-card/80 backdrop-blur-xs text-xs font-medium text-muted-foreground mb-8 shadow-xs animate-fadeIn">
           <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-foreground font-semibold">OpenBook 2.0</span>
+          <span className="text-foreground font-semibold">Kairos 2.0</span>
           <span>•</span>
           <span>Next-Gen Grounded NotebookLM</span>
         </div>
@@ -102,7 +102,7 @@ export function HeroSection({ isAuthenticated = false }: HeroSectionProps) {
               <div className="w-3 h-3 rounded-full bg-amber-400/80" />
               <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
               <span className="ml-2 text-xs font-medium text-muted-foreground">
-                🔬 AI &amp; Quantum Computing Research · OpenBook
+                🔬 AI &amp; Quantum Computing Research · Kairos
               </span>
             </div>
 

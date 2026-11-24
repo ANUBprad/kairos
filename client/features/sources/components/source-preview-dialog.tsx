@@ -37,32 +37,32 @@ export function SourcePreviewDialog({
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
       onMouseDown={(e) => dismissOnBackdropClick(e, onClose)}
     >
-      <div className="w-full sm:max-w-3xl max-h-[92dvh] sm:max-h-[85vh] bg-card border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fadeIn text-foreground">
+      <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-border bg-card text-foreground shadow-[var(--shadow-lift)] animate-fadeIn motion-reduce:animate-none sm:max-h-[85vh] sm:max-w-3xl sm:rounded-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-card shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2 sm:pr-4">
-            <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-2.5 pr-2 sm:gap-3 sm:pr-4">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-brand-quiet">
               <SourceTypeIcon type={source.type} source={source} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-foreground truncate">
+                <h2 className="kairos-section-title truncate text-sm text-primary">
                   {source.title}
                 </h2>
                 <SourceStatusBadge status={source.status} />
               </div>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground sm:text-[11px]">
                 <span>{source.type}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
+                  <Calendar className="size-3" aria-hidden="true" />
                   {formatDate(source.createdAt)}
                 </span>
                 {chunkCount !== null && (
                   <>
                     <span>•</span>
                     <span className="flex items-center gap-1">
-                      <Layers className="w-3 h-3" />
+                      <Layers className="size-3" aria-hidden="true" />
                       {chunkCount} chunks indexed
                     </span>
                   </>
@@ -72,24 +72,29 @@ export function SourcePreviewDialog({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label="Close source preview"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-brand-quiet hover:text-brand motion-reduce:transition-none"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" aria-hidden="true" />
           </button>
         </div>
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 text-foreground overscroll-contain">
           {source.url && source.type !== "IMAGE" && (
-            <div className="p-3 bg-muted/40 border border-border rounded-lg text-xs flex items-center gap-2">
-              <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <div className="kairos-inset flex items-center gap-2 rounded-lg p-3 text-xs">
+              <ExternalLink
+                className="size-3.5 shrink-0 text-brand"
+                aria-hidden="true"
+              />
               <span className="text-muted-foreground">URL: </span>
               <a
                 href={source.url}
                 target="_blank"
                 rel="noreferrer"
-                className="text-foreground underline hover:no-underline break-all"
+                className="break-all text-brand underline underline-offset-4 hover:no-underline"
               >
                 {source.url}
               </a>
@@ -99,9 +104,7 @@ export function SourcePreviewDialog({
           {source.type === "IMAGE" && fileUrl && (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Image
-                </h3>
+                <h3 className="kairos-eyebrow">Image</h3>
                 <button
                   type="button"
                   disabled={isDownloading}
@@ -115,12 +118,15 @@ export function SourcePreviewDialog({
                       setIsDownloading(false);
                     }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2.5 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-brand/30 bg-brand-soft px-2.5 py-1.5 text-[11px] font-medium text-brand transition-colors hover:bg-brand-soft/70 disabled:opacity-50 motion-reduce:transition-none"
                 >
                   {isDownloading ? (
-                    <Loader2 className="size-3.5 animate-spin" />
+                    <Loader2
+                      className="size-3.5 animate-spin motion-reduce:animate-none"
+                      aria-hidden="true"
+                    />
                   ) : (
-                    <Download className="size-3.5" />
+                    <Download className="size-3.5" aria-hidden="true" />
                   )}
                   Download image
                 </button>
@@ -128,20 +134,20 @@ export function SourcePreviewDialog({
               <img
                 src={fileUrl}
                 alt={source.title}
-                className="max-h-64 w-full rounded-xl border border-border object-contain bg-muted/30"
+                className="max-h-64 w-full rounded-xl border border-border bg-brand-quiet object-contain"
               />
             </div>
           )}
 
           {source.content ? (
             <div className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {source.type === "IMAGE" ? "OCR & description" : "Extracted Content"}
+              <h3 className="kairos-eyebrow">
+                {source.type === "IMAGE" ? "OCR & description" : "Extracted content"}
               </h3>
               <MarkdownPreview content={source.content} />
             </div>
           ) : (
-            <div className="p-8 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+            <div className="rounded-xl border border-dashed border-border bg-brand-quiet p-8 text-center text-xs text-muted-foreground">
               No content preview available for this source.
             </div>
           )}

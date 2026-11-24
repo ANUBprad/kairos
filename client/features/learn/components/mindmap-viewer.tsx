@@ -59,25 +59,22 @@ function CustomMindmapNode({ data }: NodeProps) {
     }
   };
 
-  // Color scheme based on hierarchy level matching clean black & white theme
+  // Token-driven hierarchy so nodes stay legible in both themes.
   const getNodeStyles = () => {
     if (level === 0) {
-      // Root Node (Solid black in light mode / solid white in dark mode)
-      return "bg-foreground text-background border-border shadow-md text-xs font-semibold px-4 py-2.5 rounded-xl";
+      return "border-primary bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] rounded-xl";
     }
     if (level === 1) {
-      // Category Nodes (Card background with crisp border)
-      return "bg-card text-foreground border-border hover:border-zinc-400 dark:hover:border-zinc-600 shadow-xs text-xs font-medium px-3.5 py-2 rounded-lg";
+      return "border-border bg-surface px-3.5 py-2 text-xs font-medium text-foreground shadow-[var(--shadow-panel)] hover:border-brand/40 rounded-lg";
     }
-    // Sub-branch Nodes (Subtle muted background)
-    return "bg-muted/70 text-foreground border-border hover:border-zinc-400 dark:hover:border-zinc-600 text-[11px] font-normal px-3 py-1.5 rounded-lg";
+    return "border-border bg-brand-quiet px-3 py-1.5 text-[11px] font-normal text-foreground hover:border-brand/40 rounded-lg";
   };
 
   return (
     <div
       onClick={handleClick}
       className={cn(
-        "group relative flex items-center gap-2 border transition-all duration-200 select-none cursor-pointer hover:scale-[1.02] max-w-55",
+        "group relative flex max-w-55 cursor-pointer items-center gap-2 border transition-all duration-200 select-none hover:scale-[1.02] motion-reduce:transition-none motion-reduce:hover:scale-100",
         getNodeStyles()
       )}
     >
@@ -86,7 +83,7 @@ function CustomMindmapNode({ data }: NodeProps) {
         <Handle
           type="target"
           position={Position.Left}
-          className="w-2! h-2! bg-muted-foreground! border-none!"
+          className="w-2! h-2! bg-primary! border-none!"
         />
       )}
 
@@ -102,10 +99,10 @@ function CustomMindmapNode({ data }: NodeProps) {
           onClick={handleClick}
           title={isCollapsed ? "Expand branch" : "Collapse branch"}
           className={cn(
-            "w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-transform active:scale-90",
+            "flex size-4 shrink-0 items-center justify-center rounded-full border transition-transform active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100",
             level === 0
-              ? "bg-background/20 hover:bg-background/40 text-background border-background/30"
-              : "bg-muted hover:bg-muted/80 text-foreground border-border"
+              ? "border-primary-foreground/30 bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/40"
+              : "border-border bg-brand-soft text-primary hover:bg-brand-soft/80"
           )}
         >
           {isCollapsed ? (
@@ -121,7 +118,7 @@ function CustomMindmapNode({ data }: NodeProps) {
         <Handle
           type="source"
           position={Position.Right}
-          className="w-2! h-2! bg-muted-foreground! border-none!"
+          className="w-2! h-2! bg-primary! border-none!"
         />
       )}
     </div>
@@ -343,7 +340,7 @@ export function MindmapViewer({ content }: MindmapViewerProps) {
             type: "bezier",
             animated: true,
             style: {
-              stroke: "var(--muted-foreground)",
+              stroke: "var(--brand)",
               strokeWidth: 1.5,
             },
           });
@@ -355,7 +352,11 @@ export function MindmapViewer({ content }: MindmapViewerProps) {
   }, [rawGraph, collapsedIds, toggleNode]);
 
   return (
-    <div className="w-full h-140 rounded-2xl border border-border bg-card/60 text-foreground overflow-hidden relative select-none">
+    <section
+      role="region"
+      aria-label="Mind map"
+      className="relative h-105 w-full overflow-hidden rounded-2xl border border-border bg-panel text-foreground select-none shadow-[var(--shadow-panel)] sm:h-140"
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -365,15 +366,15 @@ export function MindmapViewer({ content }: MindmapViewerProps) {
         minZoom={0.2}
         maxZoom={1.5}
       >
-        <Background gap={16} size={1} />
-        <Controls className="bg-card border-border text-foreground" />
+        <Background gap={16} size={1} color="var(--brand)" />
+        <Controls className="border-border! bg-surface! text-foreground!" />
         <MiniMap
           nodeStrokeWidth={3}
           zoomable
           pannable
-          className="bg-card/90 border border-border rounded-lg"
+          className="rounded-xl! border! border-border! bg-surface/90!"
         />
       </ReactFlow>
-    </div>
+    </section>
   );
 }

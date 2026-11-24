@@ -42,9 +42,9 @@ type IntegrationsSettingsViewProps = {
 };
 
 const actionBtnPrimary =
-  "w-full py-2.5 bg-foreground text-background text-xs font-semibold rounded-xl transition-opacity hover:opacity-90 cursor-pointer shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50";
+  "flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-opacity hover:opacity-90 disabled:opacity-50 motion-reduce:transition-none";
 const actionBtnDanger =
-  "w-full py-2.5 rounded-xl text-xs font-medium text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50";
+  "flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-transparent px-3 py-2.5 text-xs font-medium text-danger transition-colors hover:border-danger/20 hover:bg-danger/10 disabled:opacity-50 motion-reduce:transition-none";
 
 export function IntegrationsSettingsView({
   workspaceId,
@@ -114,18 +114,17 @@ export function IntegrationsSettingsView({
     }
   };
 
-  const accountBoxClass =
-    "rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-xs space-y-0.5";
+  const accountBoxClass = "kairos-inset space-y-0.5 px-3 py-2.5 text-xs";
 
   const cards = isLoading ? (
-    <div className="flex justify-center py-16">
+    <div className="kairos-panel flex min-h-72 items-center justify-center">
       <ThemeLoader size={28} />
     </div>
   ) : (
     <div className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-3 lg:items-stretch">
       <IntegrationCard
         title="Google Drive"
-        description="Import Google Docs and PDFs from Drive into any notebook."
+        description="Connect Drive to bring Google Docs and PDFs into your Kairos library."
         connected={!!integrations?.googleDrive?.connected}
         icon={<GoogleDriveIcon size={34} />}
         iconClassName="bg-muted/30"
@@ -153,7 +152,8 @@ export function IntegrationsSettingsView({
         }
       >
         {googleError && (
-          <div className="p-2.5 text-xs bg-destructive/10 text-destructive border border-destructive/20 rounded-xl">
+          <div role="alert"
+            className="rounded-xl border border-danger/20 bg-danger/5 p-2.5 text-xs text-danger">
             {googleError}
           </div>
         )}
@@ -168,14 +168,14 @@ export function IntegrationsSettingsView({
           </div>
         ) : (
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Sign in with Google to browse Docs and PDFs when adding sources.
+            Sign in with Google to choose Docs and PDFs when adding sources.
           </p>
         )}
       </IntegrationCard>
 
       <IntegrationCard
         title="Notion"
-        description="Import pages and sync study artifacts with your workspace."
+        description="Connect a Notion integration to import pages into your Kairos library."
         connected={!!integrations?.notion?.connected}
         icon={<NotionIcon size={24} />}
         iconClassName="bg-muted/30"
@@ -207,7 +207,8 @@ export function IntegrationsSettingsView({
         }
       >
         {notionError && (
-          <div className="p-2.5 text-xs bg-destructive/10 text-destructive border border-destructive/20 rounded-xl">
+          <div role="alert"
+            className="rounded-xl border border-danger/20 bg-danger/5 p-2.5 text-xs text-danger">
             {notionError}
           </div>
         )}
@@ -218,14 +219,14 @@ export function IntegrationsSettingsView({
                 "Connected workspace"}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              Import & export enabled
+              Connection active
             </p>
           </div>
         ) : (
           <div className="space-y-2">
             <label
               htmlFor="notion-integration-token"
-              className="block text-[11px] font-medium text-muted-foreground"
+              className="block text-[11px] font-medium text-foreground"
             >
               Integration secret
             </label>
@@ -235,7 +236,7 @@ export function IntegrationsSettingsView({
               placeholder="secret_…"
               value={notionToken}
               onChange={(e) => setNotionToken(e.target.value)}
-              className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 font-mono text-xs text-foreground outline-none focus:ring-2 focus:ring-ring/40"
             />
             <p className="text-[10px] text-muted-foreground">
               Create at{" "}
@@ -243,7 +244,7 @@ export function IntegrationsSettingsView({
                 href="https://www.notion.so/my-integrations"
                 target="_blank"
                 rel="noreferrer"
-                className="underline hover:text-foreground"
+                className="font-medium text-primary underline decoration-brand/40 underline-offset-2 hover:text-brand"
               >
                 notion.so/my-integrations
               </a>
@@ -254,7 +255,7 @@ export function IntegrationsSettingsView({
 
       <IntegrationCard
         title="GitHub"
-        description="Import public or private repos as grounded chat sources."
+        description="Connect GitHub to use repositories as grounded chat sources."
         connected={!!integrations?.github?.connected}
         icon={<GithubIcon size={22} />}
         footer={
@@ -281,7 +282,8 @@ export function IntegrationsSettingsView({
         }
       >
         {githubError && (
-          <div className="p-2.5 text-xs bg-destructive/10 text-destructive border border-destructive/20 rounded-xl">
+          <div role="alert"
+            className="rounded-xl border border-danger/20 bg-danger/5 p-2.5 text-xs text-danger">
             {githubError}
           </div>
         )}
@@ -296,7 +298,7 @@ export function IntegrationsSettingsView({
           </div>
         ) : (
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            OAuth connects your account to index READMEs, docs, and code.
+            OAuth connects your account so you can choose repositories as sources.
           </p>
         )}
       </IntegrationCard>
@@ -304,16 +306,20 @@ export function IntegrationsSettingsView({
   );
 
   const body = (
-    <div className="flex-1 max-w-6xl mx-auto w-full min-w-0 p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 select-none">
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-1 flex-col gap-6 p-4 sm:p-6 md:p-8">
       <div className="max-w-2xl">
-        <div className="flex items-center gap-2">
-          <Puzzle className="w-5 h-5 text-foreground shrink-0" />
-          <h1 className="text-lg sm:text-xl font-semibold text-foreground">
-            Cloud Integrations
+        <p className="kairos-eyebrow">Connections</p>
+        <div className="mt-2 flex items-center gap-3">
+          <span className="kairos-inset flex size-10 shrink-0 items-center justify-center text-primary">
+            <Puzzle className="size-5" />
+          </span>
+          <h1 className="kairos-section-title text-2xl text-foreground sm:text-3xl">
+            Integrations
           </h1>
         </div>
-        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-          Connect cloud storage and workspace tools to ingest documents directly.
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          Review the accounts saved to your Kairos profile and add sources from the
+          tools you already use. Connection status is read from your saved accounts.
         </p>
       </div>
       {cards}
@@ -325,18 +331,16 @@ export function IntegrationsSettingsView({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="border-b border-border px-4 sm:px-6 py-3.5 flex items-center justify-between bg-card">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-panel px-4 py-3.5 sm:px-6">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Dashboard</span>
+          <ArrowLeft className="size-4" />
+          Back to dashboard
         </Link>
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Integrations
-        </span>
+        <span className="kairos-eyebrow">Integrations</span>
       </div>
       {body}
     </div>

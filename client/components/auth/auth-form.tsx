@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { OpenBookLogo } from "@/components/ui/openbook-logo";
+import { KairosLogo } from "@/components/brand/kairos-logo";
 import { useAuth } from "@/hooks/use-auth";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
@@ -62,14 +62,14 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
     <div className="w-full max-w-110 px-6 sm:px-10 py-10 flex flex-col items-center justify-between min-h-[640px] text-zinc-900 dark:text-zinc-100">
       {/* Brand Header */}
       <div className="flex flex-col items-center text-center w-full">
-        <OpenBookLogo size={32} textSize="text-2xl" className="mb-8" />
+        <KairosLogo size={32} textSize="text-2xl" className="mb-8" />
 
         <h1 className="text-2xl sm:text-[26px] font-normal tracking-tight text-zinc-900 dark:text-zinc-100 font-sans">
-          {mode === "login" ? "Access your OpenBook" : "Create your OpenBook"}
+          {mode === "login" ? "Access your Kairos" : "Create your Kairos"}
         </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 font-normal">
           {mode === "login"
-            ? "Get started with OpenBook"
+            ? "Get started with Kairos"
             : "Sign up to start organizing insights"}
         </p>
       </div>

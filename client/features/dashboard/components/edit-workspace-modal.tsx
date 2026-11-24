@@ -42,18 +42,35 @@ export function EditWorkspaceModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs"
       onMouseDown={(e) => dismissOnBackdropClick(e, onClose)}
     >
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl p-6 shadow-2xl space-y-5 animate-fadeIn text-foreground">
-        <div className="flex items-center justify-between border-b border-border pb-3">
-          <div className="flex items-center gap-2">
-            <Edit3 className="w-5 h-5 text-foreground" />
-            <h3 className="text-base font-semibold text-foreground">Edit Notebook</h3>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-workspace-title"
+        className="kairos-panel w-full max-w-md animate-fadeIn motion-reduce:animate-none space-y-5 p-6 text-foreground sm:p-7"
+      >
+        <div className="flex items-center justify-between border-b border-border pb-4">
+          <div className="flex items-center gap-3">
+            <span className="kairos-inset flex h-9 w-9 items-center justify-center text-brand">
+              <Edit3 className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="kairos-eyebrow">Notebook settings</p>
+              <h3
+                id="edit-workspace-title"
+                className="kairos-section-title mt-1 text-lg text-foreground"
+              >
+                Edit Notebook
+              </h3>
+            </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-xs p-1 cursor-pointer"
+            aria-label="Close edit workspace dialog"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand"
           >
             ✕
           </button>
@@ -65,27 +82,29 @@ export function EditWorkspaceModal({
 
           {/* Title Field */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground">Title</label>
+            <label htmlFor="edit-workspace-title-field" className="text-xs font-medium text-foreground">Title</label>
             <input
+              id="edit-workspace-title-field"
               type="text"
               required
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Notebook Title"
-              className="w-full px-3.5 py-2 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-ring/40"
             />
           </div>
 
           {/* Description Field */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground">Description (Optional)</label>
+            <label htmlFor="edit-workspace-description" className="text-xs font-medium text-foreground">Description (Optional)</label>
             <textarea
+              id="edit-workspace-description"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Notebook Description"
-              className="w-full px-3.5 py-2 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-ring/40"
             />
           </div>
 
@@ -93,14 +112,14 @@ export function EditWorkspaceModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="rounded-xl border border-border px-3.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isUpdating || !title.trim()}
-              className="px-4 py-2 bg-primary text-primary-foreground hover:opacity-90 text-xs font-medium rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-xs font-medium text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:bg-brand/90 disabled:opacity-50"
             >
               {isUpdating ? <ThemeLoader size={16} /> : null}
               <span>Save Changes</span>

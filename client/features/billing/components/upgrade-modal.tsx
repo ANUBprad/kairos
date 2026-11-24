@@ -14,11 +14,11 @@ export function UpgradeModal() {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && closeUpgradeModal()}>
       <DialogContent
-        className="sm:max-w-5xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden bg-background text-foreground border-border rounded-[1.75rem] shadow-2xl"
+        className="kairos-panel flex max-h-[92dvh] flex-col gap-0 overflow-hidden bg-surface p-0 text-foreground sm:max-w-6xl"
         aria-describedby={undefined}
       >
-        <DialogTitle className="sr-only">Choose a subscription plan</DialogTitle>
-        <div className="overflow-y-auto flex-1 custom-scrollbar p-6 md:p-8">
+        <DialogTitle className="sr-only">Choose a credit top-up</DialogTitle>
+        <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 md:p-8">
           <PricingPlans
             variant="embedded"
             alertMessage={reason}

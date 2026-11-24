@@ -8,9 +8,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-  --font-serif: var(--font-serif);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-kairos-mono);
+  --font-serif: var(--font-kairos-serif);
+  --font-heading: var(--font-kairos-display);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -29,88 +29,246 @@
   --color-card: var(--card);
   --color-selection: var(--selection);
   --color-selection-foreground: var(--selection-foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-panel: var(--panel);
+  --color-brand: var(--brand);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-quiet: var(--brand-quiet);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --radius-card: var(--radius-card);
+  --shadow-panel: var(--shadow-panel);
+  --shadow-lift: var(--shadow-lift);
 }
 
 :root {
-  /* Geist is loaded in the root layout as --font-geist-sans; without this the
-     `font-sans` utility resolves to an empty var and falls back to Times. */
   --font-sans: var(--font-geist-sans);
-  --background: #f6efe7;
-  --foreground: #09090b;
-  --card: #fcf9f5;
-  --card-foreground: #09090b;
-  --popover: #fcf9f5;
-  --popover-foreground: #09090b;
-  --primary: #18181b;
-  --primary-foreground: #fafafa;
-  --secondary: #ede3d7;
-  --secondary-foreground: #18181b;
-  --muted: #ede3d7;
-  --muted-foreground: #70685e;
-  --accent: #ede3d7;
-  --accent-foreground: #18181b;
-  --destructive: #ef4444;
-  --border: #e3d7c8;
-  --input: #e3d7c8;
-  --ring: #18181b;
-  --radius: 0.625rem;
-  --selection: #dfcfbc;
-  --selection-foreground: #18181b;
+  --background: #f6f7f4;
+  --foreground: #101820;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --panel: #fdfefd;
+  --card: #ffffff;
+  --card-foreground: #101820;
+  --popover: #ffffff;
+  --popover-foreground: #101820;
+  --primary: #155e56;
+  --primary-foreground: #ffffff;
+  --secondary: #e7f0ed;
+  --secondary-foreground: #103b36;
+  --muted: #eff1ee;
+  --muted-foreground: #64706b;
+  --accent: #e7f0ed;
+  --accent-foreground: #103b36;
+  --destructive: #c43d3d;
+  --border: #dde3de;
+  --input: #d5ddd8;
+  --ring: #155e56;
+  --brand: #155e56;
+  --brand-accent: #c8f169;
+  --brand-soft: #e7f0ed;
+  --brand-quiet: #f3f7f1;
+  --success: #167c5a;
+  --warning: #a76413;
+  --danger: #c43d3d;
+  --selection: #c8f169;
+  --selection-foreground: #101820;
+  --radius: 0.75rem;
+  --radius-card: 1.25rem;
+  --shadow-panel: 0 1px 2px rgba(16, 24, 32, 0.04),
+    0 14px 34px -22px rgba(16, 24, 32, 0.24);
+  --shadow-lift: 0 20px 48px -26px rgba(16, 24, 32, 0.36);
 }
 
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #121215;
-  --card-foreground: #fafafa;
-  --popover: #121215;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #18181b;
-  --secondary: #18181b;
-  --secondary-foreground: #fafafa;
-  --muted: #18181b;
-  --muted-foreground: #a1a1aa;
-  --accent: #18181b;
-  --accent-foreground: #fafafa;
-  --destructive: #7f1d1d;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #d4d4d8;
-  --selection: #3f3f46;
-  --selection-foreground: #fafafa;
+  --background: #0a0f14;
+  --foreground: #f3f7f5;
+  --surface: #101820;
+  --surface-raised: #151f29;
+  --panel: #0e151c;
+  --card: #111a23;
+  --card-foreground: #f3f7f5;
+  --popover: #111a23;
+  --popover-foreground: #f3f7f5;
+  --primary: #c8f169;
+  --primary-foreground: #0b160b;
+  --secondary: #1b2832;
+  --secondary-foreground: #dce8e1;
+  --muted: #17222c;
+  --muted-foreground: #9aa9a4;
+  --accent: #1b2832;
+  --accent-foreground: #f3f7f5;
+  --destructive: #f87171;
+  --border: #25333d;
+  --input: #2a3945;
+  --ring: #c8f169;
+  --brand: #c8f169;
+  --brand-accent: #8fe3c6;
+  --brand-soft: #1b2c28;
+  --brand-quiet: #12201c;
+  --success: #5ee0a0;
+  --warning: #f5c36b;
+  --danger: #f87171;
+  --selection: #2e4b36;
+  --selection-foreground: #f3f7f5;
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 18px 48px -28px rgba(0, 0, 0, 0.8);
+  --shadow-lift: 0 24px 60px -28px rgba(0, 0, 0, 0.85);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground min-h-screen transition-colors duration-150;
-  }
-  button:not(:disabled), [role="button"]:not(:disabled) {
-    cursor: pointer;
-  }
+
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground min-h-screen antialiased;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :where(a, button, input, textarea, select, [role="button"]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 }
 
-/* One text selection colour for the whole app, driven by --selection so it
-   follows the light and dark themes. Deliberately left outside @layer so a
-   stray `selection:bg-*` utility can't reintroduce per-page colours; change
-   the tokens above instead of overriding this locally. */
+/* Shared visual language. These classes are intentionally token-driven so the
+   same surfaces read correctly in both themes without a second theme system. */
+.kairos-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+}
+
+.kairos-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-panel);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.kairos-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--brand) 36%, var(--border));
+  box-shadow: var(--shadow-lift);
+}
+
+.kairos-inset {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
+.kairos-eyebrow {
+  color: var(--brand);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.kairos-display {
+  font-family: var(--font-kairos-display);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  line-height: 1.03;
+}
+
+.kairos-section-title {
+  font-family: var(--font-kairos-display);
+  font-weight: 620;
+  letter-spacing: -0.028em;
+  line-height: 1.14;
+}
+
+.kairos-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--surface);
+  padding: 0.25rem 0.625rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.kairos-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--success);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent);
+}
+
+.kairos-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--border) 65%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--border) 65%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+.kairos-aurora {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+}
+
+.kairos-aurora::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10% auto;
+  z-index: -1;
+  height: 640px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 25%, color-mix(in srgb, var(--brand) 18%, transparent), transparent 42%),
+    radial-gradient(circle at 78% 18%, color-mix(in srgb, var(--brand-accent) 14%, transparent), transparent 38%);
+  filter: blur(18px);
+}
+
+.kairos-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--brand-soft) 20%,
+    color-mix(in srgb, var(--brand-accent) 28%, var(--brand-soft)) 50%,
+    var(--brand-soft) 80%
+  );
+  background-size: 200% 100%;
+  animation: kairos-shimmer 2.4s ease-in-out infinite;
+}
+
 ::selection,
 *::selection {
   background-color: var(--selection);
   color: var(--selection-foreground);
 }
 
-
-/* Custom sleek scrollbar matching light and dark modes */
+/* Theme-aware scrollbars. */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -118,36 +276,23 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d6c8b8;
+  background: color-mix(in srgb, var(--muted-foreground) 28%, transparent);
   border-radius: 9999px;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #b8a896;
+  background: color-mix(in srgb, var(--muted-foreground) 45%, transparent);
+  background-clip: padding-box;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #27272a;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
-}
-
-/* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #d6c8b8 transparent;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground) 28%, transparent) transparent;
 }
 
-.dark * {
-  scrollbar-color: #27272a transparent;
-}
-
-/* Continuous logo strip on the landing page */
-@keyframes openbook-marquee {
+@keyframes kairos-marquee {
   from {
     transform: translate3d(0, 0, 0);
   }
@@ -157,16 +302,19 @@
 }
 
 .marquee-track {
-  animation: openbook-marquee 45s linear infinite;
+  animation: kairos-marquee 45s linear infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none;
+@keyframes kairos-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: -100% 50%;
   }
 }
 
-/* Gold Glitter & Shimmer Effects for PRO+ Tier */
+/* Premium tier accent, retained from the existing billing visual language. */
 @keyframes gold-shimmer {
   0% {
     background-position: 0% 50%;
@@ -203,4 +351,24 @@
   );
   background-size: 200% 200%;
   animation: gold-shimmer 4s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .marquee-track,
+  .kairos-shimmer,
+  .gold-glitter-badge,
+  .gold-glitter-ring {
+    animation: none !important;
+  }
+
+  .kairos-card,
+  .kairos-card:hover,
+  body {
+    transition: none !important;
+    transform: none !important;
+  }
 }

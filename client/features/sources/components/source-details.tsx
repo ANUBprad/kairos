@@ -27,7 +27,11 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center p-12 text-muted-foreground gap-3">
+      <div
+        className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-muted-foreground"
+        role="status"
+        aria-label="Loading source details"
+      >
         <ThemeLoader size={32} />
         <span className="text-xs">Loading source details...</span>
       </div>
@@ -36,13 +40,18 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
 
   if (error || !source) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center">
-        <p className="text-sm font-medium text-destructive">Could not load source</p>
+      <div
+        className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center"
+        role="alert"
+      >
+        <p className="kairos-section-title text-sm text-destructive">
+          Could not load source
+        </p>
         <Link
           href={sourceRoutes.list(workspaceId)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-brand/30 hover:bg-brand-quiet hover:text-brand motion-reduce:transition-none"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
+          <ArrowLeft className="size-3.5" aria-hidden="true" />
           Back to library
         </Link>
       </div>
@@ -57,29 +66,30 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
   const isProcessing = source.status === "PENDING" || source.status === "PROCESSING";
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6 md:p-8 max-w-4xl mx-auto w-full">
+    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 p-4 pb-10 sm:p-6 md:p-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
           <Link
             href={sourceRoutes.list(workspaceId)}
-            className="p-2 rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            aria-label="Back to source library"
+            className="shrink-0 rounded-lg border border-border bg-card p-2 text-muted-foreground transition-colors hover:border-brand/30 hover:bg-brand-quiet hover:text-brand motion-reduce:transition-none"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="size-4" aria-hidden="true" />
           </Link>
 
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-muted border border-border flex items-center justify-center">
+              <div className="flex size-6 items-center justify-center rounded-md border border-border bg-brand-quiet">
                 <SourceTypeIcon type={source.type} source={source} />
               </div>
-              <h2 className="text-lg font-semibold text-foreground truncate">
+              <h2 className="kairos-section-title truncate text-lg text-primary">
                 {source.title}
               </h2>
               <SourceStatusBadge status={source.status} />
             </div>
 
-            <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-2">
+            <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>{SOURCE_TYPE_LABELS[source.type]}</span>
               <span>·</span>
               <span>
@@ -89,7 +99,7 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
                 <>
                   <span>·</span>
                   <span className="flex items-center gap-1">
-                    <Layers className="w-3 h-3" />
+                    <Layers className="size-3" aria-hidden="true" />
                     {chunkCount} chunks indexed
                   </span>
                 </>
@@ -103,9 +113,15 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
             type="button"
             onClick={() => reprocessMutation.mutate(source.id)}
             disabled={reprocessMutation.isPending}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-brand/30 hover:bg-brand-quiet hover:text-brand disabled:opacity-50 motion-reduce:transition-none"
           >
-            <RefreshCw className={cn("w-3.5 h-3.5", reprocessMutation.isPending && "animate-spin")} />
+            <RefreshCw
+              className={cn(
+                "size-3.5",
+                reprocessMutation.isPending && "animate-spin motion-reduce:animate-none"
+              )}
+              aria-hidden="true"
+            />
             Retry
           </button>
         )}
@@ -113,14 +129,14 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
 
       {/* External URL if present */}
       {source.url && source.type !== "IMAGE" && (
-        <div className="flex items-center gap-2 text-xs p-3 rounded-lg border border-border bg-card text-muted-foreground">
-          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">URL:</span>
+        <div className="kairos-inset flex items-center gap-2 rounded-lg p-3 text-xs text-muted-foreground">
+          <ExternalLink className="size-3.5 shrink-0 text-brand" aria-hidden="true" />
+          <span className="shrink-0">URL:</span>
           <a
             href={source.url}
             target="_blank"
             rel="noreferrer"
-            className="text-foreground underline hover:no-underline truncate"
+            className="truncate text-brand underline underline-offset-4 hover:no-underline"
           >
             {source.url}
           </a>
@@ -129,19 +145,21 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
 
       {/* PDF file info */}
       {source.type === "PDF" && fileUrl && (
-        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card text-xs">
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4 text-xs shadow-[var(--shadow-panel)]">
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-foreground" />
+            <FileText className="size-4 text-brand" aria-hidden="true" />
             <div>
-              <p className="font-medium text-foreground">{fileName || "Uploaded PDF"}</p>
-              <p className="text-muted-foreground text-[11px]">Ready for grounded querying</p>
+              <p className="font-medium text-primary">{fileName || "Uploaded PDF"}</p>
+              <p className="text-[11px] text-muted-foreground">
+                Ready for grounded queries
+              </p>
             </div>
           </div>
           <a
             href={fileUrl}
             target="_blank"
             rel="noreferrer"
-            className="px-3 py-1.5 rounded-lg border border-border bg-muted hover:bg-muted/80 text-foreground font-medium transition-colors"
+            className="rounded-lg border border-brand/30 bg-brand-soft px-3 py-1.5 font-medium text-brand transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
           >
             Open PDF
           </a>
@@ -149,9 +167,9 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
       )}
 
       {source.type === "IMAGE" && fileUrl && (
-        <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+        <div className="space-y-3 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-panel)]">
           <div className="flex items-center justify-between gap-2 text-xs">
-            <p className="font-medium text-foreground">{fileName || "Uploaded image"}</p>
+            <p className="font-medium text-primary">{fileName || "Uploaded image"}</p>
             <button
               type="button"
               disabled={isDownloadingImage}
@@ -168,12 +186,15 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
                   setIsDownloadingImage(false);
                 }
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/80 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand/30 bg-brand-soft px-3 py-1.5 font-medium text-brand transition-colors hover:bg-brand-soft/70 disabled:opacity-50 motion-reduce:transition-none"
             >
               {isDownloadingImage ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2
+                  className="size-3.5 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
               ) : (
-                <Download className="w-3.5 h-3.5" />
+                <Download className="size-3.5" aria-hidden="true" />
               )}
               Download image
             </button>
@@ -181,36 +202,44 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
           <img
             src={fileUrl}
             alt={source.title}
-            className="max-h-80 w-full rounded-lg border border-border object-contain bg-muted/30"
+            className="max-h-80 w-full rounded-lg border border-border bg-brand-quiet object-contain"
           />
         </div>
       )}
 
       {/* Main Content / Status State */}
       {isProcessing ? (
-        <div className="p-12 text-center border border-dashed border-border rounded-2xl bg-card space-y-2">
-          <CircularLoader size={36} className="mx-auto text-muted-foreground" />
-          <p className="text-xs font-medium text-foreground">Processing Source</p>
+        <div
+          className="space-y-2 rounded-2xl border border-dashed border-border bg-brand-quiet p-12 text-center"
+          role="status"
+        >
+          <CircularLoader size={36} className="mx-auto text-brand" />
+          <p className="kairos-section-title text-sm text-primary">
+            Processing source
+          </p>
           <p className="text-[11px] text-muted-foreground">
             {source.type === "IMAGE"
               ? "Running OCR, chunking text, and building the search index."
-              : "Extracting text, chunking passages, and embedding vector index."}
+              : "Extracting text, chunking passages, and embedding the vector index."}
           </p>
         </div>
       ) : source.status === "FAILED" ? (
-        <div className="p-6 rounded-xl border border-destructive/30 bg-destructive/5 space-y-2 text-xs text-destructive">
+        <div
+          className="space-y-2 rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-xs text-destructive"
+          role="alert"
+        >
           <p className="font-semibold">Processing failed</p>
-          <p className="text-muted-foreground">{processingError || "An error occurred during extraction or embedding."}</p>
+          <p className="text-muted-foreground">
+            {processingError || "An error occurred during extraction or embedding."}
+          </p>
         </div>
       ) : source.content ? (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Extracted Content
-          </h3>
+          <h3 className="kairos-eyebrow">Extracted content</h3>
           <MarkdownPreview content={source.content} />
         </div>
       ) : (
-        <div className="p-8 text-center border border-dashed border-border rounded-xl text-xs text-muted-foreground">
+        <div className="rounded-xl border border-dashed border-border bg-brand-quiet p-8 text-center text-xs text-muted-foreground">
           No extracted content available for this source.
         </div>
       )}

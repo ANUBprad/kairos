@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import { AuthLayout } from "@/features/auth";
 
 export const metadata: Metadata = {
-  title: "Log in - OpenBook",
-  description: "Access your OpenBook workspaces, documents, and notes.",
+  title: "Log in",
+  description: "Sign in to continue your Kairos research workspaces.",
 };
 
 export default function LoginPage() {

@@ -7,7 +7,6 @@ import {
   Globe,
   FileText,
   X,
-  Plus,
   Search,
   Check,
   HelpCircle,
@@ -65,7 +64,7 @@ type TabType =
   | "github";
 
 const FORM_CONTROL_CLASSNAME =
-  "w-full rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+  "kairos-inset w-full px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 const IMAGE_ACCEPT =
   "image/png,image/jpeg,image/gif,image/webp,image/bmp,image/tiff,image/heic,image/heif,.png,.jpg,.jpeg,.gif,.webp,.bmp,.tif,.tiff,.heic,.heif";
 
@@ -392,23 +391,27 @@ export function AddSourceDialog({
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       onMouseDown={(e) => dismissOnBackdropClick(e, handleClose)}
     >
-      <div className="w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-fadeIn text-foreground">
+      <div className="kairos-panel max-h-[calc(100vh-2rem)] w-full max-w-2xl animate-fadeIn overflow-y-auto text-foreground shadow-[var(--shadow-lift)] motion-reduce:animate-none">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-          <div className="flex items-center gap-2">
-            <Plus className="w-4 h-4 text-foreground" />
-            <h2 className="text-sm font-semibold text-foreground">Add Source to OpenBook</h2>
+        <div className="flex items-center justify-between border-b border-border bg-surface px-6 py-4">
+          <div className="min-w-0 space-y-0.5">
+            <p className="kairos-eyebrow">Add knowledge</p>
+            <h2 className="kairos-section-title text-base text-primary">
+              Add source to Kairos
+            </h2>
           </div>
           <button
+            type="button"
             onClick={handleClose}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            aria-label="Close add source dialog"
+            className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-brand-quiet hover:text-brand motion-reduce:transition-none"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" aria-hidden="true" />
           </button>
         </div>
 
         {/* Source type grid — 4 × 2 */}
-        <div className="border-b border-border bg-muted/40 px-4 py-4 select-none">
+        <div className="select-none border-b border-border bg-brand-quiet px-4 py-4">
           <div className="grid grid-cols-4 gap-2">
             {SOURCE_TABS.map((tab) => (
               <button
@@ -418,15 +421,17 @@ export function AddSourceDialog({
                   setActiveTab(tab.id);
                   setError(null);
                 }}
+                aria-pressed={activeTab === tab.id}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1.5 rounded-xl border px-1.5 py-2.5 min-h-[4.25rem] text-[11px] font-medium transition-colors cursor-pointer",
+                  "flex min-h-[4.25rem] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border px-1.5 py-2.5 text-[11px] font-medium transition-colors motion-reduce:transition-none",
                   activeTab === tab.id
-                    ? "border-foreground bg-background text-foreground shadow-sm ring-1 ring-foreground/10"
-                    : "border-border bg-card/60 text-muted-foreground hover:border-foreground/35 hover:bg-card hover:text-foreground",
+                    ? "border-brand bg-primary text-primary-foreground shadow-[var(--shadow-panel)]"
+                    : "border-border bg-card text-muted-foreground hover:border-brand/40 hover:bg-brand-soft hover:text-brand",
                 )}
               >
                 <span
                   className="flex size-5 shrink-0 items-center justify-center overflow-visible [&_svg]:size-5"
+                  aria-hidden="true"
                 >
                   {tab.icon}
                 </span>
@@ -441,7 +446,10 @@ export function AddSourceDialog({
         {/* Content Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 text-xs bg-destructive/10 border border-destructive/20 text-destructive rounded-xl animate-fadeIn">
+            <div
+              className="animate-fadeIn rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive motion-reduce:animate-none"
+              role="alert"
+            >
               {error}
             </div>
           )}
@@ -452,10 +460,10 @@ export function AddSourceDialog({
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className={cn(
-                  "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors flex flex-col items-center justify-center gap-2",
+                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none",
                   pdfFile
-                    ? "border-foreground bg-muted/30"
-                    : "border-border hover:border-zinc-400 hover:bg-muted/20"
+                    ? "border-brand bg-brand-quiet text-brand"
+                    : "border-border hover:border-brand/50 hover:bg-brand-quiet"
                 )}
               >
                 <input
@@ -471,15 +479,15 @@ export function AddSourceDialog({
                     }
                   }}
                 />
-                <Upload className="w-8 h-8 text-muted-foreground" />
-                <div className="text-xs font-medium text-foreground">
-                  {pdfFile ? pdfFile.name : "Click to browse or drop your PDF here"}
+                <Upload className="size-8 text-brand" aria-hidden="true" />
+                <div className="text-xs font-medium text-primary">
+                  {pdfFile ? pdfFile.name : "Click to browse or drop a PDF here"}
                 </div>
-                <div className="text-[11px] text-muted-foreground">Up to 25MB</div>
+                <div className="text-[11px] text-muted-foreground">Up to 25 MB</div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs font-medium text-foreground">
                   Source Title (Optional)
                 </label>
                 <input
@@ -498,10 +506,10 @@ export function AddSourceDialog({
               <div
                 onClick={() => imageInputRef.current?.click()}
                 className={cn(
-                  "border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-colors flex flex-col items-center justify-center gap-2",
+                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none",
                   imageFile
-                    ? "border-foreground bg-muted/30"
-                    : "border-border hover:border-zinc-400 hover:bg-muted/20"
+                    ? "border-brand bg-brand-quiet text-brand"
+                    : "border-border hover:border-brand/50 hover:bg-brand-quiet"
                 )}
               >
                 <input
@@ -519,8 +527,8 @@ export function AddSourceDialog({
                     }
                   }}
                 />
-                <ImageIcon className="w-8 h-8 text-muted-foreground" />
-                <div className="text-xs font-medium text-foreground">
+                <ImageIcon className="size-8 text-brand" aria-hidden="true" />
+                <div className="text-xs font-medium text-primary">
                   {imageFile ? imageFile.name : "Upload a photo, scan, or screenshot"}
                 </div>
                 <div className="text-[11px] text-muted-foreground max-w-sm">
@@ -529,7 +537,7 @@ export function AddSourceDialog({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs font-medium text-foreground">
                   Source Title (Optional)
                 </label>
                 <input
@@ -547,20 +555,20 @@ export function AddSourceDialog({
           {activeTab === "google-drive" && (
             <div className="space-y-4">
               {!integrations?.googleDrive?.connected ? (
-                <div className="p-8 text-center border border-border rounded-2xl bg-muted/20 space-y-4">
+                <div className="space-y-4 rounded-2xl border border-border bg-brand-quiet p-8 text-center">
                   <GoogleDriveIcon size={48} className="mx-auto" />
                   <div className="space-y-1">
-                    <h3 className="text-xs font-bold text-foreground">
+                    <h3 className="kairos-section-title text-sm text-primary">
                       Connect your Google Drive
                     </h3>
-                    <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
-                      Import Google Docs and PDFs directly into your notebook sources with 1 click.
+                    <p className="mx-auto max-w-sm text-[11px] text-muted-foreground">
+                      Import Google Docs and PDFs directly into your Kairos sources with one click.
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={handleConnectGoogleDrive}
-                    className="px-4 py-2 bg-foreground text-background text-xs font-semibold rounded-xl transition-opacity hover:opacity-90 cursor-pointer shadow-xs"
+                    className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
                   >
                     Connect Google Drive
                   </button>
@@ -568,7 +576,10 @@ export function AddSourceDialog({
               ) : (
                 <div className="space-y-3">
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
+                    <Search
+                      className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground"
+                      aria-hidden="true"
+                    />
                     <input
                       type="text"
                       placeholder="Search Google Drive docs & PDFs..."
@@ -579,7 +590,7 @@ export function AddSourceDialog({
                   </div>
 
 
-                  <div className="max-h-52 overflow-y-auto border border-border rounded-xl divide-y divide-border bg-card">
+                  <div className="kairos-inset max-h-52 divide-y divide-border overflow-y-auto">
                     {isLoadingDriveFiles ? (
                       <div className="p-6 text-center">
                         <ThemeLoader size={20} />
@@ -592,21 +603,21 @@ export function AddSourceDialog({
                             key={file.id}
                             onClick={() => setSelectedDriveFileId(file.id)}
                             className={cn(
-                              "p-2.5 flex items-center justify-between gap-3 text-xs cursor-pointer transition-colors",
+                              "flex cursor-pointer items-center justify-between gap-3 p-2.5 text-xs transition-colors motion-reduce:transition-none",
                               isSelected
-                                ? "bg-muted font-semibold text-foreground"
-                                : "hover:bg-muted/40 text-foreground"
+                                ? "bg-brand-soft font-semibold text-brand"
+                                : "hover:bg-brand-quiet text-foreground"
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <FileText className="w-4 h-4 shrink-0 text-muted-foreground" />
+                              <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                               <span className="truncate">{file.name}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-[10px] uppercase font-mono text-muted-foreground">
                                 {file.type === "GOOGLE_DOC" ? "Doc" : "PDF"}
                               </span>
-                              {isSelected && <Check className="w-3.5 h-3.5" />}
+                              {isSelected && <Check className="size-3.5 text-brand" aria-hidden="true" />}
                             </div>
                           </div>
                         );
@@ -626,24 +637,25 @@ export function AddSourceDialog({
           {activeTab === "notion" && (
             <div className="space-y-4">
               {!integrations?.notion?.connected ? (
-                <div className="p-6 border border-border rounded-2xl bg-muted/20 space-y-4 relative">
+                <div className="relative space-y-4 rounded-2xl border border-border bg-brand-quiet p-6">
                   {/* Corner Help Button */}
                   <button
                     type="button"
                     onClick={() => setShowNotionHelp(true)}
-                    className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
-                    title="How to get Notion token?"
+                    aria-label="How to get a Notion token?"
+                    className="absolute right-3.5 top-3.5 cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand motion-reduce:transition-none"
+                    title="How to get a Notion token?"
                   >
-                    <HelpCircle className="w-4 h-4" />
+                    <HelpCircle className="size-4" aria-hidden="true" />
                   </button>
 
-                  <div className="text-center space-y-1">
+                  <div className="space-y-1 text-center">
                     <NotionIcon size={36} className="mx-auto" />
-                    <h3 className="text-xs font-bold text-foreground">
-                      Connect your Notion Workspace
+                    <h3 className="kairos-section-title text-sm text-primary">
+                      Connect your Notion workspace
                     </h3>
-                    <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
-                      Paste your Notion Internal Integration Token to browse and import your Notion pages.
+                    <p className="mx-auto max-w-sm text-[11px] text-muted-foreground">
+                      Paste your Notion internal integration token to browse and import your pages.
                     </p>
                   </div>
 
@@ -659,9 +671,9 @@ export function AddSourceDialog({
                       type="button"
                       onClick={handleConnectNotionToken}
                       disabled={isConnectingNotion}
-                      className="w-full py-2 bg-foreground text-background text-xs font-semibold rounded-xl transition-opacity hover:opacity-90 cursor-pointer shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 disabled:opacity-50 motion-reduce:transition-none"
                     >
-                      {isConnectingNotion ? <ThemeLoader size={14} /> : "Connect Notion Token"}
+                      {isConnectingNotion ? <ThemeLoader size={14} /> : "Connect Notion token"}
                     </button>
                   </div>
 
@@ -676,7 +688,10 @@ export function AddSourceDialog({
 
                 <div className="space-y-3">
                   <div className="relative">
-                    <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
+                    <Search
+                      className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground"
+                      aria-hidden="true"
+                    />
                     <input
                       type="text"
                       placeholder="Search Notion pages..."
@@ -687,7 +702,7 @@ export function AddSourceDialog({
                   </div>
 
 
-                  <div className="max-h-52 overflow-y-auto border border-border rounded-xl divide-y divide-border bg-card">
+                  <div className="kairos-inset max-h-52 divide-y divide-border overflow-y-auto">
                     {isLoadingNotionPages ? (
                       <div className="p-6 text-center">
                         <ThemeLoader size={20} />
@@ -700,17 +715,17 @@ export function AddSourceDialog({
                             key={page.id}
                             onClick={() => setSelectedNotionPageId(page.id)}
                             className={cn(
-                              "p-2.5 flex items-center justify-between gap-3 text-xs cursor-pointer transition-colors",
+                              "flex cursor-pointer items-center justify-between gap-3 p-2.5 text-xs transition-colors motion-reduce:transition-none",
                               isSelected
-                                ? "bg-muted font-semibold text-foreground"
-                                : "hover:bg-muted/40 text-foreground"
+                                ? "bg-brand-soft font-semibold text-brand"
+                                : "hover:bg-brand-quiet text-foreground"
                             )}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-sm shrink-0">{page.icon || "📄"}</span>
                               <span className="truncate">{page.title}</span>
                             </div>
-                            {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                            {isSelected && <Check className="size-3.5 shrink-0 text-brand" aria-hidden="true" />}
                           </div>
                         );
                       })
@@ -729,7 +744,7 @@ export function AddSourceDialog({
           {activeTab === "website" && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs font-medium text-foreground">
                   Website URL
                 </label>
                 <input
@@ -742,7 +757,7 @@ export function AddSourceDialog({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs font-medium text-foreground">
                   Title (Optional)
                 </label>
                 <input
@@ -760,7 +775,7 @@ export function AddSourceDialog({
           {activeTab === "youtube" && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs font-medium text-foreground">
                   YouTube Video URL
                 </label>
                 <input
@@ -773,7 +788,7 @@ export function AddSourceDialog({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs font-medium text-foreground">
                   Title (Optional)
                 </label>
                 <input
@@ -791,7 +806,7 @@ export function AddSourceDialog({
           {activeTab === "text" && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs font-medium text-foreground">
                   Title
                 </label>
                 <input
@@ -804,7 +819,7 @@ export function AddSourceDialog({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs font-medium text-foreground">
                   Content
                 </label>
                 <textarea
@@ -824,11 +839,11 @@ export function AddSourceDialog({
               {/* Not Connected State */}
               {!integrations?.github?.connected ? (
                 <>
-                  <div className="p-4 border border-border rounded-xl bg-muted/20 space-y-3">
+                  <div className="space-y-3 rounded-xl border border-border bg-brand-quiet p-4">
                     <div className="flex items-start gap-3">
-                      <GithubIcon size={20} className="shrink-0 text-muted-foreground mt-0.5" />
+                      <GithubIcon size={20} className="mt-0.5 shrink-0 text-brand" />
                       <div className="space-y-1">
-                        <p className="text-xs font-medium text-foreground">
+                        <p className="text-xs font-medium text-primary">
                           Connect GitHub to browse your repositories
                         </p>
                         <p className="text-[11px] text-muted-foreground">
@@ -839,7 +854,7 @@ export function AddSourceDialog({
                     <button
                       type="button"
                       onClick={handleConnectGithub}
-                      className="px-4 py-2 bg-foreground text-background text-xs font-semibold rounded-xl transition-opacity hover:opacity-90 cursor-pointer shadow-xs"
+                      className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
                     >
                       Connect GitHub
                     </button>
@@ -854,7 +869,7 @@ export function AddSourceDialog({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                    <label className="mb-1 block text-xs font-medium text-foreground">
                       GitHub Repository URL
                     </label>
                     <input
@@ -867,7 +882,7 @@ export function AddSourceDialog({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">
+                    <label className="mb-1 block text-xs font-medium text-foreground">
                       Title (Optional)
                     </label>
                     <input
@@ -883,12 +898,12 @@ export function AddSourceDialog({
                 /* Connected State: List user's repositories */
                 <div className="space-y-3">
                   {/* Account Badge & Switch Mode */}
-                  <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-muted/30 border border-border text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between rounded-xl border border-brand/20 bg-brand-quiet px-3 py-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-green-500" />
+                      <Check className="size-3.5 text-success" aria-hidden="true" />
                       <span>
                         Connected as{" "}
-                        <span className="font-semibold text-foreground">
+                        <span className="font-semibold text-primary">
                           {integrations.github.account?.metadata?.login || "GitHub User"}
                         </span>
                       </span>
@@ -897,10 +912,17 @@ export function AddSourceDialog({
                       <button
                         type="button"
                         onClick={() => refetchGithubRepos()}
+                        aria-label="Refresh repositories"
                         title="Refresh repositories"
-                        className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand motion-reduce:transition-none"
                       >
-                        <RefreshCw className={cn("w-3.5 h-3.5", isFetchingGithubRepos && "animate-spin")} />
+                        <RefreshCw
+                          className={cn(
+                            "size-3.5",
+                            isFetchingGithubRepos && "animate-spin motion-reduce:animate-none"
+                          )}
+                          aria-hidden="true"
+                        />
                       </button>
                       <button
                         type="button"
@@ -908,7 +930,7 @@ export function AddSourceDialog({
                           setIsManualGithubUrl(!isManualGithubUrl);
                           setSelectedGithubRepoUrl(null);
                         }}
-                        className="text-[11px] font-medium text-primary hover:underline cursor-pointer"
+                        className="cursor-pointer text-[11px] font-medium text-brand hover:underline"
                       >
                         {isManualGithubUrl ? "Browse my repos" : "Enter custom URL"}
                       </button>
@@ -919,7 +941,7 @@ export function AddSourceDialog({
                     /* Manual Custom URL input when connected */
                     <div className="space-y-3 pt-1">
                       <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        <label className="mb-1 block text-xs font-medium text-foreground">
                           GitHub Repository URL
                         </label>
                         <input
@@ -932,7 +954,7 @@ export function AddSourceDialog({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        <label className="mb-1 block text-xs font-medium text-foreground">
                           Title (Optional)
                         </label>
                         <input
@@ -948,7 +970,10 @@ export function AddSourceDialog({
                     /* Repository List from GitHub */
                     <div className="space-y-3">
                       <div className="relative">
-                        <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-muted-foreground" />
+                        <Search
+                      className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground"
+                      aria-hidden="true"
+                    />
                         <input
                           type="text"
                           placeholder="Search your repositories..."
@@ -958,7 +983,7 @@ export function AddSourceDialog({
                         />
                       </div>
 
-                      <div className="max-h-56 overflow-y-auto border border-border rounded-xl divide-y divide-border bg-card">
+                      <div className="kairos-inset max-h-56 divide-y divide-border overflow-y-auto">
                         {isLoadingGithubRepos ? (
                           <div className="p-6 text-center space-y-2">
                             <ThemeLoader size={20} />
@@ -978,18 +1003,18 @@ export function AddSourceDialog({
                                   }
                                 }}
                                 className={cn(
-                                  "p-2.5 flex items-center justify-between gap-3 text-xs cursor-pointer transition-colors",
+                                  "flex cursor-pointer items-center justify-between gap-3 p-2.5 text-xs transition-colors motion-reduce:transition-none",
                                   isSelected
-                                    ? "bg-muted font-medium text-foreground border-l-2 border-l-primary"
-                                    : "hover:bg-muted/40 text-foreground"
+                                    ? "border-l-2 border-l-brand bg-brand-soft font-medium text-brand"
+                                    : "hover:bg-brand-quiet text-foreground"
                                 )}
                               >
                                 <div className="flex items-start gap-2.5 min-w-0">
                                   <div className="mt-0.5 shrink-0 text-muted-foreground">
                                     {repo.isPrivate ? (
-                                      <Lock className="w-3.5 h-3.5 text-amber-500" />
+                                      <Lock className="size-3.5 text-warning" aria-hidden="true" />
                                     ) : (
-                                      <GitFork className="w-3.5 h-3.5" />
+                                      <GitFork className="size-3.5 text-muted-foreground" aria-hidden="true" />
                                     )}
                                   </div>
                                   <div className="min-w-0 space-y-0.5">
@@ -1025,7 +1050,7 @@ export function AddSourceDialog({
                                       {repo.stargazersCount}
                                     </span>
                                   )}
-                                  {isSelected && <Check className="w-4 h-4 text-green-500" />}
+                                  {isSelected && <Check className="size-4 text-success" aria-hidden="true" />}
                                 </div>
                               </div>
                             );
@@ -1044,7 +1069,7 @@ export function AddSourceDialog({
 
                       {/* Title input when a repo is selected */}
                       <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1">
+                        <label className="mb-1 block text-xs font-medium text-foreground">
                           Source Title (Optional)
                         </label>
                         <input
@@ -1071,7 +1096,7 @@ export function AddSourceDialog({
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="cursor-pointer rounded-xl px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-brand-quiet hover:text-brand motion-reduce:transition-none"
             >
               Cancel
             </button>
@@ -1083,15 +1108,15 @@ export function AddSourceDialog({
                 (activeTab === "notion" && !selectedNotionPageId) ||
                 (activeTab === "github" && !githubUrl.trim())
               }
-              className="px-5 py-2 rounded-xl text-xs font-semibold bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer shadow-xs flex items-center gap-1.5"
+              className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 disabled:opacity-50 motion-reduce:transition-none"
             >
               {isLoading ? (
                 <>
                   <ThemeLoader size={14} />
-                  <span>Importing Source...</span>
+                  <span>Importing source...</span>
                 </>
               ) : (
-                <span>Add Source</span>
+                <span>Add source</span>
               )}
             </button>
           </div>

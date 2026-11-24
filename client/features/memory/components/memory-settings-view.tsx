@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Brain, Plus } from "lucide-react";
+import { AlertCircle, ArrowLeft, Brain, Plus } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
 import { useMemories } from "../hooks/use-memories";
 import { MemoryList } from "./memory-list";
@@ -15,7 +15,7 @@ type MemorySettingsViewProps = {
 export function MemorySettingsView({
   workspaceId,
 }: MemorySettingsViewProps = {}) {
-  const { memories, isLoading } = useMemories();
+  const { memories, isLoading, error } = useMemories();
   const [addOpen, setAddOpen] = useState(false);
 
   const backHref = workspaceId
@@ -23,26 +23,31 @@ export function MemorySettingsView({
     : "/dashboard";
 
   const content = (
-    <div className="flex flex-1 flex-col gap-6 p-6 md:p-8 max-w-4xl mx-auto w-full">
+    <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-4 sm:p-6 md:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3 min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
           {!workspaceId && (
             <Link
               href={backHref}
-              className="p-2 rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              aria-label="Back to dashboard"
+              className="kairos-inset flex size-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="size-4" />
             </Link>
           )}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Brain className="w-5 h-5 text-foreground" />
-              <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                Personalized Memory &amp; Insights
+          <div className="min-w-0 space-y-1">
+            <p className="kairos-eyebrow">Personal context</p>
+            <div className="flex items-center gap-3">
+              <span className="kairos-inset flex size-10 shrink-0 items-center justify-center text-primary">
+                <Brain className="size-5" />
+              </span>
+              <h2 className="kairos-section-title text-2xl text-foreground sm:text-3xl">
+                Memory &amp; insights
               </h2>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Long-term memory engine personalizes study notes and answers based on your background and past sessions.
+            <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
+              Review what Kairos has learned and add facts you want it to remember
+              when shaping answers and study material.
             </p>
           </div>
         </div>
@@ -50,18 +55,29 @@ export function MemorySettingsView({
         <button
           type="button"
           onClick={() => setAddOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg bg-foreground text-background hover:opacity-90 active:scale-[0.99] transition-all shadow-xs shrink-0"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-opacity hover:opacity-90 motion-reduce:transition-none"
         >
-          <Plus className="w-4 h-4" />
-          Add Memory Fact
+          <Plus className="size-4" />
+          Add memory fact
         </button>
       </div>
 
       {/* Memory Content */}
       {isLoading ? (
-        <div className="flex items-center justify-center p-12 text-muted-foreground gap-3">
-          <ThemeLoader size={32} />
-          <span className="text-xs">Loading memory profile...</span>
+        <div className="kairos-panel flex min-h-64 items-center justify-center gap-3 px-6 text-center text-xs text-muted-foreground">
+          <ThemeLoader size={28} />
+          <span>Loading your memory profile…</span>
+        </div>
+      ) : error ? (
+        <div
+          role="alert"
+          className="kairos-panel flex items-start gap-3 border-danger/25 bg-danger/5 p-5 text-sm text-danger"
+        >
+          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <span>
+            We couldn&apos;t load your memories. Please refresh the page and try
+            again.
+          </span>
         </div>
       ) : (
         <MemoryList memories={memories} />
@@ -77,18 +93,16 @@ export function MemorySettingsView({
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <div className="border-b border-border px-6 py-3.5 flex items-center justify-between bg-card">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <div className="flex items-center justify-between gap-3 border-b border-border bg-panel px-4 py-3.5 sm:px-6">
         <Link
           href={backHref}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Dashboard</span>
+          <ArrowLeft className="size-4" />
+          Back to dashboard
         </Link>
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Memory
-        </span>
+        <span className="kairos-eyebrow">Memory</span>
       </div>
       {content}
     </div>

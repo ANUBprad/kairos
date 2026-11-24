@@ -62,7 +62,7 @@ export function SourceTypeIcon({ type, className, source }: SourceTypeIconProps)
   return (
     <Icon
       className={cn(
-        "w-4 h-4 shrink-0 text-zinc-800 dark:text-zinc-200",
+        "size-4 shrink-0 text-brand",
         className
       )}
     />

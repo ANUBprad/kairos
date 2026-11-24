@@ -25,26 +25,29 @@ const INTEGRATIONS: { label: string; icon: React.ReactNode }[] = [
 
 export function IntegrationsStrip() {
   return (
-    <section className="pt-28 sm:pt-36">
-      <div className="mx-auto w-full max-w-5xl px-5 text-center sm:px-6">
-        <p className="text-[15px] text-foreground">
-          Bring in the sources and tools your research already lives in.
-        </p>
-        <p className="mt-2 text-[13px] text-muted-foreground/70">
-          More connectors are being added continuously.
-        </p>
-      </div>
+    <section id="workflow" className="scroll-mt-24 px-5 pt-24 sm:px-6 sm:pt-28">
+      <div className="mx-auto w-full max-w-6xl">
+        <div className="max-w-xl">
+          <p className="kairos-eyebrow">Connected research</p>
+          <h2 className="kairos-section-title mt-3 text-[30px] sm:text-[36px]">
+            Bring in the sources your work already lives in.
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            Kairos normalizes each source into searchable evidence, so a PDF, a
+            transcript, and a web page can answer the same question together.
+          </p>
+        </div>
 
-      <div className="relative mt-14 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_14%,black_86%,transparent)]">
-        <div className="marquee-track flex w-max items-center gap-14 pr-14">
-          {[...INTEGRATIONS, ...INTEGRATIONS].map((item, index) => (
+        <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {INTEGRATIONS.map((item) => (
             <div
-              key={`${item.label}-${index}`}
-              aria-hidden={index >= INTEGRATIONS.length}
-              className="flex shrink-0 items-center gap-2.5 text-[21px] font-medium tracking-tight text-muted-foreground/55"
+              key={item.label}
+              className="kairos-card flex min-h-24 flex-col justify-between p-4"
             >
-              {item.icon}
-              {item.label}
+              <div className="text-primary">{item.icon}</div>
+              <span className="mt-4 text-[13px] font-medium text-foreground">
+                {item.label}
+              </span>
             </div>
           ))}
         </div>

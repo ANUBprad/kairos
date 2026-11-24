@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { ChatMessage as ChatMessageType } from "../types";
-import { User, Copy, Check } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
-import { ThemeBlob } from "@/components/ui/theme-blob";
+import { KairosLogo } from "@/components/brand/kairos-logo";
 import { StreamingResponse } from "@/components/agents/streaming-response";
 import { ReasoningText } from "@/components/agents/loading-states/reasoning-text";
 import { ChatMarkdown } from "@/components/ui/chat-markdown";
@@ -105,19 +105,19 @@ export function ChatMessage({
   return (
     <div
       className={cn(
-        "group relative flex gap-3.5 p-4 rounded-2xl transition-all shadow-xs",
+        "group relative flex gap-3 rounded-2xl border p-3.5 transition-colors motion-reduce:transition-none sm:gap-3.5 sm:p-4",
         isUser
-          ? "bg-zinc-100/90 dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700/60 text-foreground max-w-[85%] ml-auto"
-          : "bg-card dark:bg-zinc-900/40 border border-border text-foreground max-w-[95%] mr-auto"
+          ? "ml-auto max-w-[88%] border-brand/25 bg-brand-soft/70 text-foreground"
+          : "mr-auto max-w-[94%] border-border bg-panel text-foreground"
       )}
     >
       {/* Role Avatar Icon */}
       <div
         className={cn(
-          "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border mt-0.5 shadow-xs overflow-hidden",
+          "mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border shadow-[var(--shadow-panel)]",
           isUser
-            ? "bg-zinc-900 dark:bg-zinc-100 border-zinc-800 dark:border-zinc-200 text-white dark:text-zinc-900"
-            : "bg-white border-zinc-200 shadow-xs"
+            ? "border-foreground/15 bg-foreground text-background"
+            : "border-brand/20 bg-brand-quiet text-brand"
         )}
       >
         {isUser ? (
@@ -128,15 +128,15 @@ export function ChatMessage({
             fallbackClassName="rounded-lg"
           />
         ) : (
-          <ThemeBlob size={26} />
+          <KairosLogo size={22} showText={false} />
         )}
       </div>
 
       {/* Message Content */}
       <div className="flex-1 min-w-0 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold text-foreground/80">
-            {isUser ? "You" : "OpenBook"}
+          <span className="kairos-eyebrow">
+            {isUser ? "You" : "Kairos"}
           </span>
 
           {isUser && (
@@ -144,10 +144,11 @@ export function ChatMessage({
               type="button"
               onClick={handleCopy}
               title="Copy message"
-              className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-foreground rounded transition-all cursor-pointer"
+              aria-label={copied ? "Copied message" : "Copy message"}
+              className="rounded p-1 text-muted-foreground opacity-100 transition-colors hover:text-brand focus-visible:opacity-100 motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
             >
               {copied ? (
-                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                <Check className="w-3.5 h-3.5 text-success" />
               ) : (
                 <Copy className="w-3.5 h-3.5" />
               )}

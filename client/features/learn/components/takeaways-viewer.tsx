@@ -36,7 +36,7 @@ export function TakeawaysViewer({ content }: TakeawaysViewerProps) {
     ? content
     : typeof content === "string"
     ? content.split("\n").map((s) => s.replace(/^[-*•\d.]+\s*/, "").trim()).filter(Boolean)
-    : ["Synthesize key materials", "Review core arguments", "Test retention with quizzes"];
+    : [];
 
   const [checkedIndices, setCheckedIndices] = useState<number[]>([]);
 
@@ -46,45 +46,81 @@ export function TakeawaysViewer({ content }: TakeawaysViewerProps) {
     );
   };
 
-  return (
-    <div className="space-y-3 p-4 rounded-2xl border border-border bg-card">
-      <div className="flex items-center justify-between pb-3 border-b border-border text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <ListChecks className="w-4 h-4 text-foreground" />
-          <span className="font-semibold text-foreground">Actionable Takeaways</span>
+  if (items.length === 0) {
+    return (
+      <section className="kairos-inset space-y-2 px-5 py-8 text-center">
+        <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
+          <ListChecks className="size-5" />
         </div>
-        <span>
-          {checkedIndices.length}/{items.length} completed
+        <p className="text-sm font-semibold text-foreground">No takeaways yet</p>
+        <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
+          Key points extracted from your sources will show up here.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[var(--shadow-panel)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-brand-quiet/60 px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <div className="kairos-inset flex size-8 items-center justify-center rounded-xl text-primary">
+            <ListChecks className="size-4" />
+          </div>
+          <div>
+            <p className="kairos-eyebrow">Review checklist</p>
+            <h3 className="kairos-section-title mt-0.5 text-sm">
+              Actionable takeaways
+            </h3>
+          </div>
+        </div>
+        <span className="kairos-tag font-mono">
+          {checkedIndices.length}/{items.length} complete
         </span>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 p-4 sm:p-5" role="list">
         {items.map((item, idx) => {
           const isChecked = checkedIndices.includes(idx);
           return (
             <div
               key={idx}
+              role="listitem"
               onClick={() => toggleCheck(idx)}
               className={cn(
-                "p-3 rounded-xl border border-border transition-all flex items-start gap-3 cursor-pointer select-none",
-                isChecked ? "bg-muted/30 text-muted-foreground line-through" : "bg-card text-foreground hover:bg-muted/20"
+                "flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors select-none motion-reduce:transition-none",
+                isChecked
+                  ? "border-brand/30 bg-brand-soft/50 text-muted-foreground"
+                  : "border-border bg-surface hover:border-brand/30 hover:bg-brand-quiet/60"
               )}
             >
-              <button type="button" className="mt-0.5 text-muted-foreground hover:text-foreground">
+              <button
+                type="button"
+                aria-pressed={isChecked}
+                aria-label={
+                  isChecked ? "Mark takeaway incomplete" : "Mark takeaway complete"
+                }
+                className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground"
+              >
                 {isChecked ? (
-                  <CheckSquare className="w-4 h-4 text-primary" />
+                  <CheckSquare className="size-4 text-primary" />
                 ) : (
-                  <Square className="w-4 h-4" />
+                  <Square className="size-4" />
                 )}
               </button>
-              <p className="text-xs leading-relaxed flex-1">
+              <p
+                className={cn(
+                  "flex-1 text-xs leading-relaxed",
+                  isChecked && "line-through"
+                )}
+              >
                 {renderFormattedTakeaway(item)}
               </p>
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
 

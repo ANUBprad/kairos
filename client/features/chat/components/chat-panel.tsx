@@ -8,7 +8,6 @@ import {
   MessageSquare,
   Plus,
   Trash2,
-  Sparkles,
   HelpCircle,
   BookOpen,
   FileSearch,
@@ -16,7 +15,7 @@ import {
   Check,
   ArrowUp,
 } from "lucide-react";
-import { ThemeLoader } from "@/components/ui/theme-loader";
+import { KairosLogo } from "@/components/brand/kairos-logo";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,21 +51,21 @@ interface ChatPanelProps {
 
 const STARTER_PROMPTS = [
   {
-    icon: <BookOpen className="w-4 h-4 text-zinc-800 dark:text-zinc-200" />,
+    icon: <BookOpen className="w-4 h-4 text-brand" />,
     title: "Summarize sources",
     desc: "Provide a comprehensive summary of all key concepts across my selected sources.",
     prompt:
       "Please provide a comprehensive and detailed summary of all key concepts across my selected sources.",
   },
   {
-    icon: <FileSearch className="w-4 h-4 text-zinc-800 dark:text-zinc-200" />,
+    icon: <FileSearch className="w-4 h-4 text-brand" />,
     title: "Key takeaways & insights",
     desc: "Extract the top 5 most important takeaways with supporting evidence.",
     prompt:
       "What are the top 5 most important takeaways and insights from these documents? Explain each clearly.",
   },
   {
-    icon: <HelpCircle className="w-4 h-4 text-zinc-800 dark:text-zinc-200" />,
+    icon: <HelpCircle className="w-4 h-4 text-brand" />,
     title: "Find connections",
     desc: "What are the common themes and contrasting arguments across these documents?",
     prompt:
@@ -149,12 +148,12 @@ export function ChatPanel({
   const currentConv = conversations.find((c) => c.id === currentConversationId);
 
   return (
-    <div className="h-full flex flex-col bg-background text-foreground relative select-text">
+    <div className="relative flex h-full select-text flex-col bg-panel text-foreground">
       {/* Top Chat Sub-header */}
-      <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-border flex items-center justify-between bg-card/60 gap-2">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-          <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:block" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-foreground shrink-0 hidden sm:inline">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-panel/85 px-3 py-2.5 backdrop-blur-sm sm:px-4 sm:py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+          <MessageSquare className="hidden size-4 shrink-0 text-brand sm:block" />
+          <span className="kairos-eyebrow hidden shrink-0 sm:inline">
             Chat
           </span>
 
@@ -163,7 +162,9 @@ export function ChatPanel({
             <button
               type="button"
               onClick={() => setIsConvMenuOpen(!isConvMenuOpen)}
-              className="w-full flex items-center justify-between gap-1 px-2 py-1 bg-muted/80 hover:bg-muted border border-border rounded-lg text-xs text-foreground font-medium transition-colors cursor-pointer"
+              aria-expanded={isConvMenuOpen}
+              aria-label="Choose conversation"
+              className="flex w-full items-center justify-between gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
             >
               <span className="truncate text-left">
                 {currentConv ? currentConv.title || "Untitled Chat" : "+ New Conversation"}
@@ -177,7 +178,7 @@ export function ChatPanel({
             </button>
 
             {isConvMenuOpen && (
-              <div className="absolute left-0 top-full mt-1.5 w-64 sm:w-72 rounded-xl border border-border bg-card shadow-2xl p-1.5 z-40 animate-fadeIn space-y-1 text-xs">
+              <div className="kairos-panel absolute left-0 top-full z-40 mt-1.5 w-64 space-y-1 p-1.5 text-xs motion-safe:animate-fadeIn sm:w-72">
                 <button
                   type="button"
                   onClick={() => {
@@ -187,8 +188,8 @@ export function ChatPanel({
                   className={cn(
                     "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
                     !currentConversationId
-                      ? "bg-foreground text-background font-semibold"
-                      : "hover:bg-muted text-foreground"
+                      ? "bg-brand-soft font-semibold text-brand"
+                      : "text-foreground hover:bg-brand-quiet"
                   )}
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -205,8 +206,8 @@ export function ChatPanel({
                           className={cn(
                             "flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg group transition-colors cursor-pointer",
                             isActive
-                              ? "bg-muted font-semibold text-foreground"
-                              : "hover:bg-muted/60 text-foreground"
+                              ? "bg-brand-soft font-semibold text-brand"
+                              : "text-foreground hover:bg-brand-quiet"
                           )}
                           onClick={() => {
                             setIsConvMenuOpen(false);
@@ -224,7 +225,8 @@ export function ChatPanel({
                                 setConfirmAction("delete");
                               }}
                               title="Delete chat"
-                              className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-opacity rounded"
+                              aria-label={`Delete ${c.title || "untitled chat"}`}
+                              className="rounded p-1 text-muted-foreground opacity-100 transition-colors hover:text-danger focus-visible:opacity-100 motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
@@ -246,7 +248,7 @@ export function ChatPanel({
               type="button"
               onClick={() => setConfirmAction("clear")}
               title="Clear all messages in this chat"
-              className="flex items-center gap-1 px-2.5 py-1 bg-muted hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 text-muted-foreground border border-border rounded-lg text-xs font-medium transition-colors cursor-pointer"
+              className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-danger/30 hover:bg-danger/10 hover:text-danger motion-reduce:transition-none"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Clear</span>
@@ -257,7 +259,7 @@ export function ChatPanel({
           <button
             type="button"
             onClick={onNewChat}
-            className="flex items-center gap-1 px-2.5 py-1 bg-muted hover:bg-muted/80 text-foreground border border-border rounded-lg text-xs font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">New Chat</span>
@@ -266,53 +268,55 @@ export function ChatPanel({
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 relative min-h-0 overflow-hidden flex flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar"
+          className="custom-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-6 md:p-7"
         >
           {messages.length === 0 ? (
+            <div className="kairos-aurora mx-auto flex h-full max-w-lg flex-col items-center justify-center space-y-6 text-center motion-safe:animate-fadeIn">
+              <div
+                aria-hidden="true"
+                className="kairos-grid pointer-events-none absolute inset-x-0 top-0 h-56 opacity-40"
+              />
+              <KairosLogo size={58} showText={false} iconClassName="text-brand" />
 
-          <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto  space-y-6 animate-fadeIn">
-            {/* <div className="w-12 h-12 rounded-2xl bg-card border border-border flex items-center justify-center shadow-xs"> */}
-              <ThemeLoader size={86} />
-            {/* </div> */}
+              <div className="space-y-2">
+                <span className="kairos-eyebrow">Grounded chat</span>
+                <h3 className="kairos-section-title text-xl text-foreground sm:text-2xl">
+                  Ask anything about your notes &amp; sources
+                </h3>
+                <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
+                  Kairos retrieves relevant excerpts directly from your indexed
+                  materials and synthesizes answers with source citations.
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium text-foreground tracking-tight">
-                Ask anything about your notes &amp; sources
-              </h3>
-              {/* <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
-                OpenBook retrieves relevant excerpts directly from your indexed
-                materials and synthesizes answers with source citations.
-              </p> */}
+              {/* Starter Prompt Cards */}
+              <div className="grid w-full grid-cols-1 gap-2.5 pt-2">
+                {STARTER_PROMPTS.map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => onSendMessage(item.prompt)}
+                    className="group flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5 text-left shadow-[var(--shadow-panel)] transition-colors hover:border-brand/35 hover:bg-brand-quiet motion-reduce:transition-none"
+                  >
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-brand-quiet transition-colors group-hover:bg-brand-soft motion-reduce:transition-none">
+                      {item.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-foreground">
+                        {item.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                        {item.prompt}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-
-            {/* Starter Prompt Cards */}
-            <div className="grid grid-cols-1 gap-2.5 w-full pt-2">
-              {STARTER_PROMPTS.map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => onSendMessage(item.prompt)}
-                  className="flex items-center gap-3 p-3.5 rounded-xl border border-border bg-card hover:bg-muted/50 hover:border-zinc-400 dark:hover:border-zinc-600 text-left transition-all group shadow-xs"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0 group-hover:bg-muted/80 transition-colors">
-                    {item.icon}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-foreground">
-                      {item.title}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                      {item.prompt}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
+          ) : (
           messages.map((message, index) => (
             <ChatMessage
               key={message.id || index}
@@ -331,7 +335,7 @@ export function ChatPanel({
           <button
             type="button"
             onClick={scrollToTop}
-            className="absolute bottom-3 right-4 z-20 w-8 h-8 rounded-full bg-card/95 hover:bg-muted border border-border text-foreground shadow-lg backdrop-blur-xs flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer animate-fadeIn"
+            className="absolute bottom-3 right-4 z-20 flex size-8 items-center justify-center rounded-full border border-brand/25 bg-panel/95 text-brand shadow-[var(--shadow-panel)] backdrop-blur-sm transition-colors hover:bg-brand-soft motion-safe:animate-fadeIn motion-reduce:transition-none"
             title="Go to top"
             aria-label="Scroll to top of chat"
           >

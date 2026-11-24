@@ -11,7 +11,7 @@ interface MarkdownPreviewProps {
 export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   if (!content) {
     return (
-      <div className="p-6 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+      <div className="rounded-xl border border-dashed border-border bg-brand-quiet p-6 text-center text-xs text-muted-foreground">
         No preview content available
       </div>
     );
@@ -20,7 +20,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   return (
     <div
       className={cn(
-        "max-h-[60vh] overflow-y-auto rounded-xl border border-border bg-card/50 p-4 text-xs sm:text-sm text-foreground font-mono leading-relaxed whitespace-pre-wrap select-text",
+        "kairos-inset max-h-[60vh] select-text overflow-y-auto p-4 font-mono text-xs leading-relaxed text-foreground whitespace-pre-wrap sm:text-sm",
         className
       )}
     >

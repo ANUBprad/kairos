@@ -146,12 +146,12 @@ export function StreamingResponsePreview() {
   const [run, setRun] = useState(0);
 
   return (
-    <div className="relative w-full max-w-xl p-5 rounded-2xl bg-card border border-border shadow-sm">
+    <div className="kairos-card relative w-full max-w-xl p-5">
       <ResponseDemo key={run} onReplay={() => setRun((value) => value + 1)} />
       <button
         type="button"
         onClick={() => setRun((value) => value + 1)}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring border border-border cursor-pointer"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground outline-none transition-colors hover:bg-brand-soft hover:text-brand focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
       >
         <RotateCcw className="size-3" />
         Replay Demo

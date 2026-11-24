@@ -11,15 +11,15 @@ export function CreateWorkspaceCard({ onClick }: CreateWorkspaceCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group h-44 rounded-xl border border-dashed border-border hover:border-zinc-500 bg-card hover:bg-muted/40 p-5 flex flex-col items-center justify-center text-center transition-all duration-200 cursor-pointer"
+      className="group flex h-44 flex-col items-center justify-center rounded-[var(--radius-card)] border border-dashed border-border bg-panel p-5 text-center shadow-[var(--shadow-panel)] transition-colors hover:border-brand/50 hover:bg-brand-quiet focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
-      <div className="w-10 h-10 rounded-full border border-border group-hover:border-zinc-400 bg-muted flex items-center justify-center text-muted-foreground group-hover:text-foreground transition-colors mb-3">
-        <Plus className="w-5 h-5" />
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted text-muted-foreground transition-colors group-hover:text-brand">
+        <Plus className="h-5 w-5" aria-hidden="true" />
       </div>
-      <span className="text-sm font-medium text-foreground transition-colors">
+      <span className="text-sm font-medium text-foreground">
         Create New Workspace
       </span>
-      <span className="text-xs text-muted-foreground mt-1">
+      <span className="mt-1 text-xs text-muted-foreground">
         Upload PDFs, audio, YouTube &amp; web links
       </span>
     </button>

@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import { AuthLayout } from "@/features/auth";
 
 export const metadata: Metadata = {
-  title: "Sign up - OpenBook",
-  description: "Create your OpenBook account and unlock insights with AI.",
+  title: "Sign up",
+  description: "Create a Kairos workspace and bring your research sources together.",
 };
 
 export default function SignupPage() {

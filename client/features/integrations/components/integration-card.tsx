@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type IntegrationCardProps = {
@@ -24,42 +23,36 @@ export function IntegrationCard({
   footer,
 }: IntegrationCardProps) {
   return (
-    <article
-      className="flex h-full min-h-[22rem] flex-col rounded-2xl border border-border bg-card p-5 shadow-xs sm:p-6"
-    >
+    <article className="kairos-card flex h-full min-h-[22rem] flex-col p-5 motion-reduce:transition-none sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div
           className={cn(
-            "flex size-11 items-center justify-center rounded-xl border border-border bg-background shadow-sm",
+            "kairos-inset flex size-11 items-center justify-center text-primary",
             iconClassName,
           )}
         >
           {icon}
         </div>
         {connected ? (
-          <span
-            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
-          >
-            <Check className="size-3" aria-hidden />
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-success/25 bg-success/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
+            <span className="kairos-status-dot" aria-hidden />
             Connected
           </span>
         ) : (
-          <span
-            className="shrink-0 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
-          >
+          <span className="kairos-tag shrink-0 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
             Not connected
           </span>
         )}
       </div>
 
       <div className="mt-4 space-y-1.5">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        <h3 className="kairos-section-title text-lg text-foreground">{title}</h3>
         <p className="text-xs leading-relaxed text-muted-foreground">
           {description}
         </p>
       </div>
 
-      <div className="mt-4 flex flex-1 flex-col gap-3 min-h-[7.5rem]">
+      <div className="mt-4 flex min-h-[7.5rem] flex-1 flex-col gap-3">
         {children}
       </div>
 

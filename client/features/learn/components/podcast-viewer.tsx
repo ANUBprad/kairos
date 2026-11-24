@@ -379,15 +379,22 @@ export function PodcastViewer({
 
   if (!podcast || turns.length === 0) {
     return (
-      <div className="p-8 text-center text-muted-foreground space-y-3">
-        <Radio className="w-8 h-8 mx-auto animate-pulse text-muted-foreground" />
-        <p className="text-sm">Podcast debate script is generating...</p>
+      <div className="kairos-inset space-y-2 px-5 py-8 text-center">
+        <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
+          <Radio className="size-5 animate-pulse motion-reduce:animate-none" />
+        </div>
+        <p className="text-sm font-semibold text-foreground">
+          Podcast audio isn’t available yet
+        </p>
+        <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
+          The episode will appear here once generation finishes.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="mx-auto w-full max-w-3xl space-y-5">
       {/* Hidden audio element */}
       {/* Keep this a no-CORS media request: it sends the session cookie to our
           authenticated API, while direct Cloudinary redirects do not need to
@@ -401,35 +408,36 @@ export function PodcastViewer({
       />
 
       {/* Podcast Audio Player Hero Card */}
-      <div className="p-5 sm:p-6 rounded-2xl bg-card border border-border shadow-md space-y-4">
+      <section className="kairos-panel space-y-4 p-5 sm:p-6">
         {/* Header & Status */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-primary text-primary-foreground">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="kairos-inset flex size-10 shrink-0 items-center justify-center rounded-xl text-primary">
               <AudioLinesIcon size={20} />
             </div>
-            <div>
-              <h3 className="text-sm sm:text-base font-bold text-foreground">
-                {podcast.topic || "AI Deep-Dive Debate Podcast"}
+            <div className="min-w-0">
+              <p className="kairos-eyebrow">Now playing</p>
+              <h3 className="kairos-section-title mt-1 text-base sm:text-lg">
+                {podcast.topic || "AI deep-dive debate podcast"}
               </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Hosted by <strong>Alex</strong> (Analyst) & <strong>Jordan</strong> (Challenger)
+              <p className="mt-1 text-xs text-muted-foreground">
+                Hosted by <strong className="text-foreground">Alex</strong> (analyst) &amp;{" "}
+                <strong className="text-foreground">Jordan</strong> (challenger)
               </p>
             </div>
-
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Live Interrupt & Ask Action Button */}
             {artifactId && workspaceId && (
               <Button
                 variant="default"
                 size="xs"
                 onClick={handleOpenInterrupt}
-                className="gap-1.5 text-xs font-semibold shadow-xs bg-primary text-primary-foreground hover:opacity-90 active:scale-95 transition-all cursor-pointer rounded-lg"
+                className="gap-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground shadow-[var(--shadow-panel)] transition-all hover:opacity-90 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100"
                 title="Pause episode and ask Alex & Jordan a question"
               >
-                <Radio className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+                <Radio className="size-3.5 text-danger animate-pulse motion-reduce:animate-none" />
                 <span>Interrupt &amp; Ask</span>
               </Button>
             )}
@@ -438,17 +446,17 @@ export function PodcastViewer({
               variant="outline"
               size="xs"
               onClick={copyTranscript}
-              className="gap-1 text-xs cursor-pointer"
+              className="gap-1 rounded-full text-xs"
               title="Copy entire debate transcript"
             >
               {copied ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  <Check className="size-3.5 text-success" />
                   <span>Copied</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="size-3.5" />
                   <span>Transcript</span>
                 </>
               )}
@@ -457,12 +465,12 @@ export function PodcastViewer({
             {resolvedMainAudioUrl && (
               <a
                 href={resolvedMainAudioUrl}
-                download="chaibook-debate-podcast.mp3"
+                download="kairos-debate-podcast.mp3"
                 target="_blank"
                 rel="noreferrer"
               >
-                <Button variant="outline" size="xs" className="gap-1 text-xs cursor-pointer">
-                  <Download className="w-3.5 h-3.5" />
+                <Button variant="outline" size="xs" className="gap-1 rounded-full text-xs">
+                  <Download className="size-3.5" />
                   <span>MP3</span>
                 </Button>
               </a>
@@ -471,55 +479,62 @@ export function PodcastViewer({
         </div>
 
         {playbackError && (
-          <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs flex items-center justify-between gap-2">
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-2 rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger"
+          >
             <span>{playbackError}</span>
             <button
               type="button"
               onClick={() => setPlaybackError(null)}
-              className="text-muted-foreground hover:text-foreground cursor-pointer"
+              aria-label="Dismiss playback error"
+              className="text-muted-foreground hover:text-foreground"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="size-3.5" />
             </button>
           </div>
         )}
 
         {/* Active Interruption Live Overlay */}
         {activeInterruption && (
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs flex items-center justify-between gap-3 animate-fadeIn">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="p-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
-                <Radio className="w-3.5 h-3.5 animate-pulse" />
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning/10 p-3.5 text-xs animate-fadeIn motion-reduce:animate-none">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className="shrink-0 rounded-full bg-warning/20 p-1 text-warning">
+                <Radio className="size-3.5 animate-pulse motion-reduce:animate-none" />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="font-semibold text-amber-900 dark:text-amber-200 block truncate">
+                <span className="block truncate font-semibold text-warning">
                   Host Q&amp;A: &ldquo;{activeInterruption.userQuestion}&rdquo;
                 </span>
-                <span className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
-                  Alex &amp; Jordan answering listener question • Resuming show next
+                <span className="text-[11px] text-warning/80">
+                  Alex &amp; Jordan are answering · The episode resumes next
                 </span>
               </div>
             </div>
             <button
               type="button"
               onClick={handleSkipInterruption}
-              className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-100 rounded-lg text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
+              className="shrink-0 rounded-full bg-warning/20 px-3 py-1 text-[11px] font-medium text-warning transition-colors hover:bg-warning/30 motion-reduce:transition-none"
             >
-              Resume Episode
+              Resume episode
             </button>
           </div>
         )}
 
         {/* Animated Sound Wave Visualizer */}
-        <div className="h-10 w-full bg-secondary/50 rounded-xl flex items-center justify-center gap-1 px-4 overflow-hidden border border-border/60">
+        <div
+          aria-hidden="true"
+          className="flex h-10 w-full items-center justify-center gap-1 overflow-hidden rounded-xl border border-border/60 bg-brand-quiet px-4"
+        >
           {Array.from({ length: 32 }).map((_, i) => (
             <div
               key={i}
               className={cn(
-                "w-1 rounded-full transition-all duration-150",
+                "w-1 rounded-full transition-all duration-150 motion-reduce:transition-none",
                 activeInterruption
-                  ? "bg-amber-600 dark:bg-amber-400"
+                  ? "bg-warning"
                   : "bg-primary/70",
-                isPlaying ? "animate-pulse" : "opacity-40"
+                isPlaying ? "animate-pulse motion-reduce:animate-none" : "opacity-40"
               )}
               style={{
                 height: isPlaying
@@ -532,7 +547,7 @@ export function PodcastViewer({
         </div>
 
         {/* Progress Bar & Timestamps */}
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <input
             type="range"
             min={0}
@@ -540,9 +555,10 @@ export function PodcastViewer({
             value={currentTime}
             onChange={handleSeek}
             disabled={!resolvedMainAudioUrl && !activeInterruption}
-            className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary disabled:opacity-50"
+            aria-label="Podcast playback position"
+            className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-secondary accent-primary disabled:opacity-50"
           />
-          <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
+          <div className="flex justify-between font-mono text-[11px] text-muted-foreground">
             <span>{formatTime(currentTime)}</span>
             <span>
               {activeInterruption
@@ -561,9 +577,10 @@ export function PodcastViewer({
             type="button"
             onClick={toggleMute}
             disabled={!resolvedMainAudioUrl && !activeInterruption}
-            className="p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 cursor-pointer"
+            aria-label={isMuted ? "Unmute podcast" : "Mute podcast"}
+            className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-foreground disabled:opacity-40 motion-reduce:transition-none"
           >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
           </button>
 
           {/* Center Playback Controls */}
@@ -572,23 +589,25 @@ export function PodcastViewer({
               type="button"
               onClick={() => skipTime(-10)}
               disabled={!resolvedMainAudioUrl && !activeInterruption}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+              aria-label="Rewind 10 seconds"
+              className="rounded-full p-2 text-muted-foreground transition-all hover:bg-brand-soft hover:text-foreground active:scale-95 disabled:opacity-40 motion-reduce:transition-none motion-reduce:active:scale-100"
               title="Rewind 10 seconds"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="size-4" />
             </button>
 
             <button
               type="button"
               onClick={togglePlay}
               disabled={!resolvedMainAudioUrl && !activeInterruption}
-              className="p-3.5 bg-primary text-primary-foreground hover:opacity-90 rounded-full transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+              aria-label={isPlaying ? "Pause podcast" : "Play podcast"}
+              className="rounded-full bg-primary p-3.5 text-primary-foreground shadow-[var(--shadow-panel)] transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
               title={isPlaying ? "Pause" : "Play Podcast"}
             >
               {isPlaying ? (
-                <Pause className="w-5 h-5 fill-primary-foreground" />
+                <Pause className="size-5 fill-primary-foreground" />
               ) : (
-                <Play className="w-5 h-5 fill-primary-foreground translate-x-0.5" />
+                <Play className="size-5 translate-x-0.5 fill-primary-foreground" />
               )}
             </button>
 
@@ -596,10 +615,11 @@ export function PodcastViewer({
               type="button"
               onClick={() => skipTime(10)}
               disabled={!resolvedMainAudioUrl && !activeInterruption}
-              className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+              aria-label="Fast forward 10 seconds"
+              className="rounded-full p-2 text-muted-foreground transition-all hover:bg-brand-soft hover:text-foreground active:scale-95 disabled:opacity-40 motion-reduce:transition-none motion-reduce:active:scale-100"
               title="Fast forward 10 seconds"
             >
-              <RotateCw className="w-4 h-4" />
+              <RotateCw className="size-4" />
             </button>
           </div>
 
@@ -608,34 +628,38 @@ export function PodcastViewer({
             type="button"
             onClick={cyclePlaybackRate}
             disabled={!resolvedMainAudioUrl && !activeInterruption}
-            className="px-2 py-1 text-xs font-mono font-semibold text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 rounded-md border border-border transition-colors disabled:opacity-40 cursor-pointer"
+            aria-label={`Playback speed ${playbackRate}x`}
+            className="rounded-full border border-border bg-brand-quiet px-2.5 py-1 font-mono text-xs font-semibold text-foreground transition-colors hover:bg-brand-soft disabled:opacity-40 motion-reduce:transition-none"
           >
             {playbackRate}x
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Podcast Summary Banner */}
       {podcast.summary && (
-        <div className="p-4 rounded-xl bg-secondary/40 border border-border text-xs text-muted-foreground leading-relaxed space-y-1">
-          <span className="font-semibold text-foreground block">
-            Episode Synopsis:
-          </span>
+        <div className="kairos-inset space-y-1.5 px-4 py-3.5 text-xs leading-relaxed text-muted-foreground">
+          <p className="kairos-eyebrow">Episode synopsis</p>
           <p>{podcast.summary}</p>
         </div>
       )}
 
       {/* Interactive Multi-Speaker Debate Transcript with Interruption Badges */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" />
-            Debate Transcript ({turns.length} Exchanges)
-          </h4>
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="kairos-eyebrow flex items-center gap-1.5">
+              <Users className="size-3.5" />
+              Debate transcript
+            </p>
+            <h4 className="kairos-section-title mt-1 text-sm">
+              {turns.length} {turns.length === 1 ? "exchange" : "exchanges"}
+            </h4>
+          </div>
           {interruptions.length > 0 && (
-            <Badge variant="outline" className="text-[10px] gap-1">
-              <Radio className="w-3 h-3 text-red-500" />
-              <span>{interruptions.length} Listener Q&amp;A</span>
+            <Badge variant="outline" className="gap-1 text-[10px]">
+              <Radio className="size-3 text-danger" />
+              <span>{interruptions.length} listener Q&amp;A</span>
             </Badge>
           )}
         </div>
@@ -652,25 +676,25 @@ export function PodcastViewer({
               <React.Fragment key={index}>
                 <div
                   className={cn(
-                    "p-4 rounded-2xl border transition-all",
+                    "rounded-2xl border p-4 transition-colors motion-reduce:transition-none",
                     isAlex
-                      ? "bg-card border-border/80 ml-0 mr-4 sm:mr-8"
-                      : "bg-secondary/50 border-border/60 ml-4 sm:ml-8 mr-0"
+                      ? "mr-0 border-border bg-surface sm:mr-8"
+                      : "ml-4 border-border bg-brand-quiet/60 sm:ml-8"
                   )}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <div
                         className={cn(
-                          "p-1 rounded-full text-[10px] font-bold",
+                          "flex size-6 items-center justify-center rounded-full",
                           isAlex
                             ? "bg-primary text-primary-foreground"
                             : "bg-foreground text-background"
                         )}
                       >
-                        <User className="w-3 h-3" />
+                        <User className="size-3" />
                       </div>
-                      <span className="text-xs font-bold text-foreground font-sans">
+                      <span className="text-xs font-bold text-foreground">
                         {turn.speaker}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
@@ -678,39 +702,42 @@ export function PodcastViewer({
                       </span>
                     </div>
 
-                    <span className="text-[10px] font-mono text-muted-foreground">
+                    <span className="font-mono text-[10px] text-muted-foreground">
                       #{index + 1}
                     </span>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed pl-6">
+                  <p className="pl-8 text-xs leading-relaxed text-foreground/90 sm:text-sm">
                     {turn.text}
                   </p>
                 </div>
 
                 {/* Render interruption card if one was asked here */}
                 {matchingInterruption && (
-                  <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-2 mx-2 sm:mx-4 animate-fadeIn">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-semibold">
-                        <MessageCircleQuestion className="w-3.5 h-3.5" />
-                        <span>Listener Interruption ({formatTime(matchingInterruption.timestamp)})</span>
+                  <div className="mx-2 space-y-2 rounded-2xl border border-warning/30 bg-warning/10 p-3.5 text-xs animate-fadeIn motion-reduce:animate-none sm:mx-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 font-semibold text-warning">
+                        <MessageCircleQuestion className="size-3.5" />
+                        <span>
+                          Listener Q&amp;A · {formatTime(matchingInterruption.timestamp)}
+                        </span>
                       </div>
                       {(matchingInterruption.audioUrl || workspaceId) && (
                         <button
                           type="button"
                           onClick={() => handlePlayInterruption(matchingInterruption)}
-                          className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-100 rounded-md font-medium text-[11px] transition-colors cursor-pointer"
+                          aria-label={`Replay listener question at ${formatTime(matchingInterruption.timestamp)}`}
+                          className="inline-flex items-center gap-1 rounded-full bg-warning/20 px-2.5 py-1 text-[11px] font-medium text-warning transition-colors hover:bg-warning/30 motion-reduce:transition-none"
                         >
-                          <Play className="w-3 h-3 fill-current" />
+                          <Play className="size-3 fill-current" />
                           <span>Replay Q&amp;A</span>
                         </button>
                       )}
                     </div>
-                    <p className="italic text-foreground font-medium pl-5">
+                    <p className="pl-5 font-medium italic text-foreground">
                       &ldquo;{matchingInterruption.userQuestion}&rdquo;
                     </p>
-                    <div className="pl-5 space-y-1 pt-1 border-t border-amber-500/20">
+                    <div className="space-y-1 border-t border-warning/20 pl-5 pt-2">
                       {matchingInterruption.dialogue.map((d, dIdx) => (
                         <p key={dIdx} className="text-[11px] text-foreground/80">
                           <strong>{d.speaker}:</strong> {d.text}
@@ -723,28 +750,40 @@ export function PodcastViewer({
             );
           })}
         </div>
-      </div>
+      </section>
 
       {/* "Ask the Hosts" Interruption Modal */}
       {isInterruptModalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 backdrop-blur-sm sm:p-6"
           onMouseDown={(e) =>
             dismissOnBackdropClick(e, () => setIsInterruptModalOpen(false))
           }
         >
-          <div className="w-full max-w-lg bg-card border border-border rounded-2xl p-6 shadow-2xl space-y-4 animate-fadeIn text-foreground">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-red-500/10 text-red-500">
-                  <Radio className="w-4 h-4 animate-pulse" />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="interrupt-dialog-title"
+            aria-describedby="interrupt-dialog-subtitle"
+            className="kairos-panel w-full max-w-lg animate-fadeIn space-y-4 p-5 text-foreground motion-reduce:animate-none sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
+                  <Radio className="size-4 animate-pulse motion-reduce:animate-none" />
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-foreground">
+                <div className="min-w-0">
+                  <h3
+                    id="interrupt-dialog-title"
+                    className="kairos-section-title text-base"
+                  >
                     Interrupt &amp; Ask the Hosts
                   </h3>
-                  <span className="text-[11px] text-muted-foreground">
-                    Paused at {formatTime(savedResumeTime)} • Alex &amp; Jordan will address you live
+                  <span
+                    id="interrupt-dialog-subtitle"
+                    className="mt-1 block text-[11px] text-muted-foreground"
+                  >
+                    Paused at {formatTime(savedResumeTime)} · Alex &amp; Jordan will address you live
                   </span>
                 </div>
               </div>
@@ -752,17 +791,18 @@ export function PodcastViewer({
                 type="button"
                 onClick={() => setIsInterruptModalOpen(false)}
                 disabled={isSubmittingInterrupt}
-                className="text-muted-foreground hover:text-foreground text-xs p-1 cursor-pointer disabled:opacity-40"
+                aria-label="Close interrupt dialog"
+                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground motion-reduce:transition-none disabled:opacity-40"
               >
-                <X className="w-4 h-4" />
+                <X className="size-4" />
               </button>
             </div>
 
             {/* Quick suggested questions */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground block">
+              <span className="kairos-eyebrow block">
                 Suggested questions from your notes:
-              </label>
+              </span>
               <div className="flex flex-wrap gap-1.5">
                 {SUGGESTED_INTERRUPTIONS.map((sq, idx) => (
                   <button
@@ -773,7 +813,7 @@ export function PodcastViewer({
                       setUserQuestion(sq);
                       handleSendInterruption(sq);
                     }}
-                    className="text-[11px] px-2.5 py-1 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-foreground text-left transition-colors cursor-pointer disabled:opacity-40"
+                    className="rounded-lg border border-border bg-surface px-2.5 py-1 text-left text-[11px] text-foreground transition-colors hover:border-brand/40 hover:bg-brand-quiet motion-reduce:transition-none disabled:opacity-40"
                   >
                     {sq}
                   </button>
@@ -789,23 +829,27 @@ export function PodcastViewer({
               }}
               className="space-y-3 pt-2"
             >
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-foreground">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="interrupt-question"
+                  className="block text-xs font-medium text-foreground"
+                >
                   Or ask your own question:
                 </label>
                 <textarea
+                  id="interrupt-question"
                   rows={3}
                   value={userQuestion}
                   onChange={(e) => setUserQuestion(e.target.value)}
                   placeholder="e.g., Wait, does this work with multimodal embeddings?"
                   disabled={isSubmittingInterrupt}
-                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
+                  className="kairos-inset w-full resize-none px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand/40 focus:outline-none focus:ring-1 focus:ring-brand/40 disabled:opacity-50"
                   autoFocus
                 />
               </div>
 
               {interruptError && (
-                <p className="text-xs text-destructive bg-destructive/10 p-2 rounded-lg border border-destructive/20">
+                <p className="kairos-inset border-danger/30 bg-danger/10 p-2.5 text-xs text-danger">
                   {interruptError}
                 </p>
               )}
@@ -827,16 +871,16 @@ export function PodcastViewer({
                   variant="default"
                   size="sm"
                   disabled={isSubmittingInterrupt || !userQuestion.trim()}
-                  className="text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:opacity-90"
+                  className="gap-1.5 bg-primary text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90 motion-reduce:transition-none"
                 >
                   {isSubmittingInterrupt ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
                       <span>Alex &amp; Jordan researching...</span>
                     </>
                   ) : (
                     <>
-                      <Send className="w-3.5 h-3.5" />
+                      <Send className="size-3.5" />
                       <span>Ask Co-Hosts</span>
                     </>
                   )}

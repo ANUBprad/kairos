@@ -21,7 +21,7 @@ const SOURCE_FEATURES = [
     icon: <FileText className="w-5 h-5 text-red-500" />,
     badge: "Vector Chunking",
     description:
-      "Upload multi-page research papers, slide decks, legal briefs, and textbooks. OpenBook parses and chunks the text, generating dense embeddings for sub-second retrieval.",
+      "Upload multi-page research papers, slide decks, legal briefs, and textbooks. Kairos parses and chunks the text, generating dense embeddings for sub-second retrieval.",
     highlights: [
       "Deep text extraction & table comprehension",
       "Chunk-level source citations & page references",
@@ -34,7 +34,7 @@ const SOURCE_FEATURES = [
     icon: <YoutubeIcon size={20} className="text-red-500" />,
     badge: "Transcript Sync",
     description:
-      "Paste any YouTube video or lecture URL. OpenBook automatically pulls the complete closed captions and timestamps, allowing you to ask questions about spoken lectures.",
+      "Paste any YouTube video or lecture URL. Kairos automatically pulls the complete closed captions and timestamps, allowing you to ask questions about spoken lectures.",
     highlights: [
       "Automatic transcript parsing across languages",
       "Timestamp grounding linking answers to video moments",
@@ -86,7 +86,7 @@ export function SourcesShowcase() {
             Bring any source. Ground every answer.
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-            Eliminate AI hallucinations. OpenBook connects directly to your verified materials
+            Eliminate AI hallucinations. Kairos connects directly to your verified materials
             and generates answers backed strictly by evidence.
           </p>
         </div>
