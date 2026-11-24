@@ -1,3 +1,5 @@
+import { getRequestId } from "./observability/request-context.js";
+
 type LogLevel = "info" | "warn" | "error";
 
 const REDACTED = "[REDACTED]";
@@ -43,6 +45,7 @@ export function redactForLog(value: unknown, depth = 0): unknown {
 }
 
 function write(level: LogLevel, message: string, meta?: Record<string, unknown>) {
+    const requestId = getRequestId();
     const payload = {
         level,
         // Messages are free-form and may contain a provider error string with
@@ -50,6 +53,9 @@ function write(level: LogLevel, message: string, meta?: Record<string, unknown>)
         message: redactForLog(message) as string,
         time: new Date().toISOString(),
         ...(meta ? (redactForLog(meta) as Record<string, unknown>) : {}),
+        // The active context is authoritative; a caller cannot overwrite the
+        // correlation id of a request/worker trace.
+        ...(requestId ? { requestId } : {}),
     };
     let line: string;
     try {

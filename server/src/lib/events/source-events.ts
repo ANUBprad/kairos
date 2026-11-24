@@ -1,4 +1,5 @@
 import { logger } from "../logger.js";
+import { getRequestId } from "../observability/request-context.js";
 import { sendInngestEvent } from "./inngest-send.js";
 
 /**
@@ -20,12 +21,13 @@ export async function enqueueSourceProcessing(input: {
     jobKey?: string;
     leaseToken?: string;
     eventId?: string;
+    requestId?: string;
 }): Promise<boolean> {
     const jobKey = input.jobKey ?? `source.process:${input.sourceId}`;
     return sendInngestEvent({
         id: input.eventId ?? jobKey,
         name: "source/created",
-        data: { ...input, jobKey },
+        data: { ...input, jobKey, requestId: getRequestId() },
     });
 }
 

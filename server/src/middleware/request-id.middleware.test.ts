@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { NextFunction, Request, Response } from "express";
+import { getRequestId } from "../lib/observability/request-context.js";
 import {
     REQUEST_ID_HEADER,
     requestIdMiddleware,
@@ -21,11 +22,13 @@ function invoke(supplied?: string) {
         },
     } as unknown as Response;
     let called = 0;
+    let contextDuringNext: string | undefined;
     const next = (() => {
         called += 1;
+        contextDuringNext = getRequestId();
     }) as NextFunction;
     requestIdMiddleware(req, res, next);
-    return { id: req.requestId, headers, called };
+    return { id: req.requestId, headers, called, contextDuringNext };
 }
 
 describe("request id middleware", () => {
@@ -35,6 +38,7 @@ describe("request id middleware", () => {
         assert.match(first.id!, /^[0-9a-f-]{36}$/);
         assert.notEqual(first.id, second.id);
         assert.equal(first.headers[REQUEST_ID_HEADER.toLowerCase()], first.id);
+        assert.equal(first.contextDuringNext, first.id);
         assert.equal(first.called, 1);
     });
 

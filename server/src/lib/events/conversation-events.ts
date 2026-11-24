@@ -1,6 +1,7 @@
 import { summarizeConversationById } from "../../services/conversation-memory.services.js";
 import { sendInngestEvent } from "./inngest-send.js";
 import { logger } from "../logger.js";
+import { getRequestId } from "../observability/request-context.js";
 
 
 /**
@@ -19,7 +20,7 @@ export async function enqueueConversationSummarize(input: {
     const accepted = await sendInngestEvent({
         id: jobKey,
         name: "conversation/summarize",
-        data: { ...input, jobKey },
+        data: { ...input, jobKey, requestId: getRequestId() },
     });
 
     if (!accepted) {

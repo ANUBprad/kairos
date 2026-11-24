@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { logger, redactForLog } from "./logger.js";
+import { runWithRequestId } from "./observability/request-context.js";
 
 describe("log redaction", () => {
   it("redacts sensitive keys recursively", () => {
@@ -66,5 +67,23 @@ describe("log redaction", () => {
     }
     assert.doesNotMatch(line, /sk-abcdefghijklmnopqrst/);
     assert.match(line, /\[REDACTED\]/);
+  });
+
+  it("adds the active request id to structured logs", () => {
+    const original = console.log;
+    let line = "";
+    console.log = (value: unknown) => {
+      line = String(value);
+    };
+    try {
+      runWithRequestId("trace-log123456", () => {
+        logger.info("correlated event");
+      });
+    } finally {
+      console.log = original;
+    }
+    const payload = JSON.parse(line) as Record<string, unknown>;
+    assert.equal(payload.level, "info");
+    assert.equal(payload.requestId, "trace-log123456");
   });
 });

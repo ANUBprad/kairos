@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
+import {
+    normalizeRequestId,
+    runWithRequestId,
+} from "../lib/observability/request-context.js";
 
 export const REQUEST_ID_HEADER = "X-Request-Id";
-const MAX_REQUEST_ID_LENGTH = 128;
-/** Accept only compact identifiers, never headers carrying control characters. */
-const VALID_REQUEST_ID = /^[A-Za-z0-9._:-]{8,128}$/;
 
 declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -24,13 +25,10 @@ export function requestIdMiddleware(
     res: Response,
     next: NextFunction,
 ): void {
-    const supplied = req.header(REQUEST_ID_HEADER);
-    const id =
-        supplied && supplied.length <= MAX_REQUEST_ID_LENGTH &&
-        VALID_REQUEST_ID.test(supplied)
-            ? supplied
-            : randomUUID();
+    const id = normalizeRequestId(req.header(REQUEST_ID_HEADER)) ?? randomUUID();
     req.requestId = id;
     res.setHeader(REQUEST_ID_HEADER, id);
-    next();
+    // Downstream handlers, Inngest sends and worker/local fallback jobs all
+    // inherit the same id through AsyncLocalStorage.
+    runWithRequestId(id, () => next());
 }

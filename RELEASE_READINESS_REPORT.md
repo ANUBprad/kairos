@@ -316,3 +316,27 @@ drill. No Render credentials were available, so no deployment occurred and
 classification remains **C. READY FOR STAGING DEPLOYMENT**. The independent
 licensing classification remains **E**. Full evidence is in
 `PHASE08_STAGING_DEPLOYMENT_AND_VALIDATION_REPORT.md`.
+
+---
+
+## Phase 09 addendum — request correlation and blocked deployment
+
+Phase 09 completed the outstanding local request-ID propagation: an
+`AsyncLocalStorage` context carries a validated ID through structured logs,
+provider fetch headers, Inngest event data, durable-job payloads, worker/local
+fallback execution and compensation. The F5 settlement/refund race paths were
+re-reviewed with no new confirmed defect; F7 backup automation still needs owner
+platform access.
+
+Final local checks after the edits: server typecheck/build exit 0, unit
+**163/163**, integration **49/49** on a disposable PostgreSQL database with 14
+migrations applied, all three staging/legacy/redirect guards exit 0, and no
+changes to `ATTRIBUTION.md` or lockfiles. No client file changed, so Phase 08
+client evidence remains authoritative for those unchanged files.
+
+Render CLI/API/OAuth/deployment-MCP access was unavailable. No staging
+deployment, hosted endpoint, service ID, deployment ID, build log, live provider
+call, live payment, live worker trace or hosted monitoring evidence exists.
+Phase 09 therefore remains **C. READY FOR STAGING DEPLOYMENT**, never A/B.
+Licensing remains independently **E**. Full evidence and the blocked-versus-local
+matrix are in `PHASE09_STAGING_DEPLOYMENT_AND_LIVE_VALIDATION_REPORT.md`.

@@ -108,3 +108,15 @@ claim as well as generation. Unit and integration regressions cover refusal to
 rewind, heartbeat renewal, stale-token rejection, recovery-after-expiry, orphaned
 source-claim release and the already-`READY` settlement path. Live worker
 crash/restart remains **BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**.
+
+---
+
+## Phase 09 request-correlation note
+
+Durable jobs now preserve the originating request ID in the job payload. The
+outbox restores it for dispatch, local fallback and terminal compensation; the
+source/artifact/conversation Inngest handlers restore the event ID so worker logs
+carry the same correlation key. This changes no lease, retry, compensation or
+idempotency rule. It is verified locally by unit and disposable-DB integration
+tests only; hosted worker traces remain **BLOCKED — CREDENTIALS/PERMISSIONS
+REQUIRED**.

@@ -2,6 +2,7 @@
  * Inngest event helpers for background artifact generation.
  */
 
+import { getRequestId } from "../observability/request-context.js";
 import { sendInngestEvent } from "./inngest-send.js";
 
 /**
@@ -21,11 +22,12 @@ export async function enqueueArtifactGeneration(input: {
     jobKey?: string;
     leaseToken?: string;
     eventId?: string;
+    requestId?: string;
 }): Promise<boolean> {
     const jobKey = input.jobKey ?? `artifact-generate:${input.artifactId}`;
     return sendInngestEvent({
         id: input.eventId ?? jobKey,
         name: "artifact/generate",
-        data: { ...input, jobKey },
+        data: { ...input, jobKey, requestId: getRequestId() },
     });
 }

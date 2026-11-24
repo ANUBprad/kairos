@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Prisma } from "../generated/prisma/client.js";
+import { runWithRequestId } from "./observability/request-context.js";
 import {
     claimDurableJob,
     dispatchDurableJob,
@@ -231,6 +232,18 @@ describe("transactional outbox", () => {
 
         assert.equal(jobs.size, 1);
         assert.equal(jobs.get(baseInput.key)?.status, "PENDING");
+    });
+
+    it("stores the originating request id on the durable job payload", async () => {
+        const { db, jobs } = fakeStore();
+        const tx = db as Prisma.TransactionClient;
+
+        await runWithRequestId("trace-durable123", () =>
+            insertDurableJob(tx, baseInput),
+        );
+
+        const payload = jobs.get(baseInput.key)?.payload as Record<string, unknown>;
+        assert.equal(payload.requestId, "trace-durable123");
     });
 
     it("claims a due job exactly once", async () => {

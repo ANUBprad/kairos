@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, describe, it } from "node:test";
+import { runWithRequestId } from "./observability/request-context.js";
 
 /**
  * The shared provider fetch helper must always bound outbound calls. These
@@ -55,5 +56,33 @@ describe("providerFetch", () => {
         assert.equal(combined.aborted, false);
         controller.abort("caller cancelled");
         assert.equal(combined.aborted, true, "caller cancellation must still propagate");
+    });
+
+    it("forwards the active request id without overriding an explicit header", async () => {
+        let received: RequestInit | undefined;
+        globalThis.fetch = (async (
+            _input: Parameters<typeof fetch>[0],
+            init?: RequestInit,
+        ) => {
+            received = init;
+            return new Response("ok", { status: 200 });
+        }) as typeof fetch;
+
+        const { providerFetch } = await import("./provider-http.js");
+        await runWithRequestId("trace-provider123", () =>
+            providerFetch("https://example.test/resource"),
+        );
+        const headers = new Headers(received?.headers);
+        assert.equal(headers.get("x-request-id"), "trace-provider123");
+
+        await runWithRequestId("trace-provider123", () =>
+            providerFetch("https://example.test/resource", {
+                headers: { "x-request-id": "caller-supplied" },
+            }),
+        );
+        assert.equal(
+            new Headers(received?.headers).get("x-request-id"),
+            "caller-supplied",
+        );
     });
 });

@@ -96,3 +96,21 @@ and error logs. Request IDs are **not yet propagated into Inngest or worker log
 lines**; that is documented owner work, not live monitoring. Live dashboards,
 alerts, Render log streaming and deployed alert verification remain **BLOCKED —
 CREDENTIALS/PERMISSIONS REQUIRED**.
+
+---
+
+## 7. Phase 09 correlation update (supersedes the Phase 07/08 notes above)
+
+Request IDs are now propagated **locally** through an `AsyncLocalStorage`
+context: structured logs include the active `requestId`, provider calls receive
+`X-Request-Id` unless explicitly overridden, Inngest event data carries the ID,
+and durable-job payloads preserve it across dispatch, local fallback and
+compensation. Inngest source/artifact/conversation handlers restore it so worker
+log lines remain correlated. Regression coverage passes in the local unit suite
+(163/163) and the disposable-DB integration suite (49/49).
+
+This is **not** hosted monitoring evidence. No Render log stream, dashboard,
+alert, pager or deployed request trail was accessed or configured. Those items
+remain **BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**. When access is supplied,
+verify end-to-end correlation with a real staged request before treating the
+Phase 08 F6 follow-up as live-validated.

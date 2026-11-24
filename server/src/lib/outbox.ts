@@ -2,6 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { Prisma } from "../generated/prisma/client.js";
 import prisma from "./db.js";
 import { logger } from "./logger.js";
+import {
+    getRequestId,
+    normalizeRequestId,
+    runWithRequestId,
+} from "./observability/request-context.js";
 import { refundChargeInTransaction } from "../services/credit.services.js";
 import { markArtifactFailedIfEligible } from "../repository/artifact.repository.js";
 
@@ -112,12 +117,18 @@ export async function insertDurableJob(
     tx: Prisma.TransactionClient,
     input: DurableJobInput,
 ): Promise<void> {
+    // Preserve the originating request id when a job is reissued from a worker;
+    // otherwise capture the active HTTP request id at enqueue time.
+    const payload = { ...input.payload };
+    const requestId = normalizeRequestId(payload.requestId) ?? getRequestId();
+    if (requestId) payload.requestId = requestId;
+
     await durableJobs(tx).createMany({
         data: [
             {
                 key: input.key,
                 type: input.type,
-                payload: jsonValue(input.payload),
+                payload: jsonValue(payload),
                 status: "PENDING" as const,
                 attempts: 0,
                 maxAttempts: input.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
@@ -140,13 +151,17 @@ export async function requeueDurableJob(
     key: string,
     input?: Partial<DurableJobInput>,
 ): Promise<boolean> {
-    if (input?.type && input.payload) {
+    const payload = input?.payload ? { ...input.payload } : undefined;
+    const requestId = normalizeRequestId(payload?.requestId) ?? getRequestId();
+    if (payload && requestId) payload.requestId = requestId;
+
+    if (input?.type && payload) {
         await durableJobs(store()).createMany({
             data: [
                 {
                     key,
                     type: input.type,
-                    payload: jsonValue(input.payload),
+                    payload: jsonValue(payload),
                     status: "PENDING" as const,
                     attempts: 0,
                     maxAttempts: input.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
@@ -170,7 +185,7 @@ export async function requeueDurableJob(
             leaseToken: null,
             leaseExpiresAt: null,
             heartbeatAt: null,
-            ...(input?.payload ? { payload: jsonValue(input.payload) } : {}),
+            ...(payload ? { payload: jsonValue(payload) } : {}),
         },
     });
     if (updated.count === 0) {
@@ -306,7 +321,7 @@ export async function markDurableJobDelivered(
 }
 
 /** Best-effort idempotent compensation for a job that exhausted its retries. */
-async function compensateDeadJob(job: DurableJobRow, error: unknown): Promise<void> {
+async function compensateDeadJobInner(job: DurableJobRow, error: unknown): Promise<void> {
     const payload = asRecord(job.payload);
     const message = errorMessage(error);
     const chargeIdempotencyKey =
@@ -414,6 +429,15 @@ async function compensateDeadJob(job: DurableJobRow, error: unknown): Promise<vo
     }
 }
 
+function compensateDeadJob(job: DurableJobRow, error: unknown): Promise<void> {
+    // Compensation can run from a sweeper long after the HTTP request ended;
+    // the originating id stored on the job keeps its ledger/log trail linked.
+    return runWithRequestId(
+        normalizeRequestId(asRecord(job.payload).requestId),
+        () => compensateDeadJobInner(job, error),
+    );
+}
+
 /**
  * PROCESSING -> PENDING with exponential backoff, or -> DEAD at maxAttempts.
  * DEAD jobs compensate exactly once (refund + failed state) for artifact and
@@ -490,6 +514,7 @@ async function deliverToInngest(job: DurableJobRow, leaseToken: string): Promise
             jobKey: key,
             leaseToken,
             eventId,
+            requestId: normalizeRequestId(payload.requestId),
         });
     }
 
@@ -502,6 +527,7 @@ async function deliverToInngest(job: DurableJobRow, leaseToken: string): Promise
             jobKey: key,
             leaseToken,
             eventId,
+            requestId: normalizeRequestId(payload.requestId),
         });
     }
 
@@ -509,27 +535,29 @@ async function deliverToInngest(job: DurableJobRow, leaseToken: string): Promise
 }
 
 /** Local (no-Inngest) fallback. The outbox row is the source of truth. */
-async function runLocalFallback(job: DurableJobRow, leaseToken: string): Promise<void> {
+function runLocalFallback(job: DurableJobRow, leaseToken: string): Promise<void> {
     const payload = asRecord(job.payload);
-    if (job.type === "artifact.generate") {
-        const { processArtifactById } = await import("../services/artifact.services.js");
-        await processArtifactById(
-            String(payload.artifactId ?? ""),
-            job.key,
-            leaseToken,
-        );
-        return;
-    }
-    if (job.type === "source.process") {
-        const { processSourceById } = await import("../services/source-processing-runner.js");
-        await processSourceById(
-            String(payload.sourceId ?? ""),
-            job.key,
-            leaseToken,
-        );
-        return;
-    }
-    throw new Error(`Unknown durable job type: ${job.type}`);
+    return runWithRequestId(normalizeRequestId(payload.requestId), async () => {
+        if (job.type === "artifact.generate") {
+            const { processArtifactById } = await import("../services/artifact.services.js");
+            await processArtifactById(
+                String(payload.artifactId ?? ""),
+                job.key,
+                leaseToken,
+            );
+            return;
+        }
+        if (job.type === "source.process") {
+            const { processSourceById } = await import("../services/source-processing-runner.js");
+            await processSourceById(
+                String(payload.sourceId ?? ""),
+                job.key,
+                leaseToken,
+            );
+            return;
+        }
+        throw new Error(`Unknown durable job type: ${job.type}`);
+    });
 }
 
 /**
@@ -547,21 +575,23 @@ export async function dispatchDurableJob(key: string): Promise<boolean> {
     const lease = await claimDurableJob(key);
     if (!lease) return false;
 
-    try {
-        const accepted = await deliverToInngest(job, lease.token);
-        if (!accepted) {
-            // Inngest is unavailable: run locally. The worker marks the job
-            // DELIVERED only after its own atomic completion succeeds.
-            await runLocalFallback(job, lease.token);
+    return runWithRequestId(normalizeRequestId(asRecord(job.payload).requestId), async () => {
+        try {
+            const accepted = await deliverToInngest(job, lease.token);
+            if (!accepted) {
+                // Inngest is unavailable: run locally. The worker marks the job
+                // DELIVERED only after its own atomic completion succeeds.
+                await runLocalFallback(job, lease.token);
+            }
+            // Event acceptance is NOT completion. A PROCESSING job stays
+            // PROCESSING until the worker reports success with markDurableJobDelivered.
+            // Its lease prevents stale recovery from reclaiming live work.
+            return true;
+        } catch (error) {
+            await releaseDurableJob(key, error, lease.token);
+            return false;
         }
-        // Event acceptance is NOT completion. A PROCESSING job stays
-        // PROCESSING until the worker reports success with markDurableJobDelivered.
-        // Its lease prevents stale recovery from reclaiming live work.
-        return true;
-    } catch (error) {
-        await releaseDurableJob(key, error, lease.token);
-        return false;
-    }
+    });
 }
 
 /** Dispatches a bounded batch of due PENDING jobs. */

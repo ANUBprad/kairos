@@ -5,6 +5,7 @@ import {
     releaseDurableJob,
     withDurableJobHeartbeat,
 } from "../lib/outbox.js";
+import { runWithRequestId } from "../lib/observability/request-context.js";
 import {
     markArtifactFailed,
     processArtifactById,
@@ -28,13 +29,15 @@ export const processSource = inngest.createFunction(
       triggers: [{ event: "source/created" }],
   },
   async ({ event, step }) => {
-      const { sourceId, jobKey, leaseToken } = event.data as {
+      const { sourceId, jobKey, leaseToken, requestId } = event.data as {
           sourceId: string;
           jobKey?: string;
           leaseToken?: string;
+          requestId?: string;
       };
 
-      return withDurableJobHeartbeat(jobKey, leaseToken, async () => {
+      return runWithRequestId(requestId, async () =>
+        withDurableJobHeartbeat(jobKey, leaseToken, async () => {
           try {
               // STEP 1: mark source as processing {status: "PROCESSING"}.
               // This is inside the try so a refused claim releases the leased
@@ -84,7 +87,8 @@ export const processSource = inngest.createFunction(
               });
               throw error;
           }
-      });
+        }),
+      );
   },
 );
 
@@ -99,13 +103,19 @@ export const summarizeConversation = inngest.createFunction(
         triggers: [{ event: "conversation/summarize" }],
     },
     async ({ event, step }) => {
-        const { conversationId, userId } = event.data;
+        const { conversationId, userId, requestId } = event.data as {
+            conversationId: string;
+            userId: string;
+            requestId?: string;
+        };
 
-        await step.run("summarize", () =>
-            summarizeConversationById(conversationId, userId),
-        );
+        return runWithRequestId(requestId, async () => {
+            await step.run("summarize", () =>
+                summarizeConversationById(conversationId, userId),
+            );
 
-        return { conversationId, status: "SUMMARIZED" };
+            return { conversationId, status: "SUMMARIZED" };
+        });
     },
 );
 
@@ -121,32 +131,35 @@ export const generateArtifact = inngest.createFunction(
         triggers: [{ event: "artifact/generate" }],
     },
     async ({ event, step }) => {
-        const { artifactId, jobKey, leaseToken } = event.data as {
+        const { artifactId, jobKey, leaseToken, requestId } = event.data as {
             artifactId: string;
             jobKey?: string;
             leaseToken?: string;
+            requestId?: string;
         };
 
-        try {
-            await step.run("generate", () =>
-                processArtifactById(artifactId, jobKey, leaseToken),
-            );
-            return { artifactId, status: "READY" };
-        } catch (error) {
-            // processArtifactById already releases and marks the artifact
-            // failed; this is an idempotent, lease-guarded safety net.
-            if (jobKey) {
-                await releaseDurableJob(jobKey, error, leaseToken);
+        return runWithRequestId(requestId, async () => {
+            try {
+                await step.run("generate", () =>
+                    processArtifactById(artifactId, jobKey, leaseToken),
+                );
+                return { artifactId, status: "READY" };
+            } catch (error) {
+                // processArtifactById already releases and marks the artifact
+                // failed; this is an idempotent, lease-guarded safety net.
+                if (jobKey) {
+                    await releaseDurableJob(jobKey, error, leaseToken);
+                }
+                await step.run("mark-failed", async () => {
+                    const message =
+                        error instanceof Error
+                            ? error.message
+                            : "Artifact generation failed";
+                    await markArtifactFailed(artifactId, message);
+                });
+                throw error;
             }
-            await step.run("mark-failed", async () => {
-                const message =
-                    error instanceof Error
-                        ? error.message
-                        : "Artifact generation failed";
-                await markArtifactFailed(artifactId, message);
-            });
-            throw error;
-        }
+        });
     },
 );
 
