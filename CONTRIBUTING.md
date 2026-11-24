@@ -1,6 +1,6 @@
-# Contributing to OpenBook
+# Contributing to Kairos
 
-Thank you for improving OpenBook. This guide covers local setup, quality checks, and how data flows through the system.
+Thank you for improving Kairos. This guide covers local setup, quality checks, and how data flows through the system.
 
 ## Prerequisites
 
