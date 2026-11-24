@@ -148,10 +148,14 @@ async function wasSourceRefunded(sourceId: string): Promise<boolean> {
     return refund !== null;
 }
 
-/** Reuses the durable job for a re-processing request (no new charge). */
-async function requeueSourceProcessing(source: SourceRecord): Promise<void> {
+/**
+ * Reuses the durable job for a re-processing request (no new charge).
+ * Returns false when the job is live or already delivered; callers must not
+ * report success in that case.
+ */
+async function requeueSourceProcessing(source: SourceRecord): Promise<boolean> {
     const jobKey = `source.process:${source.id}`;
-    await requeueDurableJob(jobKey, {
+    const requeued = await requeueDurableJob(jobKey, {
         key: jobKey,
         type: "source.process",
         payload: {
@@ -162,9 +166,11 @@ async function requeueSourceProcessing(source: SourceRecord): Promise<void> {
             chargeIdempotencyKey: `source-charge:${source.id}`,
         },
     });
+    if (!requeued) return false;
     void dispatchDurableJob(jobKey).catch((error) => {
         logDurableJobError(jobKey, error);
     });
+    return true;
 }
 
 /**
@@ -558,6 +564,12 @@ export async function reprocessSourceForWorkspace(
         );
     }
 
+    if (source.status === "PROCESSING" || source.status === "READY") {
+        throw new ValidationError(
+            "This source is already processing or ready and cannot be reprocessed.",
+        );
+    }
+
     if (source.status === "FAILED") {
         const priorMetadata =
             (source.metadata as Record<string, unknown> | null) ?? {};
@@ -571,7 +583,11 @@ export async function reprocessSourceForWorkspace(
         });
     }
 
-    await requeueSourceProcessing(source);
+    if (!(await requeueSourceProcessing(source))) {
+        throw new ValidationError(
+            "This source has a live or already completed processing job and cannot be reprocessed.",
+        );
+    }
 
     return { reprocessed: true };
 }
@@ -600,6 +616,8 @@ export async function reprocessSourcesForWorkspace(
     for (const source of targetSources) {
         // Skip compensated sources; they must be re-imported with a new charge.
         if (await wasSourceRefunded(source.id)) continue;
+        // Never rewind a live pipeline or overwrite finished work.
+        if (source.status === "PROCESSING" || source.status === "READY") continue;
 
         if (source.status === "FAILED") {
             const priorMetadata =
@@ -614,8 +632,7 @@ export async function reprocessSourcesForWorkspace(
             });
         }
 
-        await requeueSourceProcessing(source);
-        requeued += 1;
+        if (await requeueSourceProcessing(source)) requeued += 1;
     }
 
     return { reprocessed: requeued };

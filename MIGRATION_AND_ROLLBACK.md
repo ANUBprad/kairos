@@ -143,5 +143,20 @@ identical; `orphan_workspaces/sources/artifacts/conversations/messages/payments/
 
 Rollback policy is unchanged: redeploy the previous application commit for app-only
 incidents; for a schema-caused incident restore the pre-deploy backup into a new
-database and repoint the service—never reset, reverse a migration in place, or
+database and repoint the service-never reset, reverse a migration in place, or
 overwrite the live staging database. No production backup or database was touched.
+
+---
+
+## Phase 08 migration and restore evidence
+
+A 14th forward-only additive migration,
+`20261124100000_durable_job_lease_heartbeat`, added three nullable durable-job
+columns and one index; no historical, payment, credit or legacy rows were
+rewritten. The staging backend `buildCommand` now runs `prisma migrate deploy`
+and `prisma migrate status` before `npm run build`. On the disposable
+`kairos_phase08` database, both commands exited 0 and the schema audit reported
+19 tables, 169 columns, 10 enums, 55 indexes, 13 FKs and 19 PKs. A 46,249-byte
+`pg_dump -Fc` was restored into a separate Phase 08 restore container in 1,050 ms
+with identical nine-entity fixture counts, 14/14 migrations and zero invariant
+violations.

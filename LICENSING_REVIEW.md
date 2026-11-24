@@ -42,3 +42,13 @@ in the Phase 07 addendum of `RELEASE_READINESS_REPORT.md`) as an engineering
 step, but it does gate public release and any new license assertion. Dependency
 or staging fixes never resolve this gate. Phase 07 made no licensing change and
 did not deploy anything publicly.
+
+---
+
+## Phase 08 licensing note
+
+Phase 08 made no licensing change and deployed nothing publicly. The independent
+classification remains **E. PUBLIC REDISTRIBUTION BLOCKED — LICENSING EVIDENCE
+INSUFFICIENT**, unchanged by staging-readiness fixes, dependency work or local
+tests. Keep the repository private until an explicit written grant or legal
+determination is recorded.

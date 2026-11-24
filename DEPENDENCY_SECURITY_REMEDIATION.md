@@ -146,3 +146,15 @@ an OS-level lock on one client source-map file prevented in-place reinstall, so
 `npm ci` was run successfully in a clean temporary directory with the committed
 client manifest/lockfile (`TEMP_CLIENT_NPM_CI_EXIT=0`) and both lockfiles remained
 byte-identical under `git diff --exit-code`.
+
+---
+
+## 7. Phase 08 dependency verification
+
+After the final Phase 08 code edits, `npm audit --json` was rerun: server
+`SERVER_AUDIT_EXIT=1` with 0 critical / 0 high / 7 moderate / 0 low, client
+`CLIENT_AUDIT_EXIT=1` with 0 critical / 0 high / 10 moderate / 4 low, and root
+`ROOT_AUDIT_EXIT=0` with zero advisories. Both `npm audit --audit-level=high`
+gates exited 0. The residual moderate/low advisories remain **ACCEPTED RISK —
+OWNER APPROVAL REQUIRED**; no blind `npm audit fix`, audit suppression or lockfile
+change was used.

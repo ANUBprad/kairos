@@ -382,6 +382,12 @@ model DurableJob {
   deliveredAt DateTime?
   lastError   String?
 
+  /// Attempt-scoped lease token. Only the holder may complete/release the job.
+  leaseToken     String?
+  leaseExpiresAt DateTime?
+  heartbeatAt    DateTime?
+
   @@index([status, availableAt])
+  @@index([status, leaseExpiresAt])
   @@map("durable_job")
 }

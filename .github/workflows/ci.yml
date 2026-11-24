@@ -39,9 +39,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Native TypeScript type stripping is used by the redirect guard.
+          node-version: "24"
       - name: Staging-only blueprint guard
         run: node scripts/check-staging-blueprint.mjs render.staging.yaml
+      - name: Legacy blueprint staging identity guard
+        run: node scripts/check-staging-blueprint.mjs render.yaml --legacy
+      - name: Auth redirect guard
+        run: node scripts/check-safe-redirect.mjs
 
   server:
     runs-on: ubuntu-latest

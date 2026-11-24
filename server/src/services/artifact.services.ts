@@ -9,6 +9,7 @@ import {
     markDurableJobDelivered,
     releaseDurableJob,
     requeueDurableJob,
+    withDurableJobHeartbeat,
 } from "../lib/outbox.js";
 import {
     deleteArtifactRecord,
@@ -326,7 +327,7 @@ export async function retryArtifactForWorkspace(
     }
 
     const jobKey = `artifact-generate:${artifactId}`;
-    await requeueDurableJob(jobKey, {
+    const requeued = await requeueDurableJob(jobKey, {
         key: jobKey,
         type: "artifact.generate",
         payload: {
@@ -336,6 +337,11 @@ export async function retryArtifactForWorkspace(
             type: artifact.type,
         },
     });
+    if (!requeued) {
+        throw new ValidationError(
+            "This artifact has a live or already completed generation job and cannot be retried.",
+        );
+    }
     void dispatchDurableJob(jobKey).catch((error) => {
         logDurableJobError(jobKey, error);
     });
@@ -357,96 +363,105 @@ export async function retryArtifactForWorkspace(
  * local outbox fallback). A lease guarantees only one worker can generate a
  * given artifact at a time.
  */
-export async function processArtifactById(artifactId: string, jobKey?: string) {
-    const artifact = await findArtifactById(artifactId);
-    if (!artifact) {
-        const error = new Error("Artifact not found");
-        if (jobKey) await releaseDurableJob(jobKey, error);
-        throw error;
-    }
-
-    if (artifact.status === "READY") {
-        if (jobKey) await markDurableJobDelivered(jobKey);
-        return artifact;
-    }
-
-    const leaseToken = randomUUID();
-    const claimed = await claimArtifactForProcessing(
-        artifactId,
-        leaseToken,
-        ARTIFACT_LEASE_MS,
-    );
-    if (!claimed) {
-        // Another worker owns a live lease. Leave the job in its current state
-        // so the active holder can report completion; marking it DELIVERED
-        // here would silently lose an in-flight job.
-        return (await findArtifactById(artifactId)) ?? artifact;
-    }
-
-    const artifactType =
-        artifact.type === "DIAGRAM" ? "MINDMAP" : artifact.type;
-
-    try {
-        const context = await gatherSourceContext(
-            artifact.workspaceId,
-            artifact.sourceIds,
-        );
-
-        // Long-running generation must keep its lease alive; otherwise a
-        // recovery sweep could hand the artifact to a second worker.
-        if (!(await renewArtifactLease(artifactId, leaseToken, ARTIFACT_LEASE_MS))) {
-            throw new Error("Artifact lease was lost before generation");
+export async function processArtifactById(
+    artifactId: string,
+    jobKey?: string,
+    jobLeaseToken?: string,
+) {
+    // The job heartbeat covers the whole execution, including the initial
+    // lookup and artifact claim. Otherwise a long claim/recovery race could
+    // expire the job lease before the generation work even starts.
+    return withDurableJobHeartbeat(jobKey, jobLeaseToken, async () => {
+        const artifact = await findArtifactById(artifactId);
+        if (!artifact) {
+            const error = new Error("Artifact not found");
+            if (jobKey) await releaseDurableJob(jobKey, error, jobLeaseToken);
+            throw error;
         }
 
-        const content = await generateArtifactContent(
-            artifactType,
-            context.text,
-        );
-
-        let finalTitle = artifact.title;
-        if (finalTitle.includes(" · ")) {
-            if (artifactType === "PODCAST" && (content as Record<string, unknown>)?.topic) {
-                finalTitle = String((content as Record<string, unknown>).topic);
-            } else {
-                finalTitle = await generateArtifactTitleWithGemini(
-                    artifactType,
-                    context.text,
-                    artifact.title,
-                );
-            }
+        if (artifact.status === "READY") {
+            if (jobKey) await markDurableJobDelivered(jobKey, jobLeaseToken);
+            return artifact;
         }
 
-        const completed = await completeArtifactProcessing(
+        const leaseToken = randomUUID();
+        const claimed = await claimArtifactForProcessing(
             artifactId,
             leaseToken,
-            {
-                title: finalTitle,
-                type: artifactType,
-                content: content as Prisma.InputJsonValue,
-                metadata: {
-                    generatedAt: new Date().toISOString(),
-                    processingError: null,
-                },
-            },
+            ARTIFACT_LEASE_MS,
         );
-        if (!completed) {
-            throw new Error("Artifact lease was lost before completion");
+        if (!claimed) {
+            // Another worker owns a live lease. Leave the job in its current
+            // state so the active holder can report completion; marking it
+            // DELIVERED here would silently lose an in-flight job.
+            return (await findArtifactById(artifactId)) ?? artifact;
         }
 
-        if (jobKey) await markDurableJobDelivered(jobKey);
-        return (await findArtifactById(artifactId)) ?? artifact;
-    } catch (error) {
-        const message =
-            error instanceof Error
-                ? error.message
-                : "Artifact generation failed";
+        const artifactType =
+            artifact.type === "DIAGRAM" ? "MINDMAP" : artifact.type;
 
-        if (jobKey) await releaseDurableJob(jobKey, error);
-        await markArtifactFailed(artifactId, message, leaseToken);
+        try {
+            const context = await gatherSourceContext(
+                artifact.workspaceId,
+                artifact.sourceIds,
+            );
 
-        logger.error("Artifact generation failed", { artifactId, err: error });
-        throw error;
-    }
+            // Long-running generation must keep both leases alive; otherwise a
+            // recovery sweep could hand the work to a second worker.
+            if (!(await renewArtifactLease(artifactId, leaseToken, ARTIFACT_LEASE_MS))) {
+                throw new Error("Artifact lease was lost before generation");
+            }
+
+            const content = await generateArtifactContent(
+                artifactType,
+                context.text,
+            );
+
+            let finalTitle = artifact.title;
+            if (finalTitle.includes(" · ")) {
+                if (artifactType === "PODCAST" && (content as Record<string, unknown>)?.topic) {
+                    finalTitle = String((content as Record<string, unknown>).topic);
+                } else {
+                    finalTitle = await generateArtifactTitleWithGemini(
+                        artifactType,
+                        context.text,
+                        artifact.title,
+                    );
+                }
+            }
+
+            const completed = await completeArtifactProcessing(
+                artifactId,
+                leaseToken,
+                {
+                    title: finalTitle,
+                    type: artifactType,
+                    content: content as Prisma.InputJsonValue,
+                    metadata: {
+                        generatedAt: new Date().toISOString(),
+                        processingError: null,
+                    },
+                },
+            );
+            if (!completed) {
+                throw new Error("Artifact lease was lost before completion");
+            }
+
+            if (jobKey) await markDurableJobDelivered(jobKey, jobLeaseToken);
+            return (await findArtifactById(artifactId)) ?? artifact;
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Artifact generation failed";
+
+            if (jobKey) await releaseDurableJob(jobKey, error, jobLeaseToken);
+            await markArtifactFailed(artifactId, message, leaseToken);
+
+            logger.error("Artifact generation failed", { artifactId, err: error });
+            throw error;
+        }
+    });
 }
 
 export type { ArtifactRecord };

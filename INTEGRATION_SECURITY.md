@@ -112,3 +112,15 @@ Live provider/Inngest/Mem0/Razorpay validation and the Zod 4 smoke test over a
 real Inngest/Mem0 deployment remain **BLOCKED — CREDENTIALS/PERMISSIONS
 REQUIRED**; the provider-mocked suites are not a substitute. Residual moderate/
 low dependency advisories remain **ACCEPTED RISK — OWNER APPROVAL REQUIRED**.
+
+---
+
+## 6. Phase 08 provider note
+
+Phase 08 did not contact any provider. Inngest retries were set to `0` so the
+durable outbox is the single retry owner, and event IDs are derived from the
+per-claim lease UUID so an explicit requeue cannot reuse a dedup ID
+to avoid suppressing legitimate retries. The provider-mocked integration suite
+still passed 49/49 after the change. Live Razorpay test-mode, OAuth, Inngest,
+Mem0 and email validation remain blocked and must be recorded only by the owner
+after deployment.

@@ -134,13 +134,22 @@ async function extractSourceText(source: SourceRecord) {
 }
 
 /**
- * Updates a source status to "PROCESSING" in the database.
+ * Atomically claims a PENDING/FAILED source for processing. A source already
+ * PROCESSING or READY cannot be claimed by a second worker or a reprocess
+ * request, which prevents two pipelines from rebuilding the same chunks.
  *
  * @param sourceId - Unique identifier of the source
  * @returns Updated source record
  */
-export function markSourceProcessing(sourceId: string) {
-    return updateSourceRecord(sourceId, { status: "PROCESSING" });
+export async function markSourceProcessing(sourceId: string) {
+    const changed = await prisma.source.updateMany({
+        where: { id: sourceId, status: { in: ["PENDING", "FAILED"] } },
+        data: { status: "PROCESSING" },
+    });
+    if (changed.count !== 1) {
+        throw new Error(`Source ${sourceId} is not claimable for processing`);
+    }
+    return findSourceById(sourceId);
 }
 
 /**

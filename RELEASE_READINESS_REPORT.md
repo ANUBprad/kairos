@@ -218,9 +218,10 @@ staging remediation do not change that gate.
 Baseline (confirmed locally and remotely before edits):
 `eb5df27baa236563e3f32c81ec41d3e6a2c227d7`, branch `main`, clean tree, only
 remote `origin https://github.com/ANUBprad/kairos.git`, visibility `PRIVATE`.
-Final commit delivering this addendum: `8d7c2c16471d99cfb34774fcf73352facf3ae561` (the commit that
-contains `PHASE07_STAGING_VALIDATION_REPORT.md`). No Render/provider credentials
-were available, so the final classification is C, not A or B.
+Final pushed Phase 07 HEAD: `07c387ded18f560839dc81686ffc36a7ee863273` (verified
+locally and by `git ls-remote origin refs/heads/main`; this supersedes the stale
+pre-amend hash recorded here earlier). No Render/provider credentials were
+available, so the final classification is C, not A or B.
 
 ## 8. Phase 07 verification matrix (all after final edits)
 
@@ -296,4 +297,22 @@ This is the strongest classification independently verifiable here: staging-only
 configuration and local verification are complete, but deployment credentials or
 permissions are unavailable. It is **not** production-ready and no production
 promotion is authorized. Independently, the licensing classification remains
-**E. PUBLIC REDISTRIBUTION BLOCKED — LICENSING EVIDENCE INSUFFICIENT**.
+**E. PUBLIC REDISTRIBUTION BLOCKED - LICENSING EVIDENCE INSUFFICIENT**.
+
+---
+
+## Phase 08 addendum — P1 fixes and final readiness state
+
+Phase 08 fixed the four confirmed P1 reliability defects found after Phase 07:
+source reprocess can no longer rewind live jobs, durable jobs use attempt-scoped
+lease tokens/heartbeats with guarded completion/recovery, migrations now run
+inside the free-plan-compatible staging backend build, and crash recovery now
+releases an orphaned source claim (or settles already-finished work) instead of
+burning a job to `DEAD` and refunding it. The P2 open redirect and legacy staging
+identity were also fixed. After the final code edits, the full matrix passed:
+unit 156/156, integration 49/49, server build, client staging build, negative
+staging build, Playwright 3/3, 14/14 migrations and a separate backup/restore
+drill. No Render credentials were available, so no deployment occurred and
+classification remains **C. READY FOR STAGING DEPLOYMENT**. The independent
+licensing classification remains **E**. Full evidence is in
+`PHASE08_STAGING_DEPLOYMENT_AND_VALIDATION_REPORT.md`.

@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const file = resolve(process.argv[2] ?? "render.staging.yaml");
+const legacyMode = process.argv.includes("--legacy");
 const text = readFileSync(file, "utf8");
 const lines = text.split(/\r?\n/);
 
@@ -48,16 +49,29 @@ const services = serviceHeaders.map((header, position) => {
     return { type: header.type, name: nameMatch?.[1] ?? null, envKeys, body };
 });
 
-const names = services.map((service) => service.name).sort();
-check(
-    JSON.stringify(names) === JSON.stringify(["kairos-client-staging", "kairos-server-staging"]),
-    `expected exactly the two staging services, found ${JSON.stringify(names)}`,
-);
-check(!text.includes("openbook-server"), "production service name found in staging blueprint");
-check(
-    !/DEPLOYMENT_ENV\s*\n\s*-?\s*value:\s*production/m.test(text),
-    "DEPLOYMENT_ENV=production found in staging blueprint",
-);
+if (legacyMode) {
+    // The full blueprint also provisions production. We only require that any
+    // staging-named service still declares the staging identity gate.
+    const stagingServices = services.filter((service) => service.name?.endsWith("-staging"));
+    check(stagingServices.length > 0, "no staging services found in legacy blueprint");
+    for (const service of stagingServices) {
+        check(
+            service.envKeys.get("DEPLOYMENT_ENV")?.settings.includes("value: staging"),
+            `${service.name}: DEPLOYMENT_ENV must be staging`,
+        );
+    }
+} else {
+    const names = services.map((service) => service.name).sort();
+    check(
+        JSON.stringify(names) === JSON.stringify(["kairos-client-staging", "kairos-server-staging"]),
+        `expected exactly the two staging services, found ${JSON.stringify(names)}`,
+    );
+    check(!text.includes("openbook-server"), "production service name found in staging blueprint");
+    check(
+        !/DEPLOYMENT_ENV\s*\n\s*-?\s*value:\s*production/m.test(text),
+        "DEPLOYMENT_ENV=production found in staging blueprint",
+    );
+}
 for (const service of services) {
     check(service.type === "web", `${service.name}: expected type web`);
     for (const [key, setting] of service.envKeys) {
@@ -86,6 +100,15 @@ if (backend) {
     check(backend.envKeys.get("NODE_ENV")?.settings.includes("value: production"), "backend: NODE_ENV must be production");
     check(backend.envKeys.get("DEPLOYMENT_ENV")?.settings.includes("value: staging"), "backend: DEPLOYMENT_ENV must be staging");
     check(backend.body.some((line) => line.trim() === "healthCheckPath: /healthz"), "backend: health check must be /healthz");
+    if (!legacyMode) {
+        const buildCommand = backend.body.find((line) => /^\s*buildCommand:/.test(line)) ?? "";
+        const migrateAt = buildCommand.indexOf("prisma migrate deploy");
+        const buildAt = buildCommand.indexOf("npm run build");
+        check(migrateAt >= 0 && buildAt >= 0 && migrateAt < buildAt,
+            "backend: buildCommand must run 'prisma migrate deploy' before 'npm run build'");
+        check(buildCommand.includes("prisma migrate status"),
+            "backend: buildCommand must verify 'prisma migrate status'");
+    }
 }
 
 const frontend = services.find((service) => service.name === "kairos-client-staging");
@@ -104,4 +127,8 @@ if (failures.length > 0) {
     for (const failure of failures) console.error(` - ${failure}`);
     process.exit(1);
 }
-console.log(`STAGING BLUEPRINT GUARD: PASS (${services.length} staging services, no production service)`);
+if (legacyMode) {
+    console.log(`STAGING IDENTITY GUARD: PASS (${services.filter((s) => s.name?.endsWith("-staging")).length} staging services in legacy blueprint)`);
+} else {
+    console.log(`STAGING BLUEPRINT GUARD: PASS (${services.length} staging services, no production service)`);
+}

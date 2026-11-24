@@ -152,3 +152,16 @@ build. The positive staging client build then passed.
 6. Clean only Phase 07-labelled containers after the drill. Other containers
    (`kairos-remediation-pg-20261123`, `kairos-postgres-1`, `openbook-postgres`)
    are unrelated and must be left untouched.
+
+---
+
+## Phase 08 operations note
+
+Phase 08 added `kairos-phase08-pg-20261124` and the separate
+`kairos-phase08-restore-20261124` container for a disposable backup/restore
+drill; only those Phase 08-labelled containers are eligible for cleanup. The
+staging deploy path now fails closed on migrations before app build. An early
+`X-Request-Id` middleware adds correlation IDs to responses and error payloads;
+propagation into Inngest/worker logs is still outstanding. Owner triage should
+cover that propagation, automated backup scheduling and the pre-existing client
+lint debt documented in `PHASE08_STAGING_DEPLOYMENT_AND_VALIDATION_REPORT.md`.

@@ -19,7 +19,11 @@ services:
     runtime: node
     rootDir: server
     plan: free
-    buildCommand: npm install --include=dev && npm run build
+    # Render's `preDeployCommand` requires a paid plan. On free staging we run
+    # migrations as a fail-closed build step: deps -> migrate deploy -> status
+    # -> build -> start. The app can never boot against a stale schema.
+    # DATABASE_URL must therefore be available at build time (private env var).
+    buildCommand: npm install --include=dev && npx prisma migrate deploy && npx prisma migrate status && npm run build
     startCommand: npm start
     # Liveness only. /health is a throttled readiness probe and must not be
     # used as a deployment health check.

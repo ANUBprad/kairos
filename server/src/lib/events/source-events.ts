@@ -4,8 +4,10 @@ import { sendInngestEvent } from "./inngest-send.js";
 /**
  * Enqueues a source processing job to run asynchronously via Inngest.
  *
- * The worker runs extract → chunk → embed → Pinecone upsert. The event id is
- * the durable job key so Inngest deduplicates redeliveries.
+ * The worker runs extract → chunk → embed → Pinecone upsert. The durable
+ * outbox supplies a per-claim `eventId` (derived from the lease token) so
+ * Inngest dedupes redeliveries without suppressing a legitimate retry; direct
+ * legacy callers fall back to the job key.
  *
  * @param input - Source and workspace ids for the processing worker
  * @returns `true` when Inngest accepted the event; `false` when the caller
@@ -16,10 +18,12 @@ export async function enqueueSourceProcessing(input: {
     workspaceId: string;
     title?: string;
     jobKey?: string;
+    leaseToken?: string;
+    eventId?: string;
 }): Promise<boolean> {
     const jobKey = input.jobKey ?? `source.process:${input.sourceId}`;
     return sendInngestEvent({
-        id: jobKey,
+        id: input.eventId ?? jobKey,
         name: "source/created",
         data: { ...input, jobKey },
     });

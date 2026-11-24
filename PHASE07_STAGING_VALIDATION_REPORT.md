@@ -15,7 +15,7 @@ production-ready**.
 | Repository | `ANUBprad/kairos` (private; `origin https://github.com/ANUBprad/kairos.git` only) |
 | Branch | `main` |
 | Baseline commit | `eb5df27baa236563e3f32c81ec41d3e6a2c227d7` (confirmed locally and via `git ls-remote origin refs/heads/main`) |
-| Final commit | `8d7c2c16471d99cfb34774fcf73352facf3ae561` (the commit containing this report) |
+| Final commit | `07c387ded18f560839dc81686ffc36a7ee863273` (actual pushed Phase 07 HEAD, verified by `git ls-remote origin refs/heads/main`) |
 | Staging service names | `kairos-server-staging`, `kairos-client-staging` (only services in `render.staging.yaml`) |
 | Deployment IDs | **None — BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**. No Render account/API key/owner ID available. |
 | Staging URLs | **None recorded** — no deployment occurred; no URL was invented. |
@@ -164,3 +164,16 @@ The following were **not** performed and must not be inferred from local tests:
    redistribution; keep the repository private until then.
 
 No production deployment or production promotion is authorized by this phase.
+
+---
+
+## Phase 08 disposition
+
+This report is retained as the Phase 07 historical record; the stale pre-amend
+final hash above was corrected to the actual pushed Phase 07 HEAD
+`07c387ded18f560839dc81686ffc36a7ee863273`. Phase 08 superseded the readiness
+evidence by fixing four confirmed P1 durability defects plus the P2 open
+redirect and legacy staging identity issue, then rerunning the full matrix.
+No deployment occurred. The engineering classification remains **C** and the
+independent licensing classification remains **E**. See
+`PHASE08_STAGING_DEPLOYMENT_AND_VALIDATION_REPORT.md`.

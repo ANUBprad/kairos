@@ -6,8 +6,11 @@ import {
     dispatchDurableJob,
     insertDurableJob,
     markDurableJobDelivered,
+    recoverAbandonedDurableJobs,
     releaseDurableJob,
+    requeueDurableJob,
     setOutboxStoreForTests,
+    touchDurableJob,
     type DurableJobInput,
     type DurableJobStatus,
 } from "./outbox.js";
@@ -24,6 +27,9 @@ type JobRow = {
     updatedAt: Date;
     deliveredAt: Date | null;
     lastError: string | null;
+    leaseToken: string | null;
+    leaseExpiresAt: Date | null;
+    heartbeatAt: Date | null;
 };
 
 type Charge = {
@@ -34,6 +40,7 @@ type Charge = {
 };
 
 function comparable(value: unknown): number {
+    if (value === null || value === undefined) return Number.NaN;
     if (value instanceof Date) return value.getTime();
     if (typeof value === "number") return value;
     return new Date(value as string).getTime();
@@ -58,6 +65,7 @@ function matches(row: Record<string, unknown>, where: Record<string, unknown> = 
             if (range.not !== undefined && actual === range.not) return false;
             if (range.lt !== undefined && !(comparable(actual) < comparable(range.lt))) return false;
             if (range.lte !== undefined && !(comparable(actual) <= comparable(range.lte))) return false;
+            if (range.gt !== undefined && !(comparable(actual) > comparable(range.gt))) return false;
             if (range.gte !== undefined && !(comparable(actual) >= comparable(range.gte))) return false;
             continue;
         }
@@ -71,6 +79,7 @@ function fakeStore(options: { charge?: Charge | null } = {}) {
     const ledger: Array<Record<string, unknown>> = [];
     const users = new Map<string, { credits: number }>([["u1", { credits: 20 }]]);
     const artifacts = new Map<string, Record<string, unknown>>();
+    const sources = new Map<string, Record<string, unknown>>();
     let sequence = 0;
 
     const durableJob = {
@@ -97,6 +106,9 @@ function fakeStore(options: { charge?: Charge | null } = {}) {
                     updatedAt: new Date(),
                     deliveredAt: null,
                     lastError: null,
+                    leaseToken: (dataRow.leaseToken as string | null) ?? null,
+                    leaseExpiresAt: (dataRow.leaseExpiresAt as Date | null) ?? null,
+                    heartbeatAt: (dataRow.heartbeatAt as Date | null) ?? null,
                 });
                 count += 1;
             }
@@ -171,7 +183,22 @@ function fakeStore(options: { charge?: Charge | null } = {}) {
         creditTransaction,
         user,
         learningArtifact,
-        source: { findUnique: async () => null },
+        source: {
+            findUnique: async ({ where }: { where: { id: string } }) =>
+                sources.get(where.id) ?? null,
+            updateMany: async ({ where, data }: {
+                where: Record<string, unknown>;
+                data: Record<string, unknown>;
+            }) => {
+                let count = 0;
+                for (const source of sources.values()) {
+                    if (!matches(source, where)) continue;
+                    Object.assign(source, data);
+                    count += 1;
+                }
+                return { count };
+            },
+        },
         workspace: {
             findUnique: async () => ({ userId: "u1" }),
         },
@@ -183,6 +210,7 @@ function fakeStore(options: { charge?: Charge | null } = {}) {
         jobs,
         ledger,
         artifacts,
+        sources,
         users,
     };
 }
@@ -228,7 +256,7 @@ describe("transactional outbox", () => {
             availableAt: new Date(Date.now() + 60_000),
         });
 
-        assert.equal(await claimDurableJob("later"), false);
+        assert.equal(await claimDurableJob("later"), null);
         assert.equal(await dispatchDurableJob("later"), false);
     });
 
@@ -236,7 +264,7 @@ describe("transactional outbox", () => {
         const { db } = fakeStore();
         setOutboxStoreForTests(db);
         await insertDurableJob(db as Prisma.TransactionClient, baseInput);
-        assert.equal(await claimDurableJob(baseInput.key), true);
+        assert.notEqual(await claimDurableJob(baseInput.key), null);
 
         await markDurableJobDelivered(baseInput.key);
         await markDurableJobDelivered(baseInput.key);
@@ -345,5 +373,154 @@ describe("transactional outbox", () => {
         assert.equal(jobs.get("artifact-generate:a3")?.status, "DEAD");
         assert.equal(artifacts.get("a3")?.status, "READY");
         assert.equal(ledger.filter((row) => row.type === "REFUND").length, 0);
+    });
+
+    // --- Phase 08 P1 regressions -----------------------------------------
+
+    it("refuses to rewind PROCESSING or DELIVERED jobs", async () => {
+        const { db, jobs } = fakeStore();
+        setOutboxStoreForTests(db);
+        await insertDurableJob(db as Prisma.TransactionClient, baseInput);
+        const lease = await claimDurableJob(baseInput.key);
+        assert.ok(lease?.token);
+
+        const liveAttempts = jobs.get(baseInput.key)!.attempts;
+        const liveLease = jobs.get(baseInput.key)!.leaseToken;
+        assert.equal(await requeueDurableJob(baseInput.key), false);
+        assert.equal(jobs.get(baseInput.key)?.status, "PROCESSING");
+        assert.equal(jobs.get(baseInput.key)?.attempts, liveAttempts);
+        assert.equal(jobs.get(baseInput.key)?.leaseToken, liveLease);
+
+        await markDurableJobDelivered(baseInput.key, lease!.token);
+        assert.equal(await requeueDurableJob(baseInput.key), false);
+        assert.equal(jobs.get(baseInput.key)?.status, "DELIVERED");
+
+        jobs.get(baseInput.key)!.status = "DEAD";
+        assert.equal(await requeueDurableJob(baseInput.key), true);
+        assert.equal(jobs.get(baseInput.key)?.status, "PENDING");
+        assert.equal(jobs.get(baseInput.key)?.attempts, 0);
+        assert.equal(jobs.get(baseInput.key)?.leaseToken, null);
+    });
+
+    it("does not reclaim a heartbeated job, but reclaims exactly once after lease expiry", async () => {
+        const { db, jobs } = fakeStore();
+        setOutboxStoreForTests(db);
+        await insertDurableJob(db as Prisma.TransactionClient, baseInput);
+        const first = await claimDurableJob(baseInput.key);
+        assert.ok(first?.token);
+
+        // A live heartbeat keeps the lease in the future: recovery is a no-op.
+        assert.equal(await touchDurableJob(baseInput.key, first!.token), true);
+        assert.equal(await recoverAbandonedDurableJobs(50, false), 0);
+        assert.equal(jobs.get(baseInput.key)?.status, "PROCESSING");
+
+        // A stale token cannot renew or complete someone else's job.
+        assert.equal(await touchDurableJob(baseInput.key, "stale-token"), false);
+        assert.equal(await markDurableJobDelivered(baseInput.key, "stale-token"), false);
+        assert.equal(jobs.get(baseInput.key)?.status, "PROCESSING");
+
+        // Simulate a crashed worker: let the lease expire.
+        jobs.get(baseInput.key)!.leaseExpiresAt = new Date(Date.now() - 1000);
+        await recoverAbandonedDurableJobs(50, false);
+        assert.equal(jobs.get(baseInput.key)?.status, "PENDING");
+        assert.equal(jobs.get(baseInput.key)?.attempts, 1);
+
+        const second = await claimDurableJob(baseInput.key);
+        assert.ok(second?.token);
+        assert.notEqual(second!.token, first!.token);
+        assert.equal(jobs.get(baseInput.key)?.status, "PROCESSING");
+
+        // The old worker can no longer release or deliver the reissued job.
+        assert.equal(await releaseDurableJob(baseInput.key, new Error("late"), first!.token), null);
+        assert.equal(await markDurableJobDelivered(baseInput.key, first!.token), false);
+        assert.equal(jobs.get(baseInput.key)?.status, "PROCESSING");
+
+        assert.equal(await markDurableJobDelivered(baseInput.key, second!.token), true);
+        assert.equal(jobs.get(baseInput.key)?.status, "DELIVERED");
+    });
+
+    it("keeps legacy lease-less PROCESSING rows recoverable by updatedAt", async () => {
+        const { db, jobs } = fakeStore();
+        setOutboxStoreForTests(db);
+        await insertDurableJob(db as Prisma.TransactionClient, baseInput);
+        const lease = await claimDurableJob(baseInput.key);
+        assert.ok(lease?.token);
+        jobs.get(baseInput.key)!.status = "PROCESSING";
+        jobs.get(baseInput.key)!.leaseToken = null;
+        jobs.get(baseInput.key)!.leaseExpiresAt = null;
+        jobs.get(baseInput.key)!.updatedAt = new Date(Date.now() - 60 * 60 * 1000);
+
+        await recoverAbandonedDurableJobs(50, false);
+        assert.equal(jobs.get(baseInput.key)?.status, "PENDING");
+        assert.equal(jobs.get(baseInput.key)?.attempts, 1);
+    });
+
+    it("releases a crashed source claim when recovering its stale job", async () => {
+        const { db, jobs, sources } = fakeStore();
+        setOutboxStoreForTests(db);
+        const key = "source.process:s1";
+        await insertDurableJob(db as Prisma.TransactionClient, {
+            key,
+            type: "source.process",
+            payload: { sourceId: "s1", workspaceId: "w1" },
+        });
+        sources.set("s1", { id: "s1", status: "PROCESSING" });
+        assert.ok((await claimDurableJob(key))?.token);
+        // Hard crash: the worker never released the source or the job lease.
+        jobs.get(key)!.leaseExpiresAt = new Date(Date.now() - 1000);
+
+        await recoverAbandonedDurableJobs(50, false);
+
+        assert.equal(jobs.get(key)?.status, "PENDING");
+        assert.equal(jobs.get(key)?.attempts, 1);
+        assert.equal(sources.get("s1")?.status, "PENDING");
+        // A new worker can now satisfy the strict PENDING|FAILED -> PROCESSING
+        // source claim instead of throwing on the orphaned PROCESSING status.
+        assert.ok((await claimDurableJob(key))?.token);
+    });
+
+    it("settles a stale source job as DELIVERED when the source is already READY", async () => {
+        const { db, jobs, sources, ledger } = fakeStore({
+            charge: { id: "charge-s2", userId: "u1", amount: -10, type: "SOURCE_UPLOAD" },
+        });
+        setOutboxStoreForTests(db);
+        const key = "source.process:s2";
+        await insertDurableJob(db as Prisma.TransactionClient, {
+            key,
+            type: "source.process",
+            payload: {
+                sourceId: "s2",
+                workspaceId: "w1",
+                chargeIdempotencyKey: "source-charge:s2",
+            },
+        });
+        sources.set("s2", { id: "s2", status: "READY", metadata: {} });
+        assert.ok((await claimDurableJob(key))?.token);
+        jobs.get(key)!.leaseExpiresAt = new Date(Date.now() - 1000);
+
+        await recoverAbandonedDurableJobs(50, false);
+
+        assert.equal(jobs.get(key)?.status, "DELIVERED");
+        assert.equal(sources.get("s2")?.status, "READY");
+        assert.equal(ledger.filter((row) => row.type === "REFUND").length, 0);
+    });
+
+    it("settles a stale artifact job when the artifact is already READY", async () => {
+        const { db, jobs, artifacts } = fakeStore();
+        setOutboxStoreForTests(db);
+        const key = "artifact-generate:a-ready";
+        await insertDurableJob(db as Prisma.TransactionClient, {
+            key,
+            type: "artifact.generate",
+            payload: { artifactId: "a-ready", workspaceId: "w1" },
+        });
+        artifacts.set("a-ready", { id: "a-ready", status: "READY" });
+        assert.ok((await claimDurableJob(key))?.token);
+        jobs.get(key)!.leaseExpiresAt = new Date(Date.now() - 1000);
+
+        await recoverAbandonedDurableJobs(50, false);
+
+        assert.equal(jobs.get(key)?.status, "DELIVERED");
+        assert.equal(artifacts.get("a-ready")?.status, "READY");
     });
 });

@@ -169,7 +169,7 @@ describe("background job recovery (integration)", () => {
                 });
                 if (!due.length) break;
                 for (const job of due) {
-                    assert.equal(await outbox.claimDurableJob(job.key), true);
+                    assert.notEqual(await outbox.claimDurableJob(job.key), null);
                     await outbox.markDurableJobDelivered(job.key);
                     processed += 1;
                 }
@@ -245,7 +245,7 @@ describe("background job recovery (integration)", () => {
         assert.equal(job.attempts, 1);
         assert.match(String(job.lastError), /Recovered abandoned processing job/);
 
-        assert.equal(await outbox.claimDurableJob(key), true);
+        assert.notEqual(await outbox.claimDurableJob(key), null);
         await outbox.markDurableJobDelivered(key);
         await outbox.markDurableJobDelivered(key); // duplicate delivery
         job = await db.durableJob.findUniqueOrThrow({ where: { key } });
@@ -254,6 +254,98 @@ describe("background job recovery (integration)", () => {
         assert.equal(
             await db.creditTransaction.count({
                 where: { idempotencyKey: `artifact-refund:${fixture.artifactId}` },
+            }),
+            0,
+        );
+    });
+
+    it("resets a crashed source claim so the reissued job's strict worker claim succeeds", async () => {
+        const outbox = await import("../lib/outbox.js");
+        const { markSourceProcessing } = await import("../services/source-processing.services.js");
+        const fixture = await createFixture();
+        const key = `jr-source-crash-${randomUUID()}`;
+        keysToClean.add(key);
+        await db.durableJob.create({
+            data: {
+                key,
+                type: "source.process",
+                payload: {
+                    sourceId: fixture.sourceId,
+                    workspaceId: fixture.workspaceId,
+                },
+                status: "PROCESSING",
+                attempts: 0,
+                maxAttempts: 5,
+            },
+        });
+        await ageProcessingJob(key, 20);
+
+        // The source was left PROCESSING by a hard crash mid-pipeline. Recovery
+        // must release it together with the stale job, otherwise the reissued
+        // worker is rejected by markSourceProcessing's PENDING|FAILED CAS.
+        await outbox.recoverAbandonedDurableJobs(50, false);
+
+        let job = await db.durableJob.findUniqueOrThrow({ where: { key } });
+        assert.equal(job.status, "PENDING");
+        assert.equal(job.attempts, 1);
+        let source = await db.source.findUniqueOrThrow({ where: { id: fixture.sourceId } });
+        assert.equal(source.status, "PENDING");
+
+        const claimedSource = await markSourceProcessing(fixture.sourceId);
+        assert.equal(claimedSource?.status, "PROCESSING");
+
+        // The reissued job follows the normal claim -> deliver path.
+        const newLease = await outbox.claimDurableJob(key);
+        assert.notEqual(newLease, null);
+        await outbox.markDurableJobDelivered(key, newLease?.token);
+        job = await db.durableJob.findUniqueOrThrow({ where: { key } });
+        assert.equal(job.status, "DELIVERED");
+    });
+
+    it("settles a stale source job as DELIVERED when the source is already READY", async () => {
+        const outbox = await import("../lib/outbox.js");
+        const fixture = await createFixture();
+        const key = `jr-source-ready-${randomUUID()}`;
+        keysToClean.add(key);
+        await db.source.update({
+            where: { id: fixture.sourceId },
+            data: { status: "READY" },
+        });
+        await db.creditTransaction.create({
+            data: {
+                userId: fixture.userId,
+                amount: -10,
+                balanceAfter: 90,
+                type: "SOURCE_UPLOAD",
+                description: "source recovery test charge",
+                idempotencyKey: key,
+            },
+        });
+        await db.durableJob.create({
+            data: {
+                key,
+                type: "source.process",
+                payload: {
+                    sourceId: fixture.sourceId,
+                    workspaceId: fixture.workspaceId,
+                    chargeIdempotencyKey: key,
+                },
+                status: "PROCESSING",
+                attempts: 0,
+                maxAttempts: 2,
+            },
+        });
+        await ageProcessingJob(key, 20);
+
+        await outbox.recoverAbandonedDurableJobs(50, false);
+
+        const job = await db.durableJob.findUniqueOrThrow({ where: { key } });
+        assert.equal(job.status, "DELIVERED");
+        const source = await db.source.findUniqueOrThrow({ where: { id: fixture.sourceId } });
+        assert.equal(source.status, "READY");
+        assert.equal(
+            await db.creditTransaction.count({
+                where: { idempotencyKey: `source-refund:${fixture.sourceId}` },
             }),
             0,
         );
@@ -394,7 +486,7 @@ describe("background job recovery (integration)", () => {
         const futureKey = (
             await insertJobs(1, { availableAt: new Date(Date.now() + 3_600_000) })
         )[0];
-        assert.equal(await outbox.claimDurableJob(futureKey), false);
+        assert.equal(await outbox.claimDurableJob(futureKey), null);
         assert.equal(
             (await db.durableJob.findUniqueOrThrow({ where: { key: futureKey } })).status,
             "PENDING",

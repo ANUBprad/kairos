@@ -81,6 +81,30 @@ concurrency tests. The backup/restore drill also verified a `DELIVERED` job row
 survived restore with no stale `PROCESSING` or premature `DEAD` rows.
 
 Worker crash/restart, DB interruption, provider outage and live Inngest
-event execution on a deployed staging service remain **BLOCKED —
+event execution on a deployed staging service remain **BLOCKED -
 CREDENTIALS/PERMISSIONS REQUIRED**; the in-process fallback is not a durable
 replacement for a hosted worker across full service replacement.
+
+---
+
+## Phase 08 lease and retry-owner update
+
+Durable jobs now carry an attempt-scoped `leaseToken`, `leaseExpiresAt` and
+`heartbeatAt`. Only the live token holder can complete or release a job;
+recovery waits for lease expiry and legacy lease-less rows keep the `updatedAt`
+fallback. `requeueDurableJob()` refuses to rewind `PROCESSING`/`DELIVERED` jobs,
+source reprocess refuses to rewind live or finished sources, and Inngest retries
+are `0` so the outbox is the single retry owner. Requeue results are honored by
+the source and artifact retry endpoints; a refused requeue is reported as an
+error rather than a successful retry.
+
+Crash recovery also resets a stale `PROCESSING` source claim atomically with the
+job, so the newly dispatched worker can satisfy the strict
+`PENDING|FAILED -> PROCESSING` source claim. If the source or artifact is already
+`READY`, recovery settles the job as `DELIVERED` instead of rebuilding or
+refunding already-finished work. The Inngest source `mark-processing` step is
+inside the guarded `try/catch`, and the artifact job heartbeat covers the initial
+claim as well as generation. Unit and integration regressions cover refusal to
+rewind, heartbeat renewal, stale-token rejection, recovery-after-expiry, orphaned
+source-claim release and the already-`READY` settlement path. Live worker
+crash/restart remains **BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**.

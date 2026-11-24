@@ -16,13 +16,15 @@ import { logger } from "../lib/logger.js";
  */
 export function errorHandler(
     error: unknown,
-    _req: Request,
+    req: Request,
     res: Response,
     _next: NextFunction,
 ): void {
+    const requestId = req.requestId;
     if (error instanceof AppError) {
         res.status(error.statusCode).json({
             error: error.message,
+            ...(requestId ? { requestId } : {}),
             ...(error.details ? { details: error.details } : {}),
         });
         return;
@@ -69,6 +71,10 @@ export function errorHandler(
     // carry safe details; unexpected 500s must never leak internals to clients.
     logger.error("Unhandled request error", {
         error: error instanceof Error ? error.message : String(error),
+        requestId,
     });
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+        error: "Internal server error",
+        ...(requestId ? { requestId } : {}),
+    });
 }

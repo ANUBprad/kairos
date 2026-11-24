@@ -21,6 +21,10 @@ import {
 } from "./middleware/rate-limit.middleware.js";
 import { optionalAuth } from "./middleware/require-auth.middleware.js";
 import {
+    REQUEST_ID_HEADER,
+    requestIdMiddleware,
+} from "./middleware/request-id.middleware.js";
+import {
     getAllowedOrigins,
     getExpressTrustProxy,
 } from "./config/network.js";
@@ -44,6 +48,9 @@ export function createApp(): express.Express {
     const allowedOrigins = getAllowedOrigins();
 
     const app = express();
+    // Correlation first so even auth/CORS/webhook failures carry an id.
+    app.use(requestIdMiddleware);
+
     // Only explicitly configured proxies are trusted; forwarded headers from
     // any other source cannot influence req.ip or rate-limit keys.
     app.set("trust proxy", getExpressTrustProxy());
@@ -65,7 +72,11 @@ export function createApp(): express.Express {
                 callback(new AppError(403, "Origin not allowed by CORS"));
             },
             credentials: true,
-            exposedHeaders: ["X-Conversation-Id", "x-conversation-id"],
+            exposedHeaders: [
+                "X-Conversation-Id",
+                "x-conversation-id",
+                REQUEST_ID_HEADER,
+            ],
         }),
     );
 

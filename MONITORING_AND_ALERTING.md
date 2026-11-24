@@ -85,3 +85,14 @@ coverage.
 - No dashboard, alert rule, pager, Render log stream or deployed `/health` was
   accessed or configured. Those items remain **BLOCKED — CREDENTIALS/PERMISSIONS
   REQUIRED** and must not be described as active monitoring.
+
+---
+
+## 6. Phase 08 correlation note
+
+An early `X-Request-Id` middleware now emits a validated/generated request ID on
+every response, exposes it through CORS and includes it in API error payloads
+and error logs. Request IDs are **not yet propagated into Inngest or worker log
+lines**; that is documented owner work, not live monitoring. Live dashboards,
+alerts, Render log streaming and deployed alert verification remain **BLOCKED —
+CREDENTIALS/PERMISSIONS REQUIRED**.

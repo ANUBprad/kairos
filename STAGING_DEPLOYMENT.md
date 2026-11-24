@@ -206,3 +206,16 @@ is introduced. Result: **FIXED AND VERIFIED**.
 No Render credentials were present in this environment, so no deployment
 occurred. Overall Phase 07 classification is `C. READY FOR STAGING DEPLOYMENT`;
 the independent licensing classification remains `E`.
+
+---
+
+## Phase 08 deployment note
+
+Deploy **only** `render.staging.yaml`. The backend `buildCommand` now runs
+`npm install --include=dev && npx prisma migrate deploy && npx prisma migrate status && npm run build`;
+no paid-only `preDeployCommand` is used, and `DATABASE_URL` must be configured
+as a private build-time variable for staging. The canonical blueprint guard and
+the legacy staging-identity guard both pass in CI. Phase 08 still produced no
+Render service IDs, deployment IDs, URLs, timestamps or build logs because
+credentials were unavailable; record those only from the owner's private
+dashboard after deployment.

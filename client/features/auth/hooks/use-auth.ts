@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { signIn, signUp, signOut, useSession } from "../lib/auth-client";
 import { authRoutes } from "../lib/auth-routes";
+import { safeRedirectPath } from "../lib/safe-redirect";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -17,18 +18,14 @@ function getCallbackPath(): string {
   if (typeof window !== "undefined") {
     const params = new URLSearchParams(window.location.search);
     const cb = params.get("callbackUrl");
-    if (cb) return cb;
+    if (cb) return safeRedirectPath(cb);
   }
   return authRoutes.dashboard;
 }
 
+/** Builds a callback URL strictly on the current app origin. */
 function toAbsoluteUrl(pathOrUrl: string): string {
-  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
-    return pathOrUrl;
-  }
-  const origin = getClientOrigin();
-  const path = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
-  return `${origin}${path}`;
+  return new URL(safeRedirectPath(pathOrUrl), getClientOrigin()).toString();
 }
 
 export function useAuth() {
@@ -55,7 +52,7 @@ export function useAuth() {
       if (res.error) {
         throw new Error(res.error.message || "Failed to log in");
       }
-      return { data: res.data, targetUrl: callbackUrl || getCallbackPath() };
+      return { data: res.data, targetUrl: safeRedirectPath(callbackUrl || getCallbackPath()) };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries();
@@ -88,7 +85,7 @@ export function useAuth() {
       if (res.error) {
         throw new Error(res.error.message || "Failed to create account");
       }
-      return { data: res.data, targetUrl: callbackUrl || getCallbackPath() };
+      return { data: res.data, targetUrl: safeRedirectPath(callbackUrl || getCallbackPath()) };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries();

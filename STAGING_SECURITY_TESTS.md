@@ -110,3 +110,15 @@ generic client message while operational detail goes to the server log.
 Live HTTPS/TLS/HSTS/cookie, real OAuth round-trip, real Razorpay test-mode
 checkout/webhook/refund and live provider checks remain **BLOCKED —
 CREDENTIALS/PERMISSIONS REQUIRED**.
+
+---
+
+## 8. Phase 08 execution note
+
+No Phase 08 live security test was executed: there is no Render account, API key,
+OAuth token or deployment MCP access. Owner-run checks must use only
+`render.staging.yaml`, staging-owned OAuth callbacks, test-mode Razorpay keys and
+synthetic data. The local CI guards now include the staging blueprint guard, the
+legacy staging identity guard and the 15-case safe-redirect guard; all exited 0.
+Full local/mocked evidence is separated from live evidence in
+`PHASE08_STAGING_DEPLOYMENT_AND_VALIDATION_REPORT.md`.

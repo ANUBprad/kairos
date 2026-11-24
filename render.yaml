@@ -214,6 +214,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Required so client/lib/env.ts enforces staging-only backend targets.
+      - key: DEPLOYMENT_ENV
+        value: staging
       - key: NEXT_PUBLIC_API_URL
         sync: false
       - key: NEXT_PUBLIC_BETTER_AUTH_URL
