@@ -50,6 +50,25 @@ describe("error handler hygiene", () => {
         assert.ok(warnings.length > 0, "operational detail should be logged server-side");
     });
 
+    it("maps malformed multipart parser errors to 400 without parser details", async () => {
+        console.error = () => {};
+        const { errorHandler } = await import("./error-handler.middleware.js");
+        const { res, captured } = fakeResponse();
+
+        errorHandler(
+            new Error("Multipart: Boundary not found in request body"),
+            REQ,
+            res,
+            NEXT,
+        );
+
+        assert.equal(captured.status, 400);
+        assert.deepEqual(captured.body, {
+            error: "Malformed multipart upload",
+        });
+        assert.doesNotMatch(JSON.stringify(captured.body), /Boundary|not found/i);
+    });
+
     it("returns a fixed 500 body for unknown errors", async () => {
         console.error = () => {};
         const { errorHandler } = await import("./error-handler.middleware.js");

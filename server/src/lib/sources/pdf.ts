@@ -1,4 +1,5 @@
 import { extractText, getDocumentProxy } from "unpdf";
+import { ValidationError } from "../../types/app-error.js";
 import { getSignedCloudinaryDownloadUrl } from "../cloudinary.js";
 import { safeFetchBuffer } from "../safe-fetch.js";
 
@@ -8,6 +9,44 @@ export type PdfExtractResult = {
     pages: string[];
     pageCount: number;
 };
+
+export type PdfExtractionErrorCode =
+    | "CORRUPT"
+    | "ENCRYPTED"
+    | "NO_TEXT";
+
+/** Safe, client-facing PDF failures are validation errors with a stable code. */
+export class PdfExtractionError extends ValidationError {
+    constructor(
+        public readonly code: PdfExtractionErrorCode,
+        message: string,
+    ) {
+        super(message);
+        this.name = "PdfExtractionError";
+    }
+}
+
+/** Classifies library failures without exposing provider internals to clients. */
+export function classifyPdfExtractionError(error: unknown): PdfExtractionError {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (/password|encrypted/i.test(message)) {
+        return new PdfExtractionError(
+            "ENCRYPTED",
+            "Encrypted PDFs are not supported. Upload a version without a password.",
+        );
+    }
+    if (/no text|could not extract|empty page/i.test(message)) {
+        return new PdfExtractionError(
+            "NO_TEXT",
+            "No text could be extracted from the PDF. Scanned or image-only PDFs are not supported.",
+        );
+    }
+    return new PdfExtractionError(
+        "CORRUPT",
+        "The uploaded file is not a readable PDF.",
+    );
+}
 
 
 /**
@@ -47,24 +86,50 @@ export async function extractPdfFromBuffer(
             ) as ArrayBuffer)
             : buffer;
 
-    const pdf = await getDocumentProxy(new Uint8Array(arrayBuffer));
-    const { totalPages, text } = await extractText(pdf, { mergePages: false });
+    let extracted: Awaited<ReturnType<typeof extractText>>;
+    try {
+        const pdf = await getDocumentProxy(new Uint8Array(arrayBuffer));
+        extracted = await extractText(pdf, { mergePages: false });
+    } catch (error) {
+        throw classifyPdfExtractionError(error);
+    }
 
-    const pages = Array.isArray(text)
-        ? text.map((page) => page.trim())
-        : [String(text).trim()];
+    const rawPages = Array.isArray(extracted.text)
+        ? extracted.text.map((page) => String(page ?? "").trim())
+        : [String(extracted.text ?? "").trim()];
+    const reportedCount = Number(extracted.totalPages);
+    const pageCount =
+        Number.isInteger(reportedCount) && reportedCount > 0
+            ? reportedCount
+            : rawPages.length;
+    // Keep blank pages in place. Chunk metadata uses the array index as the
+    // physical 1-based page number, so filtering empties would renumber pages.
+    const pages = rawPages.slice(0, pageCount);
+    while (pages.length < pageCount) {
+        pages.push("");
+    }
 
     const joined = pages.filter(Boolean).join("\n\n");
-
-    if (!joined) {
-        throw new Error("No text could be extracted from the PDF");
+    if (!joined || pageCount === 0) {
+        throw classifyPdfExtractionError(
+            new Error("No text could be extracted from the PDF"),
+        );
     }
 
     return {
         text: joined,
         pages,
-        pageCount: totalPages,
+        pageCount,
     };
+}
+
+/**
+ * Returns true for Cloudinary delivery failures that can be caused by a private
+ * asset. Parse failures and 5xx responses are not retried with a signed URL.
+ */
+export function shouldRetryPdfDownloadWithSignedUrl(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    return /Remote fetch failed \((401|403|404)\)/.test(error.message);
 }
 
 /**
@@ -83,10 +148,10 @@ export async function extractPdfFromCloudinary(input: {
         const buffer = await downloadPdf(input.fileUrl);
         return await extractPdfFromBuffer(buffer);
     } catch (error) {
-        const isUnauthorized =
-            error instanceof Error && error.message.includes("(401)");
-
-        if (!isUnauthorized || !input.publicId) {
+        if (
+            !shouldRetryPdfDownloadWithSignedUrl(error) ||
+            !input.publicId
+        ) {
             throw error;
         }
 

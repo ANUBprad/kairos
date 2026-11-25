@@ -8,6 +8,7 @@ import {
     importYoutubeSchema,
     listSourcesQuerySchema,
     sourceIdParamSchema,
+    uploadPdfBodySchema,
 } from "../validators/source.validator.js";
 import { workspaceIdParamSchema } from "../validators/workspace.validator.js";
 import {
@@ -224,8 +225,7 @@ export async function uploadPdf(req: Request, res: Response) {
         throw new ValidationError("PDF file is required");
     }
 
-    const title =
-        typeof req.body.title === "string" ? req.body.title : undefined;
+    const { title } = uploadPdfBodySchema.parse(req.body ?? {});
 
     const source = await uploadPdfSource(
         workspaceId,

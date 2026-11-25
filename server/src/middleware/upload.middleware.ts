@@ -23,10 +23,13 @@ export const pdfUpload = multer({
         const isPdfMime =
             file.mimetype === "application/pdf" ||
             file.mimetype === "application/x-pdf" ||
-            file.mimetype === "application/octet-stream";
+            file.mimetype === "application/octet-stream" ||
+            file.mimetype === "binary/octet-stream";
         const isPdfExt = file.originalname.toLowerCase().endsWith(".pdf");
 
-        if (isPdfMime || isPdfExt) {
+        // Magic bytes are checked separately; require both a plausible MIME
+        // type and a .pdf name so mislabeled uploads are rejected early.
+        if (isPdfMime && isPdfExt) {
             callback(null, true);
             return;
         }

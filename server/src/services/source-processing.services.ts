@@ -73,18 +73,21 @@ async function extractSourceText(source: SourceRecord) {
             : {};
 
     if (source.type === "PDF") {
+        // Keep blank pages in place: chunkPages() skips empty pages while
+        // using the array index as the physical 1-based page number.
         const storedPages = Array.isArray(metadata.pageTexts)
             ? metadata.pageTexts.filter(
-                (page): page is string =>
-                    typeof page === "string" && page.trim().length > 0,
+                (page): page is string => typeof page === "string",
             )
             : [];
 
         if (storedPages.length > 0) {
-            const text = source.content?.trim() || storedPages.join("\n\n");
+            const text =
+                source.content?.trim() ||
+                storedPages.filter((page) => page.trim()).join("\n\n");
             return {
                 text,
-                pageCount: storedPages.length,
+                pageCount: metadata.pageCount ?? storedPages.length,
                 pages: storedPages,
             };
         }

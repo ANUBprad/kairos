@@ -5,6 +5,9 @@ import { AppError } from "../types/app-error.js";
 import { getZodFieldErrors } from "../utils/zod-error.js";
 import { logger } from "../lib/logger.js";
 
+const MALFORMED_MULTIPART_ERROR =
+    /unexpected end of (?:form|multipart data)|multipart: boundary not found|malformed part header/i;
+
 /**
  * Global Express error handling middleware. Formats Application errors, Zod validation failures,
  * Multer upload errors, and Cloudinary permission errors into standardized JSON responses.
@@ -49,6 +52,16 @@ export function errorHandler(
             error.message === "Only image files are allowed")
     ) {
         res.status(400).json({ error: error.message });
+        return;
+    }
+
+    // Busboy/parser errors are client input problems, not server failures.
+    // Return a fixed message so parser internals never reach the response.
+    if (
+        error instanceof Error &&
+        MALFORMED_MULTIPART_ERROR.test(error.message)
+    ) {
+        res.status(400).json({ error: "Malformed multipart upload" });
         return;
     }
 

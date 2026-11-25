@@ -35,6 +35,10 @@ export const listSourcesQuerySchema = z.object({
     status: sourceStatusSchema.optional(),
 });
 
+export const uploadPdfBodySchema = z.object({
+    title: z.string().trim().min(1).max(200).optional(),
+});
+
 export const createTextSourceSchema = z.object({
     type: z.literal("TEXT"),
     title: z.string().trim().min(1, "Title is required").max(200),

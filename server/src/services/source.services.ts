@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { logger } from "../lib/logger.js";
 import { uploadImageToCloudinary, uploadPdfToCloudinary } from "../lib/cloudinary.js";
 import { extractTextFromImageBuffer } from "../lib/sources/image-ocr.js";
@@ -342,20 +342,23 @@ export async function uploadPdfSource(
     title?: string,
 ) {
     await getWorkspaceByIdForUser(workspaceId, userId);
+
+    const contentHash = createHash("sha256").update(file.buffer).digest("hex");
+    const existing = await findActiveSourceByMetadataKey(
+        workspaceId,
+        "PDF",
+        "contentHash",
+        contentHash,
+    );
+    if (existing) {
+        return existing;
+    }
+
     await assertCanCreateSource(userId);
 
-    let content: string | null = null;
-    let pageCount: number | undefined;
-    let pageTexts: string[] | undefined;
-
-    try {
-        const extracted = await extractPdfFromBuffer(file.buffer);
-        content = extracted.text;
-        pageCount = extracted.pageCount;
-        pageTexts = extracted.pages;
-    } catch (parseErr) {
-        logger.warn("Direct PDF buffer extraction notice", { err: parseErr });
-    }
+    // Fail closed before Cloudinary upload, charging, or job creation. A
+    // corrupt, encrypted, or image-only PDF must not become a charged source.
+    const extracted = await extractPdfFromBuffer(file.buffer);
 
     let uploadMetadata: Record<string, unknown> = {};
     try {
@@ -383,12 +386,13 @@ export async function uploadPdfSource(
             workspaceId,
             type: "PDF",
             title: title?.trim() || file.originalname.replace(/\.pdf$/i, ""),
-            content,
+            content: extracted.text,
             status: "PENDING",
             metadata: {
                 ...uploadMetadata,
-                pageCount,
-                ...(pageTexts?.length ? { pageTexts } : {}),
+                contentHash,
+                pageCount: extracted.pageCount,
+                pageTexts: extracted.pages,
             },
         },
         userId,
