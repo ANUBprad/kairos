@@ -7,7 +7,7 @@ import {
     chunkTimestampedTranscript,
     type TranscriptChunkSegment,
 } from "../lib/chunking.js";
-import { embedTexts } from "../lib/openai.js";
+import { embedTexts, embeddingMetadata } from "../lib/embeddings.js";
 import { extractTextFromCloudinaryImage } from "../lib/sources/image-ocr.js";
 import { extractPdfFromCloudinary } from "../lib/sources/pdf.js";
 import {
@@ -485,6 +485,7 @@ export async function embedAndIndexSource(
                     sourceTitle: source.title,
                     sourceType: source.type,
                     text: chunk.content.slice(0, 35000),
+                    ...embeddingMetadata(),
                     ...(typeof chunkMetadata.page === "number"
                         ? { page: chunkMetadata.page }
                         : {}),

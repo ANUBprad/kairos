@@ -6,20 +6,25 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, Save, Settings, ChevronDown, Check } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
 import { useWorkspace, useWorkspaces, NotebookIconPicker } from "@/features/workspaces";
+import {
+  CHAT_MODELS,
+  CHAT_MODEL_LABELS,
+  DEFAULT_CHAT_MODEL,
+  resolveChatModel,
+  type ChatModelId,
+} from "@/features/chat/stores/chat-preferences";
 import { cn } from "@/lib/utils";
 
-const MODEL_OPTIONS = [
-  {
-    id: "gpt-4o-mini",
-    title: "GPT-4o Mini",
-    desc: "Fast & Accurate RAG with rapid response times",
-  },
-  {
-    id: "gpt-4o",
-    title: "GPT-4o",
-    desc: "Deep Reasoning & Complex Multi-source Synthesis",
-  },
-];
+const MODEL_DESCRIPTIONS: Record<ChatModelId, string> = {
+  "gemini-3.6-flash": "Fast, grounded answers for everyday research",
+  "gemini-3.5-flash-lite": "Lower-cost option for quick questions",
+};
+
+const MODEL_OPTIONS = CHAT_MODELS.map((id) => ({
+  id,
+  title: CHAT_MODEL_LABELS[id],
+  desc: MODEL_DESCRIPTIONS[id],
+}));
 
 
 interface WorkspaceSettingsPageProps {
@@ -38,7 +43,7 @@ export default function WorkspaceSettingsPage({
 
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState("📚");
-  const [defaultModel, setDefaultModel] = useState("gpt-4o-mini");
+  const [defaultModel, setDefaultModel] = useState<ChatModelId>(DEFAULT_CHAT_MODEL);
   const [isSaved, setIsSaved] = useState(false);
   const [isModelOpen, setIsModelOpen] = useState(false);
   const modelRef = useRef<HTMLDivElement>(null);
@@ -57,7 +62,7 @@ export default function WorkspaceSettingsPage({
     if (workspace) {
       setTitle(workspace.title || "");
       setIcon(workspace.icon || "📚");
-      setDefaultModel(workspace.defaultModel || "gpt-4o-mini");
+      setDefaultModel(resolveChatModel(workspace.defaultModel));
     }
   }, [workspace]);
 

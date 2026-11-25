@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import {
     EMBEDDING_DIMENSIONS,
-    EMBEDDING_MODEL,
+    getEmbeddingIdentity,
     QUERY_EMBED_CACHE_TTL_SEC,
 } from "../ai-config.js";
 import prisma from "../db.js";
@@ -10,8 +10,11 @@ function normalizeQuery(query: string): string {
     return query.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export function buildQueryEmbedCacheKey(query: string): string {
-    const payload = `${EMBEDDING_MODEL}:${EMBEDDING_DIMENSIONS}:${normalizeQuery(query)}`;
+export function buildQueryEmbedCacheKey(
+    query: string,
+    identity: string = getEmbeddingIdentity("query"),
+): string {
+    const payload = `${identity}:${normalizeQuery(query)}`;
     return createHash("sha256").update(payload).digest("hex");
 }
 
@@ -36,10 +39,11 @@ export async function getCachedQueryEmbedding(
     }
 
     const embedding = row.embedding.filter(
-        (value): value is number => typeof value === "number",
+        (value): value is number =>
+            typeof value === "number" && Number.isFinite(value),
     );
 
-    return embedding.length > 0 ? embedding : null;
+    return embedding.length === EMBEDDING_DIMENSIONS ? embedding : null;
 }
 
 export async function setCachedQueryEmbedding(

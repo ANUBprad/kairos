@@ -77,6 +77,12 @@ cp client/.env.example client/.env.local
 
 Set the required database, authentication, frontend URL, and provider values in the appropriate files. See the example files for the current variable names and descriptions. Never commit real credentials.
 
+#### AI providers
+
+Kairos uses Gemini by default for chat, artifacts, summaries, podcast turns, OCR, and embeddings. Set `GEMINI_API_KEY`; OpenAI is available only as an explicit legacy option through `CHAT_PROVIDER`, `EMBEDDING_PROVIDER`, and `OCR_PROVIDER`.
+
+Document and query embeddings must use the same provider, model, and dimensions. Every stored vector carries that identity, and Pinecone queries are filtered by it. Changing `EMBEDDING_PROVIDER`, `GEMINI_EMBEDDING_MODEL`, `OPENAI_EMBEDDING_MODEL`, or `EMBEDDING_DIMENSIONS` requires a dedicated `PINECONE_INDEX` and a re-import of sources. Vector dimension mismatches fail with an actionable startup/index error rather than mixing incompatible embeddings.
+
 ### 3. Start PostgreSQL
 
 Use your own PostgreSQL instance, or start the repository's local database service:

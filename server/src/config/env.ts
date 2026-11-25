@@ -23,6 +23,18 @@ const baseSchema = z.object({
     BETTER_AUTH_URL: z.string().url().optional(),
     OPENAI_API_KEY: z.string().optional(),
     GEMINI_API_KEY: z.string().optional(),
+    CHAT_PROVIDER: z.enum(["gemini", "openai"]).default("gemini"),
+    EMBEDDING_PROVIDER: z.enum(["gemini", "openai"]).default("gemini"),
+    OCR_PROVIDER: z.enum(["gemini", "openai"]).optional(),
+    GEMINI_CHAT_MODEL: z.string().min(1).optional(),
+    GEMINI_SECONDARY_CHAT_MODEL: z.string().min(1).optional(),
+    GEMINI_OCR_MODEL: z.string().min(1).optional(),
+    GEMINI_EMBEDDING_MODEL: z.string().min(1).optional(),
+    OPENAI_CHAT_MODEL: z.string().min(1).optional(),
+    OPENAI_PRO_CHAT_MODEL: z.string().min(1).optional(),
+    OPENAI_OCR_MODEL: z.string().min(1).optional(),
+    OPENAI_EMBEDDING_MODEL: z.string().min(1).optional(),
+    EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(512),
     PINECONE_API_KEY: z.string().optional(),
     PINECONE_INDEX: z.string().optional(),
     ELEVENLABS_API_KEY: z.string().optional(),
@@ -81,6 +93,52 @@ function forbiddenEndpoints(env: ServerEnv): string[] {
         .split(",")
         .map((value) => value.trim().toLowerCase())
         .filter(Boolean);
+}
+
+function activeAiProviders(env: ServerEnv): Set<"gemini" | "openai"> {
+    return new Set([
+        env.CHAT_PROVIDER,
+        env.EMBEDDING_PROVIDER,
+        env.OCR_PROVIDER ?? env.CHAT_PROVIDER,
+    ]);
+}
+
+function requiredAiCredentials(env: ServerEnv): ("GEMINI_API_KEY" | "OPENAI_API_KEY")[] {
+    const providers = activeAiProviders(env);
+    const keys: ("GEMINI_API_KEY" | "OPENAI_API_KEY")[] = [];
+    if (providers.has("gemini")) keys.push("GEMINI_API_KEY");
+    if (providers.has("openai")) keys.push("OPENAI_API_KEY");
+    return keys;
+}
+
+/** Rejects unsupported embedding model/dimension combinations before startup. */
+function assertEmbeddingConfig(env: ServerEnv): void {
+    if (env.EMBEDDING_PROVIDER === "gemini") {
+        const model = env.GEMINI_EMBEDDING_MODEL?.trim() || "gemini-embedding-001";
+        if (!/^gemini-embedding/.test(model)) {
+            throw new Error(
+                `Unsupported GEMINI_EMBEDDING_MODEL "${model}". Use a Gemini embedding model.`,
+            );
+        }
+        if (env.EMBEDDING_DIMENSIONS > 3072) {
+            throw new Error(
+                "EMBEDDING_DIMENSIONS must be 3072 or less for Gemini embedding models.",
+            );
+        }
+        return;
+    }
+
+    const model = env.OPENAI_EMBEDDING_MODEL?.trim() || "text-embedding-3-small";
+    if (!model.startsWith("text-embedding-")) {
+        throw new Error(
+            `Unsupported OPENAI_EMBEDDING_MODEL "${model}". Use an OpenAI text-embedding model.`,
+        );
+    }
+    if (env.EMBEDDING_DIMENSIONS > 1536) {
+        throw new Error(
+            "EMBEDDING_DIMENSIONS must be 1536 or less for OpenAI text-embedding-3 models.",
+        );
+    }
 }
 
 function assertStagingIsolation(env: ServerEnv): void {
@@ -236,6 +294,7 @@ export function getServerEnv(): ServerEnv {
 
     const env = parsed.data;
     const deploymentEnv = deploymentEnvOf(env);
+    assertEmbeddingConfig(env);
 
     // A production-labelled deployment must never run with development-grade
     // middleware/cookies. This closes the split-identity downgrade path.
@@ -258,7 +317,7 @@ export function getServerEnv(): ServerEnv {
 
     if (env.NODE_ENV === "production") {
         const requiredInProd: (keyof ServerEnv)[] = [
-            "OPENAI_API_KEY",
+            ...requiredAiCredentials(env),
             "PINECONE_API_KEY",
             "PINECONE_INDEX",
             "CLOUDINARY_CLOUD_NAME",
@@ -302,11 +361,10 @@ export function getServerEnv(): ServerEnv {
             }
         }
     } else {
-        const optionalWarnings = [
-            "OPENAI_API_KEY",
+        const optionalWarnings: (keyof ServerEnv)[] = [
+            ...requiredAiCredentials(env),
             "PINECONE_API_KEY",
-            "GEMINI_API_KEY",
-        ] as const;
+        ];
         for (const key of optionalWarnings) {
             if (isPlaceholder(process.env[key])) {
                 console.warn(

@@ -1,8 +1,7 @@
 import { generateText, Output } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import type { Prisma } from "../generated/prisma/client.js";
-import { CHAT_MODEL } from "../lib/ai-config.js";
+import { getChatModel } from "../lib/ai-model.js";
 import { logger } from "../lib/logger.js";
 import { getWorkspaceByIdForUser } from "./workspace.services.js";
 import {
@@ -95,7 +94,7 @@ export async function processPodcastInterruption({
     const context = await gatherSourceContext(workspaceId, artifact.sourceIds);
 
     const result = await generateText({
-        model: openai(CHAT_MODEL),
+        model: getChatModel(),
         system: [
             "You are the executive producer and scriptwriter for the live debate podcast hosted by Alex and Jordan.",
             "A listener just pressed 'Interrupt & Ask' while listening to the episode and asked a question.",

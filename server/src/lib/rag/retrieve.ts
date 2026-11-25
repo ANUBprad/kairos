@@ -4,7 +4,7 @@ import {
     RAG_TOP_K,
     RERANK_ENABLED,
 } from "../ai-config.js";
-import { embedQueryText } from "../openai.js";
+import { embedQueryText } from "../embeddings.js";
 import { logger } from "../logger.js";
 import { queryWorkspaceVectors } from "../pinecone.js";
 import {

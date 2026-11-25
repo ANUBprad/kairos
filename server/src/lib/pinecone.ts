@@ -4,7 +4,11 @@ import {
     type Index,
     type PineconeRecord,
 } from "@pinecone-database/pinecone";
-import { EMBEDDING_DIMENSIONS } from "./ai-config.js";
+import {
+    EMBEDDING_DIMENSIONS,
+    EMBEDDING_MODEL,
+    getEmbeddingMetadata,
+} from "./ai-config.js";
 
 const indexName = process.env.PINECONE_INDEX ?? "chaibook";
 
@@ -61,9 +65,9 @@ export async function ensurePineconeIndex() {
 
     const client = getPineconeClient();
     const indexes = await client.listIndexes();
-    const exists = indexes.indexes?.some((index) => index.name === indexName);
+    const existing = indexes.indexes?.find((index) => index.name === indexName);
 
-    if (!exists) {
+    if (!existing) {
         await client.createIndex({
             name: indexName,
             dimension: EMBEDDING_DIMENSIONS,
@@ -76,6 +80,10 @@ export async function ensurePineconeIndex() {
             },
         });
         await waitForIndexReady(indexName);
+    } else if (existing.dimension && existing.dimension !== EMBEDDING_DIMENSIONS) {
+        throw new Error(
+            `Pinecone index "${indexName}" has ${existing.dimension} dimensions but ${EMBEDDING_MODEL} requires ${EMBEDDING_DIMENSIONS}. Set PINECONE_INDEX to a dedicated index for this embedding model and re-import sources.`,
+        );
     }
 
     indexReady = true;
@@ -140,6 +148,9 @@ export type VectorMetadata = {
     url?: string;
     startSeconds?: number;
     endSeconds?: number;
+    embeddingProvider: "gemini" | "openai";
+    embeddingModel: string;
+    embeddingDimensions: number;
 };
 
 /**
@@ -216,10 +227,16 @@ export async function queryWorkspaceVectors(
     topK: number,
 ) {
     const index = await getPineconeIndex();
+    const identity = getEmbeddingMetadata();
     const result = await index.namespace(workspaceId).query({
         vector,
         topK,
         includeMetadata: true,
+        filter: {
+            embeddingProvider: { $eq: identity.embeddingProvider },
+            embeddingModel: { $eq: identity.embeddingModel },
+            embeddingDimensions: { $eq: identity.embeddingDimensions },
+        },
     });
 
     return result.matches ?? [];

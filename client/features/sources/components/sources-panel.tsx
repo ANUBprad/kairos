@@ -12,7 +12,6 @@ import {
   Square,
   FileBox,
   Layers,
-  Sparkles,
 } from "lucide-react";
 import { useReprocessSource } from "../hooks/use-sources";
 
@@ -45,14 +44,13 @@ export function SourcesPanel({
   onDeleteSource,
   isLoading,
 }: SourcesPanelProps) {
-
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [previewSource, setPreviewSource] = useState<Source | null>(null);
   const reprocessMutation = useReprocessSource(workspaceId ?? "");
 
   const filteredSources = sources.filter((s) =>
-    s.title.toLowerCase().includes(searchQuery.toLowerCase())
+    s.title.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const allSelected =
@@ -61,30 +59,32 @@ export function SourcesPanel({
   return (
     <div className="flex h-full select-none flex-col border-r border-border bg-panel text-foreground">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border p-3.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Layers className="size-4 text-brand" />
-          <span className="kairos-eyebrow">Sources</span>
-          <span className="kairos-tag font-mono">{sources.length}</span>
+      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Layers className="size-3.5 shrink-0 text-brand" aria-hidden="true" />
+          <span className="kairos-eyebrow truncate">Sources</span>
+          <span className="kairos-tag font-mono text-[10px]">
+            {sources.length}
+          </span>
         </div>
 
         <button
           type="button"
           onClick={() => setIsAddOpen(true)}
           aria-label="Add source"
-          className="flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
+          className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground transition-colors hover:opacity-90 motion-reduce:transition-none"
         >
-          <Plus className="size-3.5" aria-hidden="true" />
+          <Plus className="size-3" aria-hidden="true" />
           <span>Add</span>
         </button>
       </div>
 
-      {/* Sub-header: Search & Select All toggle */}
-      <div className="space-y-2 border-b border-border bg-surface/60 p-3">
+      {/* Search & selection controls */}
+      <div className="space-y-1.5 border-b border-border bg-surface/50 px-3 py-2">
         <label className="relative block">
           <span className="sr-only">Search sources</span>
           <Search
-            className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
           />
           <input
@@ -92,64 +92,83 @@ export function SourcesPanel({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search sources..."
-            className="kairos-inset w-full py-1.5 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+            className="w-full rounded-lg border border-border bg-muted py-1 pl-7 pr-2 text-[11px] text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/30"
           />
         </label>
 
         {sources.length > 0 && (
-          <div className="flex items-center justify-between rounded-lg bg-brand-quiet px-2 py-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={allSelected ? onDeselectAll : onSelectAll}
-              className="flex items-center gap-1.5 transition-colors hover:text-brand motion-reduce:transition-none"
+              aria-pressed={allSelected}
+              className="inline-flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-brand focus-visible:text-brand motion-reduce:transition-none"
             >
               {allSelected ? (
-                <CheckSquare className="size-3.5 text-brand" aria-hidden="true" />
+                <CheckSquare className="size-3.5 shrink-0 text-brand" aria-hidden="true" />
               ) : (
-                <Square className="size-3.5" aria-hidden="true" />
+                <Square className="size-3.5 shrink-0" aria-hidden="true" />
               )}
-              <span>{allSelected ? "Deselect all" : "Select all"}</span>
+              <span className="truncate">
+                {allSelected ? "Deselect all" : "Select all"}
+              </span>
             </button>
 
-            <span className="kairos-tag px-1.5 py-0 font-mono text-[10px]">
+            <span className="kairos-tag shrink-0 font-mono text-[10px]">
               {selectedSourceIds.length}/{sources.length} active
             </span>
           </div>
         )}
       </div>
 
-      {/* Sources List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      {/* Sources list */}
+      <div className="flex-1 space-y-1.5 overflow-y-auto p-2">
         {isLoading ? (
-          <div className="space-y-2" role="status" aria-label="Loading sources">
-            {[1, 2, 3].map((i) => (
+          <div
+            className="space-y-1.5"
+            role="status"
+            aria-label="Loading sources"
+            aria-busy="true"
+          >
+            {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="kairos-panel h-14 animate-pulse motion-reduce:animate-none"
+                className="h-10 rounded-lg border border-border bg-muted/60"
               />
             ))}
           </div>
-        ) : filteredSources.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center space-y-3 p-6 text-center text-muted-foreground">
-            <div className="flex size-11 items-center justify-center rounded-full bg-brand-soft text-brand">
-              <FileBox className="size-5" aria-hidden="true" />
+        ) : sources.length === 0 ? (
+          <div
+            role="status"
+            className="flex h-full flex-col items-center justify-center gap-2 px-3 py-6 text-center"
+          >
+            <div className="flex items-center gap-1.5 text-foreground">
+              <FileBox className="size-4 text-brand" aria-hidden="true" />
+              <span className="text-xs font-medium">No sources yet</span>
             </div>
-            <div className="space-y-1">
-              <p className="kairos-section-title text-sm text-primary">
-                No sources yet
-              </p>
-              <p className="mx-auto max-w-52 text-[11px] text-muted-foreground">
-                Add PDFs, websites, or YouTube links to ground this workspace.
-              </p>
-            </div>
+            <p className="max-w-56 text-[11px] leading-relaxed text-muted-foreground">
+              Add PDFs, websites, or YouTube links to ground this workspace.
+            </p>
             <button
               type="button"
               onClick={() => setIsAddOpen(true)}
-              className="flex items-center gap-1 rounded-lg border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-brand-quiet motion-reduce:transition-none"
             >
-              <Plus className="size-3.5" aria-hidden="true" />
+              <Plus className="size-3" aria-hidden="true" />
               <span>Add first source</span>
             </button>
+          </div>
+        ) : filteredSources.length === 0 ? (
+          <div
+            role="status"
+            className="flex h-full flex-col items-center justify-center gap-1 px-3 py-6 text-center"
+          >
+            <span className="text-xs font-medium text-foreground">
+              No matching sources
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              Try a different title.
+            </span>
           </div>
         ) : (
           filteredSources.map((source) => (
@@ -174,7 +193,6 @@ export function SourcesPanel({
         )}
       </div>
 
-      {/* Add Source Dialog Modal */}
       <AddSourceDialog
         workspaceId={workspaceId}
         isOpen={isAddOpen}
@@ -185,8 +203,6 @@ export function SourcesPanel({
         onCreateTextSource={onCreateTextSource}
       />
 
-
-      {/* Source Preview Dialog Modal */}
       <SourcePreviewDialog
         source={previewSource}
         onClose={() => setPreviewSource(null)}

@@ -3,13 +3,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export const CHAT_MODELS = ["gpt-4o-mini", "gpt-4o"] as const;
+export const CHAT_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"] as const;
 export type ChatModelId = (typeof CHAT_MODELS)[number];
 
 export const CHAT_MODEL_LABELS: Record<ChatModelId, string> = {
-    "gpt-4o-mini": "GPT-4o mini",
-    "gpt-4o": "GPT-4o",
+    "gemini-3.6-flash": "Gemini 3.6 Flash",
+    "gemini-3.5-flash-lite": "Gemini 3.5 Flash Lite",
 };
+
+export const DEFAULT_CHAT_MODEL: ChatModelId = "gemini-3.6-flash";
 
 export type WorkspaceChatPrefs = {
     model: ChatModelId;
@@ -26,12 +28,13 @@ export type ChatPreferencesState = {
     setWebSearch: (workspaceId: string, enabled: boolean) => void;
 };
 
-function resolveModel(model?: string): ChatModelId {
+export function resolveChatModel(model?: string): ChatModelId {
     if (model && CHAT_MODELS.includes(model as ChatModelId)) {
         return model as ChatModelId;
     }
 
-    return "gpt-4o-mini";
+    // Legacy gpt-* workspace defaults and persisted preferences map to Flash.
+    return DEFAULT_CHAT_MODEL;
 }
 
 export const useChatPreferences = create<ChatPreferencesState>()(
@@ -41,11 +44,14 @@ export const useChatPreferences = create<ChatPreferencesState>()(
             getPrefs: (workspaceId, defaultModel) => {
                 const existing = get().byWorkspace[workspaceId];
                 if (existing) {
-                    return existing;
+                    return {
+                        ...existing,
+                        model: resolveChatModel(existing.model),
+                    };
                 }
 
                 return {
-                    model: resolveModel(defaultModel),
+                    model: resolveChatModel(defaultModel),
                     webSearch: false,
                 };
             },

@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { CHAT_MODELS } from "../lib/ai-config.js";
 
-export const CHAT_MODELS = ["gpt-4o-mini", "gpt-4o"] as const;
+export { CHAT_MODELS };
 
 export const createWorkspaceSchema = z.object({
     title: z.string().trim().min(1, "Title is required").max(120),

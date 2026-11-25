@@ -62,8 +62,8 @@ export async function generateArtifactTitleWithGemini(
             sourceText.slice(0, 5000),
         ].join("\n");
 
-        // Use active Google Gemini free-tier models (2.5 generation)
-        const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+        // Use currently available Gemini Flash models with a capacity fallback.
+        const models = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
 
         for (const model of models) {
             try {
@@ -162,7 +162,7 @@ export async function enhancePromptWithGemini(
         "Return only the enhanced prompt text.",
     ].join("\n");
 
-    const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+    const models = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
 
     for (const model of models) {
         try {

@@ -17,7 +17,7 @@ export const usePreferences = create<PreferencesState>()(
       setViewMode: (mode) => set({ viewMode: mode }),
       webSearchDefault: false,
       setWebSearchDefault: (enabled) => set({ webSearchDefault: enabled }),
-      selectedModel: "gpt-4o-mini",
+      selectedModel: "gemini-3.6-flash",
       setSelectedModel: (model) => set({ selectedModel: model }),
     }),
     {

@@ -1,17 +1,25 @@
 import OpenAI from "openai";
-import { OCR_VISION_MODEL } from "../ai-config.js";
+import {
+    GEMINI_OCR_MODEL,
+    OCR_PROVIDER,
+    OPENAI_OCR_MODEL,
+} from "../ai-config.js";
 import { getSignedCloudinaryDownloadUrl } from "../cloudinary.js";
+import { providerFetch } from "../provider-http.js";
 import { safeFetchBuffer } from "../safe-fetch.js";
 
 let client: OpenAI | null = null;
 
 function getClient() {
-    if (!process.env.OPENAI_API_KEY) {
-        throw new Error("OPENAI_API_KEY is not configured");
+    const apiKey = process.env.OPENAI_API_KEY?.trim();
+    if (!apiKey) {
+        throw new Error(
+            "OPENAI_API_KEY is not configured. Set OCR_PROVIDER=gemini with GEMINI_API_KEY, or configure an OpenAI key.",
+        );
     }
 
     if (!client) {
-        client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        client = new OpenAI({ apiKey });
     }
 
     return client;
@@ -30,9 +38,83 @@ export type ImageOcrResult = {
     model: string;
 };
 
+function summarizeProviderError(body: string): string {
+    const compact = body.replace(/\s+/g, " ").trim();
+    return compact.length > 400 ? `${compact.slice(0, 400)}…` : compact || "no response body";
+}
+
+async function runGeminiOcr(
+    buffer: Buffer,
+    mimeType: string,
+): Promise<ImageOcrResult> {
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    if (!apiKey) {
+        throw new Error(
+            "GEMINI_API_KEY is not configured. Set it to use Gemini OCR, or set OCR_PROVIDER=openai with OPENAI_API_KEY.",
+        );
+    }
+
+    const normalizedMime = mimeType.startsWith("image/") ? mimeType : "image/jpeg";
+    const response = await providerFetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_OCR_MODEL)}:generateContent`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": apiKey,
+            },
+            body: JSON.stringify({
+                contents: [
+                    {
+                        parts: [
+                            { text: OCR_INSTRUCTIONS },
+                            {
+                                inline_data: {
+                                    mime_type: normalizedMime,
+                                    data: buffer.toString("base64"),
+                                },
+                            },
+                        ],
+                    },
+                ],
+                generationConfig: {
+                    temperature: 0.1,
+                    maxOutputTokens: 4096,
+                },
+            }),
+        },
+    );
+
+    if (!response.ok) {
+        const detail = summarizeProviderError(await response.text());
+        if (response.status === 429 || /quota|rate limit/i.test(detail)) {
+            throw new Error(
+                `Gemini OCR quota or rate limit reached (${response.status}): ${detail}`,
+            );
+        }
+        throw new Error(`Gemini OCR request failed (${response.status}): ${detail}`);
+    }
+
+    const payload = (await response.json()) as {
+        candidates?: Array<{
+            content?: { parts?: Array<{ text?: string }> };
+        }>;
+    };
+    const text = (payload.candidates?.[0]?.content?.parts ?? [])
+        .map((part) => part.text ?? "")
+        .join("\n")
+        .trim();
+
+    if (!text) {
+        throw new Error("No text or description could be extracted from the image");
+    }
+
+    return { text, model: GEMINI_OCR_MODEL };
+}
+
 async function runVisionOcr(imageUrl: string): Promise<ImageOcrResult> {
     const response = await getClient().chat.completions.create({
-        model: OCR_VISION_MODEL,
+        model: OPENAI_OCR_MODEL,
         temperature: 0.1,
         max_tokens: 4096,
         messages: [
@@ -55,11 +137,11 @@ async function runVisionOcr(imageUrl: string): Promise<ImageOcrResult> {
         throw new Error("No text or description could be extracted from the image");
     }
 
-    return { text, model: OCR_VISION_MODEL };
+    return { text, model: OPENAI_OCR_MODEL };
 }
 
 /**
- * OCR / describe an image from an in-memory buffer (data URL sent to OpenAI Vision).
+ * OCR / describe an image from an in-memory buffer using the configured vision provider.
  */
 export async function extractTextFromImageBuffer(
     buffer: Buffer,
@@ -67,6 +149,11 @@ export async function extractTextFromImageBuffer(
 ): Promise<ImageOcrResult> {
     const normalizedMime =
         mimeType?.startsWith("image/") ? mimeType : "image/jpeg";
+
+    if (OCR_PROVIDER === "gemini") {
+        return runGeminiOcr(buffer, normalizedMime);
+    }
+
     const dataUrl = `data:${normalizedMime};base64,${buffer.toString("base64")}`;
     return runVisionOcr(dataUrl);
 }

@@ -3,7 +3,9 @@ import { after, describe, it } from "node:test";
 
 const WORKSPACE_ID = "workspace-1";
 const originalOpenAiKey = process.env.OPENAI_API_KEY;
+const originalGeminiKey = process.env.GEMINI_API_KEY;
 delete process.env.OPENAI_API_KEY;
+delete process.env.GEMINI_API_KEY;
 
 type SourceRow = {
     id: string;
@@ -155,6 +157,8 @@ const { retrieveWorkspaceCandidates } = await import("./retrieve.js");
 after(() => {
     if (originalOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = originalOpenAiKey;
+    if (originalGeminiKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = originalGeminiKey;
 });
 
 describe("READY-only retrieval", () => {

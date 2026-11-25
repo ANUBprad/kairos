@@ -1,6 +1,5 @@
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { CHAT_MODEL } from "../lib/ai-config.js";
+import { getChatModel } from "../lib/ai-model.js";
 import { addMemoriesFromMessages } from "../lib/mem0.js";
 import {
     findConversationById,
@@ -44,7 +43,7 @@ export async function summarizeConversationById(
     const previousSummary = conversation.summary?.trim();
 
     const { text: summary } = await generateText({
-        model: openai(CHAT_MODEL),
+        model: getChatModel(),
         system: [
             "You summarize chat conversations for a learning assistant.",
             "Produce a concise rolling summary covering topics discussed, questions asked,",

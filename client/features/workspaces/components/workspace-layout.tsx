@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 
 
 import {
@@ -44,7 +44,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
   } = useWorkspace(workspaceId);
 
   const sourcesQuery = useSources(workspaceId);
-  const sources = sourcesQuery.data || [];
+  const sources = useMemo(() => sourcesQuery.data || [], [sourcesQuery.data]);
   const isSourcesLoading = sourcesQuery.isLoading;
 
   const storageKey = `openbook_selected_sources_${workspaceId}`;
@@ -82,17 +82,20 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
   }, [sources, storageKey]);
 
   // Helper to update selection and persist to localStorage
-  const updateAndPersistSelection = (updater: (prev: string[]) => string[]) => {
-    setSelectedSourceIds((prev) => {
-      const next = updater(prev);
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(next));
-        } catch {}
-      }
-      return next;
-    });
-  };
+  const updateAndPersistSelection = useCallback(
+    (updater: (prev: string[]) => string[]) => {
+      setSelectedSourceIds((prev) => {
+        const next = updater(prev);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(next));
+          } catch {}
+        }
+        return next;
+      });
+    },
+    [storageKey],
+  );
 
   // When newly created/imported sources appear, include them in selection and persist
   useEffect(() => {
@@ -104,7 +107,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
       });
     }
     prevSourcesLength.current = sources.length;
-  }, [sources]);
+  }, [sources, updateAndPersistSelection]);
 
   const uploadPdfMutation = useUploadPdfSource(workspaceId);
   const importWebsiteMutation = useImportWebsiteSource(workspaceId);
@@ -153,6 +156,14 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
     isRetrying: isArtifactRetrying,
     retryingArtifactId,
   } = useArtifacts(workspaceId);
+
+  const mobileTabClass = (tab: MobileTab) =>
+    cn(
+      "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors motion-reduce:transition-none",
+      mobileTab === tab
+        ? "bg-brand-soft text-brand"
+        : "text-muted-foreground hover:bg-brand-quiet hover:text-foreground",
+    );
 
   if (isWorkspaceLoading) {
     return (
@@ -254,118 +265,102 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
         </ResizablePanelGroup>
       </div>
 
-      {/* Mobile View: Single Panel with Tab Bar */}
+      {/* Mobile View: Single Panel with Compact Tab Bar */}
       <div className="flex md:hidden flex-1 flex-col min-h-0 overflow-hidden">
-        <div className="flex-1 overflow-hidden">
-          {mobileTab === "sources" && (
-            <SourcesPanel
-              workspaceId={workspaceId}
-              sources={sources}
-              selectedSourceIds={selectedSourceIds}
-              onToggleSelect={toggleSourceSelection}
-              onSelectAll={selectAllSources}
-              onDeselectAll={deselectAllSources}
-              onUploadPdf={(file, title) => uploadPdfMutation.mutateAsync({ file, title })}
-              onImportWebsite={(url, title) => importWebsiteMutation.mutateAsync({ url, title })}
-              onImportYoutube={(url, title) => importYoutubeMutation.mutateAsync({ url, title })}
-              onCreateTextSource={(title, content) =>
-                createSourceMutation.mutateAsync({ type: "TEXT", title, content })
-              }
-              onDeleteSource={(id) => deleteSourceMutation.mutateAsync(id)}
-              isLoading={isSourcesLoading}
-            />
-          )}
+        <div className="min-h-0 flex-1 overflow-hidden p-2 pb-1 sm:p-3 sm:pb-2">
+          <div className="h-full overflow-hidden rounded-xl border border-border bg-panel">
+            {mobileTab === "sources" && (
+              <SourcesPanel
+                workspaceId={workspaceId}
+                sources={sources}
+                selectedSourceIds={selectedSourceIds}
+                onToggleSelect={toggleSourceSelection}
+                onSelectAll={selectAllSources}
+                onDeselectAll={deselectAllSources}
+                onUploadPdf={(file, title) => uploadPdfMutation.mutateAsync({ file, title })}
+                onImportWebsite={(url, title) => importWebsiteMutation.mutateAsync({ url, title })}
+                onImportYoutube={(url, title) => importYoutubeMutation.mutateAsync({ url, title })}
+                onCreateTextSource={(title, content) =>
+                  createSourceMutation.mutateAsync({ type: "TEXT", title, content })
+                }
+                onDeleteSource={(id) => deleteSourceMutation.mutateAsync(id)}
+                isLoading={isSourcesLoading}
+              />
+            )}
 
+            {mobileTab === "chat" && (
+              <ChatPanel
+                workspaceId={workspaceId}
+                defaultModel={workspace?.defaultModel}
+                onModelChange={(defaultModel) => updateWorkspace({ defaultModel })}
+                messages={messages}
+                isStreaming={isStreaming}
+                onSendMessage={sendMessage}
+                onStopStreaming={stopStreaming}
+                onNewChat={startNewChat}
+                selectedSourcesCount={selectedSourceIds.length}
+                webSearchEnabled={webSearchEnabled}
+                onToggleWebSearch={() => setWebSearchEnabled(!webSearchEnabled)}
+                conversations={conversations}
+                currentConversationId={currentConversationId}
+                onSelectConversation={(id) => setCurrentConversationId(id || undefined)}
+                onDeleteConversation={deleteConversation}
+                onClearConversation={clearConversation}
+              />
+            )}
 
-          {mobileTab === "chat" && (
-            <ChatPanel
-              workspaceId={workspaceId}
-              defaultModel={workspace?.defaultModel}
-              onModelChange={(defaultModel) => updateWorkspace({ defaultModel })}
-              messages={messages}
-              isStreaming={isStreaming}
-              onSendMessage={sendMessage}
-              onStopStreaming={stopStreaming}
-              onNewChat={startNewChat}
-              selectedSourcesCount={selectedSourceIds.length}
-              webSearchEnabled={webSearchEnabled}
-              onToggleWebSearch={() => setWebSearchEnabled(!webSearchEnabled)}
-              conversations={conversations}
-              currentConversationId={currentConversationId}
-              onSelectConversation={(id) => setCurrentConversationId(id || undefined)}
-              onDeleteConversation={deleteConversation}
-              onClearConversation={clearConversation}
-            />
-          )}
-
-          {mobileTab === "studio" && (
-            <StudioPanel
-              artifacts={artifacts}
-              onCreateArtifact={(type) =>
-                createArtifact({
-                  type,
-                  sourceIds: selectedSourceIds,
-                })
-              }
-              onDeleteArtifact={deleteArtifact}
-              onRetryArtifact={retryArtifact}
-              isCreating={isArtifactCreating}
-              isRetrying={isArtifactRetrying}
-              retryingArtifactId={retryingArtifactId}
-              selectedSourcesCount={selectedSourceIds.length}
-            />
-          )}
+            {mobileTab === "studio" && (
+              <StudioPanel
+                artifacts={artifacts}
+                onCreateArtifact={(type) =>
+                  createArtifact({
+                    type,
+                    sourceIds: selectedSourceIds,
+                  })
+                }
+                onDeleteArtifact={deleteArtifact}
+                onRetryArtifact={retryArtifact}
+                isCreating={isArtifactCreating}
+                isRetrying={isArtifactRetrying}
+                retryingArtifactId={retryingArtifactId}
+                selectedSourcesCount={selectedSourceIds.length}
+              />
+            )}
+          </div>
         </div>
 
-
-        {/* Mobile Navigation Tabs */}
         <nav
           aria-label="Workspace panels"
-          className="z-20 flex h-16 shrink-0 items-center justify-around border-t border-border bg-panel px-2"
+          className="z-20 flex h-12 shrink-0 items-stretch gap-1 border-t border-border bg-panel px-2 py-1"
         >
           <button
             type="button"
             onClick={() => setMobileTab("sources")}
             aria-pressed={mobileTab === "sources"}
-            className={cn(
-              "flex min-w-24 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
-              mobileTab === "sources"
-                ? "bg-brand-soft text-brand"
-                : "text-muted-foreground hover:bg-brand-quiet hover:text-foreground"
-            )}
+            className={mobileTabClass("sources")}
           >
-            <Layers className="h-4 w-4" aria-hidden="true" />
-            <span>Sources ({sources.length})</span>
+            <Layers className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">Sources ({sources.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMobileTab("chat")}
             aria-pressed={mobileTab === "chat"}
-            className={cn(
-              "flex min-w-24 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
-              mobileTab === "chat"
-                ? "bg-brand-soft text-brand"
-                : "text-muted-foreground hover:bg-brand-quiet hover:text-foreground"
-            )}
+            className={mobileTabClass("chat")}
           >
-            <MessageSquare className="h-4 w-4" aria-hidden="true" />
-            <span>Chat</span>
+            <MessageSquare className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">Chat</span>
           </button>
 
           <button
             type="button"
             onClick={() => setMobileTab("studio")}
             aria-pressed={mobileTab === "studio"}
-            className={cn(
-              "flex min-w-24 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
-              mobileTab === "studio"
-                ? "bg-brand-soft text-brand"
-                : "text-muted-foreground hover:bg-brand-quiet hover:text-foreground"
-            )}
+            className={mobileTabClass("studio")}
           >
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-            <span>Studio ({artifacts.length})</span>
+            <Sparkles className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">Studio ({artifacts.length})</span>
           </button>
         </nav>
       </div>

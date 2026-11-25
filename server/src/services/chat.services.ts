@@ -1,4 +1,3 @@
-import { openai } from "@ai-sdk/openai";
 import type { Response } from "express";
 import { z } from "zod";
 import {
@@ -11,6 +10,7 @@ import {
     tool,
     type UIMessage,
 } from "ai";
+import { getChatModel } from "../lib/ai-model.js";
 import {
     CHAT_MODEL,
     CHAT_MODELS,
@@ -486,7 +486,7 @@ export async function streamWorkspaceChat(
                         : undefined;
 
                 const result = streamText({
-                    model: openai(chatModel),
+                    model: getChatModel(chatModel),
                     system: systemPrompt,
                     messages: await convertToModelMessages(contextMessages),
                     tools,

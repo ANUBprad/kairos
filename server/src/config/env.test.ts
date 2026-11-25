@@ -11,6 +11,19 @@ const ENV_KEYS = [
     "BETTER_AUTH_SECRET",
     "OAUTH_STATE_SECRET",
     "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "CHAT_PROVIDER",
+    "EMBEDDING_PROVIDER",
+    "OCR_PROVIDER",
+    "GEMINI_CHAT_MODEL",
+    "GEMINI_SECONDARY_CHAT_MODEL",
+    "GEMINI_OCR_MODEL",
+    "GEMINI_EMBEDDING_MODEL",
+    "OPENAI_CHAT_MODEL",
+    "OPENAI_PRO_CHAT_MODEL",
+    "OPENAI_OCR_MODEL",
+    "OPENAI_EMBEDDING_MODEL",
+    "EMBEDDING_DIMENSIONS",
     "PINECONE_API_KEY",
     "PINECONE_INDEX",
     "CLOUDINARY_CLOUD_NAME",
@@ -58,7 +71,7 @@ function validStagingEnv(): Record<string, string> {
         BETTER_AUTH_URL: "https://api-staging.example.test",
         BETTER_AUTH_SECRET: "staging-auth-secret-32-chars-minimum",
         OAUTH_STATE_SECRET: "staging-oauth-state-32-chars-minimum",
-        OPENAI_API_KEY: "sk-staging-only",
+        GEMINI_API_KEY: "AIza-staging-only",
         PINECONE_API_KEY: "pc-staging-only",
         PINECONE_INDEX: "kairos-staging",
         CLOUDINARY_CLOUD_NAME: "kairos-staging-uploads",
@@ -259,6 +272,55 @@ describe("getServerEnv", () => {
             // previously failed parse must not leave a usable cached config.
             setEnv(validStagingEnv());
             assert.equal(getServerEnv().DEPLOYMENT_ENV, "staging");
+        } finally {
+            restoreEnv();
+        }
+    });
+
+    it("defaults to Gemini and requires only credentials for active providers", async () => {
+        try {
+            setEnv(validStagingEnv());
+            const { getServerEnv } = await envModule();
+            assert.equal(getServerEnv().CHAT_PROVIDER, "gemini");
+            assert.equal(getServerEnv().EMBEDDING_PROVIDER, "gemini");
+
+            setEnv({ ...validStagingEnv(), GEMINI_API_KEY: undefined });
+            const { getServerEnv: getEnv2 } = await envModule();
+            assert.throws(() => getEnv2(), /GEMINI_API_KEY/);
+
+            setEnv({
+                ...validStagingEnv(),
+                GEMINI_API_KEY: undefined,
+                CHAT_PROVIDER: "openai",
+                EMBEDDING_PROVIDER: "openai",
+                OCR_PROVIDER: "openai",
+                OPENAI_API_KEY: "sk-staging-only",
+            });
+            const { getServerEnv: getEnv3 } = await envModule();
+            assert.equal(getEnv3().CHAT_PROVIDER, "openai");
+        } finally {
+            restoreEnv();
+        }
+    });
+
+    it("rejects unsupported providers and embedding dimensions", async () => {
+        try {
+            setEnv({ ...validStagingEnv(), CHAT_PROVIDER: "groq" });
+            const { getServerEnv } = await envModule();
+            assert.throws(() => getServerEnv(), /CHAT_PROVIDER/);
+
+            setEnv({ ...validStagingEnv(), EMBEDDING_DIMENSIONS: "4096" });
+            const { getServerEnv: getEnv2 } = await envModule();
+            assert.throws(() => getEnv2(), /3072 or less/);
+
+            setEnv({
+                ...validStagingEnv(),
+                EMBEDDING_PROVIDER: "openai",
+                OPENAI_API_KEY: "sk-staging-only",
+                EMBEDDING_DIMENSIONS: "1537",
+            });
+            const { getServerEnv: getEnv3 } = await envModule();
+            assert.throws(() => getEnv3(), /1536 or less/);
         } finally {
             restoreEnv();
         }

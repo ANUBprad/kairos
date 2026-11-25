@@ -51,23 +51,23 @@ interface ChatPanelProps {
 
 const STARTER_PROMPTS = [
   {
-    icon: <BookOpen className="w-4 h-4 text-brand" />,
+    icon: <BookOpen className="size-3.5 text-brand" aria-hidden="true" />,
     title: "Summarize sources",
-    desc: "Provide a comprehensive summary of all key concepts across my selected sources.",
+    desc: "Key concepts across your selected sources",
     prompt:
       "Please provide a comprehensive and detailed summary of all key concepts across my selected sources.",
   },
   {
-    icon: <FileSearch className="w-4 h-4 text-brand" />,
+    icon: <FileSearch className="size-3.5 text-brand" aria-hidden="true" />,
     title: "Key takeaways & insights",
-    desc: "Extract the top 5 most important takeaways with supporting evidence.",
+    desc: "Five takeaways with supporting evidence",
     prompt:
       "What are the top 5 most important takeaways and insights from these documents? Explain each clearly.",
   },
   {
-    icon: <HelpCircle className="w-4 h-4 text-brand" />,
+    icon: <HelpCircle className="size-3.5 text-brand" aria-hidden="true" />,
     title: "Find connections",
-    desc: "What are the common themes and contrasting arguments across these documents?",
+    desc: "Shared themes and contrasting arguments",
     prompt:
       "Analyze the connections, common themes, and contrasting viewpoints across my sources.",
   },
@@ -149,36 +149,40 @@ export function ChatPanel({
 
   return (
     <div className="relative flex h-full select-text flex-col bg-panel text-foreground">
-      {/* Top Chat Sub-header */}
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-panel/85 px-3 py-2.5 backdrop-blur-sm sm:px-4 sm:py-3">
+      {/* Chat sub-header */}
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-panel/85 px-3 py-2 backdrop-blur-sm sm:px-4">
         <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-          <MessageSquare className="hidden size-4 shrink-0 text-brand sm:block" />
+          <MessageSquare className="hidden size-4 shrink-0 text-brand sm:block" aria-hidden="true" />
           <span className="kairos-eyebrow hidden shrink-0 sm:inline">
             Chat
           </span>
 
-          {/* Custom Compact Conversation Selector Dropdown */}
-          <div className="relative min-w-0 flex-1 max-w-[200px] sm:max-w-[240px]" ref={convMenuRef}>
+          {/* Conversation selector */}
+          <div
+            className="relative min-w-0 max-w-[200px] flex-1 sm:max-w-[240px]"
+            ref={convMenuRef}
+          >
             <button
               type="button"
               onClick={() => setIsConvMenuOpen(!isConvMenuOpen)}
               aria-expanded={isConvMenuOpen}
               aria-label="Choose conversation"
-              className="flex w-full items-center justify-between gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
+              className="flex w-full items-center justify-between gap-1 rounded-md border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
             >
               <span className="truncate text-left">
                 {currentConv ? currentConv.title || "Untitled Chat" : "+ New Conversation"}
               </span>
               <ChevronDown
                 className={cn(
-                  "w-3 h-3 text-muted-foreground shrink-0 transition-transform duration-200",
-                  isConvMenuOpen && "rotate-180"
+                  "size-3 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
+                  isConvMenuOpen && "rotate-180",
                 )}
+                aria-hidden="true"
               />
             </button>
 
             {isConvMenuOpen && (
-              <div className="kairos-panel absolute left-0 top-full z-40 mt-1.5 w-64 space-y-1 p-1.5 text-xs motion-safe:animate-fadeIn sm:w-72">
+              <div className="kairos-panel absolute left-0 top-full z-40 mt-1.5 w-64 space-y-0.5 p-1 text-xs sm:w-72">
                 <button
                   type="button"
                   onClick={() => {
@@ -186,37 +190,41 @@ export function ChatPanel({
                     onNewChat();
                   }}
                   className={cn(
-                    "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left transition-colors cursor-pointer",
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors",
                     !currentConversationId
                       ? "bg-brand-soft font-semibold text-brand"
-                      : "text-foreground hover:bg-brand-quiet"
+                      : "text-foreground hover:bg-brand-quiet",
                   )}
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="size-3.5" aria-hidden="true" />
                   <span>New Conversation</span>
                 </button>
 
                 {conversations.length > 0 && (
-                  <div className="pt-1 border-t border-border max-h-52 overflow-y-auto space-y-0.5">
+                  <div className="max-h-48 space-y-0.5 overflow-y-auto border-t border-border pt-1">
                     {conversations.map((c) => {
                       const isActive = c.id === currentConversationId;
                       return (
                         <div
                           key={c.id}
                           className={cn(
-                            "flex items-center justify-between gap-1.5 px-2 py-1.5 rounded-lg group transition-colors cursor-pointer",
+                            "group flex items-center justify-between gap-1.5 rounded-md px-2 py-1.5 transition-colors",
                             isActive
                               ? "bg-brand-soft font-semibold text-brand"
-                              : "text-foreground hover:bg-brand-quiet"
+                              : "text-foreground hover:bg-brand-quiet",
                           )}
                           onClick={() => {
                             setIsConvMenuOpen(false);
                             onSelectConversation(c.id);
                           }}
                         >
-                          <span className="truncate flex-1 text-xs">{c.title || "Untitled Chat"}</span>
-                          <div className="flex items-center gap-1 shrink-0">
-                            {isActive && <Check className="w-3.5 h-3.5 text-foreground" />}
+                          <span className="flex-1 truncate text-xs">
+                            {c.title || "Untitled Chat"}
+                          </span>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {isActive && (
+                              <Check className="size-3.5 text-foreground" aria-hidden="true" />
+                            )}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -228,7 +236,7 @@ export function ChatPanel({
                               aria-label={`Delete ${c.title || "untitled chat"}`}
                               className="rounded p-1 text-muted-foreground opacity-100 transition-colors hover:text-danger focus-visible:opacity-100 motion-reduce:transition-none sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="size-3" aria-hidden="true" />
                             </button>
                           </div>
                         </div>
@@ -241,111 +249,105 @@ export function ChatPanel({
           </div>
         </div>
 
-        {/* Header Action Buttons: Clear, New Chat */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {/* Header actions */}
+        <div className="flex shrink-0 items-center gap-1.5">
           {(currentConversationId || messages.length > 0) && (
             <button
               type="button"
               onClick={() => setConfirmAction("clear")}
               title="Clear all messages in this chat"
-              className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-danger/30 hover:bg-danger/10 hover:text-danger motion-reduce:transition-none"
+              aria-label="Clear chat messages"
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:border-danger/30 hover:bg-danger/10 hover:text-danger motion-reduce:transition-none"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="size-3.5" aria-hidden="true" />
               <span className="hidden md:inline">Clear</span>
             </button>
           )}
 
-          {/* New Chat Button */}
           <button
             type="button"
             onClick={onNewChat}
-            className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
+            aria-label="Start a new chat"
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-brand-soft/70 motion-reduce:transition-none"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="size-3.5" aria-hidden="true" />
             <span className="hidden sm:inline">New Chat</span>
           </button>
         </div>
       </div>
 
-      {/* Messages Scroll Area */}
+      {/* Messages */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="custom-scrollbar flex-1 space-y-4 overflow-y-auto p-4 sm:p-6 md:p-7"
+          className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-3 sm:p-4"
         >
           {messages.length === 0 ? (
-            <div className="kairos-aurora mx-auto flex h-full max-w-lg flex-col items-center justify-center space-y-6 text-center motion-safe:animate-fadeIn">
-              <div
-                aria-hidden="true"
-                className="kairos-grid pointer-events-none absolute inset-x-0 top-0 h-56 opacity-40"
-              />
-              <KairosLogo size={58} showText={false} iconClassName="text-brand" />
+            <div className="mx-auto flex h-full max-w-md flex-col items-center justify-center gap-3 px-2 py-6 text-center">
+              <KairosLogo size={36} showText={false} iconClassName="text-brand" />
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <span className="kairos-eyebrow">Grounded chat</span>
-                <h3 className="kairos-section-title text-xl text-foreground sm:text-2xl">
+                <h3 className="kairos-section-title text-base text-foreground sm:text-lg">
                   Ask anything about your notes &amp; sources
                 </h3>
-                <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
-                  Kairos retrieves relevant excerpts directly from your indexed
-                  materials and synthesizes answers with source citations.
+                <p className="mx-auto max-w-sm text-[11px] leading-relaxed text-muted-foreground">
+                  Kairos retrieves relevant excerpts from your indexed materials
+                  and answers with source citations.
                 </p>
               </div>
 
-              {/* Starter Prompt Cards */}
-              <div className="grid w-full grid-cols-1 gap-2.5 pt-2">
+              <div className="w-full divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
                 {STARTER_PROMPTS.map((item, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => onSendMessage(item.prompt)}
-                    className="group flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5 text-left shadow-[var(--shadow-panel)] transition-colors hover:border-brand/35 hover:bg-brand-quiet motion-reduce:transition-none"
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-brand-quiet motion-reduce:transition-none"
                   >
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-brand-quiet transition-colors group-hover:bg-brand-soft motion-reduce:transition-none">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-brand-quiet">
                       {item.icon}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium text-foreground">
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11px] font-medium text-foreground">
                         {item.title}
-                      </p>
-                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                        {item.prompt}
-                      </p>
-                    </div>
+                      </span>
+                      <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+                        {item.desc}
+                      </span>
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-          messages.map((message, index) => (
-            <ChatMessage
-              key={message.id || index}
-              message={message}
-              isLast={index === messages.length - 1}
-              isStreaming={isStreaming}
-            />
-          ))
-        )}
+            messages.map((message, index) => (
+              <ChatMessage
+                key={message.id || index}
+                message={message}
+                isLast={index === messages.length - 1}
+                isStreaming={isStreaming}
+              />
+            ))
+          )}
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Go To Top Floating Button at Bottom Right */}
         {showScrollTop && messages.length > 0 && (
           <button
             type="button"
             onClick={scrollToTop}
-            className="absolute bottom-3 right-4 z-20 flex size-8 items-center justify-center rounded-full border border-brand/25 bg-panel/95 text-brand shadow-[var(--shadow-panel)] backdrop-blur-sm transition-colors hover:bg-brand-soft motion-safe:animate-fadeIn motion-reduce:transition-none"
             title="Go to top"
             aria-label="Scroll to top of chat"
+            className="absolute bottom-3 right-3 z-20 flex size-7 items-center justify-center rounded-md border border-border bg-panel text-brand transition-colors hover:bg-brand-soft motion-reduce:transition-none"
           >
-            <ArrowUp className="w-4 h-4" />
+            <ArrowUp className="size-3.5" aria-hidden="true" />
           </button>
         )}
       </div>
 
-
-      {/* Input Bar */}
       <ChatInput
         workspaceId={workspaceId}
         defaultModel={defaultModel}

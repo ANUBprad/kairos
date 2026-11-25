@@ -1,18 +1,120 @@
-/** Default chat model when the client or workspace does not specify one. */
-export const CHAT_MODEL = "gpt-4o-mini";
+export type AiProvider = "gemini" | "openai";
 
-/** Vision model for image source OCR (defaults to chat model). */
+function providerFromEnv(
+    value: string | undefined,
+    fallback: AiProvider,
+): AiProvider {
+    const normalized = value?.trim().toLowerCase();
+    return normalized === "gemini" || normalized === "openai"
+        ? normalized
+        : fallback;
+}
+
+function dimensionsFromEnv(): number {
+    const parsed = Number(process.env.EMBEDDING_DIMENSIONS);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 512;
+}
+
+/** Provider used for chat streaming, artifacts, summaries and podcast turns. */
+export const CHAT_PROVIDER: AiProvider = providerFromEnv(
+    process.env.CHAT_PROVIDER,
+    "gemini",
+);
+
+/** Provider used for RAG document and query embeddings. */
+export const EMBEDDING_PROVIDER: AiProvider = providerFromEnv(
+    process.env.EMBEDDING_PROVIDER,
+    "gemini",
+);
+
+/** Provider used for image OCR. Defaults to the chat provider. */
+export const OCR_PROVIDER: AiProvider = providerFromEnv(
+    process.env.OCR_PROVIDER,
+    CHAT_PROVIDER,
+);
+
+export const GEMINI_CHAT_MODEL =
+    process.env.GEMINI_CHAT_MODEL?.trim() || "gemini-3.6-flash";
+export const GEMINI_SECONDARY_CHAT_MODEL =
+    process.env.GEMINI_SECONDARY_CHAT_MODEL?.trim() || "gemini-3.5-flash-lite";
+export const GEMINI_OCR_MODEL =
+    process.env.GEMINI_OCR_MODEL?.trim() || GEMINI_CHAT_MODEL;
+export const GEMINI_EMBEDDING_MODEL =
+    process.env.GEMINI_EMBEDDING_MODEL?.trim() || "gemini-embedding-001";
+
+export const OPENAI_CHAT_MODEL =
+    process.env.OPENAI_CHAT_MODEL?.trim() || "gpt-4o-mini";
+export const OPENAI_PRO_CHAT_MODEL =
+    process.env.OPENAI_PRO_CHAT_MODEL?.trim() || "gpt-4o";
+export const OPENAI_OCR_MODEL =
+    process.env.OPENAI_OCR_MODEL?.trim() || "gpt-4o-mini";
+export const OPENAI_EMBEDDING_MODEL =
+    process.env.OPENAI_EMBEDDING_MODEL?.trim() || "text-embedding-3-small";
+
+export const GEMINI_CHAT_MODELS = [
+    GEMINI_CHAT_MODEL,
+    GEMINI_SECONDARY_CHAT_MODEL,
+] as const;
+export const OPENAI_CHAT_MODELS = [
+    OPENAI_CHAT_MODEL,
+    OPENAI_PRO_CHAT_MODEL,
+] as const;
+
+/** All model ids accepted by request validators. The active provider maps them at runtime. */
+export const CHAT_MODELS = [
+    ...GEMINI_CHAT_MODELS,
+    ...OPENAI_CHAT_MODELS,
+] as const;
+
+/** Effective default chat model for the configured provider. */
+export const CHAT_MODEL =
+    CHAT_PROVIDER === "gemini" ? GEMINI_CHAT_MODEL : OPENAI_CHAT_MODEL;
+
+/** Effective vision model for image OCR. */
 export const OCR_VISION_MODEL =
-    process.env.OCR_VISION_MODEL?.trim() || CHAT_MODEL;
+    OCR_PROVIDER === "gemini" ? GEMINI_OCR_MODEL : OPENAI_OCR_MODEL;
 
-/** Allowed chat models exposed to the client and workspace settings. */
-export const CHAT_MODELS = ["gpt-4o-mini", "gpt-4o"] as const;
+/** Effective embedding model for RAG indexing and queries. */
+export const EMBEDDING_MODEL =
+    EMBEDDING_PROVIDER === "gemini"
+        ? GEMINI_EMBEDDING_MODEL
+        : OPENAI_EMBEDDING_MODEL;
 
-/** OpenAI embedding model used for RAG vector indexing and query embedding. */
-export const EMBEDDING_MODEL = "text-embedding-3-small";
+/** Vector dimension count — must match the Pinecone index configuration. */
+export const EMBEDDING_DIMENSIONS = dimensionsFromEnv();
 
-/** Vector dimension count — must match Pinecone index configuration (default: 512 for chaibooklm index). */
-export const EMBEDDING_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS) || 512;
+/**
+ * Resolves a client/workspace model id against the active provider.
+ * Legacy ids from the other provider fall back to the configured default so
+ * existing workspace preferences keep working after a provider switch.
+ */
+export function resolveChatModelId(requested?: string): string {
+    const allowed: readonly string[] =
+        CHAT_PROVIDER === "gemini" ? GEMINI_CHAT_MODELS : OPENAI_CHAT_MODELS;
+    return requested && allowed.includes(requested) ? requested : CHAT_MODEL;
+}
+
+/** Identity written to every vector so different embedding spaces never mix. */
+export function getEmbeddingMetadata(): {
+    embeddingProvider: AiProvider;
+    embeddingModel: string;
+    embeddingDimensions: number;
+} {
+    return {
+        embeddingProvider: EMBEDDING_PROVIDER,
+        embeddingModel: EMBEDDING_MODEL,
+        embeddingDimensions: EMBEDDING_DIMENSIONS,
+    };
+}
+
+/** Cache/query identity including the retrieval task type. */
+export function getEmbeddingIdentity(
+    taskType: "document" | "query" = "document",
+): string {
+    const { embeddingProvider, embeddingModel, embeddingDimensions } =
+        getEmbeddingMetadata();
+    return `${embeddingProvider}:${embeddingModel}:${embeddingDimensions}:${taskType}`;
+}
 
 /** Target max characters per text chunk during source processing. */
 export const CHUNK_SIZE = 1000;

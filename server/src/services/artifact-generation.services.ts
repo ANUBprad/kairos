@@ -1,7 +1,6 @@
 import { generateText, Output } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
-import { CHAT_MODEL } from "../lib/ai-config.js";
+import { getChatModel } from "../lib/ai-model.js";
 import { findSourcesByWorkspaceId } from "../repository/source.repository.js";
 import type { ArtifactRecord } from "../repository/artifact.repository.js";
 import { ValidationError } from "../types/app-error.js";
@@ -166,7 +165,7 @@ export async function generateArtifactContent(
     switch (type) {
         case "SUMMARY": {
             const result = await generateText({
-                model: openai(CHAT_MODEL),
+                model: getChatModel(),
                 system,
                 prompt: `Write a comprehensive markdown summary of the following sources:\n\n${sourceText}`,
             });
@@ -174,7 +173,7 @@ export async function generateArtifactContent(
         }
         case "TAKEAWAYS": {
             const result = await generateText({
-                model: openai(CHAT_MODEL),
+                model: getChatModel(),
                 system,
                 output: Output.object({ schema: takeawaysSchema }),
                 prompt: `Extract the most important key takeaways as clear, concise bullet points (without markdown asterisks like **bold**) from:\n\n${sourceText}`,
@@ -183,7 +182,7 @@ export async function generateArtifactContent(
         }
         case "FLASHCARDS": {
             const result = await generateText({
-                model: openai(CHAT_MODEL),
+                model: getChatModel(),
                 system,
                 output: Output.object({ schema: flashcardsSchema }),
                 prompt: `Create study flashcards (front/back) covering the main concepts from:\n\n${sourceText}`,
@@ -192,7 +191,7 @@ export async function generateArtifactContent(
         }
         case "QUIZ": {
             const result = await generateText({
-                model: openai(CHAT_MODEL),
+                model: getChatModel(),
                 system,
                 output: Output.object({ schema: quizSchema }),
                 prompt: `Create a multiple-choice quiz with explanations from:\n\n${sourceText}`,
@@ -201,7 +200,7 @@ export async function generateArtifactContent(
         }
         case "MINDMAP": {
             const result = await generateText({
-                model: openai(CHAT_MODEL),
+                model: getChatModel(),
                 system,
                 output: Output.object({ schema: mindmapSchema }),
                 prompt: `Generate a structured, deeply informative mind map strictly from the provided source materials.
@@ -216,7 +215,7 @@ Source material:\n\n${sourceText}`,
         }
         case "REPORT": {
             const result = await generateText({
-                model: openai(CHAT_MODEL),
+                model: getChatModel(),
                 system,
                 output: Output.object({ schema: reportSchema }),
                 prompt: `Write a structured long-form report with sections and a full markdown version from:\n\n${sourceText}`,
@@ -225,7 +224,7 @@ Source material:\n\n${sourceText}`,
         }
         case "PODCAST": {
             const result = await generateText({
-                model: openai(CHAT_MODEL),
+                model: getChatModel(),
                 system: [
                     "You are the executive producer of an acclaimed deep-dive audio podcast and intellectual debate show (like NotebookLM Audio Overviews).",
                     "Generate a concise 1-minute audio debate dialogue between two sharp, articulate AI hosts: Alex and Jordan.",
