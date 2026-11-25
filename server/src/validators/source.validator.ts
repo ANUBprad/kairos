@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseYouTubeVideoUrl } from "../lib/sources/youtube-url.js";
 
 export const sourceTypeSchema = z.enum([
     "PDF",
@@ -56,10 +57,15 @@ export const importWebsiteSchema = z.object({
     title: z.string().trim().max(200).optional(),
 });
 
-export const importYoutubeSchema = z.object({
-    url: z.string().trim().min(1, "YouTube URL is required"),
-    title: z.string().trim().max(200).optional(),
-});
+export const importYoutubeSchema = z
+    .object({
+        url: z.string().trim().min(1, "YouTube URL is required"),
+        title: z.string().trim().max(200).optional(),
+    })
+    .refine((value) => parseYouTubeVideoUrl(value.url) !== null, {
+        message: "Enter a valid YouTube URL",
+        path: ["url"],
+    });
 
 export const bulkDeleteSourcesSchema = z.object({
     sourceIds: z.array(z.string().trim().min(1)).min(1).max(100),
