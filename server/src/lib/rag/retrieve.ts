@@ -201,7 +201,9 @@ async function retrieveDatabaseFallback(
             });
         }
 
-        const sources = await findSourcesByWorkspaceId(workspaceId);
+        const sources = await findSourcesByWorkspaceId(workspaceId, {
+            status: "READY",
+        });
         const readySources = sources.filter(
             (s) => s.content && s.content.trim().length > 0,
         );

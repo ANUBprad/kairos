@@ -132,6 +132,7 @@ export function searchChunksByWorkspace(workspaceId: string, queryTerms: string[
         where: {
             source: {
                 workspaceId,
+                status: "READY" as const,
             },
             ...(filters.length > 0 ? { OR: filters } : {}),
         },

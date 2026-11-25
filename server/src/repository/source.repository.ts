@@ -146,8 +146,14 @@ export function findSourceSummariesByWorkspaceIdAndIds(
         return Promise.resolve([] as SourceSummary[]);
     }
 
+    // Retrieval and citation reconciliation must never expose an unindexed or
+    // failed source, even if stale vectors or chunks still exist.
     return prisma.source.findMany({
-        where: { workspaceId, id: { in: sourceIds } },
+        where: {
+            workspaceId,
+            status: "READY" as const,
+            id: { in: sourceIds },
+        },
         select: sourceSummarySelect,
         take: 200,
     });
