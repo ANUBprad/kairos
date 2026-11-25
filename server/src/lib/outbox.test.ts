@@ -3,9 +3,13 @@ import { describe, it } from "node:test";
 import type { Prisma } from "../generated/prisma/client.js";
 import { runWithRequestId } from "./observability/request-context.js";
 import {
+    assertDurableJobLeaseActive,
     claimDurableJob,
     dispatchDurableJob,
+    DurableJobLeaseLostError,
     insertDurableJob,
+    isDurableJobLeaseActive,
+    isDurableJobLeaseActiveForJob,
     markDurableJobDelivered,
     recoverAbandonedDurableJobs,
     releaseDurableJob,
@@ -535,5 +539,82 @@ describe("transactional outbox", () => {
 
         assert.equal(jobs.get(key)?.status, "DELIVERED");
         assert.equal(artifacts.get("a-ready")?.status, "READY");
+    });
+});
+
+describe("durable job lease guards", () => {
+    it("treats only an unexpired matching PROCESSING lease as active", () => {
+        const now = new Date("2026-01-01T00:00:00.000Z");
+        const lease = {
+            status: "PROCESSING" as const,
+            leaseToken: "token-1",
+            leaseExpiresAt: new Date(now.getTime() + 1000),
+        };
+
+        assert.equal(isDurableJobLeaseActive(lease, "token-1", now), true);
+        assert.equal(isDurableJobLeaseActive(lease, "token-2", now), false);
+        assert.equal(
+            isDurableJobLeaseActive(
+                { ...lease, leaseExpiresAt: new Date(now.getTime() - 1000) },
+                "token-1",
+                now,
+            ),
+            false,
+        );
+        assert.equal(
+            isDurableJobLeaseActive(
+                { ...lease, status: "DELIVERED" as const },
+                "token-1",
+                now,
+            ),
+            false,
+        );
+        assert.equal(
+            isDurableJobLeaseActive(
+                { ...lease, leaseToken: null },
+                "token-1",
+                now,
+            ),
+            false,
+        );
+        assert.equal(isDurableJobLeaseActive(null, "token-1", now), false);
+    });
+
+    it("rejects assertion and blocks delivery/release when the lease is expired", async () => {
+        const { db, jobs } = fakeStore();
+        setOutboxStoreForTests(db);
+        await insertDurableJob(db as Prisma.TransactionClient, baseInput);
+        const lease = await claimDurableJob(baseInput.key);
+        assert.ok(lease?.token);
+
+        assert.equal(
+            await isDurableJobLeaseActiveForJob(baseInput.key, lease!.token),
+            true,
+        );
+        await assertDurableJobLeaseActive(baseInput.key, lease!.token);
+
+        jobs.get(baseInput.key)!.leaseExpiresAt = new Date(Date.now() - 1000);
+
+        assert.equal(
+            await isDurableJobLeaseActiveForJob(baseInput.key, lease!.token),
+            false,
+        );
+        await assert.rejects(
+            () => assertDurableJobLeaseActive(baseInput.key, lease!.token),
+            DurableJobLeaseLostError,
+        );
+        assert.equal(
+            await markDurableJobDelivered(baseInput.key, lease!.token),
+            false,
+        );
+        assert.equal(
+            await releaseDurableJob(
+                baseInput.key,
+                new Error("late"),
+                lease!.token,
+            ),
+            null,
+        );
+        assert.equal(jobs.get(baseInput.key)?.status, "PROCESSING");
     });
 });

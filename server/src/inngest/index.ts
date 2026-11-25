@@ -1,9 +1,12 @@
 import { findChunksBySourceId } from "../repository/source-chunk.repository.js";
 import { findSourceById } from "../repository/source.repository.js";
 import {
+    DurableJobLeaseLostError,
+    isDurableJobLeaseActiveForJob,
     markDurableJobDelivered,
     releaseDurableJob,
     withDurableJobHeartbeat,
+    type DurableJobLeaseContext,
 } from "../lib/outbox.js";
 import { runWithRequestId } from "../lib/observability/request-context.js";
 import {
@@ -35,6 +38,8 @@ export const processSource = inngest.createFunction(
           leaseToken?: string;
           requestId?: string;
       };
+      const lease: DurableJobLeaseContext | undefined =
+          jobKey && leaseToken ? { jobKey, leaseToken } : undefined;
 
       return runWithRequestId(requestId, async () =>
         withDurableJobHeartbeat(jobKey, leaseToken, async () => {
@@ -42,11 +47,11 @@ export const processSource = inngest.createFunction(
               // STEP 1: mark source as processing {status: "PROCESSING"}.
               // This is inside the try so a refused claim releases the leased
               // job instead of leaving it to expire across repeated sweeps.
-              await step.run("mark-processing", () => markSourceProcessing(sourceId));
+              await step.run("mark-processing", () => markSourceProcessing(sourceId, lease));
 
               // STEP 2: extract the content from the source
               const extracted = await step.run("extract-content", () =>
-                  extractSourceContent(sourceId),
+                  extractSourceContent(sourceId, lease),
               );
 
               // STEP 3: chunk the extracted content
@@ -56,6 +61,7 @@ export const processSource = inngest.createFunction(
                       extracted.text,
                       extracted.pages,
                       extracted.source.metadata,
+                      lease,
                   ),
               );
 
@@ -67,18 +73,37 @@ export const processSource = inngest.createFunction(
                   }
 
                   const chunks = await findChunksBySourceId(sourceId);
-                  await embedAndIndexSource(source, chunks);
+                  await embedAndIndexSource(source, chunks, lease);
 
                   return { chunkCount: chunks.length };
               });
 
               if (jobKey) {
-                  await markDurableJobDelivered(jobKey, leaseToken);
+                  const delivered = await markDurableJobDelivered(jobKey, leaseToken);
+                  if (!delivered) {
+                      throw new DurableJobLeaseLostError(jobKey);
+                  }
               }
               return { sourceId, status: "READY", ...result };
           } catch (error) {
+              if (
+                  error instanceof DurableJobLeaseLostError ||
+                  (jobKey &&
+                      leaseToken &&
+                      !(await isDurableJobLeaseActiveForJob(jobKey, leaseToken)))
+              ) {
+                  throw error instanceof DurableJobLeaseLostError
+                      ? error
+                      : new DurableJobLeaseLostError(jobKey!);
+              }
+
               if (jobKey) {
-                  await releaseDurableJob(jobKey, error, leaseToken);
+                  const released = await releaseDurableJob(jobKey, error, leaseToken);
+                  // A null release means recovery reissued the job first; this
+                  // worker must not fail or refund someone else's attempt.
+                  if (released === null) {
+                      throw new DurableJobLeaseLostError(jobKey);
+                  }
               }
               await step.run("mark-failed", async () => {
                   const source = await findSourceById(sourceId);

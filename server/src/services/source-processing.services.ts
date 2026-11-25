@@ -28,7 +28,12 @@ import {
     updateSourceRecord,
     type SourceRecord,
 } from "../repository/source.repository.js";
-import { isDurableJobTerminal } from "../lib/outbox.js";
+import {
+    assertDurableJobLeaseActive,
+    DurableJobLeaseLostError,
+    isDurableJobTerminal,
+    type DurableJobLeaseContext,
+} from "../lib/outbox.js";
 import { refundChargeInTransaction } from "./credit.services.js";
 
 export type SourceMetadata = {
@@ -56,6 +61,13 @@ export type SourceMetadata = {
     mimeType?: string;
     ocrModel?: string;
 };
+
+/** Re-checks the outbox lease immediately before each material mutation. */
+async function assertLease(lease?: DurableJobLeaseContext): Promise<void> {
+    if (lease) {
+        await assertDurableJobLeaseActive(lease.jobKey, lease.leaseToken);
+    }
+}
 
 /**
  * Extracts raw textual content and pagination structure from a source record or its Cloudinary asset.
@@ -157,7 +169,11 @@ async function extractSourceText(source: SourceRecord) {
  * @param sourceId - Unique identifier of the source
  * @returns Updated source record
  */
-export async function markSourceProcessing(sourceId: string) {
+export async function markSourceProcessing(
+    sourceId: string,
+    lease?: DurableJobLeaseContext,
+) {
+    await assertLease(lease);
     const changed = await prisma.source.updateMany({
         where: { id: sourceId, status: { in: ["PENDING", "FAILED"] } },
         data: { status: "PROCESSING" },
@@ -180,7 +196,9 @@ export async function markSourceFailed(
     sourceId: string,
     error: unknown,
     existingMetadata: SourceRecord["metadata"],
+    lease?: DurableJobLeaseContext,
 ) {
+    await assertLease(lease);
     const message =
         error instanceof Error ? error.message : "Source processing failed";
 
@@ -246,7 +264,10 @@ export async function markSourceFailed(
  * @returns Extracted content, pages, workspaceId, and updated source record
  * @throws {Error} If source does not exist
  */
-export async function extractSourceContent(sourceId: string) {
+export async function extractSourceContent(
+    sourceId: string,
+    lease?: DurableJobLeaseContext,
+) {
     const source = await findSourceById(sourceId);
     if (!source) {
         throw new Error("Source not found");
@@ -261,6 +282,9 @@ export async function extractSourceContent(sourceId: string) {
             : {};
 
     const chunkVersion = (metadata.chunkVersion ?? 0) + 1;
+
+    // Extraction may be slow; re-check before persisting its result.
+    await assertLease(lease);
 
     const extraMetadata =
         "extraMetadata" in extracted &&
@@ -305,7 +329,9 @@ export async function chunkSourceContent(
     text: string,
     pages?: string[],
     metadata?: SourceRecord["metadata"],
+    lease?: DurableJobLeaseContext,
 ) {
+    await assertLease(lease);
     await deleteChunksBySourceId(sourceId);
 
     const sourceMetadata: SourceMetadata =
@@ -348,6 +374,9 @@ export async function chunkSourceContent(
         throw new Error("No chunks were generated from source content");
     }
 
+    // The rebuild deletes before writing; a lost lease mid-build must not
+    // leave another worker's chunks behind.
+    await assertLease(lease);
     return createSourceChunks(
         chunks.map((chunk) => ({
             sourceId,
@@ -368,8 +397,11 @@ export async function chunkSourceContent(
 export async function removeSourceFromIndex(
     workspaceId: string,
     sourceId: string,
+    lease?: DurableJobLeaseContext,
 ) {
+    await assertLease(lease);
     await deleteSourceVectors(workspaceId, sourceId);
+    await assertLease(lease);
     await deleteChunksBySourceId(sourceId);
 }
 
@@ -406,7 +438,9 @@ export async function listChunksForSource(sourceId: string) {
 export async function embedAndIndexSource(
     source: SourceRecord,
     chunks: SourceChunkRecord[],
+    lease?: DurableJobLeaseContext,
 ) {
+    await assertLease(lease);
     await deleteSourceVectors(source.workspaceId, source.id);
 
     const batchSize = 50;
@@ -463,6 +497,10 @@ export async function embedAndIndexSource(
         }
     }
 
+    // Embeddings can take minutes. Refresh the lease before writing vectors
+    // and again before the READY transition so a reissued job cannot be
+    // completed by the stale worker.
+    await assertLease(lease);
     await upsertSourceVectors(source.workspaceId, records);
 
     const metadata =
@@ -472,6 +510,7 @@ export async function embedAndIndexSource(
             ? (source.metadata as SourceMetadata)
             : {};
 
+    await assertLease(lease);
     const completed = await markSourceReadyIfProcessing(source.id, {
         ...metadata,
         chunkCount: chunks.length,
@@ -479,7 +518,9 @@ export async function embedAndIndexSource(
         processingError: undefined,
     });
     if (!completed) {
-        throw new Error("Source lease was lost before completion");
+        throw lease
+            ? new DurableJobLeaseLostError(lease.jobKey)
+            : new Error("Source lease was lost before completion");
     }
     return completed;
 }

@@ -29,6 +29,39 @@ export interface DurableJobLease {
     expiresAt: Date;
 }
 
+/** Passed into workers so every mutation can re-check its own lease. */
+export interface DurableJobLeaseContext {
+    jobKey: string;
+    leaseToken: string;
+}
+
+/** Thrown when a worker no longer owns the job it is trying to complete. */
+export class DurableJobLeaseLostError extends Error {
+    constructor(jobKey: string) {
+        super(`Durable job lease lost: ${jobKey}`);
+        this.name = "DurableJobLeaseLostError";
+    }
+}
+
+/**
+ * A lease is active only while the job is PROCESSING, the token still matches,
+ * and its expiry is in the future. There is no schema change: recovery already
+ * clears the token/expiry when it reissues a stale job.
+ */
+export function isDurableJobLeaseActive(
+    job: Pick<DurableJobRow, "status" | "leaseToken" | "leaseExpiresAt"> | null | undefined,
+    token: string,
+    now: Date = new Date(),
+): boolean {
+    return (
+        !!job &&
+        job.status === "PROCESSING" &&
+        job.leaseToken === token &&
+        !!job.leaseExpiresAt &&
+        job.leaseExpiresAt.getTime() > now.getTime()
+    );
+}
+
 export interface DurableJobRow {
     key: string;
     type: string;
@@ -294,6 +327,33 @@ export async function isDurableJobTerminal(key: string): Promise<boolean> {
     return !job || job.status === "DEAD";
 }
 
+async function findLeaseRow(
+    key: string,
+): Promise<Pick<DurableJobRow, "status" | "leaseToken" | "leaseExpiresAt"> | null> {
+    return durableJobs(store()).findUnique({
+        where: { key },
+        select: { status: true, leaseToken: true, leaseExpiresAt: true },
+    });
+}
+
+/** DB-backed counterpart of the pure lease predicate. */
+export async function isDurableJobLeaseActiveForJob(
+    key: string,
+    token: string,
+): Promise<boolean> {
+    return isDurableJobLeaseActive(await findLeaseRow(key), token);
+}
+
+/** Fails closed before a worker performs any further side effect. */
+export async function assertDurableJobLeaseActive(
+    key: string,
+    token: string,
+): Promise<void> {
+    if (!(await isDurableJobLeaseActiveForJob(key, token))) {
+        throw new DurableJobLeaseLostError(key);
+    }
+}
+
 /**
  * PROCESSING -> DELIVERED. A lease token, when supplied, prevents a stale
  * worker from completing a job that recovery already handed to a new worker.
@@ -306,7 +366,9 @@ export async function markDurableJobDelivered(
         where: {
             key,
             status: "PROCESSING" as const,
-            ...(token ? { leaseToken: token } : {}),
+            ...(token
+                ? { leaseToken: token, leaseExpiresAt: { gt: new Date() } }
+                : {}),
         },
         data: {
             status: "DELIVERED" as const,
@@ -450,8 +512,8 @@ export async function releaseDurableJob(
 ): Promise<"RETRY" | "DEAD" | null> {
     const job = await durableJobs(store()).findUnique({ where: { key } });
     if (!job || job.status !== "PROCESSING") return null;
-    // A stale worker must not release a job that recovery reissued.
-    if (token && job.leaseToken && job.leaseToken !== token) return null;
+    // A stale or expired worker must not release a job that recovery reissued.
+    if (token && !isDurableJobLeaseActive(job, token)) return null;
 
     const attempts = job.attempts + 1;
     const dead = attempts >= job.maxAttempts;
