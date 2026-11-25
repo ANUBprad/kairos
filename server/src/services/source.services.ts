@@ -24,7 +24,7 @@ import {
     findActiveSourceByMetadataKey,
     findSourceByIdAndWorkspaceId,
     findSourcesByWorkspaceId,
-    updateSourceRecord,
+    markSourcePendingIfFailed,
     sourceSelect,
     type CreateSourceData,
     type SourceRecord,
@@ -138,13 +138,76 @@ export async function createAndProcessSource(
     return source;
 }
 
+const SOURCE_REFUND_KEY_PREFIX = "source-refund:";
+
+export type SourceRetryState = {
+    refunded: boolean;
+    canReprocess: boolean;
+};
+
+export type SourceWithRetryState = SourceRecord & SourceRetryState;
+
+type JobDispatcher = (jobKey: string) => Promise<boolean>;
+
+/**
+ * Adds ledger-derived retry state to source API responses. The ledger, not a
+ * mutable metadata flag, is the source of truth for whether a refund happened.
+ */
+export function applySourceRetryState<T extends SourceRecord>(
+    sources: T[],
+    refundedIds: ReadonlySet<string>,
+): Array<T & SourceRetryState> {
+    return sources.map((source) => {
+        const refunded = refundedIds.has(source.id);
+        return {
+            ...source,
+            refunded,
+            canReprocess:
+                !refunded &&
+                source.status !== "PROCESSING" &&
+                source.status !== "READY",
+        };
+    });
+}
+
+async function decorateSourcesWithRetryState(
+    sources: SourceRecord[],
+): Promise<SourceWithRetryState[]> {
+    if (sources.length === 0) return [];
+
+    const refunds = await prisma.creditTransaction.findMany({
+        where: {
+            idempotencyKey: {
+                in: sources.map(
+                    (source) => `${SOURCE_REFUND_KEY_PREFIX}${source.id}`,
+                ),
+            },
+        },
+        select: { idempotencyKey: true },
+    });
+    const refundedIds = new Set(
+        refunds
+            .map((row) => row.idempotencyKey)
+            .filter(
+                (key): key is string =>
+                    typeof key === "string" &&
+                    key.startsWith(SOURCE_REFUND_KEY_PREFIX),
+            )
+            .map((key) => key.slice(SOURCE_REFUND_KEY_PREFIX.length)),
+    );
+
+    return applySourceRetryState(sources, refundedIds);
+}
+
 /**
  * A source whose terminal failure was refunded must be imported again so a new
  * charge is recorded. Reusing its original charge key would be free work.
  */
 async function wasSourceRefunded(sourceId: string): Promise<boolean> {
     const refund = await prisma.creditTransaction.findUnique({
-        where: { idempotencyKey: `source-refund:${sourceId}` },
+        where: {
+            idempotencyKey: `${SOURCE_REFUND_KEY_PREFIX}${sourceId}`,
+        },
         select: { id: true },
     });
     return refund !== null;
@@ -152,10 +215,12 @@ async function wasSourceRefunded(sourceId: string): Promise<boolean> {
 
 /**
  * Reuses the durable job for a re-processing request (no new charge).
- * Returns false when the job is live or already delivered; callers must not
- * report success in that case.
+ * Returns the job key only when the job was really rewound; a live or already
+ * delivered job must not be reported as successfully requeued.
  */
-async function requeueSourceProcessing(source: SourceRecord): Promise<boolean> {
+async function requeueSourceProcessing(
+    source: SourceRecord,
+): Promise<string | null> {
     const jobKey = `source.process:${source.id}`;
     const requeued = await requeueDurableJob(jobKey, {
         key: jobKey,
@@ -168,11 +233,16 @@ async function requeueSourceProcessing(source: SourceRecord): Promise<boolean> {
             chargeIdempotencyKey: `source-charge:${source.id}`,
         },
     });
-    if (!requeued) return false;
-    void dispatchDurableJob(jobKey).catch((error) => {
+    return requeued ? jobKey : null;
+}
+
+function dispatchSourceProcessingJob(
+    jobKey: string,
+    dispatch: JobDispatcher = dispatchDurableJob,
+): void {
+    void dispatch(jobKey).catch((error) => {
         logDurableJobError(jobKey, error);
     });
-    return true;
 }
 
 /**
@@ -187,9 +257,11 @@ export async function listSourcesForWorkspace(
     workspaceId: string,
     userId: string,
     filters: ListSourcesQuery = {},
-) {
+): Promise<SourceWithRetryState[]> {
     await assertWorkspaceAccess(workspaceId, userId);
-    return findSourcesByWorkspaceId(workspaceId, filters);
+    return decorateSourcesWithRetryState(
+        await findSourcesByWorkspaceId(workspaceId, filters),
+    );
 }
 
 /**
@@ -205,7 +277,7 @@ export async function getSourceForWorkspace(
     workspaceId: string,
     sourceId: string,
     userId: string,
-): Promise<SourceRecord> {
+): Promise<SourceWithRetryState> {
     await assertWorkspaceAccess(workspaceId, userId);
 
     const source = await findSourceByIdAndWorkspaceId(sourceId, workspaceId);
@@ -214,7 +286,8 @@ export async function getSourceForWorkspace(
         throw new NotFoundError("Source not found");
     }
 
-    return source;
+    const [decorated] = await decorateSourcesWithRetryState([source]);
+    return decorated!;
 }
 
 /**
@@ -586,10 +659,11 @@ export async function reprocessSourceForWorkspace(
     workspaceId: string,
     sourceId: string,
     userId: string,
+    dispatch: JobDispatcher = dispatchDurableJob,
 ) {
     const source = await getSourceForWorkspace(workspaceId, sourceId, userId);
 
-    if (await wasSourceRefunded(sourceId)) {
+    if (source.refunded || (await wasSourceRefunded(sourceId))) {
         throw new ValidationError(
             "This source was refunded after a terminal failure. Import it again to be charged and processed.",
         );
@@ -601,25 +675,27 @@ export async function reprocessSourceForWorkspace(
         );
     }
 
-    if (source.status === "FAILED") {
-        const priorMetadata =
-            (source.metadata as Record<string, unknown> | null) ?? {};
-        await updateSourceRecord(sourceId, {
-            status: "PENDING",
-            metadata: {
-                ...priorMetadata,
-                processingError: undefined,
-                retriedAt: new Date().toISOString(),
-            },
-        });
-    }
-
-    if (!(await requeueSourceProcessing(source))) {
+    // Requeue first: a refused job must not leave the source rewound to PENDING
+    // with no worker behind it. The conditional status update below is safe if
+    // the reissued job is claimed before this call resumes.
+    const jobKey = await requeueSourceProcessing(source);
+    if (!jobKey) {
         throw new ValidationError(
             "This source has a live or already completed processing job and cannot be reprocessed.",
         );
     }
 
+    if (source.status === "FAILED") {
+        const priorMetadata =
+            (source.metadata as Record<string, unknown> | null) ?? {};
+        await markSourcePendingIfFailed(sourceId, {
+            ...priorMetadata,
+            processingError: undefined,
+            retriedAt: new Date().toISOString(),
+        });
+    }
+
+    dispatchSourceProcessingJob(jobKey, dispatch);
     return { reprocessed: true };
 }
 
@@ -635,10 +711,13 @@ export async function reprocessSourcesForWorkspace(
     workspaceId: string,
     userId: string,
     sourceIds?: string[],
+    dispatch: JobDispatcher = dispatchDurableJob,
 ) {
     await assertWorkspaceAccess(workspaceId, userId);
 
-    const sources = await findSourcesByWorkspaceId(workspaceId);
+    const sources = await decorateSourcesWithRetryState(
+        await findSourcesByWorkspaceId(workspaceId),
+    );
     const targetSources = sourceIds?.length
         ? sources.filter((s) => sourceIds.includes(s.id))
         : sources;
@@ -646,24 +725,25 @@ export async function reprocessSourcesForWorkspace(
     let requeued = 0;
     for (const source of targetSources) {
         // Skip compensated sources; they must be re-imported with a new charge.
-        if (await wasSourceRefunded(source.id)) continue;
+        if (source.refunded || (await wasSourceRefunded(source.id))) continue;
         // Never rewind a live pipeline or overwrite finished work.
         if (source.status === "PROCESSING" || source.status === "READY") continue;
+
+        const jobKey = await requeueSourceProcessing(source);
+        if (!jobKey) continue;
 
         if (source.status === "FAILED") {
             const priorMetadata =
                 (source.metadata as Record<string, unknown> | null) ?? {};
-            await updateSourceRecord(source.id, {
-                status: "PENDING",
-                metadata: {
-                    ...priorMetadata,
-                    processingError: undefined,
-                    retriedAt: new Date().toISOString(),
-                },
+            await markSourcePendingIfFailed(source.id, {
+                ...priorMetadata,
+                processingError: undefined,
+                retriedAt: new Date().toISOString(),
             });
         }
 
-        if (await requeueSourceProcessing(source)) requeued += 1;
+        dispatchSourceProcessingJob(jobKey, dispatch);
+        requeued += 1;
     }
 
     return { reprocessed: requeued };

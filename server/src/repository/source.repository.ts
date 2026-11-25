@@ -223,3 +223,22 @@ export async function markSourceReadyIfProcessing(
         select: sourceSelect,
     });
 }
+
+/**
+ * Conditional retry transition. Only a FAILED source may be rewound to PENDING;
+ * a worker that already claimed the reissued job keeps its PROCESSING state.
+ */
+export async function markSourcePendingIfFailed(
+    sourceId: string,
+    metadata: Prisma.InputJsonValue,
+): Promise<SourceRecord | null> {
+    const changed = await prisma.source.updateMany({
+        where: { id: sourceId, status: "FAILED" },
+        data: { status: "PENDING", metadata },
+    });
+    if (changed.count !== 1) return null;
+    return prisma.source.findUnique({
+        where: { id: sourceId },
+        select: sourceSelect,
+    });
+}

@@ -4,6 +4,7 @@ import React from "react";
 import { formatDistanceToNow } from "date-fns";
 import { RefreshCw, Trash2, ExternalLink } from "lucide-react";
 import { SOURCE_TYPE_LABELS } from "../lib/constants";
+import { canRetrySource, isSourceRefunded } from "../lib/retry-eligibility";
 import type { Source } from "../lib/types";
 import { SourceStatusBadge } from "./source-status-badge";
 import { SourceTypeIcon } from "./source-type-icon";
@@ -31,6 +32,16 @@ export function SourceCard({
   layout = "grid",
 }: SourceCardProps) {
   const isList = layout === "list";
+  const canRetry = canRetrySource(source);
+  const refunded = isSourceRefunded(source);
+  const reimportNotice = refunded && source.status === "FAILED" ? (
+    <span
+      title="This source was refunded. Import it again to be charged and processed."
+      className="rounded-lg border border-warning/25 bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
+    >
+      Re-import
+    </span>
+  ) : null;
 
   return (
     <div
@@ -102,7 +113,7 @@ export function SourceCard({
               className="flex items-center gap-1 shrink-0 self-end sm:self-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {onReprocess && source.status === "FAILED" && (
+              {canRetry && onReprocess ? (
                 <button
                   type="button"
                   onClick={() => onReprocess(source)}
@@ -112,6 +123,8 @@ export function SourceCard({
                 >
                   <RefreshCw className="size-3.5" />
                 </button>
+              ) : (
+                reimportNotice
               )}
               {onDelete && (
                 <button
@@ -172,7 +185,7 @@ export function SourceCard({
           onClick={(e) => e.stopPropagation()}
         >
           <SourceStatusBadge status={source.status} />
-          {onReprocess && source.status === "FAILED" && (
+          {canRetry && onReprocess ? (
             <button
               type="button"
               onClick={() => onReprocess(source)}
@@ -182,6 +195,8 @@ export function SourceCard({
             >
               <RefreshCw className="size-3.5" />
             </button>
+          ) : (
+            reimportNotice
           )}
           {onDelete && (
             <button

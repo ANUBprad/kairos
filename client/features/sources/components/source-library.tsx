@@ -25,6 +25,7 @@ import {
   SOURCE_TYPE_LABELS,
   SOURCE_TYPES,
 } from "../lib/constants";
+import { canRetrySource } from "../lib/retry-eligibility";
 import type { Source, SourceFilters, SourceStatus, SourceType } from "../lib/types";
 import { AddSourceDialog } from "./add-source-dialog";
 import { SourceCard } from "./source-card";
@@ -77,7 +78,7 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
   const reprocessFailedMutation = useReprocessSources(workspaceId);
 
   const failedCount =
-    sources?.filter((source) => source.status === "FAILED").length ?? 0;
+    sources?.filter((source) => canRetrySource(source)).length ?? 0;
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -457,7 +458,7 @@ export function SourceLibrary({ workspaceId }: SourceLibraryProps) {
                 }
               }}
               onReprocess={
-                source.status === "FAILED"
+                canRetrySource(source)
                   ? (s) => reprocessFailedMutation.mutate([s.id])
                   : undefined
               }

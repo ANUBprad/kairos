@@ -36,6 +36,15 @@ import {
 } from "../lib/outbox.js";
 import { refundChargeInTransaction } from "./credit.services.js";
 
+/** Keeps provider billing/rate-limit detail while naming the failed stage. */
+export function describeEmbeddingFailure(error: unknown): string {
+    const detail =
+        error instanceof Error && error.message
+            ? error.message
+            : "the provider returned no error detail";
+    return `Embedding provider failed while indexing source: ${detail}`;
+}
+
 export type SourceMetadata = {
     fileUrl?: string;
     fileName?: string;
@@ -448,7 +457,12 @@ export async function embedAndIndexSource(
 
     for (let i = 0; i < chunks.length; i += batchSize) {
         const batch = chunks.slice(i, i + batchSize);
-        const embeddings = await embedTexts(batch.map((chunk) => chunk.content));
+        let embeddings: number[][];
+        try {
+            embeddings = await embedTexts(batch.map((chunk) => chunk.content));
+        } catch (error) {
+            throw new Error(describeEmbeddingFailure(error), { cause: error });
+        }
 
         for (let j = 0; j < batch.length; j += 1) {
             const chunk = batch[j]!;

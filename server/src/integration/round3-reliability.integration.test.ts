@@ -436,4 +436,110 @@ describe("round 3 reliability (integration)", () => {
             await removeFixture(fixture);
         }
     });
+
+    it("exposes a refunded source as non-retryable and rejects its retry", async () => {
+        const {
+            getSourceForWorkspace,
+            listSourcesForWorkspace,
+            reprocessSourceForWorkspace,
+        } = await import("../services/source.services.js");
+        const fixture = await createFixture();
+        try {
+            await db.source.update({
+                where: { id: fixture.sourceId },
+                data: { status: "FAILED" },
+            });
+            await db.creditTransaction.create({
+                data: {
+                    userId: fixture.userId,
+                    amount: 5,
+                    balanceAfter: 100,
+                    type: "REFUND",
+                    description: "Refund for SOURCE_UPLOAD: test",
+                    idempotencyKey: `source-refund:${fixture.sourceId}`,
+                },
+            });
+
+            const source = await getSourceForWorkspace(
+                fixture.workspaceId,
+                fixture.sourceId,
+                fixture.userId,
+            );
+            assert.equal(source.refunded, true);
+            assert.equal(source.canReprocess, false);
+
+            const listed = await listSourcesForWorkspace(
+                fixture.workspaceId,
+                fixture.userId,
+            );
+            const listedSource = listed.find((row) => row.id === fixture.sourceId);
+            assert.equal(listedSource?.refunded, true);
+            assert.equal(listedSource?.canReprocess, false);
+
+            await assert.rejects(
+                reprocessSourceForWorkspace(
+                    fixture.workspaceId,
+                    fixture.sourceId,
+                    fixture.userId,
+                ),
+                /refunded after a terminal failure/,
+            );
+            assert.equal(
+                (await db.source.findUniqueOrThrow({
+                    where: { id: fixture.sourceId },
+                })).status,
+                "FAILED",
+            );
+        } finally {
+            await removeFixture(fixture);
+        }
+    });
+
+    it("keeps a failed source failed when its durable job cannot be requeued", async () => {
+        const { reprocessSourceForWorkspace } =
+            await import("../services/source.services.js");
+        const fixture = await createFixture();
+        try {
+            await db.source.update({
+                where: { id: fixture.sourceId },
+                data: {
+                    status: "FAILED",
+                    metadata: { processingError: "transient provider failure" },
+                },
+            });
+            await db.durableJob.create({
+                data: {
+                    key: `source.process:${fixture.sourceId}`,
+                    type: "source.process",
+                    payload: {
+                        sourceId: fixture.sourceId,
+                        workspaceId: fixture.workspaceId,
+                    },
+                    status: "DELIVERED",
+                    attempts: 5,
+                    maxAttempts: 5,
+                },
+            });
+
+            await assert.rejects(
+                reprocessSourceForWorkspace(
+                    fixture.workspaceId,
+                    fixture.sourceId,
+                    fixture.userId,
+                ),
+                /live or already completed processing job/,
+            );
+
+            const source = await db.source.findUniqueOrThrow({
+                where: { id: fixture.sourceId },
+            });
+            assert.equal(source.status, "FAILED");
+            assert.equal(
+                (source.metadata as { processingError?: string })?.processingError,
+                "transient provider failure",
+            );
+        } finally {
+            await removeFixture(fixture);
+        }
+    });
 });

@@ -10,6 +10,7 @@ import { CircularLoader } from "@/components/ui/circular-loader";
 import { useSource, useReprocessSource } from "../hooks/use-sources";
 import { SOURCE_TYPE_LABELS } from "../lib/constants";
 import { sourceRoutes } from "../lib/routes";
+import { canRetrySource, isSourceRefunded } from "../lib/retry-eligibility";
 import { MarkdownPreview } from "./markdown-preview";
 import { SourceStatusBadge } from "./source-status-badge";
 import { SourceTypeIcon } from "./source-type-icon";
@@ -64,6 +65,10 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
   const chunkCount = typeof metadata.chunkCount === "number" ? metadata.chunkCount : null;
   const processingError = typeof metadata.processingError === "string" ? metadata.processingError : null;
   const isProcessing = source.status === "PENDING" || source.status === "PROCESSING";
+  const isRefunded = isSourceRefunded(source);
+  const canRetry = canRetrySource(source);
+  const reimportMessage =
+    "This source was refunded after a terminal failure. Import it again to be charged and processed.";
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 p-4 pb-10 sm:p-6 md:p-8">
@@ -108,7 +113,7 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
           </div>
         </div>
 
-        {source.status === "FAILED" && (
+        {canRetry ? (
           <button
             type="button"
             onClick={() => reprocessMutation.mutate(source.id)}
@@ -124,7 +129,14 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
             />
             Retry
           </button>
-        )}
+        ) : isRefunded && source.status === "FAILED" ? (
+          <span
+            title={reimportMessage}
+            className="rounded-lg border border-warning/25 bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning"
+          >
+            Re-import required
+          </span>
+        ) : null}
       </div>
 
       {/* External URL if present */}
@@ -229,6 +241,9 @@ export function SourceDetail({ workspaceId, sourceId }: SourceDetailProps) {
           role="alert"
         >
           <p className="font-semibold">Processing failed</p>
+          {isRefunded && (
+            <p className="text-warning">{reimportMessage}</p>
+          )}
           <p className="text-muted-foreground">
             {processingError || "An error occurred during extraction or embedding."}
           </p>

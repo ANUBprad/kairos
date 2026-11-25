@@ -6,6 +6,7 @@ import { Trash2, Check, Eye, RefreshCw } from "lucide-react";
 import { SourceTypeIcon } from "./source-type-icon";
 import { SourceStatusBadge } from "./source-status-badge";
 import { SOURCE_TYPE_LABELS } from "../lib/constants";
+import { canRetrySource, isSourceRefunded } from "../lib/retry-eligibility";
 import { cn } from "@/lib/utils";
 
 interface SourceItemProps {
@@ -27,6 +28,9 @@ export function SourceItem({
   onRetry,
   isRetrying = false,
 }: SourceItemProps) {
+  const canRetry = canRetrySource(source);
+  const refunded = isSourceRefunded(source);
+
   return (
     <div
       className={cn(
@@ -75,7 +79,7 @@ export function SourceItem({
               {SOURCE_TYPE_LABELS[source.type]}
             </span>
             <SourceStatusBadge status={source.status} />
-            {source.status === "FAILED" && onRetry && (
+            {canRetry && onRetry ? (
               <button
                 type="button"
                 onClick={(e) => {
@@ -95,7 +99,14 @@ export function SourceItem({
                 />
                 Retry
               </button>
-            )}
+            ) : source.status === "FAILED" && refunded ? (
+              <span
+                title="This source was refunded. Import it again to be charged and processed."
+                className="rounded-full border border-warning/25 bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
+              >
+                Re-import
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

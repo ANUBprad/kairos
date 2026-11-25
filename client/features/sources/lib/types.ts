@@ -21,6 +21,8 @@ export type Source = {
     url: string | null;
     status: SourceStatus;
     metadata: Record<string, unknown> | null;
+    refunded?: boolean;
+    canReprocess?: boolean;
     createdAt: string;
     updatedAt: string;
 };
