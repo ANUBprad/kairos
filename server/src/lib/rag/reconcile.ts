@@ -6,6 +6,9 @@ export type RetrievedChunk = {
     chunkId: string;
     chunkIndex: number;
     page?: number;
+    timestamp?: string;
+    videoId?: string;
+    url?: string;
     text: string;
     score: number;
     vectorScore?: number;

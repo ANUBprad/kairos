@@ -144,6 +144,95 @@ export function chunkText(
  * @param options - Configurable chunkSize and chunkOverlap
  * @returns Array of sequential TextChunk objects tagged with page numbers
  */
+export type TranscriptChunkSegment = {
+    text: string;
+    offset: number;
+    duration?: number;
+    lang?: string;
+};
+
+function formatTranscriptTime(seconds: number): string {
+    const total = Math.max(0, Math.floor(seconds));
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const secs = total % 60;
+
+    return hours > 0
+        ? `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+        : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+/**
+ * Groups timestamped transcript segments into chunks without losing the start
+ * time needed for deep links and citation labels.
+ */
+export function chunkTimestampedTranscript(
+    segments: TranscriptChunkSegment[],
+    options: {
+        videoId: string;
+        videoUrl: string;
+        chunkSize?: number;
+        overlapSegments?: number;
+    },
+): TextChunk[] {
+    const limit = options.chunkSize ?? CHUNK_SIZE;
+    const overlap = Math.max(0, options.overlapSegments ?? 1);
+    const cleaned = segments
+        .map((segment) => ({
+            text: segment.text.trim(),
+            offset: Math.max(0, Math.floor(segment.offset)),
+            duration: Math.max(0, Math.floor(segment.duration ?? 0)),
+            lang: segment.lang ?? "und",
+        }))
+        .filter((segment) => segment.text.length > 0);
+
+    const result: TextChunk[] = [];
+    let start = 0;
+
+    while (start < cleaned.length) {
+        let end = start;
+        let length = 0;
+
+        while (end < cleaned.length) {
+            const piece = `[${formatTranscriptTime(cleaned[end]!.offset)}] ${cleaned[end]!.text}`;
+            const nextLength = length === 0 ? piece.length : length + 1 + piece.length;
+            if (nextLength > limit && end > start) break;
+            length = nextLength;
+            end += 1;
+        }
+
+        const group = cleaned.slice(start, end);
+        const first = group[0]!;
+        const last = group[group.length - 1]!;
+        const startSeconds = first.offset;
+        const deepLink = `${options.videoUrl}${options.videoUrl.includes("?") ? "&" : "?"}t=${startSeconds}s`;
+
+        result.push({
+            index: result.length,
+            content: group
+                .map(
+                    (segment) =>
+                        `[${formatTranscriptTime(segment.offset)}] ${segment.text}`,
+                )
+                .join("\n"),
+            metadata: {
+                contentType: "transcript",
+                videoId: options.videoId,
+                timestamp: formatTranscriptTime(startSeconds),
+                startSeconds,
+                endSeconds: last.offset + last.duration,
+                lang: first.lang,
+                url: deepLink,
+            },
+        });
+
+        if (end >= cleaned.length) break;
+        start = Math.max(start + 1, end - overlap);
+    }
+
+    return result;
+}
+
 export function chunkPages(
     pages: string[],
     options: {

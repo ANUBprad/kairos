@@ -18,8 +18,10 @@ import {
     isIgnorablePineconeDeleteError,
 } from "../lib/pinecone.js";
 import { fetchYoutubeTranscript } from "../lib/sources/youtube.js";
+import { parseYouTubeVideoUrl } from "../lib/sources/youtube-url.js";
 import {
     deleteSourceRecord,
+    findActiveSourceByMetadataKey,
     findSourceByIdAndWorkspaceId,
     findSourcesByWorkspaceId,
     updateSourceRecord,
@@ -483,8 +485,23 @@ export async function importYoutubeSource(
     input: ImportYoutubeInput,
 ) {
     await getWorkspaceByIdForUser(workspaceId, userId);
-    await assertCanCreateSource(userId);
 
+    const parsed = parseYouTubeVideoUrl(input.url);
+    if (!parsed) {
+        throw new ValidationError("Enter a valid YouTube URL");
+    }
+
+    const existing = await findActiveSourceByMetadataKey(
+        workspaceId,
+        "YOUTUBE",
+        "videoId",
+        parsed.videoId,
+    );
+    if (existing) {
+        return existing;
+    }
+
+    await assertCanCreateSource(userId);
     const transcript = await fetchYoutubeTranscript(input.url);
 
     return createAndProcessSource(
@@ -496,11 +513,21 @@ export async function importYoutubeSource(
                 transcript.title ||
                 `YouTube: ${transcript.videoId}`,
             content: transcript.content,
-            url: input.url,
+            url: transcript.canonicalUrl,
             status: "PENDING",
             metadata: {
                 videoId: transcript.videoId,
+                canonicalUrl: transcript.canonicalUrl,
                 videoTitle: transcript.title,
+                ...(transcript.author ? { videoAuthor: transcript.author } : {}),
+                ...(transcript.lengthSeconds !== undefined
+                    ? { videoDurationSeconds: transcript.lengthSeconds }
+                    : {}),
+                ...(transcript.language ? { language: transcript.language } : {}),
+                captionSource: transcript.captionSource,
+                ...(transcript.segments.length > 0
+                    ? { transcriptSegments: transcript.segments }
+                    : {}),
             },
         },
         userId,

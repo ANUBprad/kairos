@@ -135,6 +135,11 @@ export type VectorMetadata = {
     text: string;
     page?: number;
     contentType?: string;
+    videoId?: string;
+    timestamp?: string;
+    url?: string;
+    startSeconds?: number;
+    endSeconds?: number;
 };
 
 /**

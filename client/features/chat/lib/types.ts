@@ -7,6 +7,8 @@ export type ChatCitation = {
     chunkId?: string;
     chunkIndex?: number;
     page?: number;
+    timestamp?: string;
+    videoId?: string;
     excerpt: string;
     score?: number;
     url?: string;

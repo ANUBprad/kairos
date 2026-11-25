@@ -421,6 +421,9 @@ export async function streamWorkspaceChat(
             chunkId: chunk.chunkId,
             chunkIndex: chunk.chunkIndex,
             page: chunk.page,
+            timestamp: chunk.timestamp,
+            videoId: chunk.videoId,
+            url: chunk.url,
             excerpt: chunk.text.slice(0, 280),
             score: chunk.score,
         }));

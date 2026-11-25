@@ -55,6 +55,7 @@ export const processSource = inngest.createFunction(
                       sourceId,
                       extracted.text,
                       extracted.pages,
+                      extracted.source.metadata,
                   ),
               );
 

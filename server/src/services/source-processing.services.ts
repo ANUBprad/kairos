@@ -1,7 +1,12 @@
 import type { PineconeRecord } from "@pinecone-database/pinecone";
 import type { Prisma } from "../generated/prisma/client.js";
 import prisma from "../lib/db.js";
-import { chunkPages, chunkText } from "../lib/chunking.js";
+import {
+    chunkPages,
+    chunkText,
+    chunkTimestampedTranscript,
+    type TranscriptChunkSegment,
+} from "../lib/chunking.js";
 import { embedTexts } from "../lib/openai.js";
 import { extractTextFromCloudinaryImage } from "../lib/sources/image-ocr.js";
 import { extractPdfFromCloudinary } from "../lib/sources/pdf.js";
@@ -26,14 +31,22 @@ import {
 import { isDurableJobTerminal } from "../lib/outbox.js";
 import { refundChargeInTransaction } from "./credit.services.js";
 
-type SourceMetadata = {
+export type SourceMetadata = {
     fileUrl?: string;
     fileName?: string;
     fileSize?: number;
     publicId?: string;
     resourceType?: "raw" | "image";
     importedFrom?: string;
+    contentHash?: string;
     videoId?: string;
+    canonicalUrl?: string;
+    videoTitle?: string;
+    videoAuthor?: string;
+    videoDurationSeconds?: number;
+    language?: string;
+    captionSource?: string;
+    transcriptSegments?: TranscriptChunkSegment[];
     processingError?: string;
     chunkCount?: number;
     pageCount?: number;
@@ -288,10 +301,45 @@ export async function chunkSourceContent(
     sourceId: string,
     text: string,
     pages?: string[],
+    metadata?: SourceRecord["metadata"],
 ) {
     await deleteChunksBySourceId(sourceId);
 
-    const chunks = pages?.length ? chunkPages(pages) : chunkText(text);
+    const sourceMetadata: SourceMetadata =
+        metadata &&
+            typeof metadata === "object" &&
+            !Array.isArray(metadata)
+            ? (metadata as SourceMetadata)
+            : {};
+
+    let chunks: ReturnType<typeof chunkText>;
+    if (pages?.length) {
+        chunks = chunkPages(pages);
+    } else if (
+        sourceMetadata.videoId &&
+        Array.isArray(sourceMetadata.transcriptSegments)
+    ) {
+        chunks = chunkTimestampedTranscript(sourceMetadata.transcriptSegments, {
+            videoId: sourceMetadata.videoId,
+            videoUrl:
+                sourceMetadata.canonicalUrl ??
+                `https://www.youtube.com/watch?v=${sourceMetadata.videoId}`,
+        });
+    } else {
+        chunks = chunkText(
+            text,
+            sourceMetadata.videoId
+                ? {
+                    metadata: {
+                        videoId: sourceMetadata.videoId,
+                        ...(sourceMetadata.canonicalUrl
+                            ? { url: sourceMetadata.canonicalUrl }
+                            : {}),
+                    },
+                }
+                : undefined,
+        );
+    }
 
     if (chunks.length === 0) {
         throw new Error("No chunks were generated from source content");
@@ -391,6 +439,21 @@ export async function embedAndIndexSource(
                         : {}),
                     ...(typeof chunkMetadata.contentType === "string"
                         ? { contentType: chunkMetadata.contentType }
+                        : {}),
+                    ...(typeof chunkMetadata.videoId === "string"
+                        ? { videoId: chunkMetadata.videoId }
+                        : {}),
+                    ...(typeof chunkMetadata.timestamp === "string"
+                        ? { timestamp: chunkMetadata.timestamp }
+                        : {}),
+                    ...(typeof chunkMetadata.url === "string"
+                        ? { url: chunkMetadata.url }
+                        : {}),
+                    ...(typeof chunkMetadata.startSeconds === "number"
+                        ? { startSeconds: chunkMetadata.startSeconds }
+                        : {}),
+                    ...(typeof chunkMetadata.endSeconds === "number"
+                        ? { endSeconds: chunkMetadata.endSeconds }
                         : {}),
                 },
             });

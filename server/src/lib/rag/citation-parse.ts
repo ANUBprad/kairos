@@ -9,6 +9,9 @@ export type WorkspaceCitationRecord = {
     chunkId: string;
     chunkIndex: number;
     page?: number;
+    timestamp?: string;
+    videoId?: string;
+    url?: string;
     excerpt: string;
     score?: number;
 };
@@ -83,6 +86,9 @@ export function resolveCitationsFromRetrieval(
             chunkId: chunk.chunkId,
             chunkIndex: chunk.chunkIndex,
             page: chunk.page,
+            timestamp: chunk.timestamp,
+            videoId: chunk.videoId,
+            url: chunk.url,
             excerpt: chunk.text.slice(0, 280),
             score: chunk.score,
         });

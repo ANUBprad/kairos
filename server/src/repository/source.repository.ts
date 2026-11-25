@@ -104,6 +104,29 @@ export function findSourceByIdAndWorkspaceId(
     });
 }
 
+/**
+ * Finds a non-terminal source by an identity stored in metadata. This lets
+ * repeated imports reuse an active source instead of charging and indexing a
+ * duplicate; terminal FAILED sources remain re-importable.
+ */
+export function findActiveSourceByMetadataKey(
+    workspaceId: string,
+    type: SourceRecord["type"],
+    metadataKey: string,
+    metadataValue: string,
+) {
+    return prisma.source.findFirst({
+        where: {
+            workspaceId,
+            type,
+            status: { in: ["PENDING", "PROCESSING", "READY"] },
+            metadata: { path: [metadataKey], equals: metadataValue },
+        },
+        select: sourceSelect,
+        orderBy: { createdAt: "desc" },
+    });
+}
+
 const sourceSummarySelect = {
     id: true,
     title: true,

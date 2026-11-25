@@ -51,6 +51,13 @@ function matchToChunk(
         chunkId: metadata.chunkId,
         chunkIndex: Number(metadata.chunkIndex ?? 0),
         ...(typeof metadata.page === "number" ? { page: metadata.page } : {}),
+        ...(typeof metadata.timestamp === "string"
+            ? { timestamp: metadata.timestamp }
+            : {}),
+        ...(typeof metadata.videoId === "string"
+            ? { videoId: metadata.videoId }
+            : {}),
+        ...(typeof metadata.url === "string" ? { url: metadata.url } : {}),
         text: metadata.text,
         score,
         vectorScore: score,
@@ -148,6 +155,13 @@ async function retrieveDatabaseFallback(
                     chunkId: chunk.id,
                     chunkIndex: chunk.index,
                     page: typeof meta.page === "number" ? meta.page : undefined,
+                    ...(typeof meta.timestamp === "string"
+                        ? { timestamp: meta.timestamp }
+                        : {}),
+                    ...(typeof meta.videoId === "string"
+                        ? { videoId: meta.videoId }
+                        : {}),
+                    ...(typeof meta.url === "string" ? { url: meta.url } : {}),
                     text: chunk.content,
                     score: 0.8,
                 };
@@ -174,6 +188,13 @@ async function retrieveDatabaseFallback(
                     chunkId: chunk.id,
                     chunkIndex: chunk.index,
                     page: typeof meta.page === "number" ? meta.page : undefined,
+                    ...(typeof meta.timestamp === "string"
+                        ? { timestamp: meta.timestamp }
+                        : {}),
+                    ...(typeof meta.videoId === "string"
+                        ? { videoId: meta.videoId }
+                        : {}),
+                    ...(typeof meta.url === "string" ? { url: meta.url } : {}),
                     text: chunk.content,
                     score: 0.5,
                 };
@@ -285,9 +306,12 @@ export function buildChatSystemPrompt(input: {
 
     const context = input.chunks
         .map((chunk, index) => {
-            const label = `[${index + 1}] ${chunk.sourceTitle} (${chunk.sourceType})${
-                chunk.page ? `, page ${chunk.page}` : ""
-            }`;
+            const location = chunk.page
+                ? `, page ${chunk.page}`
+                : chunk.timestamp
+                  ? `, ${chunk.timestamp}`
+                  : "";
+            const label = `[${index + 1}] ${chunk.sourceTitle} (${chunk.sourceType})${location}`;
             return `${label}\n${chunk.text}`;
         })
         .join("\n\n");

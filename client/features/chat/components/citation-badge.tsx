@@ -53,6 +53,14 @@ export function CitationBadge({ citation, index }: CitationBadgeProps) {
               </span>
             </div>
 
+            {(citation.page !== undefined || citation.timestamp) && (
+              <span className="text-[11px] text-muted-foreground font-medium">
+                {citation.page !== undefined
+                  ? `Page ${citation.page}`
+                  : `At ${citation.timestamp}`}
+              </span>
+            )}
+
             {citation.excerpt && (
               <p className="text-xs text-muted-foreground leading-relaxed max-h-32 overflow-y-auto italic">
                 &ldquo;{citation.excerpt}&rdquo;

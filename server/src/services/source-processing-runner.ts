@@ -32,6 +32,7 @@ export async function processSourceById(
                 sourceId,
                 extracted.text,
                 extracted.pages,
+                extracted.source.metadata,
             );
 
             const source = await findSourceById(sourceId);

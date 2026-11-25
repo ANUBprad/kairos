@@ -49,6 +49,24 @@ describe("citation-parse", () => {
         assert.equal(citations[0]?.index, 2);
     });
 
+    it("keeps transcript timestamps and deep links in citations", () => {
+        const chunk: RetrievedChunk = {
+            ...sampleChunks[0]!,
+            sourceType: "YOUTUBE",
+            timestamp: "01:05",
+            videoId: "dQw4w9WgXcQ",
+            url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=65s",
+        };
+
+        const citation = resolveCitationsFromRetrieval([chunk], [1])[0];
+        assert.equal(citation?.timestamp, "01:05");
+        assert.equal(citation?.videoId, "dQw4w9WgXcQ");
+        assert.equal(
+            citation?.url,
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=65s",
+        );
+    });
+
     it("applies fallback when model cites nothing", () => {
         const citations = applyCitationFallback(sampleChunks, []);
         assert.equal(citations.length, 1);
