@@ -52,6 +52,7 @@ export type SourceMetadata = {
     publicId?: string;
     resourceType?: "raw" | "image";
     importedFrom?: string;
+    websiteIdentity?: string;
     contentHash?: string;
     videoId?: string;
     canonicalUrl?: string;

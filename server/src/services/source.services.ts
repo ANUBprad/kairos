@@ -2,9 +2,15 @@ import { createHash, randomUUID } from "node:crypto";
 import { logger } from "../lib/logger.js";
 import { uploadImageToCloudinary, uploadPdfToCloudinary } from "../lib/cloudinary.js";
 import { extractTextFromImageBuffer } from "../lib/sources/image-ocr.js";
-import { scrapeWebsite } from "../lib/sources/firecrawl.js";
+import {
+    normalizeWebsiteUrl,
+    scrapeWebsite,
+} from "../lib/sources/firecrawl.js";
 import { buildFaviconUrl } from "../lib/sources/favicon.js";
-import { extractPdfFromBuffer } from "../lib/sources/pdf.js";
+import {
+    extractPdfFromBuffer,
+    PDF_MAX_UPLOAD_BYTES,
+} from "../lib/sources/pdf.js";
 import prisma from "../lib/db.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import {
@@ -363,35 +369,84 @@ export async function createTextOrMarkdownSource(
     );
 }
 
+/** Dependencies are injectable so duplicate-import and failure paths can be tested offline. */
+export interface WebsiteImportDeps {
+    getWorkspace?: typeof getWorkspaceByIdForUser;
+    findActiveSource?: typeof findActiveSourceByMetadataKey;
+    assertQuota?: typeof assertCanCreateSource;
+    scrape?: typeof scrapeWebsite;
+    createSource?: typeof createAndProcessSource;
+}
+
+type ResolvedWebsiteImportDeps = {
+    getWorkspace: typeof getWorkspaceByIdForUser;
+    findActiveSource: typeof findActiveSourceByMetadataKey;
+    assertQuota: typeof assertCanCreateSource;
+    scrape: typeof scrapeWebsite;
+    createSource: typeof createAndProcessSource;
+};
+
+function resolveWebsiteImportDeps(
+    deps?: WebsiteImportDeps,
+): ResolvedWebsiteImportDeps {
+    return {
+        getWorkspace: deps?.getWorkspace ?? getWorkspaceByIdForUser,
+        findActiveSource:
+            deps?.findActiveSource ?? findActiveSourceByMetadataKey,
+        assertQuota: deps?.assertQuota ?? assertCanCreateSource,
+        scrape: deps?.scrape ?? scrapeWebsite,
+        createSource: deps?.createSource ?? createAndProcessSource,
+    };
+}
+
 /**
- * Scrapes a public website via Firecrawl and ingests its markdown content as a workspace source.
- *
- * @param workspaceId - Target workspace identifier
- * @param userId - Authenticated user's identifier
- * @param input - Payload containing target URL and optional custom title
- * @returns The created and enqueued source record
+ * Scrapes a public website via Firecrawl and ingests its bounded markdown as a
+ * workspace source. Repeated imports of the same normalised URL reuse the
+ * active source instead of charging credits again.
  */
 export async function importWebsiteSource(
     workspaceId: string,
     userId: string,
     input: ImportWebsiteInput,
+    deps?: WebsiteImportDeps,
 ) {
-    await getWorkspaceByIdForUser(workspaceId, userId);
-    await assertCanCreateSource(userId);
+    const resolved = resolveWebsiteImportDeps(deps);
+    await resolved.getWorkspace(workspaceId, userId);
 
-    const scraped = await scrapeWebsite(input.url);
+    const identity = normalizeWebsiteUrl(input.url);
+    if (!identity) {
+        throw new ValidationError("Enter a valid public http(s) URL");
+    }
+
+    const existing = await resolved.findActiveSource(
+        workspaceId,
+        "WEBSITE",
+        "websiteIdentity",
+        identity,
+    );
+    if (existing) {
+        return existing;
+    }
+
+    await resolved.assertQuota(userId);
+    const scraped = await resolved.scrape(input.url);
     const faviconUrl = buildFaviconUrl(scraped.sourceUrl);
 
-    return createAndProcessSource(
+    return resolved.createSource(
         {
             workspaceId,
             type: "WEBSITE",
-            title: input.title || scraped.title || input.url,
+            title: (
+                input.title?.trim() ||
+                scraped.title ||
+                identity
+            ).slice(0, 200),
             content: scraped.markdown,
             url: scraped.sourceUrl,
             status: "PENDING",
             metadata: {
                 importedFrom: scraped.sourceUrl,
+                websiteIdentity: identity,
                 ...(faviconUrl ? { faviconUrl } : {}),
             },
         },
@@ -415,6 +470,14 @@ export async function uploadPdfSource(
     title?: string,
 ) {
     await getWorkspaceByIdForUser(workspaceId, userId);
+
+    // Multer enforces this on the HTTP boundary; guard the service too so a
+    // direct caller cannot bypass the upload cap.
+    if (file.buffer.byteLength > PDF_MAX_UPLOAD_BYTES) {
+        throw new ValidationError(
+            "PDF is too large. The maximum upload size is 25 MB.",
+        );
+    }
 
     const contentHash = createHash("sha256").update(file.buffer).digest("hex");
     const existing = await findActiveSourceByMetadataKey(

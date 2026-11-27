@@ -3,6 +3,9 @@ import { describe, it } from "node:test";
 import {
     classifyPdfExtractionError,
     extractPdfFromBuffer,
+    PDF_MAX_PAGES,
+    PDF_MAX_TEXT_CHARS,
+    PDF_MAX_UPLOAD_BYTES,
     PdfExtractionError,
     shouldRetryPdfDownloadWithSignedUrl,
 } from "./pdf.js";
@@ -26,7 +29,14 @@ function makePdf(pageTexts: string[]): Buffer {
             .replace(/\\/g, "\\\\")
             .replace(/\(/g, "\\(")
             .replace(/\)/g, "\\)");
-        const stream = `BT /F1 12 Tf 72 720 Td (${escaped}) Tj ET`;
+        // Split long strings across text operations so pdf.js extracts all of them.
+        const lines = escaped.match(/.{1,50}/g) ?? [escaped];
+        const stream = lines
+            .map(
+                (line, lineIndex) =>
+                    `BT /F1 12 Tf 72 ${720 - lineIndex * 5} Td (${line}) Tj ET`,
+            )
+            .join("\n");
         objects.push(
             `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
         );
@@ -76,6 +86,40 @@ describe("PDF extraction", () => {
         assert.equal(result.pageCount, 3);
         assert.deepEqual(result.pages, ["First page", "", "Third page"]);
         assert.equal(result.text, "First page\n\nThird page");
+    });
+
+    it("rejects oversized buffers, page counts, and extracted text", async () => {
+        await assert.rejects(
+            () => extractPdfFromBuffer(Buffer.alloc(PDF_MAX_UPLOAD_BYTES + 1)),
+            (error: unknown) =>
+                error instanceof PdfExtractionError &&
+                error.code === "TOO_LARGE",
+        );
+
+        await assert.rejects(
+            () =>
+                extractPdfFromBuffer(
+                    makePdf(Array(PDF_MAX_PAGES + 1).fill("short page")),
+                ),
+            (error: unknown) =>
+                error instanceof PdfExtractionError &&
+                error.code === "TOO_LARGE",
+        );
+
+        await assert.rejects(
+            () =>
+                extractPdfFromBuffer(
+                    makePdf(
+                        Array.from(
+                            { length: 100 },
+                            () => "x".repeat(Math.ceil(PDF_MAX_TEXT_CHARS / 100) + 10),
+                        ),
+                    ),
+                ),
+            (error: unknown) =>
+                error instanceof PdfExtractionError &&
+                error.code === "TOO_LARGE",
+        );
     });
 
     it("fails closed for image-only and corrupt PDFs", async () => {

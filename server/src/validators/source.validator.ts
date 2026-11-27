@@ -57,7 +57,19 @@ export const createSourceSchema = z.discriminatedUnion("type", [
 ]);
 
 export const importWebsiteSchema = z.object({
-    url: z.string().trim().url("Enter a valid URL"),
+    url: z
+        .string()
+        .trim()
+        .url("Enter a valid URL")
+        .max(2048, "URL is too long")
+        .refine((value) => {
+            try {
+                const parsed = new URL(value);
+                return parsed.protocol === "http:" || parsed.protocol === "https:";
+            } catch {
+                return false;
+            }
+        }, "Enter an http(s) URL"),
     title: z.string().trim().max(200).optional(),
 });
 

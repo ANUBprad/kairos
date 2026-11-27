@@ -10,10 +10,16 @@ export type PdfExtractResult = {
     pageCount: number;
 };
 
+/** Upload and indexing limits keep a single source from monopolising storage or embedding work. */
+export const PDF_MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const PDF_MAX_PAGES = 400;
+export const PDF_MAX_TEXT_CHARS = 500_000;
+
 export type PdfExtractionErrorCode =
     | "CORRUPT"
     | "ENCRYPTED"
-    | "NO_TEXT";
+    | "NO_TEXT"
+    | "TOO_LARGE";
 
 /** Safe, client-facing PDF failures are validation errors with a stable code. */
 export class PdfExtractionError extends ValidationError {
@@ -78,6 +84,13 @@ async function downloadPdf(url: string) {
 export async function extractPdfFromBuffer(
     buffer: ArrayBuffer | Buffer,
 ): Promise<PdfExtractResult> {
+    if (buffer.byteLength > PDF_MAX_UPLOAD_BYTES) {
+        throw new PdfExtractionError(
+            "TOO_LARGE",
+            "PDF is too large. The maximum upload size is 25 MB.",
+        );
+    }
+
     const arrayBuffer =
         buffer instanceof Buffer
             ? (buffer.buffer.slice(
@@ -107,6 +120,21 @@ export async function extractPdfFromBuffer(
     const pages = rawPages.slice(0, pageCount);
     while (pages.length < pageCount) {
         pages.push("");
+    }
+
+    if (pages.length > PDF_MAX_PAGES) {
+        throw new PdfExtractionError(
+            "TOO_LARGE",
+            `PDF has too many pages. The maximum is ${PDF_MAX_PAGES} pages.`,
+        );
+    }
+
+    const totalChars = pages.reduce((sum, page) => sum + page.length, 0);
+    if (totalChars > PDF_MAX_TEXT_CHARS) {
+        throw new PdfExtractionError(
+            "TOO_LARGE",
+            "PDF contains too much text to index. Split it into smaller documents.",
+        );
     }
 
     const joined = pages.filter(Boolean).join("\n\n");
