@@ -114,4 +114,11 @@ describe("schema and migration parity", () => {
     assert.doesNotMatch(dailyCreditsMigration, /\bDELETE\s+/i);
     assert.doesNotMatch(dailyCreditsMigration, /\bDROP\s+COLUMN/i);
   });
+
+  it("documents the six-hour UTC window semantic without changing the column", () => {
+    assert.match(schema, /ISO-8601 UTC start of the current six-hour free credit window/);
+    assert.match(schema, /Legacy YYYY-MM-DD values remain\s+\/\/\/ readable as midnight UTC/);
+    assert.match(schema, /dailyCreditDay\s+String\s+@default\("1970-01-01"\)/);
+    assert.doesNotMatch(dailyCreditsMigration, /\bUPDATE\s+/i);
+  });
 });

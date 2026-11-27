@@ -5,6 +5,7 @@ import {
   CREDIT_PACKS,
   calculateCreditsForInr,
 } from "../lib/pricing.js";
+import { isDeveloperInReader, isDeveloperUser } from "../lib/developer.js";
 
 export { CREDIT_PACKS, calculateCreditsForInr } from "../lib/pricing.js";
 
@@ -20,8 +21,15 @@ export const CREDIT_COSTS = {
   AUDIO_DEBATE: 10,
 } as const;
 
-/** Server-owned UTC daily allowance. It is a quota, never a cash balance. */
-export const DAILY_ALLOWANCE_CREDITS = 100;
+/**
+ * Server-owned UTC free-credit window. Each six-hour window grants a quota
+ * (never a cash balance) that expires when the next window starts.
+ */
+export const WINDOW_ALLOWANCE_CREDITS = 100;
+export const CREDIT_WINDOW_MS = 6 * 60 * 60 * 1000;
+export const CREDIT_WINDOWS_PER_DAY = (24 * 60 * 60 * 1000) / CREDIT_WINDOW_MS;
+/** Backward-compatible alias for the per-window allowance. */
+export const DAILY_ALLOWANCE_CREDITS = WINDOW_ALLOWANCE_CREDITS;
 
 export type CreditBucket = "DAILY" | "PAID";
 export type CreditChargeBucket = CreditBucket | "AUTO";
@@ -35,6 +43,12 @@ export interface CreditSnapshot {
   dailyCreditDay: string;
   nextDailyResetAt: string;
   serverTime: string;
+  /** ISO-8601 identifier of the current six-hour UTC window. */
+  creditWindowStart: string;
+  /** ISO-8601 start of the following window. */
+  nextCreditResetAt: string;
+  windowAllowance: number;
+  windowsPerDay: number;
 }
 
 export interface CreditMutationInput {
@@ -72,19 +86,42 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
+/** @deprecated Kept only for legacy response/metadata compatibility. */
 export function getUtcCreditDay(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 
-/** The authoritative next UTC midnight. Clients must not derive this locally. */
+/** Authoritative start of the six-hour UTC window containing `now`. */
+export function getUtcCreditWindowStart(now: Date = new Date()): string {
+  return new Date(
+    Math.floor(now.getTime() / CREDIT_WINDOW_MS) * CREDIT_WINDOW_MS,
+  ).toISOString();
+}
+
+/** Authoritative next window boundary. Clients must not derive this locally. */
 export function getNextUtcCreditReset(now: Date = new Date()): string {
   return new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + 1,
-    ),
+    Math.floor(now.getTime() / CREDIT_WINDOW_MS) * CREDIT_WINDOW_MS +
+      CREDIT_WINDOW_MS,
   ).toISOString();
+}
+
+/**
+ * Normalizes a stored window identifier. Legacy YYYY-MM-DD values are treated
+ * as midnight UTC so a single rollover moves them onto the window scheme.
+ */
+export function normalizeCreditWindow(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T00:00:00.000Z`;
+  }
+  const parsed = Date.parse(trimmed);
+  if (!Number.isFinite(parsed)) return null;
+  return getUtcCreditWindowStart(new Date(parsed));
 }
 
 function snapshotFromUser(
@@ -93,14 +130,20 @@ function snapshotFromUser(
 ): CreditSnapshot {
   const dailyCredits = user?.dailyCredits ?? 0;
   const paidCredits = user?.credits ?? 0;
+  const creditWindowStart = getUtcCreditWindowStart(now);
+  const nextCreditResetAt = getNextUtcCreditReset(now);
   return {
     credits: dailyCredits + paidCredits,
     dailyCredits,
     paidCredits,
     dailyAllowance: DAILY_ALLOWANCE_CREDITS,
-    dailyCreditDay: user?.dailyCreditDay ?? getUtcCreditDay(now),
-    nextDailyResetAt: getNextUtcCreditReset(now),
+    dailyCreditDay: user?.dailyCreditDay ?? creditWindowStart,
+    nextDailyResetAt: nextCreditResetAt,
     serverTime: now.toISOString(),
+    creditWindowStart,
+    nextCreditResetAt,
+    windowAllowance: WINDOW_ALLOWANCE_CREDITS,
+    windowsPerDay: CREDIT_WINDOWS_PER_DAY,
   };
 }
 
@@ -120,6 +163,10 @@ function insufficientCreditsError(
       dailyAllowance: snapshot.dailyAllowance,
       nextDailyResetAt: snapshot.nextDailyResetAt,
       serverTime: snapshot.serverTime,
+      creditWindowStart: snapshot.creditWindowStart,
+      nextCreditResetAt: snapshot.nextCreditResetAt,
+      windowAllowance: snapshot.windowAllowance,
+      windowsPerDay: snapshot.windowsPerDay,
     },
   );
 }
@@ -145,52 +192,64 @@ async function lockCreditsForUser(
 }
 
 /**
- * Lazily renews the daily allowance on the first server-side operation of a
- * new UTC day. The conditional update makes concurrent rollover idempotent:
- * exactly one caller can claim a given (user, day) and write its ledger row.
+ * Lazily renews the free allowance on the first server-side operation of a
+ * new six-hour UTC window. The conditional update makes concurrent rollover
+ * idempotent: exactly one caller can claim a given (user, window) and write
+ * its ledger row.
  */
 export async function ensureDailyCreditsInTransaction(
   tx: Prisma.TransactionClient,
   userId: string,
   now: Date = new Date(),
 ): Promise<CreditSnapshot> {
-  const day = getUtcCreditDay(now);
+  const windowStart = getUtcCreditWindowStart(now);
   const user = await tx.user.findUnique({
     where: { id: userId },
     select: { credits: true, dailyCredits: true, dailyCreditDay: true },
   });
   if (!user) return snapshotFromUser(null, now);
-  if (user.dailyCreditDay >= day) return snapshotFromUser(user, now);
+  const storedWindow = normalizeCreditWindow(user.dailyCreditDay);
+  if (storedWindow !== null && storedWindow >= windowStart) {
+    return snapshotFromUser(user, now);
+  }
 
   const claimed = await tx.user.updateMany({
-    where: { id: userId, dailyCreditDay: { lt: day } },
+    where: { id: userId, dailyCreditDay: { lt: windowStart } },
     data: {
-      dailyCredits: DAILY_ALLOWANCE_CREDITS,
-      dailyCreditDay: day,
+      dailyCredits: WINDOW_ALLOWANCE_CREDITS,
+      dailyCreditDay: windowStart,
     },
   });
 
   if (claimed.count === 1) {
-    const grantAmount = Math.max(0, DAILY_ALLOWANCE_CREDITS - user.dailyCredits);
+    const grantAmount = Math.max(
+      0,
+      WINDOW_ALLOWANCE_CREDITS - user.dailyCredits,
+    );
+    const nextCreditResetAt = getNextUtcCreditReset(now);
     await tx.creditTransaction.create({
       data: {
         userId,
         amount: grantAmount,
-        balanceAfter: user.credits + DAILY_ALLOWANCE_CREDITS,
+        balanceAfter: user.credits + WINDOW_ALLOWANCE_CREDITS,
         type: "DAILY_ALLOWANCE",
-        description: `Daily free allowance reset for ${day} (UTC)`,
+        description: `Free credit window reset for ${windowStart} (UTC)`,
         bucket: "DAILY",
         dailyAmount: grantAmount,
         paidAmount: 0,
-        balanceAfterDaily: DAILY_ALLOWANCE_CREDITS,
+        balanceAfterDaily: WINDOW_ALLOWANCE_CREDITS,
         balanceAfterPaid: user.credits,
         metadata: {
-          day,
+          day: getUtcCreditDay(now),
+          creditWindowStart: windowStart,
+          nextCreditResetAt,
+          windowAllowance: WINDOW_ALLOWANCE_CREDITS,
+          dailyCreditDay: windowStart,
           bucket: "DAILY",
           previousDailyCredits: user.dailyCredits,
-          nextDailyResetAt: getNextUtcCreditReset(now),
+          nextDailyResetAt: nextCreditResetAt,
         } as Prisma.InputJsonValue,
-        idempotencyKey: `daily-reset:${userId}:${day}`,
+        idempotencyKey: `daily-reset:${userId}:${windowStart}`,
       },
     });
   }
@@ -226,10 +285,12 @@ export async function assertHasCredits(
   required: number,
 ): Promise<CreditSnapshot> {
   const snapshot = await getCreditSnapshot(userId);
-  if (snapshot.credits < required) {
-    throw insufficientCreditsError(required, snapshot);
+  // Allowlisted developers bypass application-level credit gating. The real
+  // balances are still returned; no paid entitlement is fabricated.
+  if ((await isDeveloperUser(userId)) || snapshot.credits >= required) {
+    return snapshot;
   }
-  return snapshot;
+  throw insufficientCreditsError(required, snapshot);
 }
 
 /**
@@ -275,10 +336,22 @@ async function idempotentDebitBalance(
 export async function debitCreditsInTransaction(
   tx: Prisma.TransactionClient,
   input: CreditMutationInput,
+  now: Date = new Date(),
 ): Promise<{ success: boolean; balance: number; snapshot: CreditSnapshot }> {
   const { userId, amount, type, description, metadata, idempotencyKey } = input;
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error("Credit deduction amount must be a positive integer.");
+  }
+
+  // Developer status is resolved from the user row inside this transaction.
+  // There is no client-supplied flag on CreditMutationInput to trust.
+  if (await isDeveloperInReader(tx, userId)) {
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { credits: true, dailyCredits: true, dailyCreditDay: true },
+    });
+    const snapshot = snapshotFromUser(user, now);
+    return { success: true, balance: snapshot.credits, snapshot };
   }
 
   if (idempotencyKey) {
@@ -288,7 +361,6 @@ export async function debitCreditsInTransaction(
     }
   }
 
-  const now = new Date();
   await lockCreditsForUser(tx, userId);
   const available = await ensureDailyCreditsInTransaction(tx, userId, now);
   if (available.credits < amount) {
@@ -348,6 +420,8 @@ export async function debitCreditsInTransaction(
         ...(input.metadata ?? {}),
         bucket,
         dailyCreditDay: after.dailyCreditDay,
+        creditWindowStart: after.creditWindowStart,
+        nextCreditResetAt: after.nextCreditResetAt,
         nextDailyResetAt: after.nextDailyResetAt,
       } as Prisma.InputJsonValue,
       idempotencyKey,
@@ -360,10 +434,11 @@ export async function debitCreditsInTransaction(
 /** Atomically debits credits and logs the transaction with an idempotency key. */
 export async function deductCredits(
   input: CreditMutationInput,
+  now: Date = new Date(),
 ): Promise<{ success: boolean; balance: number; snapshot: CreditSnapshot }> {
   try {
     return await prisma.$transaction((tx) =>
-      debitCreditsInTransaction(tx, input),
+      debitCreditsInTransaction(tx, input, now),
     );
   } catch (error) {
     if (input.idempotencyKey && isUniqueConstraintError(error)) {
@@ -515,13 +590,14 @@ function metadataRecord(value: Prisma.JsonValue | null): Record<string, unknown>
 
 /**
  * Refunds the exact recorded debit, returning daily and paid portions to their
- * original buckets. A daily charge from an already-expired UTC day cannot
- * resurrect the old quota; its value is restored to the non-expiring balance
- * so the user is never penalized by a race across midnight.
+ * original buckets. A daily charge from an already-expired six-hour window
+ * cannot resurrect the old quota; its value is restored to the non-expiring
+ * balance so the user is never penalized by a race across a window boundary.
  */
 export async function refundChargeInTransaction(
   tx: Prisma.TransactionClient,
   input: RefundChargeInput,
+  now: Date = new Date(),
 ): Promise<boolean> {
   const charge = await tx.creditTransaction.findUnique({
     where: { idempotencyKey: input.chargeIdempotencyKey },
@@ -545,6 +621,12 @@ export async function refundChargeInTransaction(
     return false;
   }
 
+  // Developer debits are never recorded, so there is nothing to refund. This
+  // also protects legacy charges after an account joins the allowlist.
+  if (await isDeveloperInReader(tx, charge.userId)) {
+    return false;
+  }
+
   const existingRefund = await tx.creditTransaction.findUnique({
     where: { idempotencyKey: input.refundIdempotencyKey },
     select: { userId: true, amount: true, metadata: true },
@@ -560,11 +642,13 @@ export async function refundChargeInTransaction(
     return true;
   }
 
-  const now = new Date();
   const chargeMeta = metadataRecord((charge as ChargeRow).metadata);
-  const chargeDay = typeof chargeMeta.dailyCreditDay === "string"
-    ? chargeMeta.dailyCreditDay
-    : undefined;
+  const chargeWindowValue =
+    typeof chargeMeta.creditWindowStart === "string"
+      ? chargeMeta.creditWindowStart
+      : typeof chargeMeta.dailyCreditDay === "string"
+        ? chargeMeta.dailyCreditDay
+        : undefined;
   const chargedAmount = -charge.amount;
   const recordedDaily = charge.dailyAmount || 0;
   const recordedPaid = charge.paidAmount || 0;
@@ -580,7 +664,12 @@ export async function refundChargeInTransaction(
     where: { id: charge.userId },
     select: { credits: true, dailyCredits: true, dailyCreditDay: true },
   });
-  const canRestoreDaily = !chargeDay || chargeDay === getUtcCreditDay(now);
+  // A daily credit belongs to exactly one window. Charges without a stored
+  // window predate the scheme and keep the legacy same-day restore behavior.
+  const canRestoreDaily =
+    chargeWindowValue === undefined
+      ? true
+      : normalizeCreditWindow(chargeWindowValue) === getUtcCreditWindowStart(now);
   const restoredDaily = canRestoreDaily
     ? Math.min(splitDaily, Math.max(0, DAILY_ALLOWANCE_CREDITS - user.dailyCredits))
     : 0;
@@ -622,6 +711,9 @@ export async function refundChargeInTransaction(
         reason: input.reason,
         bucket: "MIXED",
         expiredDailyRefund: expiredDaily,
+        creditWindowStart: getUtcCreditWindowStart(now),
+        nextCreditResetAt: getNextUtcCreditReset(now),
+        dailyCreditDay: getUtcCreditWindowStart(now),
       } as Prisma.InputJsonValue,
       idempotencyKey: input.refundIdempotencyKey,
     },
@@ -633,10 +725,11 @@ export async function refundChargeInTransaction(
 /** Transaction wrapper around {@link refundChargeInTransaction}. */
 export async function refundCreditCharge(
   input: RefundChargeInput,
+  now: Date = new Date(),
 ): Promise<boolean> {
   try {
     return await prisma.$transaction((tx) =>
-      refundChargeInTransaction(tx, input),
+      refundChargeInTransaction(tx, input, now),
     );
   } catch (error) {
     if (isUniqueConstraintError(error)) {

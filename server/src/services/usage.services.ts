@@ -13,6 +13,8 @@ import {
     getCreditHistory,
     getCreditSnapshot,
 } from "./credit.services.js";
+import type { CreditSnapshot } from "./credit.services.js";
+import { isDeveloperInReader, isDeveloperUser } from "../lib/developer.js";
 import { ForbiddenError } from "../types/app-error.js";
 import type { PlanType, Prisma } from "../generated/prisma/client.js";
 import {
@@ -48,6 +50,42 @@ export const PLAN_LIMITS: Record<
         ARTIFACTS: 25,
     },
 };
+
+export interface DeveloperEntitlement {
+    developer: boolean;
+    bypassCredits: boolean;
+    bypassFreeQuotas: boolean;
+}
+
+type PlanDetails = NonNullable<Awaited<ReturnType<typeof findUserPlanDetails>>>;
+
+type UsageLimits = {
+    WORKSPACES: number | null;
+    MESSAGES: number | null;
+    SOURCES: number | null;
+    ARTIFACTS: number | null;
+};
+
+/** Developers see unlimited quotas, but their real usage counts stay intact. */
+const DEVELOPER_LIMITS: UsageLimits = {
+    WORKSPACES: null,
+    MESSAGES: null,
+    SOURCES: null,
+    ARTIFACTS: null,
+};
+
+export interface UsageInjection {
+    /** Optional injected identity to avoid duplicate developer lookups. */
+    isDeveloper?: boolean;
+    /** Optional injected plan row; production callers should omit this. */
+    planDetails?: PlanDetails | null;
+    workspaceCount?: number;
+    sourceCount?: number;
+    totalArtifactsCreated?: number;
+    messageCount?: number;
+    creditSnapshot?: CreditSnapshot;
+    creditHistory?: Awaited<ReturnType<typeof getCreditHistory>>;
+}
 
 export interface LimitDetails {
     limitType: "workspaces" | "artifacts" | "sources" | "messages";
@@ -134,6 +172,10 @@ export async function assertQuotaInTransaction(
     userId: string,
     limitType: TransactionalLimitType,
 ): Promise<void> {
+    // Only the stored user email can grant this bypass. Auth, ownership,
+    // rate limits and upload/security checks live outside this function.
+    if (await isDeveloperInReader(tx, userId)) return;
+
     await lockQuotaForUser(tx, userId);
 
     const user = await tx.user.findUnique({
@@ -175,6 +217,16 @@ export async function consumeArtifactQuotaInTransaction(
     tx: Prisma.TransactionClient,
     userId: string,
 ): Promise<void> {
+    if (await isDeveloperInReader(tx, userId)) {
+        // Keep the real lifetime counter accurate; only the FREE-plan ceiling
+        // is bypassed.
+        await tx.user.updateMany({
+            where: { id: userId },
+            data: { totalArtifactsCreated: { increment: 1 } },
+        });
+        return;
+    }
+
     await lockQuotaForUser(tx, userId);
 
     const user = await tx.user.findUnique({
@@ -198,7 +250,8 @@ async function assertUserQuota(
     userId: string,
     limitType: TransactionalLimitType,
 ): Promise<void> {
-    const { plan, limits } = await getUserPlan(userId);
+    const { plan, limits, isDeveloper } = await getUserPlan(userId);
+    if (isDeveloper) return;
     const max =
         limitType === "sources"
             ? limits.SOURCES
@@ -225,8 +278,15 @@ async function assertUserQuota(
  * @param userId - Unique identifier of the user
  * @returns An object containing the effective plan type, expiration date, pro flags, and plan limits
  */
-export async function getUserPlan(userId: string) {
-    const user = await findUserPlanDetails(userId);
+export async function getUserPlan(
+    userId: string,
+    options: Pick<UsageInjection, "isDeveloper" | "planDetails"> = {},
+) {
+    const user =
+        options.planDetails !== undefined
+            ? options.planDetails
+            : await findUserPlanDetails(userId);
+    const isDeveloper = options.isDeveloper ?? (await isDeveloperUser(userId));
 
     const subscriptionPlan: PlanType = user?.plan ?? "FREE";
     const planExpiresAt = user?.planExpiresAt ?? null;
@@ -238,6 +298,11 @@ export async function getUserPlan(userId: string) {
     const plan: PlanType = subscriptionExpired ? "FREE" : subscriptionPlan;
     const isPro = plan === "PRO" || plan === "PRO_PLUS";
     const isProPlus = plan === "PRO_PLUS";
+    const entitlement: DeveloperEntitlement = {
+        developer: isDeveloper,
+        bypassCredits: isDeveloper,
+        bypassFreeQuotas: isDeveloper,
+    };
 
     return {
         plan,
@@ -246,7 +311,10 @@ export async function getUserPlan(userId: string) {
         planExpiresAt,
         isPro,
         isProPlus,
-        limits: PLAN_LIMITS[plan],
+        isDeveloper,
+        developer: isDeveloper,
+        entitlement,
+        limits: isDeveloper ? DEVELOPER_LIMITS : PLAN_LIMITS[plan],
     };
 }
 
@@ -256,25 +324,33 @@ export async function getUserPlan(userId: string) {
  * @param userId - Unique identifier of the user
  * @returns Comprehensive usage metrics with current counts, maximum limits, and exceeded flags
  */
-export async function getUserUsage(userId: string) {
+export async function getUserUsage(
+    userId: string,
+    options: UsageInjection = {},
+) {
     const {
         plan,
         subscriptionPlan,
         subscriptionExpired,
         isPro,
         isProPlus,
+        isDeveloper,
+        developer,
+        entitlement,
         planExpiresAt,
         limits,
-    } = await getUserPlan(userId);
+    } = await getUserPlan(userId, options);
 
     const [workspaceCount, sourceCount, userArtifacts, messageCount, creditSnapshot, creditHistory] =
         await Promise.all([
-            countUserWorkspaces(userId),
-            countUserSources(userId),
-            findUserTotalArtifacts(userId),
-            countUserMessages(userId),
-            getCreditSnapshot(userId),
-            getCreditHistory(userId, 50),
+            options.workspaceCount ?? countUserWorkspaces(userId),
+            options.sourceCount ?? countUserSources(userId),
+            options.totalArtifactsCreated !== undefined
+                ? Promise.resolve({ totalArtifactsCreated: options.totalArtifactsCreated })
+                : findUserTotalArtifacts(userId),
+            options.messageCount ?? countUserMessages(userId),
+            options.creditSnapshot ?? getCreditSnapshot(userId),
+            options.creditHistory ?? getCreditHistory(userId, 50),
         ]);
 
     const totalArtifactsCreated = userArtifacts?.totalArtifactsCreated ?? 0;
@@ -287,21 +363,26 @@ export async function getUserUsage(userId: string) {
         subscriptionExpired,
         isPro,
         isProPlus,
+        isDeveloper,
+        developer,
+        entitlement,
         planExpiresAt,
         workspaces: {
             count: workspaceCount,
             limit: limits.WORKSPACES,
-            exceeded: workspaceCount >= limits.WORKSPACES,
+            exceeded:
+                limits.WORKSPACES !== null && workspaceCount >= limits.WORKSPACES,
         },
         sources: {
             count: sourceCount,
             limit: limits.SOURCES,
-            exceeded: sourceCount >= limits.SOURCES,
+            exceeded: limits.SOURCES !== null && sourceCount >= limits.SOURCES,
         },
         artifacts: {
             count: totalArtifactsCreated,
             limit: limits.ARTIFACTS,
-            exceeded: totalArtifactsCreated >= limits.ARTIFACTS,
+            exceeded:
+                limits.ARTIFACTS !== null && totalArtifactsCreated >= limits.ARTIFACTS,
         },
         messages: {
             count: messageCount,
@@ -318,19 +399,25 @@ export async function getUserUsage(userId: string) {
  * @param userId - Unique identifier of the user
  * @throws {ForbiddenError} When the workspace limit for the user's plan is reached
  */
-export async function assertCanCreateWorkspace(userId: string): Promise<void> {
-    const { plan, limits } = await getUserPlan(userId);
+export async function assertCanCreateWorkspace(
+    userId: string,
+    options: Pick<UsageInjection, "isDeveloper" | "planDetails" | "workspaceCount"> = {},
+): Promise<void> {
+    const { plan, limits, isDeveloper } = await getUserPlan(userId, options);
+    if (isDeveloper) return;
 
-    const count = await countUserWorkspaces(userId);
-    if (count >= limits.WORKSPACES) {
+    const max = limits.WORKSPACES;
+    if (max === null) return;
+    const count = options.workspaceCount ?? (await countUserWorkspaces(userId));
+    if (count >= max) {
         const nextPlan = plan === "FREE" ? "Pro" : "Pro+";
         throw new ForbiddenError(
-            `${plan} plan limit reached: You can create a maximum of ${limits.WORKSPACES} workspace${limits.WORKSPACES > 1 ? "s" : ""} on the ${plan} plan. Upgrade to ${nextPlan} for more workspaces.`,
+            `${plan} plan limit reached: You can create a maximum of ${max} workspace${max > 1 ? "s" : ""} on the ${plan} plan. Upgrade to ${nextPlan} for more workspaces.`,
             {
                 code: "LIMIT_REACHED",
                 limitType: "workspaces",
                 current: count,
-                max: limits.WORKSPACES,
+                max,
                 plan,
             } satisfies LimitDetails & { code: string },
         );
