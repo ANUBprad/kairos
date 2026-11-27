@@ -118,6 +118,26 @@ interface DriveFilesPage {
   nextPageToken: string | null;
 }
 
+interface GithubRepo {
+  id: number;
+  name: string;
+  fullName: string;
+  owner: string;
+  htmlUrl: string;
+  description: string | null;
+  isPrivate: boolean;
+  defaultBranch: string;
+  language: string | null;
+  stargazersCount: number;
+  updatedAt: string;
+}
+
+interface GithubReposPage {
+  repos: GithubRepo[];
+  nextPage: number | null;
+  hasMore: boolean;
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
@@ -226,32 +246,23 @@ export function AddSourceDialog({
   const [githubSearch, setGithubSearch] = useState("");
   const [selectedGithubRepoUrl, setSelectedGithubRepoUrl] = useState<string | null>(null);
   const [isManualGithubUrl, setIsManualGithubUrl] = useState(false);
+  const debouncedGithubSearch = useDebouncedValue(githubSearch, 300);
 
-  const {
-    data: githubReposData,
-    isLoading: isLoadingGithubRepos,
-    refetch: refetchGithubRepos,
-    isFetching: isFetchingGithubRepos,
-  } = useQuery<{
-    repos: Array<{
-      id: number;
-      name: string;
-      fullName: string;
-      owner: string;
-      htmlUrl: string;
-      description: string | null;
-      isPrivate: boolean;
-      defaultBranch: string;
-      language: string | null;
-      stargazersCount: number;
-      updatedAt: string;
-    }>;
-  }>({
-    queryKey: ["github-repos", githubSearch],
-    queryFn: () =>
-      apiClient(`/api/integrations/github/repos?search=${encodeURIComponent(githubSearch)}`),
+  const githubReposQuery = useInfiniteQuery<GithubReposPage>({
+    queryKey: ["github-repos", debouncedGithubSearch],
+    queryFn: ({ pageParam, signal }) =>
+      apiClient<GithubReposPage>("/api/integrations/github/repos", {
+        params: {
+          search: debouncedGithubSearch || undefined,
+          page: typeof pageParam === "number" ? pageParam : undefined,
+        },
+        signal,
+      }),
+    initialPageParam: 1 as number,
+    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     enabled: isDialogOpen && activeTab === "github" && !!integrations?.github?.connected,
   });
+  const githubRepos = githubReposQuery.data?.pages.flatMap((page) => page.repos) ?? [];
 
   if (!isDialogOpen) return null;
 
@@ -993,7 +1004,7 @@ export function AddSourceDialog({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => refetchGithubRepos()}
+                        onClick={() => void githubReposQuery.refetch()}
                         aria-label="Refresh repositories"
                         title="Refresh repositories"
                         className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-brand motion-reduce:transition-none"
@@ -1001,7 +1012,8 @@ export function AddSourceDialog({
                         <RefreshCw
                           className={cn(
                             "size-3.5",
-                            isFetchingGithubRepos && "animate-spin motion-reduce:animate-none"
+                            githubReposQuery.isFetching &&
+                              "animate-spin motion-reduce:animate-none"
                           )}
                           aria-hidden="true"
                         />
@@ -1058,96 +1070,165 @@ export function AddSourceDialog({
                     />
                         <input
                           type="text"
+                          aria-label="Search GitHub repositories"
                           placeholder="Search your repositories..."
                           value={githubSearch}
-                          onChange={(e) => setGithubSearch(e.target.value)}
+                          onChange={(e) => {
+                            setGithubSearch(e.target.value);
+                            setSelectedGithubRepoUrl(null);
+                          }}
                           className={cn(FORM_CONTROL_CLASSNAME, "pl-8 pr-3")}
                         />
                       </div>
 
-                      <div className="kairos-inset max-h-56 divide-y divide-border overflow-y-auto">
-                        {isLoadingGithubRepos ? (
-                          <div className="p-6 text-center space-y-2">
-                            <ThemeLoader size={20} />
-                            <p className="text-xs text-muted-foreground">Loading your repositories...</p>
-                          </div>
-                        ) : githubReposData?.repos && githubReposData.repos.length > 0 ? (
-                          githubReposData.repos.map((repo) => {
-                            const isSelected = (selectedGithubRepoUrl || githubUrl) === repo.htmlUrl;
-                            return (
-                              <div
-                                key={repo.id}
-                                onClick={() => {
-                                  setSelectedGithubRepoUrl(repo.htmlUrl);
-                                  setGithubUrl(repo.htmlUrl);
-                                  if (!githubTitle) {
-                                    setGithubTitle(repo.name);
-                                  }
-                                }}
-                                className={cn(
-                                  "flex cursor-pointer items-center justify-between gap-3 p-2.5 text-xs transition-colors motion-reduce:transition-none",
-                                  isSelected
-                                    ? "border-l-2 border-l-brand bg-brand-soft font-medium text-brand"
-                                    : "hover:bg-brand-quiet text-foreground"
-                                )}
-                              >
-                                <div className="flex items-start gap-2.5 min-w-0">
-                                  <div className="mt-0.5 shrink-0 text-muted-foreground">
-                                    {repo.isPrivate ? (
-                                      <Lock className="size-3.5 text-warning" aria-hidden="true" />
-                                    ) : (
-                                      <GitFork className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                      {githubReposQuery.isFetching && !githubReposQuery.isLoading && (
+                        <p role="status" className="text-[11px] text-muted-foreground">
+                          Updating repositories…
+                        </p>
+                      )}
+
+                      {githubReposQuery.isError ? (
+                        <div role="alert" className="kairos-inset space-y-2 p-4 text-center">
+                          <AlertCircle className="mx-auto size-5 text-danger" aria-hidden="true" />
+                          <p className="text-xs font-medium text-foreground">
+                            Couldn&apos;t load GitHub repositories.
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {getErrorMessage(
+                              githubReposQuery.error,
+                              "The provider rejected the request.",
+                            )}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => void githubReposQuery.refetch()}
+                            className="mx-auto flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-brand-quiet motion-reduce:transition-none"
+                          >
+                            <RefreshCw className="size-3" aria-hidden="true" />
+                            Retry
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          role="listbox"
+                          aria-label="GitHub repositories"
+                          className="kairos-inset max-h-56 overflow-y-auto"
+                        >
+                          {githubReposQuery.isLoading ? (
+                            <div className="space-y-2 p-6 text-center" role="status">
+                              <ThemeLoader size={20} />
+                              <p className="text-xs text-muted-foreground">
+                                Loading your repositories...
+                              </p>
+                            </div>
+                          ) : githubRepos.length > 0 ? (
+                            <>
+                              {githubRepos.map((repo) => {
+                                const isSelected =
+                                  (selectedGithubRepoUrl || githubUrl) === repo.htmlUrl;
+                                return (
+                                  <button
+                                    key={repo.id}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    onClick={() => {
+                                      setSelectedGithubRepoUrl(repo.htmlUrl);
+                                      setGithubUrl(repo.htmlUrl);
+                                      if (!githubTitle) {
+                                        setGithubTitle(repo.name);
+                                      }
+                                    }}
+                                    className={cn(
+                                      "flex w-full cursor-pointer items-center justify-between gap-3 border-b border-border p-2.5 text-left text-xs transition-colors last:border-b-0 motion-reduce:transition-none",
+                                      isSelected
+                                        ? "bg-brand-soft font-medium text-brand"
+                                        : "hover:bg-brand-quiet text-foreground",
                                     )}
-                                  </div>
-                                  <div className="min-w-0 space-y-0.5">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-semibold truncate">{repo.fullName}</span>
-                                      <span
-                                        className={cn(
-                                          "text-[9px] px-1.5 py-0.2 rounded border font-mono",
-                                          repo.isPrivate
-                                            ? "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10"
-                                            : "border-border text-muted-foreground bg-muted/50"
+                                  >
+                                    <span className="flex min-w-0 items-start gap-2.5">
+                                      <span className="mt-0.5 shrink-0 text-muted-foreground">
+                                        {repo.isPrivate ? (
+                                          <Lock
+                                            className="size-3.5 text-warning"
+                                            aria-hidden="true"
+                                          />
+                                        ) : (
+                                          <GitFork
+                                            className="size-3.5 text-muted-foreground"
+                                            aria-hidden="true"
+                                          />
                                         )}
-                                      >
-                                        {repo.isPrivate ? "Private" : "Public"}
                                       </span>
-                                      {repo.language && (
-                                        <span className="text-[10px] text-muted-foreground font-mono">
-                                          {repo.language}
+                                      <span className="min-w-0 space-y-0.5">
+                                        <span className="flex flex-wrap items-center gap-2">
+                                          <span className="truncate font-semibold">
+                                            {repo.fullName}
+                                          </span>
+                                          <span
+                                            className={cn(
+                                              "rounded border px-1.5 py-0.2 font-mono text-[9px]",
+                                              repo.isPrivate
+                                                ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                                : "border-border bg-muted/50 text-muted-foreground",
+                                            )}
+                                          >
+                                            {repo.isPrivate ? "Private" : "Public"}
+                                          </span>
+                                          {repo.language && (
+                                            <span className="font-mono text-[10px] text-muted-foreground">
+                                              {repo.language}
+                                            </span>
+                                          )}
+                                        </span>
+                                        {repo.description && (
+                                          <span className="line-clamp-1 text-[11px] text-muted-foreground">
+                                            {repo.description}
+                                          </span>
+                                        )}
+                                      </span>
+                                    </span>
+                                    <span className="flex shrink-0 items-center gap-2">
+                                      {repo.stargazersCount > 0 && (
+                                        <span className="flex items-center gap-0.5 font-mono text-[10px] text-muted-foreground">
+                                          <Star className="size-2.5 fill-amber-400 text-amber-400" />
+                                          {repo.stargazersCount}
                                         </span>
                                       )}
-                                    </div>
-                                    {repo.description && (
-                                      <p className="text-[11px] text-muted-foreground line-clamp-1">
-                                        {repo.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {repo.stargazersCount > 0 && (
-                                    <span className="flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground">
-                                      <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                                      {repo.stargazersCount}
+                                      {isSelected && (
+                                        <Check className="size-4 text-success" aria-hidden="true" />
+                                      )}
                                     </span>
-                                  )}
-                                  {isSelected && <Check className="size-4 text-success" aria-hidden="true" />}
+                                  </button>
+                                );
+                              })}
+                              {githubReposQuery.hasNextPage && (
+                                <div className="border-t border-border p-2 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => void githubReposQuery.fetchNextPage()}
+                                    disabled={githubReposQuery.isFetchingNextPage}
+                                    className="cursor-pointer rounded-lg px-3 py-1.5 text-[11px] font-medium text-brand transition-colors hover:bg-brand-quiet disabled:opacity-50 motion-reduce:transition-none"
+                                  >
+                                    {githubReposQuery.isFetchingNextPage
+                                      ? "Loading more…"
+                                      : "Load more repositories"}
+                                  </button>
                                 </div>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className="p-6 text-center text-xs text-muted-foreground space-y-1">
-                            <p className="font-medium text-foreground">No repositories found</p>
-                            <p className="text-[11px]">
-                              {githubSearch
-                                ? "No repos match your search term."
-                                : "No repositories were found in your GitHub account."}
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="space-y-1 p-6 text-center text-xs text-muted-foreground">
+                              <p className="font-medium text-foreground">No repositories found</p>
+                              <p className="text-[11px]">
+                                {debouncedGithubSearch
+                                  ? `No repos match “${debouncedGithubSearch}”.`
+                                  : "No repositories were found in your GitHub account."}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Title input when a repo is selected */}
                       <div>

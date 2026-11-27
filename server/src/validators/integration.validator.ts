@@ -28,6 +28,12 @@ export const importGithubRepoSchema = z.object({
     title: z.string().trim().max(200).optional(),
 });
 
+export const listGithubReposQuerySchema = z.object({
+    search: z.string().trim().max(200, "Search is too long").optional(),
+    page: z.coerce.number().int().min(1).max(10000).optional(),
+    perPage: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 export const exportNotionSchema = z.object({
     parentPageId: z.string().trim().regex(PROVIDER_ID, "Invalid Notion page ID").optional(),
 });
@@ -41,4 +47,5 @@ export type ImportDriveFileInput = z.infer<typeof importDriveFileSchema>;
 export type ListDriveFilesQuery = z.infer<typeof listDriveFilesQuerySchema>;
 export type ImportNotionPageInput = z.infer<typeof importNotionPageSchema>;
 export type ImportGithubRepoInput = z.infer<typeof importGithubRepoSchema>;
+export type ListGithubReposQuery = z.infer<typeof listGithubReposQuerySchema>;
 export type ExportNotionInput = z.infer<typeof exportNotionSchema>;

@@ -58,6 +58,7 @@ import {
     importNotionPageSchema,
     importGithubRepoSchema,
     listDriveFilesQuerySchema,
+    listGithubReposQuerySchema,
 } from "../validators/integration.validator.js";
 import { getZodFieldErrors } from "../utils/zod-error.js";
 import { workspaceIdParamSchema } from "../validators/workspace.validator.js";
@@ -385,12 +386,14 @@ export async function githubCallback(req: Request, res: Response) {
             provider: "GITHUB",
         });
 
-        const { code, error, error_description } = req.query;
-        if (typeof error === "string") {
+        const { code, error } = req.query;
+        if (typeof error === "string" && error.trim()) {
+            // Never reflect provider-supplied error_description: it can contain
+            // account details and is not needed for a safe retry message.
             const message =
-                typeof error_description === "string"
-                    ? error_description.slice(0, 200)
-                    : "GitHub authorization was cancelled or denied.";
+                error.trim() === "access_denied"
+                    ? "GitHub authorization was cancelled or denied."
+                    : "GitHub authorization failed. Please try again.";
             redirectClearingState(
                 res,
                 "GITHUB",
@@ -401,19 +404,20 @@ export async function githubCallback(req: Request, res: Response) {
             return;
         }
 
-        if (typeof code !== "string" || !code.trim()) {
+        const trimmedCode = typeof code === "string" ? code.trim() : "";
+        if (!/^[A-Za-z0-9_-]{1,200}$/.test(trimmedCode)) {
             redirectClearingState(
                 res,
                 "GITHUB",
                 getGithubCallbackRedirect(verified.returnTo, {
-                    github_error: "Missing GitHub authorization code.",
+                    github_error: "Missing or invalid GitHub authorization code.",
                 }),
             );
             return;
         }
 
         try {
-            await handleGithubCallback({ code: code.trim(), userId: verified.userId });
+            await handleGithubCallback({ code: trimmedCode, userId: verified.userId });
         } catch (callbackError) {
             logger.warn("GitHub integration callback failed", {
                 reason:
@@ -473,10 +477,17 @@ export async function importGithub(req: Request, res: Response) {
  * Handles HTTP GET request to list repositories for the connected GitHub account.
  */
 export async function listGithubRepos(req: Request, res: Response) {
-    const { search } = req.query;
-    const data = await listUserGithubRepos(
-        req.session.user.id,
-        search ? String(search) : undefined,
-    );
+    const parsed = listGithubReposQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        throw new ValidationError(
+            "Invalid GitHub repository query",
+            getZodFieldErrors(parsed.error),
+        );
+    }
+    const data = await listUserGithubRepos(req.session.user.id, {
+        search: parsed.data.search,
+        page: parsed.data.page,
+        perPage: parsed.data.perPage,
+    });
     res.json(data);
 }
