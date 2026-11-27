@@ -27,6 +27,13 @@ const round3Migration = readFileSync(
   ),
   "utf8",
 );
+const dailyCreditsMigration = readFileSync(
+  new URL(
+    "../../prisma/migrations/20261127170000_daily_credit_allowance/migration.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 describe("schema and migration parity", () => {
   it("declares the credit ledger idempotency key in schema and migration", () => {
@@ -94,5 +101,17 @@ describe("schema and migration parity", () => {
     assert.doesNotMatch(round3Migration, /\bDELETE\s+/i);
     assert.doesNotMatch(round3Migration, /\bDROP\s+COLUMN/i);
     assert.match(round3Migration, /no historical rows are rewritten/i);
+  });
+
+  it("adds the daily allowance as additive-only schema", () => {
+    assert.match(schema, /dailyCreditDay\s+String\s+@default\("1970-01-01"\)/);
+    assert.match(schema, /dailyCredits\s+Int\s+@default\(100\)/);
+    assert.match(schema, /DAILY_ALLOWANCE/);
+    assert.match(dailyCreditsMigration, /ADD COLUMN IF NOT EXISTS "dailyCreditDay"/);
+    assert.match(dailyCreditsMigration, /ADD COLUMN IF NOT EXISTS "dailyCredits"/);
+    assert.match(dailyCreditsMigration, /ADD VALUE IF NOT EXISTS 'DAILY_ALLOWANCE'/);
+    assert.doesNotMatch(dailyCreditsMigration, /\bUPDATE\s+/i);
+    assert.doesNotMatch(dailyCreditsMigration, /\bDELETE\s+/i);
+    assert.doesNotMatch(dailyCreditsMigration, /\bDROP\s+COLUMN/i);
   });
 });

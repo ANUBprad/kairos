@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  Calendar,
   Coins,
   History,
   Plus,
@@ -12,7 +11,6 @@ import {
   MessageSquare,
   BookOpen,
   Headphones,
-  CheckCircle2,
   ArrowDownLeft,
   ArrowUpRight,
 } from "lucide-react";
@@ -22,7 +20,7 @@ import { ThemeLoader } from "@/components/ui/theme-loader";
 import { cn } from "@/lib/utils";
 import { useUsage } from "../hooks/use-usage";
 import { useUpgradeModal } from "../stores/use-upgrade-modal";
-import { CREDIT_COSTS, formatInr } from "../lib/plans";
+import { CREDIT_COSTS } from "../lib/plans";
 import { PricingPlans } from "./pricing-plans";
 
 type BillingSettingsViewProps = {
@@ -44,10 +42,28 @@ function formatDate(iso: string) {
   }
 }
 
+/** Formats the server-provided UTC reset instant without using local time. */
+function formatUtcReset(iso: string) {
+  if (!iso) return "Not available";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return `${date.toISOString().slice(0, 10)} at ${date.toISOString().slice(11, 16)} UTC`;
+}
+
 export function BillingSettingsView({
   workspaceId,
 }: BillingSettingsViewProps = {}) {
-  const { credits, creditHistory, isLoading, isError } = useUsage();
+  const {
+    credits,
+    dailyCredits,
+    paidCredits,
+    dailyAllowance,
+    nextDailyResetAt,
+    creditHistory,
+    isLoading,
+    isError,
+    refetch,
+  } = useUsage();
   const { openUpgradeModal } = useUpgradeModal();
 
   const backHref = workspaceId ? `/workspace/${workspaceId}` : "/dashboard";
@@ -66,7 +82,16 @@ export function BillingSettingsView({
         role="alert"
         className="kairos-panel border-danger/25 bg-danger/5 p-6 text-center text-sm text-danger"
       >
-        We couldn&apos;t load your credit details. Please refresh the page.
+        <p>We couldn&apos;t load your credit details.</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          onClick={() => void refetch()}
+        >
+          Retry
+        </Button>
       </div>
     );
   }
@@ -101,23 +126,45 @@ export function BillingSettingsView({
                 className="kairos-tag gap-1.5 border-brand/30 bg-brand-quiet px-3 py-1 text-brand"
               >
                 <Coins className="size-3.5 text-primary" />
-                Available balance
+                Daily free allowance
               </Badge>
-              <span className="kairos-eyebrow">Pay as you go</span>
+              <span className="kairos-eyebrow">Resets at 00:00 UTC</span>
             </div>
 
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="kairos-display text-5xl text-foreground sm:text-6xl">
-                {credits.toLocaleString("en-IN")}
+                {dailyCredits.toLocaleString("en-IN")}
+                <span className="text-3xl text-muted-foreground">
+                  {" / "}
+                  {dailyAllowance.toLocaleString("en-IN")}
+                </span>
               </span>
               <span className="text-base font-medium text-muted-foreground">
-                credits
+                daily credits left
               </span>
             </div>
 
+            <dl className="grid gap-2 text-sm sm:grid-cols-2">
+              <div className="rounded-xl border border-border bg-surface/70 px-3 py-2">
+                <dt className="text-xs text-muted-foreground">Paid balance</dt>
+                <dd className="font-semibold text-foreground">
+                  {paidCredits.toLocaleString("en-IN")} credits
+                </dd>
+              </div>
+              <div className="rounded-xl border border-border bg-surface/70 px-3 py-2">
+                <dt className="text-xs text-muted-foreground">Total available</dt>
+                <dd className="font-semibold text-foreground">
+                  {credits.toLocaleString("en-IN")} credits
+                </dd>
+              </div>
+            </dl>
+
             <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-              New accounts start with welcome credits. Top-ups begin at ₹50, and
-              your credits never expire.
+              Daily credits reset at{" "}
+              <time dateTime={nextDailyResetAt} className="font-medium text-foreground">
+                {formatUtcReset(nextDailyResetAt)}
+              </time>
+              . Paid credits never expire. Daily credits are spent first.
             </p>
           </div>
 
@@ -153,50 +200,66 @@ export function BillingSettingsView({
             </h2>
           </div>
 
-          <div className="space-y-3 text-xs">
+          <dl className="space-y-3 text-xs">
             <div className="flex items-center justify-between border-b border-border pb-2">
-              <span className="flex items-center gap-2 text-muted-foreground">
+              <dt className="flex items-center gap-2 text-muted-foreground">
                 <Upload className="size-3.5 text-primary" />
                 Source upload
-              </span>
-              <strong className="font-semibold text-foreground">
-                {CREDIT_COSTS.SOURCE_UPLOAD} credits
-              </strong>
+              </dt>
+              <dd className="font-semibold text-foreground">
+                {CREDIT_COSTS.SOURCE_UPLOAD} credit
+              </dd>
             </div>
 
             <div className="flex items-center justify-between border-b border-border pb-2">
-              <span className="flex items-center gap-2 text-muted-foreground">
+              <dt className="flex items-center gap-2 text-muted-foreground">
                 <MessageSquare className="size-3.5 text-primary" />
                 Chat query
-              </span>
-              <strong className="font-semibold text-foreground">
+              </dt>
+              <dd className="font-semibold text-foreground">
                 {CREDIT_COSTS.CHAT_MESSAGE} credit
-              </strong>
+              </dd>
             </div>
 
             <div className="flex items-center justify-between border-b border-border pb-2">
-              <span className="flex items-center gap-2 text-muted-foreground">
+              <dt className="flex items-center gap-2 text-muted-foreground">
                 <BookOpen className="size-3.5 text-primary" />
-                Study artifact
-              </span>
-              <strong className="font-semibold text-foreground">
+                Standard artifact
+              </dt>
+              <dd className="font-semibold text-foreground">
                 {CREDIT_COSTS.ARTIFACT_GENERATE} credits
-              </strong>
+              </dd>
+            </div>
+
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <dt className="flex items-center gap-2 text-muted-foreground">
+                <Sparkles className="size-3.5 text-primary" />
+                Mind map, diagram or report
+              </dt>
+              <dd className="font-semibold text-foreground">
+                {CREDIT_COSTS.ARTIFACT_COMPUTE} credits
+              </dd>
+            </div>
+
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <dt className="flex items-center gap-2 text-muted-foreground">
+                <Headphones className="size-3.5 text-primary" />
+                Audio debate podcast
+              </dt>
+              <dd className="font-semibold text-foreground">
+                {CREDIT_COSTS.AUDIO_DEBATE} credits
+              </dd>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <Headphones className="size-3.5 text-primary" />
-                Audio debate
-              </span>
-              <strong className="font-semibold text-foreground">
-                {CREDIT_COSTS.AUDIO_DEBATE} credits
-              </strong>
+              <dt className="text-muted-foreground">Search, browsing &amp; connecting sources</dt>
+              <dd className="font-semibold text-success">Free</dd>
             </div>
-          </div>
+          </dl>
 
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Failed generations are refunded in full.
+            Daily credits are used before paid credits. Failed generations are
+            refunded to their original buckets.
           </p>
         </section>
       </div>
@@ -229,17 +292,21 @@ export function BillingSettingsView({
 
         {creditHistory.length === 0 ? (
           <div className="kairos-panel border-dashed p-10 text-center text-sm text-muted-foreground">
-            No transactions yet. Welcome credits are added when your account is
-            created.
+            No transactions yet. Your 100 daily credits become available the
+            first time Kairos checks your balance.
           </div>
         ) : (
           <div className="kairos-panel overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[42rem] text-left text-xs">
+              <table
+                className="w-full min-w-[48rem] text-left text-xs"
+                aria-label="Credit transaction history"
+              >
                 <thead className="border-b border-border bg-brand-quiet font-medium text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-4 py-2.5">Date</th>
                     <th scope="col" className="px-4 py-2.5">Type</th>
+                    <th scope="col" className="px-4 py-2.5">Bucket</th>
                     <th scope="col" className="px-4 py-2.5">Description</th>
                     <th scope="col" className="px-4 py-2.5 text-right">Amount</th>
                     <th scope="col" className="px-4 py-2.5 text-right">
@@ -273,6 +340,11 @@ export function BillingSettingsView({
                               <ArrowUpRight className="size-3" />
                             )}
                             {tx.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            {tx.bucket ?? "PAID"}
                           </span>
                         </td>
                         <td className="max-w-xs truncate px-4 py-2.5 text-foreground">

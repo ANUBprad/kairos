@@ -27,6 +27,7 @@ enum CreditTransactionType {
   ARTIFACT_GENERATE
   AUDIO_DEBATE
   REFUND
+  DAILY_ALLOWANCE
 }
 
 model User {
@@ -35,7 +36,13 @@ model User {
   email                 String
   emailVerified         Boolean             @default(false)
   image                 String?
+  /// Purchased/promotional credits. These never expire and are never reset
+  /// by the daily free allowance.
   credits               Int                 @default(0)
+  /// UTC YYYY-MM-DD day that the current daily free allowance belongs to.
+  dailyCreditDay        String              @default("1970-01-01")
+  /// Remaining credits in the current UTC daily free allowance.
+  dailyCredits          Int                 @default(100)
   plan                  PlanType            @default(FREE)
   planExpiresAt         DateTime?
   totalArtifactsCreated Int                 @default(0)
@@ -54,18 +61,26 @@ model User {
 }
 
 model CreditTransaction {
-  id             String                @id @default(cuid())
-  userId         String
-  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount         Int                   // positive for purchases/refunds, negative for deductions
-  balanceAfter   Int
-  type           CreditTransactionType
-  description    String
-  metadata       Json?
-  idempotencyKey String?               @unique
-  createdAt      DateTime              @default(now())
+  id               String                @id @default(cuid())
+  userId           String
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount           Int                   // positive for purchases/refunds, negative for deductions
+  balanceAfter     Int
+  type             CreditTransactionType
+  description      String
+  /// Which bucket(s) this entry changed: DAILY, PAID or MIXED. Historical rows
+  /// have NULL and are treated as PAID.
+  bucket           String?
+  dailyAmount      Int                   @default(0)
+  paidAmount       Int                   @default(0)
+  balanceAfterDaily Int?
+  balanceAfterPaid Int?
+  metadata         Json?
+  idempotencyKey   String?               @unique
+  createdAt        DateTime              @default(now())
 
   @@index([userId, createdAt])
+  @@index([userId, bucket, createdAt])
   @@map("credit_transaction")
 }
 

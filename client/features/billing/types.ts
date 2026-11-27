@@ -13,7 +13,10 @@ export type CreditTransactionType =
   | "CHAT_MESSAGE"
   | "ARTIFACT_GENERATE"
   | "AUDIO_DEBATE"
-  | "REFUND";
+  | "REFUND"
+  | "DAILY_ALLOWANCE";
+
+export type CreditBucket = "DAILY" | "PAID" | "MIXED";
 
 export interface CreditTransaction {
   id: string;
@@ -22,12 +25,27 @@ export interface CreditTransaction {
   balanceAfter: number;
   type: CreditTransactionType;
   description: string;
+  bucket?: CreditBucket | null;
+  dailyAmount?: number;
+  paidAmount?: number;
+  balanceAfterDaily?: number | null;
+  balanceAfterPaid?: number | null;
   metadata?: Record<string, unknown>;
   createdAt: string;
 }
 
-export interface CreditBalance {
+export interface CreditSnapshot {
+  /** Backward-compatible total: daily + paid. */
   credits: number;
+  dailyCredits: number;
+  paidCredits: number;
+  dailyAllowance: number;
+  dailyCreditDay: string;
+  nextDailyResetAt: string;
+  serverTime: string;
+}
+
+export interface CreditBalance extends CreditSnapshot {
   history: CreditTransaction[];
 }
 
@@ -40,8 +58,7 @@ export interface CreditPack {
   isPopular?: boolean;
 }
 
-export interface UserUsage {
-  credits: number;
+export interface UserUsage extends CreditSnapshot {
   creditHistory?: CreditTransaction[];
   /** Effective plan for limits (FREE if subscription expired). */
   plan: PlanType;

@@ -44,7 +44,7 @@ export function ChatInput({
   );
   const [isEnhancing, setIsEnhancing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { credits } = useUsage();
+  const { credits, dailyCredits, paidCredits, nextDailyResetAt } = useUsage();
   const { openUpgradeModal } = useUpgradeModal();
   const currentModel = useChatPreferences(
     (state) => state.getPrefs(workspaceId, defaultModel).model,
@@ -67,7 +67,9 @@ export function ChatInput({
 
     if (isOutOfCredits) {
       openUpgradeModal({
-        reason: "You need at least 1 credit to send a chat message. Please top up your balance.",
+        reason: nextDailyResetAt
+          ? `You need at least 1 credit to send a chat message. Daily credits reset at ${nextDailyResetAt.slice(0, 10)} ${nextDailyResetAt.slice(11, 16)} UTC; top-ups never expire.`
+          : "You need at least 1 credit to send a chat message. Please top up your balance.",
         limitType: "credits",
         requiredCredits: 1,
         currentCredits: credits,
@@ -145,7 +147,8 @@ export function ChatInput({
           <div className="flex min-w-0 items-center gap-1.5">
             <Zap className="size-3.5 shrink-0 text-warning" aria-hidden="true" />
             <span className="truncate">
-              You have 0 credits remaining. Chats cost 1 credit each.
+              No credits left ({dailyCredits} daily, {paidCredits} paid). Chats
+              cost 1 credit; daily credits reset at 00:00 UTC.
             </span>
           </div>
           <Button
@@ -154,7 +157,7 @@ export function ChatInput({
             variant="default"
             onClick={() =>
               openUpgradeModal({
-                reason: "You need credits to send chat messages. Top up your balance to continue.",
+                reason: `You need credits to send chat messages. Daily credits reset at 00:00 UTC; top-ups never expire.`,
                 limitType: "credits",
                 requiredCredits: 1,
                 currentCredits: credits,

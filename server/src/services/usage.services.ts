@@ -11,7 +11,7 @@ import {
     CREDIT_COSTS,
     deductCredits,
     getCreditHistory,
-    getUserCredits,
+    getCreditSnapshot,
 } from "./credit.services.js";
 import { ForbiddenError } from "../types/app-error.js";
 import type { PlanType, Prisma } from "../generated/prisma/client.js";
@@ -267,20 +267,20 @@ export async function getUserUsage(userId: string) {
         limits,
     } = await getUserPlan(userId);
 
-    const [workspaceCount, sourceCount, userArtifacts, messageCount, credits, creditHistory] =
+    const [workspaceCount, sourceCount, userArtifacts, messageCount, creditSnapshot, creditHistory] =
         await Promise.all([
             countUserWorkspaces(userId),
             countUserSources(userId),
             findUserTotalArtifacts(userId),
             countUserMessages(userId),
-            getUserCredits(userId),
+            getCreditSnapshot(userId),
             getCreditHistory(userId, 50),
         ]);
 
     const totalArtifactsCreated = userArtifacts?.totalArtifactsCreated ?? 0;
 
     return {
-        credits,
+        ...creditSnapshot,
         creditHistory,
         plan,
         subscriptionPlan,
@@ -359,18 +359,29 @@ export async function chargeForSource(userId: string, sourceId: string) {
     });
 }
 
+const COMPUTE_HEAVY_ARTIFACTS = new Set(["MINDMAP", "DIAGRAM", "REPORT"]);
+
 /** Returns the authoritative credit cost and ledger type for an artifact. */
 export function getArtifactCharge(artifactType?: string) {
-    const isPodcast = artifactType === "PODCAST";
+    if (artifactType === "PODCAST") {
+        return {
+            cost: CREDIT_COSTS.AUDIO_DEBATE,
+            type: "AUDIO_DEBATE" as const,
+            description: "Generated an Audio Debate Podcast",
+        };
+    }
+    if (artifactType && COMPUTE_HEAVY_ARTIFACTS.has(artifactType)) {
+        return {
+            cost: CREDIT_COSTS.ARTIFACT_COMPUTE,
+            type: "ARTIFACT_GENERATE" as const,
+            description: `Generated ${artifactType} artifact`,
+        };
+    }
     return {
-        cost: isPodcast
-            ? CREDIT_COSTS.AUDIO_DEBATE
-            : CREDIT_COSTS.ARTIFACT_GENERATE,
-        type: isPodcast ? "AUDIO_DEBATE" : "ARTIFACT_GENERATE",
-        description: isPodcast
-            ? "Generated an Audio Debate Podcast"
-            : `Generated ${artifactType || "study"} artifact`,
-    } as const;
+        cost: CREDIT_COSTS.ARTIFACT_GENERATE,
+        type: "ARTIFACT_GENERATE" as const,
+        description: `Generated ${artifactType || "study"} artifact`,
+    };
 }
 
 /** Checks the artifact credit balance without charging. */

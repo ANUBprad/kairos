@@ -24,7 +24,11 @@ import {
 } from "@/components/ui/animated-icons";
 import { ThemeLoader } from "@/components/ui/theme-loader";
 import { MovingBorderCard } from "@/components/ui/moving-border";
-import { useUpgradeModal, useUsage } from "@/features/billing";
+import {
+  getArtifactCreditCost,
+  useUpgradeModal,
+  useUsage,
+} from "@/features/billing";
 import { cn, formatDate } from "@/lib/utils";
 
 interface StudioPanelProps {
@@ -150,16 +154,16 @@ export function StudioPanel({
   retryingArtifactId,
   selectedSourcesCount,
 }: StudioPanelProps) {
-  const { credits } = useUsage();
+  const { credits, dailyCredits, paidCredits, nextDailyResetAt } = useUsage();
   const [selectedArtifact, setSelectedArtifact] = useState<LearningArtifact | null>(null);
   const [generatingType, setGeneratingType] = useState<ArtifactType | null>(null);
   const [hoveredTool, setHoveredTool] = useState<ArtifactType | null>(null);
 
   const handleCreate = async (type: ArtifactType) => {
-    const requiredCredits = type === "PODCAST" ? 50 : 10;
+    const requiredCredits = getArtifactCreditCost(type);
     if (credits < requiredCredits) {
       useUpgradeModal.getState().openUpgradeModal({
-        reason: `${type === "PODCAST" ? "Audio Debate Podcast" : "Artifact generation"} requires ${requiredCredits} credits. Please top up your balance.`,
+        reason: `${type === "PODCAST" ? "Audio Debate Podcast" : "Artifact generation"} requires ${requiredCredits} credits. You have ${dailyCredits} daily and ${paidCredits} paid credits left. Daily credits reset ${nextDailyResetAt ? `at ${nextDailyResetAt.slice(0, 10)} ${nextDailyResetAt.slice(11, 16)} UTC` : "at 00:00 UTC"}.`,
         limitType: "credits",
         requiredCredits,
         currentCredits: credits,
@@ -277,7 +281,7 @@ export function StudioPanel({
           <div className="grid grid-cols-2 gap-2">
             {STUDIO_TOOLS.map((tool) => {
               const isThisGenerating = generatingType === tool.type;
-              const requiredCost = tool.type === "PODCAST" ? 50 : 10;
+              const requiredCost = getArtifactCreditCost(tool.type);
               const hasInsufficientCredits = credits < requiredCost;
 
               const cardContent = (

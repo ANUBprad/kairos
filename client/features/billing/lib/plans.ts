@@ -3,11 +3,23 @@ import type { CreditPack, PlanType } from "../types";
 export type BillingInterval = "monthly" | "yearly";
 
 export const CREDIT_COSTS = {
-  SOURCE_UPLOAD: 5,
+  SOURCE_UPLOAD: 1,
   CHAT_MESSAGE: 1,
-  ARTIFACT_GENERATE: 10,
-  AUDIO_DEBATE: 50,
+  ARTIFACT_GENERATE: 3,
+  ARTIFACT_COMPUTE: 5,
+  AUDIO_DEBATE: 10,
 } as const;
+
+const COMPUTE_HEAVY_ARTIFACTS = new Set(["MINDMAP", "DIAGRAM", "REPORT"]);
+
+/** Mirrors the server-owned artifact pricing table for pre-action UI labels. */
+export function getArtifactCreditCost(artifactType: string): number {
+  if (artifactType === "PODCAST") return CREDIT_COSTS.AUDIO_DEBATE;
+  if (COMPUTE_HEAVY_ARTIFACTS.has(artifactType)) {
+    return CREDIT_COSTS.ARTIFACT_COMPUTE;
+  }
+  return CREDIT_COSTS.ARTIFACT_GENERATE;
+}
 
 export const CREDIT_PACKS: CreditPack[] = [
   {
@@ -69,14 +81,15 @@ export const PRICING_PLANS: PricingPlanConfig[] = [
   {
     id: "FREE",
     name: "Free",
-    description: "50 welcome credits to explore Kairos.",
+    description: "100 free credits every day, resetting at 00:00 UTC.",
     monthlyPriceInr: 0,
     yearlyPriceInr: 0,
     features: [
-      "50 Starter credits included",
-      "5 credits per source upload",
-      "1 credit per chat prompt",
-      "10 credits per study artifact",
+      "100 daily free credits",
+      "1 credit per source upload or chat prompt",
+      "3 credits per standard artifact",
+      "5 credits for compute-heavy artifacts",
+      "10 credits per audio debate podcast",
     ],
   },
   {
@@ -89,7 +102,7 @@ export const PRICING_PLANS: PricingPlanConfig[] = [
     features: [
       "Minimum purchase: ₹50 for 100 credits",
       "Up to 30% bonus on higher packs",
-      "Audio Debate Podcasts (50 credits)",
+      "Audio Debate Podcasts (10 credits)",
       "Zero recurring monthly fees",
     ],
   },

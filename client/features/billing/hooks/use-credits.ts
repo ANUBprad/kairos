@@ -15,12 +15,15 @@ export function useCredits() {
       return await apiClient<CreditBalance>("/api/user/credits");
     },
     enabled: !!session?.user,
-    staleTime: 1000 * 15, // 15 seconds
+    staleTime: 1000 * 15,
     refetchOnWindowFocus: true,
   });
 
-  const credits = query.data?.credits ?? 0;
-  const history = query.data?.history ?? [];
+  const snapshot = query.data;
+  const credits = snapshot?.credits ?? 0;
+  const dailyCredits = snapshot?.dailyCredits ?? 0;
+  const paidCredits = snapshot?.paidCredits ?? 0;
+  const history = snapshot?.history ?? [];
 
   const hasEnoughCredits = (cost: number) => credits >= cost;
 
@@ -31,12 +34,18 @@ export function useCredits() {
 
   return {
     credits,
+    dailyCredits,
+    paidCredits,
+    dailyAllowance: snapshot?.dailyAllowance ?? 100,
+    dailyCreditDay: snapshot?.dailyCreditDay ?? "",
+    nextDailyResetAt: snapshot?.nextDailyResetAt ?? "",
+    serverTime: snapshot?.serverTime ?? "",
     history,
     hasEnoughCredits,
     isLoading: query.isLoading,
     isError: query.isError,
+    error: query.error,
     refetch: query.refetch,
     invalidateCredits,
   };
 }
-

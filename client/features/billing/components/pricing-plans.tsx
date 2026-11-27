@@ -30,7 +30,7 @@ export function PricingPlans({
   onCheckoutSuccess,
 }: PricingPlansProps) {
   const { data: session } = useSession();
-  const { credits } = useUsage();
+  const { credits, dailyCredits, dailyAllowance, paidCredits } = useUsage();
   const { checkout, isLoading, error } = useRazorpayCheckout();
 
   const [selectedPackId, setSelectedPackId] = useState<string>("learner");
@@ -41,10 +41,6 @@ export function PricingPlans({
   const isAuthenticated = !!session?.user;
 
   const currentPack = CREDIT_PACKS.find((p) => p.id === selectedPackId);
-  const effectiveAmount = isCustom ? customAmount : (currentPack?.amountInr ?? 100);
-  const effectiveCredits = isCustom
-    ? calculateCreditsForInr(customAmount)
-    : (currentPack?.credits ?? 220);
 
   const handleBuy = (amount: number) => {
     if (!isAuthenticated) {
@@ -92,17 +88,22 @@ export function PricingPlans({
             Pay for the research you do.
           </h2>
           <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Every new account starts with 50 welcome credits. Top up with a pack or
-            a custom amount — credits never expire, and there is no recurring
-            subscription.
+            Every account gets 100 free credits each day, resetting at 00:00 UTC.
+            Top-ups never expire, and there is no recurring subscription.
           </p>
 
           {isAuthenticated && (
-            <div className="kairos-tag mx-auto w-fit border-brand/30 bg-brand-quiet text-brand">
-              <span>Your current balance</span>
+            <div className="kairos-tag mx-auto w-fit flex-wrap justify-center border-brand/30 bg-brand-quiet text-brand">
+              <span>
+                {dailyCredits.toLocaleString("en-IN")} /{" "}
+                {dailyAllowance.toLocaleString("en-IN")} daily credits
+              </span>
+              <span aria-hidden="true">·</span>
               <strong className="font-semibold text-primary">
-                {credits.toLocaleString("en-IN")} credits
+                {paidCredits.toLocaleString("en-IN")} paid credits
               </strong>
+              <span aria-hidden="true">·</span>
+              <span>{credits.toLocaleString("en-IN")} total</span>
             </div>
           )}
         </header>
@@ -117,22 +118,22 @@ export function PricingPlans({
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <div className="kairos-panel space-y-1.5 p-4 text-center">
             <div className="kairos-inset mx-auto flex size-9 items-center justify-center text-primary">
-              <Upload className="size-4" />
+              <Upload className="size-4" aria-hidden="true" />
             </div>
             <p className="text-xs text-muted-foreground">Source upload</p>
             <p className="text-base font-semibold text-foreground">
               {CREDIT_COSTS.SOURCE_UPLOAD}{" "}
-              <span className="text-xs font-normal text-muted-foreground">credits</span>
+              <span className="text-xs font-normal text-muted-foreground">credit</span>
             </p>
             <p className="text-[11px] text-muted-foreground/80">PDF, web, video</p>
           </div>
 
           <div className="kairos-panel space-y-1.5 p-4 text-center">
             <div className="kairos-inset mx-auto flex size-9 items-center justify-center text-primary">
-              <MessageSquare className="size-4" />
+              <MessageSquare className="size-4" aria-hidden="true" />
             </div>
             <p className="text-xs text-muted-foreground">Chat query</p>
             <p className="text-base font-semibold text-foreground">
@@ -144,19 +145,31 @@ export function PricingPlans({
 
           <div className="kairos-panel space-y-1.5 p-4 text-center">
             <div className="kairos-inset mx-auto flex size-9 items-center justify-center text-primary">
-              <BookOpen className="size-4" />
+              <BookOpen className="size-4" aria-hidden="true" />
             </div>
-            <p className="text-xs text-muted-foreground">Study artifact</p>
+            <p className="text-xs text-muted-foreground">Standard artifact</p>
             <p className="text-base font-semibold text-foreground">
               {CREDIT_COSTS.ARTIFACT_GENERATE}{" "}
               <span className="text-xs font-normal text-muted-foreground">credits</span>
             </p>
-            <p className="text-[11px] text-muted-foreground/80">Quiz, flashcard, mindmap</p>
+            <p className="text-[11px] text-muted-foreground/80">Quiz, flashcard, summary</p>
           </div>
 
           <div className="kairos-panel space-y-1.5 p-4 text-center">
             <div className="kairos-inset mx-auto flex size-9 items-center justify-center text-primary">
-              <Headphones className="size-4" />
+              <Sparkles className="size-4" aria-hidden="true" />
+            </div>
+            <p className="text-xs text-muted-foreground">Compute-heavy artifact</p>
+            <p className="text-base font-semibold text-foreground">
+              {CREDIT_COSTS.ARTIFACT_COMPUTE}{" "}
+              <span className="text-xs font-normal text-muted-foreground">credits</span>
+            </p>
+            <p className="text-[11px] text-muted-foreground/80">Mind map, diagram, report</p>
+          </div>
+
+          <div className="kairos-panel space-y-1.5 p-4 text-center">
+            <div className="kairos-inset mx-auto flex size-9 items-center justify-center text-primary">
+              <Headphones className="size-4" aria-hidden="true" />
             </div>
             <p className="text-xs text-muted-foreground">Audio debate</p>
             <p className="text-base font-semibold text-foreground">
@@ -166,6 +179,10 @@ export function PricingPlans({
             <p className="text-[11px] text-muted-foreground/80">Two-host voice podcast</p>
           </div>
         </div>
+        <p className="px-1 text-xs text-muted-foreground">
+          Searching, browsing and connecting sources do not use credits. Daily
+          credits are spent before paid credits.
+        </p>
       </section>
 
       {/* Credit Packages Grid */}
@@ -227,22 +244,28 @@ export function PricingPlans({
                   <ul className="space-y-1.5 pt-1 text-xs text-muted-foreground">
                     <li className="flex items-center gap-1.5">
                       <Check className="size-3.5 shrink-0 text-success" />
-                      <span>~{Math.floor(pack.credits / 5)} source uploads</span>
+                      <span>
+                        ~{Math.floor(pack.credits / CREDIT_COSTS.SOURCE_UPLOAD)} source uploads
+                      </span>
                     </li>
                     <li className="flex items-center gap-1.5">
                       <Check className="size-3.5 shrink-0 text-success" />
-                      <span>~{pack.credits} chat messages</span>
+                      <span>
+                        ~{Math.floor(pack.credits / CREDIT_COSTS.CHAT_MESSAGE)} chat messages
+                      </span>
                     </li>
                     <li className="flex items-center gap-1.5">
                       <Check className="size-3.5 shrink-0 text-success" />
-                      <span>~{Math.floor(pack.credits / 10)} learning artifacts</span>
+                      <span>
+                        ~{Math.floor(pack.credits / CREDIT_COSTS.ARTIFACT_GENERATE)} standard artifacts
+                      </span>
                     </li>
-                    {pack.credits >= 50 && (
-                      <li className="flex items-center gap-1.5">
-                        <Check className="size-3.5 shrink-0 text-success" />
-                        <span>~{Math.floor(pack.credits / 50)} audio podcasts</span>
-                      </li>
-                    )}
+                    <li className="flex items-center gap-1.5">
+                      <Check className="size-3.5 shrink-0 text-success" />
+                      <span>
+                        ~{Math.floor(pack.credits / CREDIT_COSTS.AUDIO_DEBATE)} audio podcasts
+                      </span>
+                    </li>
                   </ul>
                 </div>
 
