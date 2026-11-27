@@ -142,6 +142,59 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+/** Keeps integration-dependent tabs from flashing a "connect" state while status loads. */
+function IntegrationStatusGate({
+  label,
+  isLoading,
+  isError,
+  error,
+  onRetry,
+  children,
+}: {
+  label: string;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  onRetry: () => void;
+  children: React.ReactNode;
+}) {
+  if (isLoading) {
+    return (
+      <div
+        role="status"
+        className="kairos-inset flex flex-col items-center gap-2 p-6 text-center text-xs text-muted-foreground"
+      >
+        <ThemeLoader size={20} />
+        <span>Checking your {label} connection…</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div role="alert" className="kairos-inset space-y-2 p-4 text-center">
+        <AlertCircle className="mx-auto size-5 text-danger" aria-hidden="true" />
+        <p className="text-xs font-medium text-foreground">
+          Couldn&apos;t check your {label} connection.
+        </p>
+        <p className="text-[11px] text-muted-foreground">
+          {getErrorMessage(error, "The provider rejected the request.")}
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mx-auto flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-brand-quiet motion-reduce:transition-none"
+        >
+          <RefreshCw className="size-3" aria-hidden="true" />
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export function AddSourceDialog({
   isOpen,
   onClose,
@@ -197,7 +250,13 @@ export function AddSourceDialog({
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Query connected integrations
-  const { data: integrations, refetch: refetchIntegrations } = useQuery<IntegrationsStatus>({
+  const {
+    data: integrations,
+    isLoading: isLoadingIntegrations,
+    isError: isIntegrationsError,
+    error: integrationsError,
+    refetch: refetchIntegrations,
+  } = useQuery<IntegrationsStatus>({
     queryKey: ["connected-integrations"],
     queryFn: () => apiClient<IntegrationsStatus>("/api/integrations"),
     enabled: isDialogOpen,
@@ -227,6 +286,8 @@ export function AddSourceDialog({
   const {
     data: notionPagesData,
     isLoading: isLoadingNotionPages,
+    isError: isNotionPagesError,
+    error: notionPagesError,
     refetch: refetchNotionPages,
   } = useQuery<{
     pages: Array<{
@@ -419,12 +480,20 @@ export function AddSourceDialog({
       className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
       onMouseDown={(e) => dismissOnBackdropClick(e, handleClose)}
     >
-      <div className="kairos-panel max-h-[calc(100vh-2rem)] w-full max-w-2xl animate-fadeIn overflow-y-auto text-foreground shadow-[var(--shadow-lift)] motion-reduce:animate-none">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-source-dialog-title"
+        className="kairos-panel max-h-[calc(100vh-2rem)] w-full max-w-2xl animate-fadeIn overflow-y-auto text-foreground shadow-[var(--shadow-lift)] motion-reduce:animate-none"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border bg-surface px-6 py-4">
           <div className="min-w-0 space-y-0.5">
             <p className="kairos-eyebrow">Add knowledge</p>
-            <h2 className="kairos-section-title text-base text-primary">
+            <h2
+              id="add-source-dialog-title"
+              className="kairos-section-title text-base text-primary"
+            >
               Add source to Kairos
             </h2>
           </div>
@@ -440,7 +509,7 @@ export function AddSourceDialog({
 
         {/* Source type grid — 4 × 2 */}
         <div className="select-none border-b border-border bg-brand-quiet px-4 py-4">
-          <div className="grid grid-cols-4 gap-2">
+          <div role="group" aria-label="Source type" className="grid grid-cols-4 gap-2">
             {SOURCE_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -485,40 +554,42 @@ export function AddSourceDialog({
           {/* 1. PDF Upload */}
           {activeTab === "pdf" && (
             <div className="space-y-4">
-              <div
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setPdfFile(file);
+                    if (!pdfTitle) setPdfTitle(file.name.replace(/\.[^/.]+$/, ""));
+                  }
+                }}
+              />
+              <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className={cn(
-                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none",
+                  "flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none",
                   pdfFile
                     ? "border-brand bg-brand-quiet text-brand"
                     : "border-border hover:border-brand/50 hover:bg-brand-quiet"
                 )}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setPdfFile(file);
-                      if (!pdfTitle) setPdfTitle(file.name.replace(/\.[^/.]+$/, ""));
-                    }
-                  }}
-                />
                 <Upload className="size-8 text-brand" aria-hidden="true" />
-                <div className="text-xs font-medium text-primary">
+                <span className="block text-xs font-medium text-primary">
                   {pdfFile ? pdfFile.name : "Click to browse or drop a PDF here"}
-                </div>
-                <div className="text-[11px] text-muted-foreground">Up to 25 MB</div>
-              </div>
+                </span>
+                <span className="block text-[11px] text-muted-foreground">Up to 25 MB</span>
+              </button>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">
+                <label htmlFor="pdf-title" className="mb-1 block text-xs font-medium text-foreground">
                   Source Title (Optional)
                 </label>
                 <input
+                  id="pdf-title"
                   type="text"
                   placeholder="e.g. Research Paper"
                   value={pdfTitle}
@@ -531,44 +602,46 @@ export function AddSourceDialog({
 
           {activeTab === "image" && (
             <div className="space-y-4">
-              <div
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept={IMAGE_ACCEPT}
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setImageFile(file);
+                    if (!imageTitle) {
+                      setImageTitle(file.name.replace(/\.[^/.]+$/, ""));
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
                 onClick={() => imageInputRef.current?.click()}
                 className={cn(
-                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none",
+                  "flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none",
                   imageFile
                     ? "border-brand bg-brand-quiet text-brand"
                     : "border-border hover:border-brand/50 hover:bg-brand-quiet"
                 )}
               >
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept={IMAGE_ACCEPT}
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setImageFile(file);
-                      if (!imageTitle) {
-                        setImageTitle(file.name.replace(/\.[^/.]+$/, ""));
-                      }
-                    }
-                  }}
-                />
                 <ImageIcon className="size-8 text-brand" aria-hidden="true" />
-                <div className="text-xs font-medium text-primary">
+                <span className="block text-xs font-medium text-primary">
                   {imageFile ? imageFile.name : "Upload a photo, scan, or screenshot"}
-                </div>
-                <div className="text-[11px] text-muted-foreground max-w-sm">
+                </span>
+                <span className="block text-[11px] text-muted-foreground max-w-sm">
                   Supports PNG, JPG, WEBP, GIF, and more — up to 15MB.
-                </div>
-              </div>
+                </span>
+              </button>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">
+                <label htmlFor="image-title" className="mb-1 block text-xs font-medium text-foreground">
                   Source Title (Optional)
                 </label>
                 <input
+                  id="image-title"
                   type="text"
                   placeholder="e.g. Lecture slide photo"
                   value={imageTitle}
@@ -581,7 +654,14 @@ export function AddSourceDialog({
 
           {/* 2. Google Drive */}
           {activeTab === "google-drive" && (
-            <div className="space-y-4">
+            <IntegrationStatusGate
+              label="Google Drive"
+              isLoading={isLoadingIntegrations}
+              isError={isIntegrationsError}
+              error={integrationsError}
+              onRetry={() => void refetchIntegrations()}
+            >
+              <div className="space-y-4">
               {!integrations?.googleDrive?.connected ? (
                 <div className="space-y-4 rounded-2xl border border-border bg-brand-quiet p-8 text-center">
                   <GoogleDriveIcon size={48} className="mx-auto" />
@@ -723,12 +803,20 @@ export function AddSourceDialog({
                   )}
                 </div>
               )}
-            </div>
+              </div>
+            </IntegrationStatusGate>
           )}
 
           {/* 3. Notion */}
           {activeTab === "notion" && (
-            <div className="space-y-4">
+            <IntegrationStatusGate
+              label="Notion"
+              isLoading={isLoadingIntegrations}
+              isError={isIntegrationsError}
+              error={integrationsError}
+              onRetry={() => void refetchIntegrations()}
+            >
+              <div className="space-y-4">
               {!integrations?.notion?.connected ? (
                 <div className="relative space-y-4 rounded-2xl border border-border bg-brand-quiet p-6">
                   {/* Corner Help Button */}
@@ -754,7 +842,9 @@ export function AddSourceDialog({
 
                   <div className="space-y-2">
                     <input
+                      id="notion-token"
                       type="password"
+                      aria-label="Notion internal integration token"
                       placeholder="secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                       value={notionTokenInput}
                       onChange={(e) => setNotionTokenInput(e.target.value)}
@@ -787,6 +877,7 @@ export function AddSourceDialog({
                     />
                     <input
                       type="text"
+                      aria-label="Search Notion pages"
                       placeholder="Search Notion pages..."
                       value={notionSearch}
                       onChange={(e) => setNotionSearch(e.target.value)}
@@ -795,52 +886,83 @@ export function AddSourceDialog({
                   </div>
 
 
-                  <div className="kairos-inset max-h-52 divide-y divide-border overflow-y-auto">
-                    {isLoadingNotionPages ? (
-                      <div className="p-6 text-center">
-                        <ThemeLoader size={20} />
-                      </div>
-                    ) : notionPagesData?.pages && notionPagesData.pages.length > 0 ? (
-                      notionPagesData.pages.map((page) => {
-                        const isSelected = selectedNotionPageId === page.id;
-                        return (
-                          <div
-                            key={page.id}
-                            onClick={() => setSelectedNotionPageId(page.id)}
-                            className={cn(
-                              "flex cursor-pointer items-center justify-between gap-3 p-2.5 text-xs transition-colors motion-reduce:transition-none",
-                              isSelected
-                                ? "bg-brand-soft font-semibold text-brand"
-                                : "hover:bg-brand-quiet text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-sm shrink-0">{page.icon || "📄"}</span>
-                              <span className="truncate">{page.title}</span>
-                            </div>
-                            {isSelected && <Check className="size-3.5 shrink-0 text-brand" aria-hidden="true" />}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="p-6 text-center text-xs text-muted-foreground">
-                        No accessible Notion pages found. Please ensure your integration is invited to the pages.
-                      </div>
-                    )}
-                  </div>
+                  {isNotionPagesError ? (
+                    <div role="alert" className="kairos-inset space-y-2 p-4 text-center">
+                      <AlertCircle className="mx-auto size-5 text-danger" aria-hidden="true" />
+                      <p className="text-xs font-medium text-foreground">
+                        Couldn&apos;t load Notion pages.
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {getErrorMessage(notionPagesError, "The provider rejected the request.")}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void refetchNotionPages()}
+                        className="mx-auto flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-brand-quiet motion-reduce:transition-none"
+                      >
+                        <RefreshCw className="size-3" aria-hidden="true" />
+                        Retry
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      role="listbox"
+                      aria-label="Notion pages"
+                      className="kairos-inset max-h-52 divide-y divide-border overflow-y-auto"
+                    >
+                      {isLoadingNotionPages ? (
+                        <div className="p-6 text-center" role="status">
+                          <ThemeLoader size={20} />
+                        </div>
+                      ) : notionPagesData?.pages && notionPagesData.pages.length > 0 ? (
+                        notionPagesData.pages.map((page) => {
+                          const isSelected = selectedNotionPageId === page.id;
+                          return (
+                            <button
+                              key={page.id}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              onClick={() => setSelectedNotionPageId(page.id)}
+                              className={cn(
+                                "flex w-full cursor-pointer items-center justify-between gap-3 p-2.5 text-left text-xs transition-colors motion-reduce:transition-none",
+                                isSelected
+                                  ? "bg-brand-soft font-semibold text-brand"
+                                  : "hover:bg-brand-quiet text-foreground"
+                              )}
+                            >
+                              <span className="flex min-w-0 items-center gap-2">
+                                <span className="shrink-0 text-sm">{page.icon || "📄"}</span>
+                                <span className="truncate">{page.title}</span>
+                              </span>
+                              {isSelected && (
+                                <Check className="size-3.5 shrink-0 text-brand" aria-hidden="true" />
+                              )}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="p-6 text-center text-xs text-muted-foreground">
+                          No accessible Notion pages found. Please ensure your integration is invited to the pages.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+              </div>
+            </IntegrationStatusGate>
           )}
 
           {/* 4. Website URL */}
           {activeTab === "website" && (
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">
+                <label htmlFor="website-url" className="mb-1 block text-xs font-medium text-foreground">
                   Website URL
                 </label>
                 <input
+                  id="website-url"
                   type="url"
                   placeholder="https://example.com/article"
                   value={webUrl}
@@ -850,10 +972,11 @@ export function AddSourceDialog({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">
+                <label htmlFor="website-title" className="mb-1 block text-xs font-medium text-foreground">
                   Title (Optional)
                 </label>
                 <input
+                  id="website-title"
                   type="text"
                   placeholder="Custom title"
                   value={webTitle}
@@ -868,10 +991,11 @@ export function AddSourceDialog({
           {activeTab === "youtube" && (
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">
+                <label htmlFor="youtube-url" className="mb-1 block text-xs font-medium text-foreground">
                   YouTube Video URL
                 </label>
                 <input
+                  id="youtube-url"
                   type="url"
                   placeholder="https://www.youtube.com/watch?v=..."
                   value={youtubeUrl}
@@ -881,10 +1005,11 @@ export function AddSourceDialog({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">
+                <label htmlFor="youtube-title" className="mb-1 block text-xs font-medium text-foreground">
                   Title (Optional)
                 </label>
                 <input
+                  id="youtube-title"
                   type="text"
                   placeholder="Custom video title"
                   value={youtubeTitle}
@@ -899,10 +1024,11 @@ export function AddSourceDialog({
           {activeTab === "text" && (
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">
+                <label htmlFor="text-title" className="mb-1 block text-xs font-medium text-foreground">
                   Title
                 </label>
                 <input
+                  id="text-title"
                   type="text"
                   placeholder="e.g. Chapter 1 Notes"
                   value={textTitle}
@@ -912,10 +1038,11 @@ export function AddSourceDialog({
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">
+                <label htmlFor="text-content" className="mb-1 block text-xs font-medium text-foreground">
                   Content
                 </label>
                 <textarea
+                  id="text-content"
                   rows={6}
                   placeholder="Paste your text content here..."
                   value={textContent}
@@ -928,7 +1055,14 @@ export function AddSourceDialog({
 
           {/* 7. GitHub Repository */}
           {activeTab === "github" && (
-            <div className="space-y-4">
+            <IntegrationStatusGate
+              label="GitHub"
+              isLoading={isLoadingIntegrations}
+              isError={isIntegrationsError}
+              error={integrationsError}
+              onRetry={() => void refetchIntegrations()}
+            >
+              <div className="space-y-4">
               {/* Not Connected State */}
               {!integrations?.github?.connected ? (
                 <>
@@ -962,10 +1096,11 @@ export function AddSourceDialog({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-foreground">
+                    <label htmlFor="github-url-public" className="mb-1 block text-xs font-medium text-foreground">
                       GitHub Repository URL
                     </label>
                     <input
+                      id="github-url-public"
                       type="url"
                       placeholder="https://github.com/owner/repo"
                       value={githubUrl}
@@ -975,10 +1110,11 @@ export function AddSourceDialog({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-foreground">
+                    <label htmlFor="github-title-public" className="mb-1 block text-xs font-medium text-foreground">
                       Title (Optional)
                     </label>
                     <input
+                      id="github-title-public"
                       type="text"
                       placeholder="e.g. My Project Docs"
                       value={githubTitle}
@@ -1035,10 +1171,11 @@ export function AddSourceDialog({
                     /* Manual Custom URL input when connected */
                     <div className="space-y-3 pt-1">
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-foreground">
+                        <label htmlFor="github-url-manual" className="mb-1 block text-xs font-medium text-foreground">
                           GitHub Repository URL
                         </label>
                         <input
+                          id="github-url-manual"
                           type="url"
                           placeholder="https://github.com/owner/repo"
                           value={githubUrl}
@@ -1048,10 +1185,11 @@ export function AddSourceDialog({
                       </div>
 
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-foreground">
+                        <label htmlFor="github-title-manual" className="mb-1 block text-xs font-medium text-foreground">
                           Title (Optional)
                         </label>
                         <input
+                          id="github-title-manual"
                           type="text"
                           placeholder="e.g. My Project Docs"
                           value={githubTitle}
@@ -1232,10 +1370,11 @@ export function AddSourceDialog({
 
                       {/* Title input when a repo is selected */}
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-foreground">
+                        <label htmlFor="github-repo-title" className="mb-1 block text-xs font-medium text-foreground">
                           Source Title (Optional)
                         </label>
                         <input
+                          id="github-repo-title"
                           type="text"
                           placeholder="e.g. My Project Docs"
                           value={githubTitle}
@@ -1251,7 +1390,8 @@ export function AddSourceDialog({
               <p className="text-[11px] text-muted-foreground">
                 We&apos;ll index up to 150 text files (code, docs, configs) from the repository and make them searchable in chat.
               </p>
-            </div>
+              </div>
+            </IntegrationStatusGate>
           )}
 
           {/* Footer Actions */}
