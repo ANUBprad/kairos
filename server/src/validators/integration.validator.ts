@@ -13,6 +13,12 @@ export const importDriveFileSchema = z.object({
     fileId: z.string().trim().regex(PROVIDER_ID, "Invalid Google Drive file ID"),
 });
 
+export const listDriveFilesQuerySchema = z.object({
+    search: z.string().trim().max(200, "Search is too long").optional(),
+    // Google page tokens are opaque; bound the length before passing them to the API.
+    pageToken: z.string().trim().max(2048, "Invalid page token").optional(),
+});
+
 export const importNotionPageSchema = z.object({
     pageId: z.string().trim().regex(PROVIDER_ID, "Invalid Notion page ID"),
 });
@@ -32,6 +38,7 @@ export const integrationProviderParamSchema = z.object({
 
 export type ConnectNotionInput = z.infer<typeof connectNotionSchema>;
 export type ImportDriveFileInput = z.infer<typeof importDriveFileSchema>;
+export type ListDriveFilesQuery = z.infer<typeof listDriveFilesQuerySchema>;
 export type ImportNotionPageInput = z.infer<typeof importNotionPageSchema>;
 export type ImportGithubRepoInput = z.infer<typeof importGithubRepoSchema>;
 export type ExportNotionInput = z.infer<typeof exportNotionSchema>;

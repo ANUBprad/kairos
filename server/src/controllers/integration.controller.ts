@@ -57,7 +57,9 @@ import {
     importDriveFileSchema,
     importNotionPageSchema,
     importGithubRepoSchema,
+    listDriveFilesQuerySchema,
 } from "../validators/integration.validator.js";
+import { getZodFieldErrors } from "../utils/zod-error.js";
 import { workspaceIdParamSchema } from "../validators/workspace.validator.js";
 import { artifactIdParamSchema } from "../validators/artifact.validator.js";
 import { ValidationError } from "../types/app-error.js";
@@ -191,10 +193,14 @@ export async function googleDriveCallback(req: Request, res: Response) {
  * @param res - Express response returning matching Google Drive files
  */
 export async function listDriveFiles(req: Request, res: Response) {
-    const { search } = req.query;
+    const parsed = listDriveFilesQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+        throw new ValidationError("Invalid Google Drive query", getZodFieldErrors(parsed.error));
+    }
     const data = await listGoogleDriveFiles(
         req.session.user.id,
-        search ? String(search) : undefined,
+        parsed.data.search,
+        { pageToken: parsed.data.pageToken },
     );
     res.json(data);
 }

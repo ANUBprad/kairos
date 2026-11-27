@@ -9,6 +9,7 @@ import {
   X,
   Search,
   Check,
+  AlertCircle,
   HelpCircle,
   GitFork,
   Lock,
@@ -32,8 +33,9 @@ import {
   useImportNotionSource,
   useImportGithubSource,
 } from "../hooks/use-sources";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { NotionTokenGuideModal } from "./notion-token-guide-modal";
 import {
   GoogleDriveIcon,
@@ -102,6 +104,20 @@ interface IntegrationsStatus {
   };
 }
 
+interface DriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number | null;
+  type: "GOOGLE_DOC" | "PDF";
+  modifiedTime: string | null;
+}
+
+interface DriveFilesPage {
+  files: DriveFile[];
+  nextPageToken: string | null;
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
@@ -167,25 +183,25 @@ export function AddSourceDialog({
     enabled: isDialogOpen,
   });
 
-  // Query Drive files when Google Drive tab is active and connected
-  const {
-    data: driveFilesData,
-    isLoading: isLoadingDriveFiles,
-  } = useQuery<{
-    files: Array<{
-      id: string;
-      name: string;
-      mimeType: string;
-      size: number | null;
-      type: "GOOGLE_DOC" | "PDF";
-      modifiedTime: string;
-    }>;
-  }>({
-    queryKey: ["google-drive-files", driveSearch],
-    queryFn: () =>
-      apiClient(`/api/integrations/google-drive/files?search=${encodeURIComponent(driveSearch)}`),
-    enabled: isDialogOpen && activeTab === "google-drive" && !!integrations?.googleDrive?.connected,
+  // Debounce keystrokes and abort superseded requests instead of firing one
+  // provider call per character.
+  const debouncedDriveSearch = useDebouncedValue(driveSearch, 300);
+  const driveFilesQuery = useInfiniteQuery<DriveFilesPage>({
+    queryKey: ["google-drive-files", debouncedDriveSearch],
+    queryFn: ({ pageParam, signal }) =>
+      apiClient<DriveFilesPage>("/api/integrations/google-drive/files", {
+        params: {
+          search: debouncedDriveSearch || undefined,
+          pageToken: typeof pageParam === "string" ? pageParam : undefined,
+        },
+        signal,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextPageToken ?? undefined,
+    enabled:
+      isDialogOpen && activeTab === "google-drive" && !!integrations?.googleDrive?.connected,
   });
+  const driveFiles = driveFilesQuery.data?.pages.flatMap((page) => page.files) ?? [];
 
   // Query Notion pages when Notion tab is active and connected
   const {
@@ -248,6 +264,7 @@ export function AddSourceDialog({
     setYoutubeTitle("");
     setTextTitle("");
     setTextContent("");
+    setDriveSearch("");
     setSelectedDriveFileId(null);
     setSelectedNotionPageId(null);
     setGithubUrl("");
@@ -582,52 +599,117 @@ export function AddSourceDialog({
                     />
                     <input
                       type="text"
+                      aria-label="Search Google Drive files"
                       placeholder="Search Google Drive docs & PDFs..."
                       value={driveSearch}
-                      onChange={(e) => setDriveSearch(e.target.value)}
+                      onChange={(e) => {
+                        setDriveSearch(e.target.value);
+                        setSelectedDriveFileId(null);
+                      }}
                       className={cn(FORM_CONTROL_CLASSNAME, "pl-8 pr-3")}
                     />
                   </div>
 
+                  {driveFilesQuery.isFetching && !driveFilesQuery.isLoading && (
+                    <p role="status" className="text-[11px] text-muted-foreground">
+                      Updating Drive files…
+                    </p>
+                  )}
 
-                  <div className="kairos-inset max-h-52 divide-y divide-border overflow-y-auto">
-                    {isLoadingDriveFiles ? (
-                      <div className="p-6 text-center">
-                        <ThemeLoader size={20} />
-                      </div>
-                    ) : driveFilesData?.files && driveFilesData.files.length > 0 ? (
-                      driveFilesData.files.map((file) => {
-                        const isSelected = selectedDriveFileId === file.id;
-                        return (
-                          <div
-                            key={file.id}
-                            onClick={() => setSelectedDriveFileId(file.id)}
-                            className={cn(
-                              "flex cursor-pointer items-center justify-between gap-3 p-2.5 text-xs transition-colors motion-reduce:transition-none",
-                              isSelected
-                                ? "bg-brand-soft font-semibold text-brand"
-                                : "hover:bg-brand-quiet text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                              <span className="truncate">{file.name}</span>
+                  {driveFilesQuery.isError ? (
+                    <div role="alert" className="kairos-inset space-y-2 p-4 text-center">
+                      <AlertCircle
+                        className="mx-auto size-5 text-danger"
+                        aria-hidden="true"
+                      />
+                      <p className="text-xs font-medium text-foreground">
+                        Couldn&apos;t load Google Drive files.
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {getErrorMessage(
+                          driveFilesQuery.error,
+                          "The provider rejected the request.",
+                        )}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void driveFilesQuery.refetch()}
+                        className="mx-auto flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-[11px] font-medium text-foreground transition-colors hover:bg-brand-quiet motion-reduce:transition-none"
+                      >
+                        <RefreshCw className="size-3" aria-hidden="true" />
+                        Retry
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      role="listbox"
+                      aria-label="Google Drive files"
+                      className="kairos-inset max-h-52 overflow-y-auto"
+                    >
+                      {driveFilesQuery.isLoading ? (
+                        <div className="p-6 text-center" role="status">
+                          <ThemeLoader size={20} />
+                        </div>
+                      ) : driveFiles.length > 0 ? (
+                        <>
+                          {driveFiles.map((file) => {
+                            const isSelected = selectedDriveFileId === file.id;
+                            return (
+                              <button
+                                key={file.id}
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => setSelectedDriveFileId(file.id)}
+                                className={cn(
+                                  "flex w-full cursor-pointer items-center justify-between gap-3 border-b border-border p-2.5 text-left text-xs transition-colors last:border-b-0 motion-reduce:transition-none",
+                                  isSelected
+                                    ? "bg-brand-soft font-semibold text-brand"
+                                    : "hover:bg-brand-quiet text-foreground",
+                                )}
+                              >
+                                <span className="flex min-w-0 items-center gap-2">
+                                  <FileText
+                                    className="size-4 shrink-0 text-muted-foreground"
+                                    aria-hidden="true"
+                                  />
+                                  <span className="truncate">{file.name}</span>
+                                </span>
+                                <span className="flex shrink-0 items-center gap-2">
+                                  <span className="font-mono text-[10px] uppercase text-muted-foreground">
+                                    {file.type === "GOOGLE_DOC" ? "Doc" : "PDF"}
+                                  </span>
+                                  {isSelected && (
+                                    <Check className="size-3.5 text-brand" aria-hidden="true" />
+                                  )}
+                                </span>
+                              </button>
+                            );
+                          })}
+                          {driveFilesQuery.hasNextPage && (
+                            <div className="border-t border-border p-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => void driveFilesQuery.fetchNextPage()}
+                                disabled={driveFilesQuery.isFetchingNextPage}
+                                className="cursor-pointer rounded-lg px-3 py-1.5 text-[11px] font-medium text-brand transition-colors hover:bg-brand-quiet disabled:opacity-50 motion-reduce:transition-none"
+                              >
+                                {driveFilesQuery.isFetchingNextPage
+                                  ? "Loading more…"
+                                  : "Load more files"}
+                              </button>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] uppercase font-mono text-muted-foreground">
-                                {file.type === "GOOGLE_DOC" ? "Doc" : "PDF"}
-                              </span>
-                              {isSelected && <Check className="size-3.5 text-brand" aria-hidden="true" />}
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="p-6 text-center text-xs text-muted-foreground">
-                        No Google Docs or PDFs found matching your search.
-                      </div>
-                    )}
-                  </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="p-6 text-center text-xs text-muted-foreground">
+                          {debouncedDriveSearch
+                            ? `No Google Docs or PDFs match “${debouncedDriveSearch}”.`
+                            : "No Google Docs or PDFs were found in your Drive."}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
