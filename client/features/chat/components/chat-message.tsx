@@ -11,6 +11,8 @@ import { ChatMarkdown } from "@/components/ui/chat-markdown";
 import { chatCitationsToAgentItems } from "../lib/citation-items";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { scrollBehavior } from "@/lib/scroll";
+import { useReducedMotion } from "motion/react";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -30,6 +32,7 @@ export function ChatMessage({
     null,
   );
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
@@ -76,7 +79,10 @@ export function ChatMessage({
         const el = document.getElementById(
           `response-source-${citationId}`,
         );
-        el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        el?.scrollIntoView({
+          behavior: scrollBehavior(reduceMotion),
+          block: "nearest",
+        });
       });
     };
 

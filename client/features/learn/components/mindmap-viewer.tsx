@@ -337,7 +337,7 @@ export function MindmapViewer({ content }: MindmapViewerProps) {
             id: `edge-${srcId}-${tgtId}-${idx}`,
             source: srcId,
             target: tgtId,
-            type: "bezier",
+            type: "default",
             animated: true,
             style: {
               stroke: "var(--brand)",

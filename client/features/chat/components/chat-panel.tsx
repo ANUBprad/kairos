@@ -27,6 +27,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { scrollBehavior } from "@/lib/scroll";
+import { useReducedMotion } from "motion/react";
 
 type ChatConfirmAction = "clear" | "delete" | null;
 
@@ -98,11 +100,15 @@ export function ChatPanel({
   const [confirmAction, setConfirmAction] = useState<ChatConfirmAction>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const convMenuRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
 
-  // Auto-scroll to bottom as messages stream
+  // Auto-scroll to bottom as messages stream. An explicit smooth behavior
+  // overrides the CSS reduced-motion rule, so choose it from the preference.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isStreaming]);
+    messagesEndRef.current?.scrollIntoView({
+      behavior: scrollBehavior(reduceMotion),
+    });
+  }, [messages, isStreaming, reduceMotion]);
 
   // Track scroll position for go-to-top button
   const handleScroll = () => {
@@ -112,7 +118,10 @@ export function ChatPanel({
   };
 
   const scrollToTop = () => {
-    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    scrollContainerRef.current?.scrollTo({
+      top: 0,
+      behavior: scrollBehavior(reduceMotion),
+    });
   };
 
   const closeConfirmDialog = () => {
