@@ -47,7 +47,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
   const sources = useMemo(() => sourcesQuery.data || [], [sourcesQuery.data]);
   const isSourcesLoading = sourcesQuery.isLoading;
 
-  const storageKey = `openbook_selected_sources_${workspaceId}`;
+  const storageKey = `kairos_selected_sources_${workspaceId}`;
 
   // Initial load: restore persisted selection or default to all sources
   useEffect(() => {

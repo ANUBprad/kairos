@@ -153,7 +153,7 @@ export async function enhancePromptWithGemini(
             : "The user may not have sources selected; keep the prompt self-contained.";
 
     const system = [
-        "You improve user prompts for a research notebook AI assistant (OpenBook).",
+        "You improve user prompts for a research notebook AI assistant (Kairos).",
         contextLine,
         "Rewrite the prompt to be specific, well-structured, and actionable.",
         "Preserve the user's intent and language.",

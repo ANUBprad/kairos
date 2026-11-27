@@ -247,8 +247,7 @@ SHADOW_DATABASE_URL=<disposable-shadow-url> npx prisma migrate diff --exit-code 
 ## 11. Owner decisions and known limitations
 
 - The repository remains **private** and is pushed only to `origin`
-  (`ANUBprad/kairos`). Upstream `swamiabhishek45/OpenBook` and its owner were
-  never contacted.
+  (`ANUBprad/kairos`). No external repository contact was performed.
 - `ATTRIBUTION.md`, copyright and licensing are unchanged. No license grant is
   invented by this work.
 - No production deploy, production service access, secret/token exposure, or

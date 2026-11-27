@@ -21,7 +21,7 @@ export const usePreferences = create<PreferencesState>()(
       setSelectedModel: (model) => set({ selectedModel: model }),
     }),
     {
-      name: "chaibook-preferences",
+      name: "kairos-preferences",
     }
   )
 );

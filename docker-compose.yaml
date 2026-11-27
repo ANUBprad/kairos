@@ -1,21 +1,21 @@
 services:
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: openbook-postgres
+    container_name: kairos-postgres
     environment:
-      POSTGRES_DB: chaibook
+      POSTGRES_DB: kairos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5435:5432"
     volumes:
-      - chaibook_pg_data:/var/lib/postgresql/data
+      - kairos_pg_data:/var/lib/postgresql/data
      
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d chaibook"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kairos"]
       interval: 5s
       timeout: 5s
       retries: 5
 
 volumes:
-  chaibook_pg_data:
+  kairos_pg_data:

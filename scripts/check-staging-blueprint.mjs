@@ -66,7 +66,10 @@ if (legacyMode) {
         JSON.stringify(names) === JSON.stringify(["kairos-client-staging", "kairos-server-staging"]),
         `expected exactly the two staging services, found ${JSON.stringify(names)}`,
     );
-    check(!text.includes("openbook-server"), "production service name found in staging blueprint");
+    check(
+        !/^\s*name:\s*kairos-server\s*$/m.test(text),
+        "production service name found in staging blueprint",
+    );
     check(
         !/DEPLOYMENT_ENV\s*\n\s*-?\s*value:\s*production/m.test(text),
         "DEPLOYMENT_ENV=production found in staging blueprint",

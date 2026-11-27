@@ -43,7 +43,7 @@ The same module no longer caches a configuration that failed validation
 
 `render.yaml` declares three web services:
 
-- `openbook-server` (production; do not deploy from this workflow).
+- `kairos-server` (production; do not deploy from this workflow).
 - `kairos-server-staging` (`DEPLOYMENT_ENV=staging`) with the identity gates
   above.
 - `kairos-client-staging` (dedicated Next.js frontend for staging; browser URLs

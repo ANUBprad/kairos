@@ -55,7 +55,7 @@ function restoreEnv(): void {
 function validLocalEnv(): Record<string, string> {
     return {
         NODE_ENV: "development",
-        DATABASE_URL: "postgresql://localhost:5432/openbook",
+        DATABASE_URL: "postgresql://localhost:5432/kairos",
         BETTER_AUTH_SECRET: "x".repeat(32),
         CLIENT_URL: "http://localhost:3000",
     };

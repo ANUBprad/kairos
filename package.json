@@ -1,7 +1,7 @@
 {
-  "name": "openbook",
+  "name": "kairos",
   "private": true,
-  "description": "OpenBook monorepo — Next.js client + Express server",
+  "description": "Kairos monorepo — Next.js client + Express server",
   "scripts": {
     "dev": "concurrently -n server,inngest,client -c blue,magenta,green \"npm run dev --prefix server\" \"npm run inngest --prefix server\" \"npm run dev --prefix client\"",
     "dev:server": "npm run dev --prefix server",

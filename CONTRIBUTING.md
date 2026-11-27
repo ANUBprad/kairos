@@ -29,7 +29,7 @@ docker compose up -d
 Use this connection string in `server/.env`:
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5435/chaibook
+DATABASE_URL=postgresql://postgres:postgres@localhost:5435/kairos
 ```
 
 Then apply the checked-in migrations (never use `prisma db push` to hide drift):

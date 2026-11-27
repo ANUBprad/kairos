@@ -1,4 +1,4 @@
-# Render Blueprint — backend (OpenBook / ChaibookLM)
+# Render Blueprint — backend (Kairos)
 # Docs: https://render.com/docs/blueprint-spec
 #
 # SECURITY NOTE: every credential below is `sync: false`, so no secret value is
@@ -11,7 +11,7 @@ services:
   # PRODUCTION — deploy only after staging validation and owner approval.
   # ---------------------------------------------------------------------------
   - type: web
-    name: openbook-server
+    name: kairos-server
     runtime: node
     rootDir: server
     plan: free

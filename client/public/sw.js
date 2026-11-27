@@ -1,5 +1,5 @@
-// OpenBook Service Worker
-const CACHE_NAME = "openbook-cache-v1";
+// Kairos Service Worker
+const CACHE_NAME = "kairos-cache-v1";
 const OFFLINE_PAGE = "/offline";
 
 const PRECACHE_ASSETS = [

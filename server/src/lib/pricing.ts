@@ -9,8 +9,8 @@ export const CREDIT_PACKS = [
 ] as const;
 
 export const PLAN_PRICES = {
-  PRO: { pricePaise: 19900, label: "₹199 / month", name: "OpenBook Pro", credits: 500 },
-  PRO_PLUS: { pricePaise: 49900, label: "₹499 / month", name: "OpenBook Pro+", credits: 1500 },
+  PRO: { pricePaise: 19900, label: "₹199 / month", name: "Kairos Pro", credits: 500 },
+  PRO_PLUS: { pricePaise: 49900, label: "₹499 / month", name: "Kairos Pro+", credits: 1500 },
 } as const;
 
 export type PurchasablePlan = keyof typeof PLAN_PRICES;

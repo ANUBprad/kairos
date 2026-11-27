@@ -14,12 +14,19 @@ import { NotFoundError, ValidationError } from "../types/app-error.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { logger } from "../lib/logger.js";
 import { providerFetch } from "../lib/provider-http.js";
+import {
+    getOAuthCallbackUrl,
+    OAUTH_CALLBACK_PATHS,
+} from "../lib/oauth-callback.js";
 
 const NOTION_CLIENT_ID = process.env.NOTION_CLIENT_ID || "";
 const NOTION_CLIENT_SECRET = process.env.NOTION_CLIENT_SECRET || "";
-const NOTION_REDIRECT_URI =
-    process.env.NOTION_REDIRECT_URI ||
-    "http://localhost:8081/api/integrations/notion/callback";
+export function getNotionRedirectUri(): string {
+    return getOAuthCallbackUrl(
+        process.env.NOTION_REDIRECT_URI,
+        OAUTH_CALLBACK_PATHS.notion,
+    );
+}
 
 const NOTION_API_VERSION = "2022-06-28";
 
@@ -37,7 +44,7 @@ export function getNotionAuthUrl(state: string): string {
 
     const params = new URLSearchParams({
         client_id: NOTION_CLIENT_ID,
-        redirect_uri: NOTION_REDIRECT_URI,
+        redirect_uri: getNotionRedirectUri(),
         response_type: "code",
         owner: "user",
         state,
@@ -132,7 +139,7 @@ export async function handleNotionOAuthCallback({
         body: JSON.stringify({
             grant_type: "authorization_code",
             code,
-            redirect_uri: NOTION_REDIRECT_URI,
+            redirect_uri: getNotionRedirectUri(),
         }),
     });
 
@@ -607,7 +614,7 @@ export async function exportArtifactToNotion({
             )
             .join("\n");
     } else {
-        textToExport = `Artifact created by OpenBook AI.`;
+        textToExport = `Artifact created by Kairos AI.`;
     }
 
     const childrenBlocks: Array<Record<string, unknown>> = [
@@ -619,7 +626,7 @@ export async function exportArtifactToNotion({
                     {
                         type: "text",
                         text: {
-                            content: `⚡ Synthesized by OpenBook AI · Artifact Type: ${artifact.type}`,
+                            content: `⚡ Synthesized by Kairos AI · Artifact Type: ${artifact.type}`,
                         },
                     },
                 ],
@@ -655,7 +662,7 @@ export async function exportArtifactToNotion({
                     title: [
                         {
                             type: "text",
-                            text: { content: artifact.title || "OpenBook Synthesis" },
+                            text: { content: artifact.title || "Kairos Synthesis" },
                         },
                     ],
                 },

@@ -107,7 +107,7 @@ export function createApp(): express.Express {
     app.use("/api/inngest", serve({ client: inngest, functions }));
 
     app.get("/", (_req, res) => {
-        res.send("OpenBook API");
+        res.send("Kairos API");
     });
 
     // Liveness probe: must never depend on external services.

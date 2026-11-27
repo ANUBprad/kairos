@@ -9,7 +9,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
-const DISMISS_KEY = "openbook_pwa_prompt_dismissed";
+const DISMISS_KEY = "kairos_pwa_prompt_dismissed";
 
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] =
@@ -90,14 +90,14 @@ export function InstallPrompt() {
 
   return (
     <aside
-      aria-label="Install OpenBook app"
+      aria-label="Install Kairos app"
       className="fixed bottom-4 right-4 z-50 max-w-sm w-[calc(100%-2rem)] sm:w-auto bg-card/95 backdrop-blur-md text-card-foreground border border-border/80 rounded-xl p-4 shadow-xl transition-all animate-in fade-in slide-in-from-bottom-4 duration-300"
     >
       <div className="flex items-start gap-3">
         <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-border/60 bg-muted flex items-center justify-center">
           <Image
             src="/logo.svg"
-            alt="OpenBook Logo"
+            alt="Kairos Logo"
             width={40}
             height={40}
             className="w-full h-full object-contain p-1"
@@ -106,7 +106,7 @@ export function InstallPrompt() {
 
         <div className="flex-1 min-w-0 pr-2">
           <h2 className="text-sm font-semibold tracking-tight leading-tight">
-            Install OpenBook
+            Install Kairos
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
             Add to home screen for fast offline access and native app experience.

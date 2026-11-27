@@ -11,16 +11,19 @@ import { NotFoundError, ValidationError } from "../types/app-error.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { logger } from "../lib/logger.js";
 import { providerFetch } from "../lib/provider-http.js";
+import {
+    getOAuthCallbackUrl,
+    OAUTH_CALLBACK_PATHS,
+} from "../lib/oauth-callback.js";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
-const serverBaseUrl =
-    process.env.SERVER_URL ||
-    process.env.BETTER_AUTH_URL ||
-    "http://localhost:8081";
-const GOOGLE_REDIRECT_URI =
-    process.env.GOOGLE_REDIRECT_URI ||
-    `${serverBaseUrl}/api/integrations/google-drive/callback`;
+export function getGoogleRedirectUri(): string {
+    return getOAuthCallbackUrl(
+        process.env.GOOGLE_REDIRECT_URI,
+        OAUTH_CALLBACK_PATHS.googleDrive,
+    );
+}
 
 /**
  * Generates the Google OAuth 2.0 authorization URL for read-only Google Drive access.
@@ -36,7 +39,7 @@ export function getGoogleDriveAuthUrl(state: string): string {
 
     const params = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
-        redirect_uri: GOOGLE_REDIRECT_URI,
+        redirect_uri: getGoogleRedirectUri(),
         response_type: "code",
         scope: "https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
         access_type: "offline",
@@ -74,7 +77,7 @@ export async function handleGoogleDriveCallback({
             code,
             client_id: GOOGLE_CLIENT_ID,
             client_secret: GOOGLE_CLIENT_SECRET,
-            redirect_uri: GOOGLE_REDIRECT_URI,
+            redirect_uri: getGoogleRedirectUri(),
             grant_type: "authorization_code",
         }),
     });

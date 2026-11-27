@@ -121,7 +121,7 @@ export async function uploadPdfToCloudinary(
 
             const result = await cloudinary.uploader.upload(base64Data, {
                 resource_type: "raw",
-                folder: "chaibook/pdfs",
+                folder: "kairos/pdfs",
                 public_id: cleanId,
                 overwrite: false,
             });
@@ -150,7 +150,7 @@ export async function uploadPdfToCloudinary(
         filename,
     );
     form.append("upload_preset", requireUploadPreset());
-    form.append("folder", "chaibook/pdfs");
+    form.append("folder", "kairos/pdfs");
 
     const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
@@ -232,7 +232,7 @@ export async function uploadImageToCloudinary(
 
             const result = await cloudinary.uploader.upload(base64Data, {
                 resource_type: "image",
-                folder: "chaibook/images",
+                folder: "kairos/images",
                 public_id: cleanId,
                 overwrite: false,
             });
@@ -260,7 +260,7 @@ export async function uploadImageToCloudinary(
         filename,
     );
     form.append("upload_preset", requireUploadPreset());
-    form.append("folder", "chaibook/images");
+    form.append("folder", "kairos/images");
 
     const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
@@ -324,7 +324,7 @@ export async function uploadAudioToCloudinary(
 
             const result = await cloudinary.uploader.upload(base64Data, {
                 resource_type: "video",
-                folder: "chaibook/podcasts",
+                folder: "kairos/podcasts",
                 public_id: cleanId,
                 overwrite: false,
                 format: "mp3",
@@ -354,7 +354,7 @@ export async function uploadAudioToCloudinary(
         filename,
     );
     form.append("upload_preset", requireUploadPreset());
-    form.append("folder", "chaibook/podcasts");
+    form.append("folder", "kairos/podcasts");
 
     const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,

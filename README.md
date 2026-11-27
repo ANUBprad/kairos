@@ -83,6 +83,16 @@ Kairos uses Gemini by default for chat, artifacts, summaries, podcast turns, OCR
 
 Document and query embeddings must use the same provider, model, and dimensions. Every stored vector carries that identity, and Pinecone queries are filtered by it. Changing `EMBEDDING_PROVIDER`, `GEMINI_EMBEDDING_MODEL`, `OPENAI_EMBEDDING_MODEL`, or `EMBEDDING_DIMENSIONS` requires a dedicated `PINECONE_INDEX` and a re-import of sources. Vector dimension mismatches fail with an actionable startup/index error rather than mixing incompatible embeddings.
 
+#### OAuth callbacks
+
+Local development uses these integration callbacks:
+
+- `http://localhost:8081/api/integrations/google-drive/callback`
+- `http://localhost:8081/api/integrations/github/callback`
+- `http://localhost:8081/api/integrations/notion/callback`
+
+If a `GOOGLE_REDIRECT_URI`, `GITHUB_REDIRECT_URI`, or `NOTION_REDIRECT_URI` value is omitted, Kairos derives it from `SERVER_URL` or `BETTER_AUTH_URL`. Deployed environments must set each variable to the exact callback registered with the provider; no production hostname is committed here.
+
 ### 3. Start PostgreSQL
 
 Use your own PostgreSQL instance, or start the repository's local database service:

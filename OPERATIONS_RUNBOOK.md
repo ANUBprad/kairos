@@ -119,8 +119,8 @@ build. The positive staging client build then passed.
 
 ## 7. Safe boundaries
 
-- Only push to the private `origin` (`ANUBprad/kairos`). Never contact the
-  upstream OpenBook repository or its owner.
+- Only push to the private `origin` (`ANUBprad/kairos`). No external repository
+  contact is authorized.
 - No production deploy, production DB/service access, real payment/refund, real
   customer data or real email is authorized by these changes.
 - Keep the repository private until the independent licensing gate in
@@ -150,7 +150,7 @@ build. The positive staging client build then passed.
    Cloudinary download URLs, redaction and combined provider signals. All have
    regression tests and the final matrix passed.
 6. Clean only Phase 07-labelled containers after the drill. Other containers
-   (`kairos-remediation-pg-20261123`, `kairos-postgres-1`, `openbook-postgres`)
+   (`kairos-remediation-pg-20261123`, `kairos-postgres-1`, `kairos-postgres`)
    are unrelated and must be left untouched.
 
 ---

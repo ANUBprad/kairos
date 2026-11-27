@@ -123,7 +123,7 @@ export async function createRazorpayOrder(
             throw new ValidationError("Unsupported top-up amount");
         }
         creditsToAward = calculateCreditsForInr(amountInr);
-        description = `Purchase ${creditsToAward} OpenBook Credits`;
+        description = `Purchase ${creditsToAward} Kairos Credits`;
     }
 
     const amountPaise = Math.round(amountInr * 100);

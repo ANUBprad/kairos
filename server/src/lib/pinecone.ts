@@ -10,7 +10,7 @@ import {
     getEmbeddingMetadata,
 } from "./ai-config.js";
 
-const indexName = process.env.PINECONE_INDEX ?? "chaibook";
+const indexName = process.env.PINECONE_INDEX ?? "kairos";
 
 let pineconeClient: Pinecone | null = null;
 let indexReady = false; // index = database

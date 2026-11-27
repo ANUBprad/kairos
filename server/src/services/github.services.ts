@@ -14,29 +14,20 @@ import { ValidationError } from "../types/app-error.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { logger } from "../lib/logger.js";
 import { providerFetch } from "../lib/provider-http.js";
+import {
+    getOAuthCallbackUrl,
+    OAUTH_CALLBACK_PATHS,
+} from "../lib/oauth-callback.js";
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "";
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
 
-function normalizeBaseUrl(url: string): string {
-    return url.trim().replace(/\/$/, "");
-}
-
 export function getGithubRedirectUri(): string {
-    if (process.env.GITHUB_REDIRECT_URI?.trim()) {
-        return process.env.GITHUB_REDIRECT_URI.trim();
-    }
-
-    const serverBaseUrl = normalizeBaseUrl(
-        process.env.SERVER_URL ||
-            process.env.BETTER_AUTH_URL ||
-            "http://localhost:8081",
+    return getOAuthCallbackUrl(
+        process.env.GITHUB_REDIRECT_URI,
+        OAUTH_CALLBACK_PATHS.github,
     );
-
-    return `${serverBaseUrl}/api/integrations/github/callback`;
 }
-
-const GITHUB_REDIRECT_URI = getGithubRedirectUri();
 
 /**
  * Generates the GitHub OAuth authorization URL for repository read access.
@@ -51,7 +42,7 @@ export function getGithubAuthUrl(state: string): string {
 
     const params = new URLSearchParams({
         client_id: GITHUB_CLIENT_ID,
-        redirect_uri: GITHUB_REDIRECT_URI,
+        redirect_uri: getGithubRedirectUri(),
         scope: "repo read:user",
         state,
     });
@@ -83,7 +74,7 @@ export async function handleGithubCallback({
             client_id: GITHUB_CLIENT_ID,
             client_secret: GITHUB_CLIENT_SECRET,
             code,
-            redirect_uri: GITHUB_REDIRECT_URI,
+            redirect_uri: getGithubRedirectUri(),
         }),
     });
 
@@ -206,7 +197,7 @@ export async function listUserGithubRepos(
             headers: {
                 Authorization: `Bearer ${account.accessToken}`,
                 Accept: "application/vnd.github+json",
-                "User-Agent": "OpenBook-App",
+                "User-Agent": "Kairos-App",
             },
         },
     );
