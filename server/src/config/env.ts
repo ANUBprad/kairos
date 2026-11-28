@@ -43,6 +43,12 @@ const baseSchema = z.object({
     CLOUDINARY_API_SECRET: z.string().optional(),
     CLOUDINARY_UPLOAD_PRESET: z.string().optional(),
     FIRECRAWL_API_KEY: z.string().optional(),
+    /**
+     * Razorpay credentials are optional at startup but all three are required
+     * at payment-operation time. Use test-mode keys outside production. Only
+     * KEY_ID is public; the secret and webhook secret stay server-side. The
+     * signed webhook target is POST /api/payment/webhook.
+     */
     RAZORPAY_KEY_ID: z.string().optional(),
     RAZORPAY_KEY_SECRET: z.string().optional(),
     RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
@@ -57,6 +63,8 @@ const baseSchema = z.object({
     STAGING_DATABASE_ID: z.string().min(4).optional(),
     /** Required marker for staging-owned storage buckets / upload presets. */
     STAGING_RESOURCE_PREFIX: z.string().min(4).optional(),
+    /** Exact-match developer email allowlist (comma-separated, normalized). */
+    DEVELOPER_EMAILS: z.string().optional(),
     /** Optional explicit denylist of production URLs, hosts, or database names. */
     STAGING_FORBIDDEN_ENDPOINTS: z.string().optional(),
     /** If set, staging may never use this exact database URL. */
