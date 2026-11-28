@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { logger } from "../lib/logger.js";
+import { getRequestId } from "../lib/observability/request-context.js";
 import { uploadImageToCloudinary, uploadPdfToCloudinary } from "../lib/cloudinary.js";
 import { extractTextFromImageBuffer } from "../lib/sources/image-ocr.js";
 import {
@@ -633,21 +634,86 @@ function resolvePdfUploadDeps(deps?: PdfUploadDeps): ResolvedPdfUploadDeps {
     };
 }
 
-/** Safe provider diagnostics: status codes and error names only, never bodies. */
-function providerDiagnostic(error: unknown): Record<string, unknown> {
-    const status =
-        error && typeof error === "object" && "status" in error
-            ? Number((error as { status?: unknown }).status)
-            : undefined;
+type ProviderDiagnosticContext = {
+    provider: string;
+    operation: string;
+};
+
+function diagnosticText(value: unknown, maxLength = 300): string | undefined {
+    if (typeof value !== "string") return undefined;
+    const text = value.replace(/\s+/g, " ").trim();
+    return text ? text.slice(0, maxLength) : undefined;
+}
+
+function diagnosticDetails(error: unknown): Record<string, unknown> {
+    if (!error || typeof error !== "object") return {};
+    const details = (error as { details?: unknown }).details;
+    return details && typeof details === "object"
+        ? (details as Record<string, unknown>)
+        : {};
+}
+
+/**
+ * Safe provider diagnostics for operators: correlation id, category, error
+ * code/message, invalid field and provider status. Never include file bytes,
+ * provider bodies, credentials, cookies, or stack traces.
+ */
+function providerDiagnostic(
+    error: unknown,
+    context: ProviderDiagnosticContext,
+): Record<string, unknown> {
+    const record =
+        error && typeof error === "object"
+            ? (error as Record<string, unknown>)
+            : {};
+    const details = diagnosticDetails(error);
     const rawName = error instanceof Error ? error.name : "UnknownError";
+    const errorName = /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(rawName)
+        ? rawName
+        : "ProviderError";
+    const code = diagnosticText(details.code ?? record.code, 64);
+    const message = diagnosticText(record.message);
+    const statusValue = record.statusCode ?? record.status ?? details.status;
+    const status =
+        typeof statusValue === "number" && Number.isInteger(statusValue)
+            ? statusValue
+            : undefined;
+    const rawField = details.field ?? details.path;
+    const field = Array.isArray(rawField)
+        ? rawField.map((part) => diagnosticText(part, 64)).filter(Boolean).join(".")
+        : diagnosticText(rawField, 64);
+    const missing = Array.isArray(details.missing)
+        ? details.missing
+              .map((key) => diagnosticText(key, 64))
+              .filter((key): key is string => Boolean(key))
+              .slice(0, 10)
+        : [];
+
+    let category = "storage_error";
+    if (
+        code === "STORAGE_NOT_CONFIGURED" ||
+        /not configured|preset is required/i.test(message ?? "")
+    ) {
+        category = "configuration";
+    } else if (code === "STORAGE_RESPONSE_INVALID") {
+        category = "provider_response_invalid";
+    } else if (code === "STORAGE_REJECTED" || status === 403) {
+        category = "provider_rejected";
+    } else if ((status ?? 0) >= 500) {
+        category = "provider_unavailable";
+    }
+
     return {
-        errorName: /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(rawName)
-            ? rawName
-            : "ProviderError",
-        status:
-            typeof status === "number" && Number.isInteger(status)
-                ? status
-                : undefined,
+        requestId: getRequestId(),
+        provider: context.provider,
+        operation: context.operation,
+        category,
+        errorName,
+        ...(code ? { errorCode: code } : {}),
+        ...(message ? { errorMessage: message } : {}),
+        ...(field ? { field } : {}),
+        ...(missing.length > 0 ? { missing } : {}),
+        ...(status === undefined ? {} : { status }),
     };
 }
 
@@ -728,11 +794,26 @@ export async function uploadPdfSource(
     try {
         upload = await resolved.uploadPdf(file.buffer, file.originalname);
     } catch (storageError) {
-        logger.warn("PDF storage failed", providerDiagnostic(storageError));
-        throw new ValidationError(
+        const diagnostic = providerDiagnostic(storageError, {
+            provider: "cloudinary",
+            operation: "pdf.upload",
+        });
+        logger.warn("PDF storage failed", diagnostic);
+        const failure = new ValidationError(
             "The PDF could not be stored. Please try again.",
-            { code: "PDF_UPLOAD_FAILED" },
+            {
+                code: "PDF_UPLOAD_FAILED",
+                provider: "cloudinary",
+                category:
+                    typeof diagnostic.category === "string"
+                        ? diagnostic.category
+                        : "storage_error",
+            },
         );
+        // Keep the original error for server-side tracing without exposing it
+        // to clients through the serialized error details.
+        Object.assign(failure, { cause: storageError });
+        throw failure;
     }
     if (!upload?.secureUrl || !upload?.publicId) {
         throw new ValidationError(

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ValidationError } from "../types/app-error.js";
+import { runWithRequestId } from "../lib/observability/request-context.js";
 import {
     PDF_MAX_UPLOAD_BYTES,
     PdfExtractionError,
@@ -158,6 +159,57 @@ describe("PDF upload ingestion", () => {
             },
         );
         assert.equal(state.create, 0);
+    });
+
+    it("logs safe structured storage diagnostics with the request id", async () => {
+        const originalWarn = console.warn;
+        const warnings: string[] = [];
+        console.warn = (line?: unknown) => {
+            warnings.push(String(line));
+        };
+
+        try {
+            await runWithRequestId("pdf-storage-test-request", () =>
+                assert.rejects(
+                    () =>
+                        uploadPdfSource(
+                            "w1",
+                            "u1",
+                            file(Buffer.from("%PDF-1.4 fake")),
+                            undefined,
+                            baseDeps(calls(), {
+                                uploadPdf: async () => {
+                                    throw new ValidationError(
+                                        "Cloudinary is not configured",
+                                        {
+                                            code: "STORAGE_NOT_CONFIGURED",
+                                            provider: "cloudinary",
+                                            missing: ["CLOUDINARY_CLOUD_NAME"],
+                                        },
+                                    );
+                                },
+                            }),
+                        ),
+                    ValidationError,
+                ),
+            );
+        } finally {
+            console.warn = originalWarn;
+        }
+
+        assert.equal(warnings.length, 1);
+        const log = JSON.parse(warnings[0]!);
+        assert.equal(log.level, "warn");
+        assert.match(log.message, /PDF storage failed/);
+        assert.equal(log.errorMessage, "Cloudinary is not configured");
+        assert.equal(log.requestId, "pdf-storage-test-request");
+        assert.equal(log.provider, "cloudinary");
+        assert.equal(log.operation, "pdf.upload");
+        assert.equal(log.category, "configuration");
+        assert.equal(log.errorName, "ValidationError");
+        assert.equal(log.errorCode, "STORAGE_NOT_CONFIGURED");
+        assert.deepEqual(log.missing, ["CLOUDINARY_CLOUD_NAME"]);
+        assert.doesNotMatch(JSON.stringify(log), /stack|file contents/i);
     });
 
     it("rejects an incomplete storage result", async () => {

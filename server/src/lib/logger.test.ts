@@ -86,4 +86,30 @@ describe("log redaction", () => {
     assert.equal(payload.level, "info");
     assert.equal(payload.requestId, "trace-log123456");
   });
+
+  it("does not let metadata overwrite event fields or correlation id", () => {
+    const original = console.warn;
+    let line = "";
+    console.warn = (value: unknown) => {
+      line = String(value);
+    };
+    try {
+      runWithRequestId("trace-owner123456", () => {
+        logger.warn("event message", {
+          level: "info",
+          message: "metadata message",
+          time: "not-a-time",
+          requestId: "spoofed-request",
+        });
+      });
+    } finally {
+      console.warn = original;
+    }
+
+    const payload = JSON.parse(line) as Record<string, unknown>;
+    assert.equal(payload.level, "warn");
+    assert.equal(payload.message, "event message");
+    assert.match(String(payload.time), /^\d{4}-\d{2}-\d{2}T/);
+    assert.equal(payload.requestId, "trace-owner123456");
+  });
 });

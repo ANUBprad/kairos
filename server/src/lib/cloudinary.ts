@@ -29,13 +29,93 @@ const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
 const apiKey = process.env.CLOUDINARY_API_KEY;
 const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
+type StorageErrorDetails = {
+    code: string;
+    provider: "cloudinary";
+    operation: string;
+    field?: string;
+    missing?: string[];
+    status?: number;
+};
+
+function storageError(
+    message: string,
+    details: StorageErrorDetails,
+    cause?: unknown,
+): ValidationError {
+    const error = new ValidationError(message, details);
+    if (cause !== undefined) Object.assign(error, { cause });
+    return error;
+}
+
 function requireUploadPreset(): string {
     if (!uploadPreset?.trim()) {
-        throw new ValidationError(
+        throw storageError(
             "CLOUDINARY_UPLOAD_PRESET is required for unsigned uploads when signed credentials are unavailable.",
+            {
+                code: "STORAGE_NOT_CONFIGURED",
+                provider: "cloudinary",
+                operation: "pdf.unsigned.upload",
+                missing: ["CLOUDINARY_UPLOAD_PRESET"],
+            },
         );
     }
     return uploadPreset;
+}
+
+/**
+ * Validates the normalized fields Kairos actually needs. `bytes` is optional
+ * because Cloudinary may omit it for some raw responses; keeping it optional
+ * avoids rejecting an otherwise valid upload for a non-essential field.
+ */
+function normalizeUploadResult(
+    result: CloudinaryUploadResponse | null | undefined,
+    filename: string,
+    fallbackBytes: number,
+    operation: string,
+): CloudinaryUploadResult {
+    if (!result || typeof result !== "object") {
+        throw storageError("Cloudinary returned an empty upload response.", {
+            code: "STORAGE_RESPONSE_INVALID",
+            provider: "cloudinary",
+            operation,
+            field: "response",
+        });
+    }
+    if (
+        typeof result.secure_url !== "string" ||
+        !/^https:\/\//i.test(result.secure_url)
+    ) {
+        throw storageError("Cloudinary upload response is missing a secure URL.", {
+            code: "STORAGE_RESPONSE_INVALID",
+            provider: "cloudinary",
+            operation,
+            field: "secure_url",
+        });
+    }
+    if (typeof result.public_id !== "string" || result.public_id.length === 0) {
+        throw storageError("Cloudinary upload response is missing a public id.", {
+            code: "STORAGE_RESPONSE_INVALID",
+            provider: "cloudinary",
+            operation,
+            field: "public_id",
+        });
+    }
+
+    const bytes =
+        typeof result.bytes === "number" &&
+        Number.isFinite(result.bytes) &&
+        result.bytes >= 0
+            ? result.bytes
+            : fallbackBytes;
+
+    return {
+        secureUrl: result.secure_url,
+        publicId: result.public_id,
+        bytes,
+        originalFilename: filename,
+        resourceType: result.resource_type === "image" ? "image" : "raw",
+    };
 }
 
 /** Normalized result returned after a successful Cloudinary upload. */
@@ -103,7 +183,15 @@ export async function uploadPdfToCloudinary(
     filename: string,
 ): Promise<CloudinaryUploadResult> {
     if (!cloudName) {
-        throw new ValidationError("Cloudinary is not configured on the server");
+        throw storageError(
+            "Cloudinary is not configured on the server. Set CLOUDINARY_CLOUD_NAME and either signed API credentials or an unsigned upload preset.",
+            {
+                code: "STORAGE_NOT_CONFIGURED",
+                provider: "cloudinary",
+                operation: "pdf.upload",
+                missing: ["CLOUDINARY_CLOUD_NAME"],
+            },
+        );
     }
 
     // 1. Try signed upload if API Key and Secret are properly configured
@@ -127,16 +215,17 @@ export async function uploadPdfToCloudinary(
             });
 
             if (result?.secure_url) {
-                return {
-                    secureUrl: result.secure_url,
-                    publicId: result.public_id,
-                    bytes: result.bytes || buffer.length,
-                    originalFilename: filename,
-                    resourceType: "raw",
-                };
+                return normalizeUploadResult(
+                    result,
+                    filename,
+                    buffer.length,
+                    "pdf.signed.upload",
+                );
             }
         } catch (signedErr) {
             logger.warn("Cloudinary signed PDF upload failed, attempting unsigned upload", {
+                provider: "cloudinary",
+                operation: "pdf.signed.upload",
                 err: signedErr,
             });
         }
@@ -157,29 +246,54 @@ export async function uploadPdfToCloudinary(
         { method: "POST", body: form, signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) },
     );
 
-    const result = (await response.json()) as CloudinaryUploadResponse;
+    let result: CloudinaryUploadResponse | undefined;
+    try {
+        result = (await response.json()) as CloudinaryUploadResponse;
+    } catch (parseError) {
+        throw storageError(
+            "Cloudinary returned an unreadable upload response.",
+            {
+                code: "STORAGE_RESPONSE_INVALID",
+                provider: "cloudinary",
+                operation: "pdf.unsigned.upload",
+                field: "response",
+                status: response.status,
+            },
+            parseError,
+        );
+    }
 
     if (!response.ok) {
         const message =
-            result.error?.message ??
+            result?.error?.message ??
             `Cloudinary upload failed (${response.status})`;
 
         if (response.status === 403) {
-            throw new ValidationError(
-                "Cloudinary rejected the upload. Check CLOUDINARY_UPLOAD_PRESET in server/.env matches an unsigned preset in your dashboard.",
+            throw storageError(
+                "Cloudinary rejected the upload. Check CLOUDINARY_UPLOAD_PRESET matches an unsigned preset in your dashboard.",
+                {
+                    code: "STORAGE_REJECTED",
+                    provider: "cloudinary",
+                    operation: "pdf.unsigned.upload",
+                    status: 403,
+                },
             );
         }
 
-        throw new ValidationError(message);
+        throw storageError(message, {
+            code: "STORAGE_PROVIDER_FAILED",
+            provider: "cloudinary",
+            operation: "pdf.unsigned.upload",
+            status: response.status,
+        });
     }
 
-    return {
-        secureUrl: result.secure_url,
-        publicId: result.public_id,
-        bytes: result.bytes,
-        originalFilename: filename,
-        resourceType: result.resource_type === "image" ? "image" : "raw",
-    };
+    return normalizeUploadResult(
+        result,
+        filename,
+        buffer.length,
+        "pdf.unsigned.upload",
+    );
 }
 
 const IMAGE_MIME_BY_EXT: Record<string, string> = {
