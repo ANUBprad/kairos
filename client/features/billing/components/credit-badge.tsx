@@ -4,6 +4,10 @@ import { Coins, Plus, RefreshCw } from "lucide-react";
 import { useUsage } from "../hooks/use-usage";
 import { useUpgradeModal } from "../stores/use-upgrade-modal";
 import { cn } from "@/lib/utils";
+import {
+  DEVELOPER_ENTITLEMENT_LABEL,
+  formatUtcInstant,
+} from "../lib/plans";
 
 interface CreditBadgeProps {
   className?: string;
@@ -13,10 +17,12 @@ interface CreditBadgeProps {
 export function CreditBadge({ className, showPlusButton = true }: CreditBadgeProps) {
   const {
     credits,
-    dailyCredits,
+    windowCredits,
     paidCredits,
-    dailyAllowance,
-    nextDailyResetAt,
+    windowAllowance,
+    nextCreditResetAt,
+    bypassCredits,
+    isDeveloper,
     isLoading,
     isError,
     refetch,
@@ -56,6 +62,25 @@ export function CreditBadge({ className, showPlusButton = true }: CreditBadgePro
     );
   }
 
+  const resetLabel = formatUtcInstant(nextCreditResetAt);
+  const balanceLabel = `${windowCredits.toLocaleString("en-IN")} of ${windowAllowance.toLocaleString("en-IN")} free-window credits remaining, reset ${resetLabel}; ${paidCredits.toLocaleString("en-IN")} paid credits remaining.`;
+
+  if (bypassCredits) {
+    return (
+      <div
+        title={`${DEVELOPER_ENTITLEMENT_LABEL} ${balanceLabel}`}
+        aria-label={`${DEVELOPER_ENTITLEMENT_LABEL} ${balanceLabel}`}
+        className={cn(
+          "kairos-tag gap-1.5 border-brand/30 bg-brand-quiet px-2.5 py-1 text-xs font-medium text-brand",
+          className,
+        )}
+      >
+        <Coins className="size-3.5" aria-hidden="true" />
+        <span>{isDeveloper ? "Developer" : "Entitlement active"}</span>
+      </div>
+    );
+  }
+
   // Color cues are based on the combined balance used for affordability checks.
   const isLow = credits < 10;
   const isMedium = credits >= 10 && credits <= 50;
@@ -75,8 +100,8 @@ export function CreditBadge({ className, showPlusButton = true }: CreditBadgePro
           currentCredits: credits,
         })
       }
-      aria-label={`${dailyCredits} of ${dailyAllowance} daily credits remaining, ${paidCredits} paid credits remaining. Open credit options.`}
-      title={`${dailyCredits} / ${dailyAllowance} daily credits, reset ${nextDailyResetAt}; ${paidCredits} paid credits. Click to top up.`}
+      aria-label={`${balanceLabel} Open credit options.`}
+      title={`${windowCredits.toLocaleString("en-IN")} / ${windowAllowance.toLocaleString("en-IN")} free-window credits, reset ${resetLabel}; ${paidCredits.toLocaleString("en-IN")} paid credits. Click to top up.`}
       className={cn(
         "group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium shadow-[var(--shadow-panel)] transition-colors motion-reduce:transition-none",
         colorClasses,
@@ -91,8 +116,8 @@ export function CreditBadge({ className, showPlusButton = true }: CreditBadgePro
         aria-hidden="true"
       />
       <span>
-        {dailyCredits.toLocaleString("en-IN")} /{" "}
-        {dailyAllowance.toLocaleString("en-IN")} daily
+        {windowCredits.toLocaleString("en-IN")} /{" "}
+        {windowAllowance.toLocaleString("en-IN")} free
       </span>
       {paidCredits > 0 && (
         <span className="text-muted-foreground">

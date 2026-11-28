@@ -38,7 +38,7 @@ const FAQS = [
   {
     question: "How does pricing work?",
     answer:
-      "You start with welcome credits and top up only when you need more. Credits never expire; there is no recurring subscription. Each action shows its credit cost before you confirm it.",
+      "New accounts receive a one-time welcome bonus, and every account gets free credits each server-defined window. Paid top-ups never expire; unused free-window credits expire at the next server-provided reset. Plan access is a finite one-time purchase, with no recurring subscription. Each action shows its credit cost before you confirm it.",
   },
   {
     question: "Can I control my saved sources and artifacts?",

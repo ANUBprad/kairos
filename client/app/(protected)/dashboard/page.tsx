@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth";
 import { useWorkspaces, Workspace } from "@/hooks/use-workspaces";
 import { ThemeLoader } from "@/components/ui/theme-loader";
-import { useUsage, useUpgradeModal } from "@/features/billing";
+import {
+  DEVELOPER_ENTITLEMENT_LABEL,
+  useUsage,
+  useUpgradeModal,
+} from "@/features/billing";
 import {
   DashboardHeader,
   DashboardBanner,
@@ -17,7 +21,7 @@ import {
 export default function DashboardPage() {
   const router = useRouter();
   const { session, isPending: isAuthPending, logoutMutation } = useAuth();
-  const { plan, usage } = useUsage();
+  const { plan, usage, bypassCredits, bypassFreeQuotas, isDeveloper } = useUsage();
   const { openUpgradeModal } = useUpgradeModal();
 
   const {
@@ -71,11 +75,14 @@ export default function DashboardPage() {
   }, [session, isAuthPending, router]);
 
   const handleOpenCreateModal = () => {
-    const wsLimit = usage?.workspaces.limit ?? (plan === "FREE" ? 1 : plan === "PRO" ? 3 : 10);
-    if (workspaces.length >= wsLimit) {
-      const nextPlan = plan === "FREE" ? "Pro (3 workspaces)" : "Pro+ (10 workspaces)";
+    const wsLimit = usage?.workspaces.limit;
+    if (
+      !bypassFreeQuotas &&
+      typeof wsLimit === "number" &&
+      workspaces.length >= wsLimit
+    ) {
       openUpgradeModal({
-        reason: `${plan} plan limit reached: You have created ${wsLimit} of ${wsLimit} allowed workspaces. Upgrade to ${nextPlan} to create more.`,
+        reason: `${plan} workspace limit reached: you have ${workspaces.length} of ${wsLimit} allowed workspaces. A paid plan or plan access raises this limit on the server.`,
         limitType: "workspaces",
       });
       return;
@@ -97,7 +104,10 @@ export default function DashboardPage() {
     } catch (err) {
       console.error("Failed to create workspace:", err);
       const msg = err instanceof Error ? err.message : "";
-      if (msg.includes("limit") || msg.includes("Free tier") || msg.includes("403")) {
+      if (
+        !bypassFreeQuotas &&
+        (msg.includes("limit") || msg.includes("Free tier") || msg.includes("403"))
+      ) {
         openUpgradeModal({
           reason: msg || "Plan limit reached. Upgrade for more workspaces.",
           limitType: "workspaces",
@@ -177,6 +187,12 @@ export default function DashboardPage() {
 
       {/* 2. Main Content Area */}
       <main className="mx-auto w-full max-w-7xl flex-1 space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        {(isDeveloper || bypassCredits || bypassFreeQuotas) && (
+          <p className="kairos-tag w-fit border-brand/30 bg-brand-quiet text-brand">
+            {DEVELOPER_ENTITLEMENT_LABEL}
+          </p>
+        )}
+
         {/* Welcome Banner & Search */}
         <DashboardBanner
           userName={session.user.name}

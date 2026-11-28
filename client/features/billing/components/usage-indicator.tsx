@@ -14,7 +14,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useUsage } from "../hooks/use-usage";
 import { useUpgradeModal } from "../stores/use-upgrade-modal";
-import { CREDIT_COSTS } from "../lib/plans";
+import {
+  CREDIT_COSTS,
+  DEVELOPER_ENTITLEMENT_LABEL,
+  formatInr,
+  formatUtcInstant,
+  MIN_CREDIT_PACK_AMOUNT_INR,
+} from "../lib/plans";
 import { cn } from "@/lib/utils";
 
 export function UsageIndicator({
@@ -24,10 +30,14 @@ export function UsageIndicator({
 }) {
   const {
     credits,
-    dailyCredits,
+    windowCredits,
     paidCredits,
-    dailyAllowance,
-    nextDailyResetAt,
+    windowAllowance,
+    creditWindowStart,
+    nextCreditResetAt,
+    windowsPerDay,
+    bypassCredits,
+    isDeveloper,
     isLoading,
     isError,
     refetch,
@@ -60,9 +70,19 @@ export function UsageIndicator({
     );
   }
 
-  const isLow = credits < 10;
+  const isLow = !bypassCredits && credits < 10;
+  const topUpLabel = `Browse credit packs (from ${formatInr(MIN_CREDIT_PACK_AMOUNT_INR)})`;
 
   if (variant === "compact") {
+    if (bypassCredits) {
+      return (
+        <span className="kairos-tag gap-1.5 border-brand/30 bg-brand-quiet text-brand">
+          <Coins className="size-3.5" aria-hidden="true" />
+          {isDeveloper ? "Developer" : "Credits bypassed"}
+        </span>
+      );
+    }
+
     return (
       <Button
         type="button"
@@ -76,7 +96,7 @@ export function UsageIndicator({
             currentCredits: credits,
           })
         }
-        aria-label={`${dailyCredits} of ${dailyAllowance} daily credits and ${paidCredits} paid credits remaining. Open credit options.`}
+        aria-label={`${windowCredits} of ${windowAllowance} free-window credits and ${paidCredits} paid credits remaining. Open credit options.`}
         className={cn(
           "gap-1.5 border-border text-xs font-normal transition-colors motion-reduce:transition-none",
           isLow
@@ -92,8 +112,8 @@ export function UsageIndicator({
           aria-hidden="true"
         />
         <span className="font-medium text-foreground">
-          {dailyCredits.toLocaleString("en-IN")} /{" "}
-          {dailyAllowance.toLocaleString("en-IN")} daily
+          {windowCredits.toLocaleString("en-IN")} /{" "}
+          {windowAllowance.toLocaleString("en-IN")} free
         </span>
         <span className="rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
           Top up
@@ -115,12 +135,18 @@ export function UsageIndicator({
         </span>
       </div>
 
+      {bypassCredits && (
+        <p className="rounded-xl border border-brand/25 bg-brand-quiet px-3 py-2 text-xs font-medium text-brand">
+          {DEVELOPER_ENTITLEMENT_LABEL}
+        </p>
+      )}
+
       <dl className="space-y-2 text-xs text-muted-foreground">
         <div className="flex items-center justify-between">
-          <dt>Daily free credits</dt>
+          <dt>Free-window credits</dt>
           <dd className="font-medium text-foreground">
-            {dailyCredits.toLocaleString("en-IN")} /{" "}
-            {dailyAllowance.toLocaleString("en-IN")}
+            {windowCredits.toLocaleString("en-IN")} /{" "}
+            {windowAllowance.toLocaleString("en-IN")}
           </dd>
         </div>
         <div className="flex items-center justify-between">
@@ -130,14 +156,24 @@ export function UsageIndicator({
           </dd>
         </div>
         <div className="flex items-center justify-between border-t border-border pt-2">
-          <dt>Daily reset</dt>
+          <dt>Window start</dt>
           <dd>
-            <time dateTime={nextDailyResetAt} className="font-medium text-foreground">
-              {nextDailyResetAt
-                ? `${nextDailyResetAt.slice(0, 10)} ${nextDailyResetAt.slice(11, 16)} UTC`
-                : "Not available"}
+            <time dateTime={creditWindowStart} className="font-medium text-foreground">
+              {formatUtcInstant(creditWindowStart)}
             </time>
           </dd>
+        </div>
+        <div className="flex items-center justify-between">
+          <dt>Next reset</dt>
+          <dd>
+            <time dateTime={nextCreditResetAt} className="font-medium text-foreground">
+              {formatUtcInstant(nextCreditResetAt)}
+            </time>
+          </dd>
+        </div>
+        <div className="flex items-center justify-between">
+          <dt>Windows per day</dt>
+          <dd className="font-medium text-foreground">{windowsPerDay}</dd>
         </div>
         <div className="flex items-center justify-between">
           <dt className="flex items-center gap-1.5">
@@ -185,15 +221,17 @@ export function UsageIndicator({
         </div>
       </dl>
 
-      <Button
-        type="button"
-        size="sm"
-        onClick={() => openUpgradeModal({ currentCredits: credits })}
-        className="w-full gap-1.5 text-xs"
-      >
-        <Plus className="size-3.5" aria-hidden="true" />
-        <span>Top up credits (min ₹50)</span>
-      </Button>
+      {!bypassCredits && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => openUpgradeModal({ currentCredits: credits })}
+          className="w-full gap-1.5 text-xs"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          <span>{topUpLabel}</span>
+        </Button>
+      )}
     </section>
   );
 }

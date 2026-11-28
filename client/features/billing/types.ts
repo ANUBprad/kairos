@@ -34,15 +34,36 @@ export interface CreditTransaction {
   createdAt: string;
 }
 
+export interface CreditEntitlement {
+  developer?: boolean;
+  bypassCredits?: boolean;
+  bypassFreeQuotas?: boolean;
+}
+
 export interface CreditSnapshot {
-  /** Backward-compatible total: daily + paid. */
+  /** Backward-compatible total: window + paid. */
   credits: number;
+  /** Legacy window balance; prefer UI labels from the normalized hook result. */
   dailyCredits: number;
   paidCredits: number;
+  /** Legacy allowance; prefer `windowAllowance` when present. */
   dailyAllowance: number;
+  /** Legacy window start; prefer `creditWindowStart` when present. */
   dailyCreditDay: string;
+  /** Legacy reset instant; prefer `nextCreditResetAt` when present. */
   nextDailyResetAt: string;
   serverTime: string;
+
+  /** Server-owned credit-window fields. */
+  creditWindowStart?: string;
+  nextCreditResetAt?: string;
+  windowAllowance?: number;
+  windowsPerDay?: number;
+
+  /** Server-owned developer entitlement. Never supplied by the browser. */
+  isDeveloper?: boolean;
+  developer?: boolean;
+  entitlement?: CreditEntitlement | null;
 }
 
 export interface CreditBalance extends CreditSnapshot {

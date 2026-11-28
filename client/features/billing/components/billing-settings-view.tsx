@@ -20,7 +20,13 @@ import { ThemeLoader } from "@/components/ui/theme-loader";
 import { cn } from "@/lib/utils";
 import { useUsage } from "../hooks/use-usage";
 import { useUpgradeModal } from "../stores/use-upgrade-modal";
-import { CREDIT_COSTS } from "../lib/plans";
+import {
+  CREDIT_COSTS,
+  DEVELOPER_ENTITLEMENT_LABEL,
+  formatInr,
+  formatUtcInstant,
+  MIN_CREDIT_PACK_AMOUNT_INR,
+} from "../lib/plans";
 import { PricingPlans } from "./pricing-plans";
 
 type BillingSettingsViewProps = {
@@ -36,18 +42,12 @@ function formatDate(iso: string) {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "UTC",
+      timeZoneName: "short",
     });
   } catch {
     return iso;
   }
-}
-
-/** Formats the server-provided UTC reset instant without using local time. */
-function formatUtcReset(iso: string) {
-  if (!iso) return "Not available";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "Not available";
-  return `${date.toISOString().slice(0, 10)} at ${date.toISOString().slice(11, 16)} UTC`;
 }
 
 export function BillingSettingsView({
@@ -55,10 +55,14 @@ export function BillingSettingsView({
 }: BillingSettingsViewProps = {}) {
   const {
     credits,
-    dailyCredits,
+    windowCredits,
     paidCredits,
-    dailyAllowance,
-    nextDailyResetAt,
+    windowAllowance,
+    creditWindowStart,
+    nextCreditResetAt,
+    windowsPerDay,
+    bypassCredits,
+    isDeveloper,
     creditHistory,
     isLoading,
     isError,
@@ -126,21 +130,30 @@ export function BillingSettingsView({
                 className="kairos-tag gap-1.5 border-brand/30 bg-brand-quiet px-3 py-1 text-brand"
               >
                 <Coins className="size-3.5 text-primary" />
-                Daily free allowance
+                Free credit window
               </Badge>
-              <span className="kairos-eyebrow">Resets at 00:00 UTC</span>
+              <span className="kairos-eyebrow">
+                Next reset: {formatUtcInstant(nextCreditResetAt)}
+              </span>
             </div>
+
+            {bypassCredits && (
+              <p className="rounded-xl border border-brand/25 bg-brand-quiet px-3 py-2 text-xs font-medium text-brand">
+                {DEVELOPER_ENTITLEMENT_LABEL}
+                {isDeveloper ? "" : " (via entitlement)"}
+              </p>
+            )}
 
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="kairos-display text-5xl text-foreground sm:text-6xl">
-                {dailyCredits.toLocaleString("en-IN")}
+                {windowCredits.toLocaleString("en-IN")}
                 <span className="text-3xl text-muted-foreground">
                   {" / "}
-                  {dailyAllowance.toLocaleString("en-IN")}
+                  {windowAllowance.toLocaleString("en-IN")}
                 </span>
               </span>
               <span className="text-base font-medium text-muted-foreground">
-                daily credits left
+                free-window credits left
               </span>
             </div>
 
@@ -157,36 +170,50 @@ export function BillingSettingsView({
                   {credits.toLocaleString("en-IN")} credits
                 </dd>
               </div>
+              <div className="rounded-xl border border-border bg-surface/70 px-3 py-2">
+                <dt className="text-xs text-muted-foreground">Window start</dt>
+                <dd className="font-semibold text-foreground">
+                  <time dateTime={creditWindowStart}>
+                    {formatUtcInstant(creditWindowStart)}
+                  </time>
+                </dd>
+              </div>
+              <div className="rounded-xl border border-border bg-surface/70 px-3 py-2">
+                <dt className="text-xs text-muted-foreground">Windows per day</dt>
+                <dd className="font-semibold text-foreground">{windowsPerDay}</dd>
+              </div>
             </dl>
 
             <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-              Daily credits reset at{" "}
-              <time dateTime={nextDailyResetAt} className="font-medium text-foreground">
-                {formatUtcReset(nextDailyResetAt)}
+              Free-window credits reset at{" "}
+              <time dateTime={nextCreditResetAt} className="font-medium text-foreground">
+                {formatUtcInstant(nextCreditResetAt)}
               </time>
-              . Paid credits never expire. Daily credits are spent first.
+              . Paid credits never expire. Free-window credits are spent first.
             </p>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-            <Button
-              type="button"
-              onClick={() =>
-                openUpgradeModal({
-                  reason: "Top up your Kairos credits",
-                  currentCredits: credits,
-                })
-              }
-              className="gap-2"
-            >
-              <Plus className="size-4" />
-              Top up credits (min ₹50)
-            </Button>
+            {!bypassCredits && (
+              <Button
+                type="button"
+                onClick={() =>
+                  openUpgradeModal({
+                    reason: "Top up your Kairos credits",
+                    currentCredits: credits,
+                  })
+                }
+                className="gap-2"
+              >
+                <Plus className="size-4" />
+                Browse credit packs (from {formatInr(MIN_CREDIT_PACK_AMOUNT_INR)})
+              </Button>
+            )}
             <Link
               href="/pricing"
               className={cn(buttonVariants({ variant: "outline" }), "text-sm")}
             >
-              View credit packs &amp; pricing
+              View credit packs &amp; plan access
             </Link>
           </div>
         </section>
@@ -258,8 +285,8 @@ export function BillingSettingsView({
           </dl>
 
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Daily credits are used before paid credits. Failed generations are
-            refunded to their original buckets.
+            Free-window credits are used before paid credits. Failed generations
+            are refunded to their original buckets.
           </p>
         </section>
       </div>
@@ -292,8 +319,8 @@ export function BillingSettingsView({
 
         {creditHistory.length === 0 ? (
           <div className="kairos-panel border-dashed p-10 text-center text-sm text-muted-foreground">
-            No transactions yet. Your 100 daily credits become available the
-            first time Kairos checks your balance.
+            No transactions yet. Your free-window credits appear here after the
+            first balance check.
           </div>
         ) : (
           <div className="kairos-panel overflow-hidden">

@@ -20,7 +20,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
-import { PremiumAvatar, ProBadge, useUpgradeModal, useUsage } from "@/features/billing";
+import {
+  DEVELOPER_ENTITLEMENT_LABEL,
+  formatInr,
+  MIN_CREDIT_PACK_AMOUNT_INR,
+  PremiumAvatar,
+  ProBadge,
+  useUpgradeModal,
+  useUsage,
+} from "@/features/billing";
 import { UserAvatar } from "@/components/ui/user-avatar";
 
 
@@ -40,7 +48,7 @@ export function WorkspaceHeader({
   const router = useRouter();
   const { session, logoutMutation } = useAuth();
   const { workspaces } = useWorkspaces();
-  const { isPro, isProPlus, plan } = useUsage();
+  const { plan, bypassCredits, bypassFreeQuotas, isDeveloper } = useUsage();
 
   const { openUpgradeModal } = useUpgradeModal();
 
@@ -215,26 +223,32 @@ export function WorkspaceHeader({
                   </div>
                 </div>
 
-                {/* Top Up Credits Button */}
+                {/* Entitlement / Top Up Credits */}
                 <div className="border-b border-border p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      openUpgradeModal({
-                        reason: "Top up your Kairos credits to upload sources, chat, and generate artifacts.",
-                      });
-                    }}
-                    className="flex w-full items-center justify-between rounded-lg border border-brand/20 bg-brand-quiet px-2.5 py-1.5 font-medium text-foreground transition-colors hover:bg-brand-soft"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Coins className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
-                      <span className="text-xs font-semibold">Top Up Credits</span>
-                    </div>
-                    <span className="kairos-tag font-mono">
-                      Min ₹50
-                    </span>
-                  </button>
+                  {isDeveloper || bypassCredits || bypassFreeQuotas ? (
+                    <p className="flex items-center gap-1.5 rounded-lg border border-brand/20 bg-brand-quiet px-2.5 py-1.5 text-[11px] font-medium text-brand">
+                      {DEVELOPER_ENTITLEMENT_LABEL}
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        openUpgradeModal({
+                          reason: "Top up your Kairos credits to upload sources, chat, and generate artifacts.",
+                        });
+                      }}
+                      className="flex w-full items-center justify-between rounded-lg border border-brand/20 bg-brand-quiet px-2.5 py-1.5 font-medium text-foreground transition-colors hover:bg-brand-soft"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Coins className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+                        <span className="text-xs font-semibold">Top Up Credits</span>
+                      </div>
+                      <span className="kairos-tag font-mono">
+                        From {formatInr(MIN_CREDIT_PACK_AMOUNT_INR)}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 {workspaceId && (

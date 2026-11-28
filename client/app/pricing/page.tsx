@@ -6,7 +6,7 @@ import { PricingPlans } from "@/features/billing/components/pricing-plans";
 export const metadata = {
   title: "Pricing & Credits — Kairos",
   description:
-    "Pay-as-you-go credits for research. Start with welcome credits, top up when you need more, and keep credits that never expire — no recurring subscription.",
+    "Pay-as-you-go credits for research. Free credits arrive each server-defined window, one-time credit packs never expire, and plan access is a finite one-time purchase — no recurring subscription.",
 };
 
 export default async function PricingPage() {

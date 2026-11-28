@@ -64,7 +64,7 @@ export function Hero({ isAuthenticated = false }: HeroProps) {
           </div>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-            <span className="kairos-tag">50 welcome credits</span>
+            <span className="kairos-tag">Free-window credits + welcome bonus</span>
             <span className="kairos-tag">No recurring subscription</span>
             <span className="kairos-tag">Your library, one workspace</span>
           </div>

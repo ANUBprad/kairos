@@ -6,6 +6,9 @@ import confetti from "canvas-confetti";
 import { apiClient } from "@/lib/api-client";
 import { RazorpayOrderResponse, RazorpayPaymentSuccessResponse } from "../types";
 
+/** Mirrors the smallest server-owned credit pack. The server is authoritative. */
+const DEFAULT_TOPUP_AMOUNT_INR = 99;
+
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window === "undefined") {
@@ -68,7 +71,7 @@ export function useRazorpayCheckout() {
       setIsLoading(true);
       setError(null);
 
-      const amountInr = options?.amountInr ?? 50;
+      const amountInr = options?.amountInr ?? DEFAULT_TOPUP_AMOUNT_INR;
 
       try {
         const scriptLoaded = await loadRazorpayScript();
@@ -86,7 +89,7 @@ export function useRazorpayCheckout() {
             body: JSON.stringify(
               options?.amountInr
                 ? { amountInr: options.amountInr }
-                : { plan: options?.plan ?? "PRO", amountInr: 50 }
+                : { plan: options?.plan ?? "PRO" }
             ),
           }
         );
@@ -95,9 +98,11 @@ export function useRazorpayCheckout() {
           throw new Error("Invalid order data received from server.");
         }
 
-        const description = orderData.credits
-          ? `Top up ${orderData.credits} Kairos Credits`
-          : "Kairos Credits Top-up";
+        const description =
+          orderData.planName ??
+          (orderData.credits
+            ? `Top up ${orderData.credits} Kairos Credits`
+            : "Kairos Credits Top-up");
 
         // 2. Open Razorpay modal
         const rzpOptions = {
@@ -125,8 +130,6 @@ export function useRazorpayCheckout() {
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_signature: response.razorpay_signature,
-                  amountInr,
-                  plan: options?.plan,
                 }),
               });
 

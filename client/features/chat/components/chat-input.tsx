@@ -5,7 +5,12 @@ import { ArrowUp, Globe, Zap, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CircularLoader } from "@/components/ui/circular-loader";
-import { useUsage, useUpgradeModal } from "@/features/billing";
+import {
+  CREDIT_COSTS,
+  formatUtcInstant,
+  useUsage,
+  useUpgradeModal,
+} from "@/features/billing";
 import { enhanceChatPrompt } from "../lib/api";
 import { toast } from "@/components/ui/toast";
 import {
@@ -44,14 +49,21 @@ export function ChatInput({
   );
   const [isEnhancing, setIsEnhancing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { credits, dailyCredits, paidCredits, nextDailyResetAt } = useUsage();
+  const {
+    credits,
+    windowCredits,
+    paidCredits,
+    nextCreditResetAt,
+    bypassCredits,
+  } = useUsage();
   const { openUpgradeModal } = useUpgradeModal();
   const currentModel = useChatPreferences(
     (state) => state.getPrefs(workspaceId, defaultModel).model,
   );
   const setStoredModel = useChatPreferences((state) => state.setModel);
 
-  const isOutOfCredits = credits < 1;
+  const isOutOfCredits =
+    !bypassCredits && credits < CREDIT_COSTS.CHAT_MESSAGE;
 
   // Auto-grow textarea
   useEffect(() => {
@@ -66,12 +78,13 @@ export function ChatInput({
     if (!input.trim() || isStreaming) return;
 
     if (isOutOfCredits) {
+      const resetHint = nextCreditResetAt
+        ? ` The next free-window reset is ${formatUtcInstant(nextCreditResetAt)}; paid top-ups never expire.`
+        : " Paid top-ups never expire.";
       openUpgradeModal({
-        reason: nextDailyResetAt
-          ? `You need at least 1 credit to send a chat message. Daily credits reset at ${nextDailyResetAt.slice(0, 10)} ${nextDailyResetAt.slice(11, 16)} UTC; top-ups never expire.`
-          : "You need at least 1 credit to send a chat message. Please top up your balance.",
+        reason: `You need at least ${CREDIT_COSTS.CHAT_MESSAGE} credit to send a chat message.${resetHint}`,
         limitType: "credits",
-        requiredCredits: 1,
+        requiredCredits: CREDIT_COSTS.CHAT_MESSAGE,
         currentCredits: credits,
       });
       return;
@@ -147,8 +160,12 @@ export function ChatInput({
           <div className="flex min-w-0 items-center gap-1.5">
             <Zap className="size-3.5 shrink-0 text-warning" aria-hidden="true" />
             <span className="truncate">
-              No credits left ({dailyCredits} daily, {paidCredits} paid). Chats
-              cost 1 credit; daily credits reset at 00:00 UTC.
+              No credits left ({windowCredits} free-window, {paidCredits} paid).
+              Chats cost {CREDIT_COSTS.CHAT_MESSAGE} credit
+              {nextCreditResetAt
+                ? `; next reset ${formatUtcInstant(nextCreditResetAt)}`
+                : ""}
+              .
             </span>
           </div>
           <Button
@@ -157,9 +174,13 @@ export function ChatInput({
             variant="default"
             onClick={() =>
               openUpgradeModal({
-                reason: `You need credits to send chat messages. Daily credits reset at 00:00 UTC; top-ups never expire.`,
+                reason: `You need credits to send chat messages.${
+                  nextCreditResetAt
+                    ? ` Next free-window reset: ${formatUtcInstant(nextCreditResetAt)}.`
+                    : ""
+                } Paid top-ups never expire.`,
                 limitType: "credits",
-                requiredCredits: 1,
+                requiredCredits: CREDIT_COSTS.CHAT_MESSAGE,
                 currentCredits: credits,
               })
             }
@@ -288,7 +309,7 @@ export function ChatInput({
                 title={
                   isOutOfCredits
                     ? "Top up credits to send messages"
-                    : "Send message (1 credit)"
+                    : `Send message (${CREDIT_COSTS.CHAT_MESSAGE} credit)`
                 }
                 aria-label="Send message"
                 className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"

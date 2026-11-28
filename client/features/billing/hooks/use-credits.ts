@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { useSession } from "@/features/auth/lib/auth-client";
+import { resolveCreditWindow } from "../lib/plans";
 import { CreditBalance } from "../types";
 
 export function useCredits() {
@@ -20,12 +21,11 @@ export function useCredits() {
   });
 
   const snapshot = query.data;
-  const credits = snapshot?.credits ?? 0;
-  const dailyCredits = snapshot?.dailyCredits ?? 0;
-  const paidCredits = snapshot?.paidCredits ?? 0;
+  const creditWindow = resolveCreditWindow(snapshot);
   const history = snapshot?.history ?? [];
 
-  const hasEnoughCredits = (cost: number) => credits >= cost;
+  const hasEnoughCredits = (cost: number) =>
+    creditWindow.bypassCredits || creditWindow.credits >= cost;
 
   const invalidateCredits = () => {
     queryClient.invalidateQueries({ queryKey: ["user-credits"] });
@@ -33,13 +33,7 @@ export function useCredits() {
   };
 
   return {
-    credits,
-    dailyCredits,
-    paidCredits,
-    dailyAllowance: snapshot?.dailyAllowance ?? 100,
-    dailyCreditDay: snapshot?.dailyCreditDay ?? "",
-    nextDailyResetAt: snapshot?.nextDailyResetAt ?? "",
-    serverTime: snapshot?.serverTime ?? "",
+    ...creditWindow,
     history,
     hasEnoughCredits,
     isLoading: query.isLoading,

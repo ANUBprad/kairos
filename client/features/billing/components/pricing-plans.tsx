@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Coins, Flame, Loader2, Sparkles, Upload, MessageSquare, BookOpen, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,11 +9,19 @@ import { useSession } from "@/features/auth/lib/auth-client";
 import { useRazorpayCheckout } from "../hooks/use-razorpay";
 import { useUsage } from "../hooks/use-usage";
 import {
+  ALLOWED_CREDIT_AMOUNTS_INR,
   CREDIT_COSTS,
   CREDIT_PACKS,
+  DEVELOPER_ENTITLEMENT_LABEL,
+  MIN_CREDIT_PACK_AMOUNT_INR,
+  PRICING_PLANS,
   calculateCreditsForInr,
   formatInr,
+  formatUtcInstant,
+  isAllowedCreditAmount,
+  snapToAllowedCreditAmount,
 } from "../lib/plans";
+import { PlanType } from "../types";
 
 export type PricingPlansProps = {
   variant?: "page" | "embedded";
@@ -22,6 +31,10 @@ export type PricingPlansProps = {
   onCheckoutSuccess?: () => void;
 };
 
+const DEFAULT_CUSTOM_AMOUNT =
+  CREDIT_PACKS.find((pack) => pack.isPopular)?.amountInr ??
+  MIN_CREDIT_PACK_AMOUNT_INR;
+
 export function PricingPlans({
   variant = "page",
   alertMessage,
@@ -29,27 +42,45 @@ export function PricingPlans({
   className,
   onCheckoutSuccess,
 }: PricingPlansProps) {
+  const router = useRouter();
   const { data: session } = useSession();
-  const { credits, dailyCredits, dailyAllowance, paidCredits } = useUsage();
+  const {
+    credits,
+    windowCredits,
+    paidCredits,
+    windowAllowance,
+    nextCreditResetAt,
+    isDeveloper,
+  } = useUsage();
   const { checkout, isLoading, error } = useRazorpayCheckout();
 
   const [selectedPackId, setSelectedPackId] = useState<string>("learner");
-  const [customAmount, setCustomAmount] = useState<number>(100);
+  const [customAmount, setCustomAmount] = useState<number>(DEFAULT_CUSTOM_AMOUNT);
   const [isCustom, setIsCustom] = useState<boolean>(false);
 
   const isEmbedded = variant === "embedded";
   const isAuthenticated = !!session?.user;
 
-  const currentPack = CREDIT_PACKS.find((p) => p.id === selectedPackId);
+  const requireAuth = () => {
+    if (isAuthenticated) return true;
+    router.push(`/login?redirect=${encodeURIComponent("/pricing")}`);
+    return false;
+  };
 
   const handleBuy = (amount: number) => {
-    if (!isAuthenticated) {
-      window.location.href = `/login?redirect=${encodeURIComponent("/pricing")}`;
-      return;
-    }
-
+    if (!requireAuth()) return;
+    const allowedAmount = snapToAllowedCreditAmount(amount);
+    setCustomAmount(allowedAmount);
     checkout({
-      amountInr: amount,
+      amountInr: allowedAmount,
+      onSuccess: onCheckoutSuccess,
+    });
+  };
+
+  const handlePlanBuy = (plan: PlanType) => {
+    if (plan === "FREE" || !requireAuth()) return;
+    checkout({
+      plan,
       onSuccess: onCheckoutSuccess,
     });
   };
@@ -62,7 +93,7 @@ export function PricingPlans({
         className
       )}
     >
-      {/* Optional Alert Message when user was redirected due to 0 credits */}
+      {/* Optional Alert Message when user was redirected due to no credits */}
       {alertMessage && (
         <div
           role="status"
@@ -88,15 +119,29 @@ export function PricingPlans({
             Pay for the research you do.
           </h2>
           <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Every account gets 100 free credits each day, resetting at 00:00 UTC.
-            Top-ups never expire, and there is no recurring subscription.
+            Every account gets {windowAllowance} free-window credits. The next reset
+            is{" "}
+            {nextCreditResetAt ? (
+              <time dateTime={nextCreditResetAt} className="font-medium text-foreground">
+                {formatUtcInstant(nextCreditResetAt)}
+              </time>
+            ) : (
+              "provided by your account snapshot"
+            )}
+            . Paid top-ups never expire, and there is no recurring subscription.
           </p>
+
+          {isDeveloper && (
+            <p className="kairos-tag mx-auto w-fit flex-wrap justify-center border-brand/30 bg-brand-quiet text-brand">
+              {DEVELOPER_ENTITLEMENT_LABEL}
+            </p>
+          )}
 
           {isAuthenticated && (
             <div className="kairos-tag mx-auto w-fit flex-wrap justify-center border-brand/30 bg-brand-quiet text-brand">
               <span>
-                {dailyCredits.toLocaleString("en-IN")} /{" "}
-                {dailyAllowance.toLocaleString("en-IN")} daily credits
+                {windowCredits.toLocaleString("en-IN")} /{" "}
+                {windowAllowance.toLocaleString("en-IN")} free-window credits
               </span>
               <span aria-hidden="true">·</span>
               <strong className="font-semibold text-primary">
@@ -180,18 +225,20 @@ export function PricingPlans({
           </div>
         </div>
         <p className="px-1 text-xs text-muted-foreground">
-          Searching, browsing and connecting sources do not use credits. Daily
-          credits are spent before paid credits.
+          Searching, browsing and connecting sources do not use credits.
+          Free-window credits are spent before paid credits.
         </p>
       </section>
 
-      {/* Credit Packages Grid */}
+      {/* One-time Credit Packs */}
       <section className="space-y-3" aria-label="Credit packs">
         <div className="flex flex-wrap items-end justify-between gap-2">
-          <p className="kairos-eyebrow">Choose a top-up</p>
-          <p className="text-xs text-muted-foreground">
-            One-time purchases. Use credits at your own pace.
-          </p>
+          <div>
+            <p className="kairos-eyebrow">One-time credit packs</p>
+            <p className="text-xs text-muted-foreground">
+              Pay once, use credits at your own pace. Paid credits never expire.
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -294,6 +341,62 @@ export function PricingPlans({
         </div>
       </section>
 
+      {/* Timed plan access — intentionally separate from one-time credit packs. */}
+      <section className="space-y-3" aria-label="Timed plan access">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="kairos-eyebrow">Timed plan access</p>
+            <p className="text-xs text-muted-foreground">
+              One-time purchase with a finite access window. No recurring billing.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {PRICING_PLANS.map((plan) => (
+            <div key={plan.id} className="kairos-panel flex flex-col gap-3 p-5">
+              <div>
+                <h3 className="kairos-section-title text-lg text-foreground">
+                  {plan.name}
+                </h3>
+                <p className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground">
+                  {plan.priceInr === 0 ? "Free" : formatInr(plan.priceInr)}
+                </p>
+                <p className="mt-1 text-xs font-medium text-brand">{plan.access}</p>
+              </div>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {plan.description}
+              </p>
+              <ul className="flex-1 space-y-1.5 text-xs text-muted-foreground">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex items-center gap-1.5">
+                    <Check className="size-3.5 shrink-0 text-success" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              {plan.id === "FREE" ? (
+                <span className="kairos-tag w-fit">Included</span>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isLoading}
+                  onClick={() => handlePlanBuy(plan.id)}
+                  className="w-full"
+                >
+                  {isLoading ? (
+                    <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
+                  ) : (
+                    `Buy ${plan.name} for ${formatInr(plan.priceInr)}`
+                  )}
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Custom Amount Top-Up Card */}
       <section className="kairos-panel space-y-4 p-5 sm:p-6" aria-label="Custom credit top-up">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -303,7 +406,9 @@ export function PricingPlans({
               Custom top-up
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Choose any amount from ₹50. Larger amounts include up to a 30% bonus.
+              Choose an allowed amount ({ALLOWED_CREDIT_AMOUNTS_INR.map(formatInr).join(", ")}).
+              Amounts are snapped to a server-validated pack; larger packs include
+              up to a 30% bonus.
             </p>
           </div>
 
@@ -315,13 +420,13 @@ export function PricingPlans({
               <input
                 id="custom-top-up-amount"
                 type="number"
-                min={50}
-                step={10}
+                min={MIN_CREDIT_PACK_AMOUNT_INR}
+                step={1}
                 value={customAmount}
                 aria-label="Custom top-up amount in rupees"
                 onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  setCustomAmount(isNaN(val) ? 50 : Math.max(50, val));
+                  const val = Number.parseInt(e.target.value, 10);
+                  setCustomAmount(snapToAllowedCreditAmount(val));
                   setIsCustom(true);
                 }}
                 className="w-full rounded-xl border border-border bg-background py-2 pl-7 pr-3 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-ring/40"
@@ -330,14 +435,14 @@ export function PricingPlans({
 
             <Button
               type="button"
-              disabled={isLoading || customAmount < 50}
+              disabled={isLoading || !isAllowedCreditAmount(customAmount)}
               onClick={() => handleBuy(customAmount)}
               className="shrink-0"
             >
               {isLoading ? (
                 <Loader2 className="size-4 animate-spin motion-reduce:animate-none" />
               ) : (
-                `Buy ${calculateCreditsForInr(customAmount).toLocaleString("en-IN")} credits`
+                `Buy ${calculateCreditsForInr(customAmount).toLocaleString("en-IN")} credits for ${formatInr(customAmount)}`
               )}
             </Button>
           </div>
@@ -346,7 +451,7 @@ export function PricingPlans({
         {/* Quick Amount Pills */}
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3 text-xs">
           <span className="text-muted-foreground">Quick select</span>
-          {[50, 100, 150, 200, 300, 500, 1000].map((amt) => (
+          {ALLOWED_CREDIT_AMOUNTS_INR.map((amt) => (
             <button
               key={amt}
               type="button"
@@ -362,7 +467,7 @@ export function PricingPlans({
                   : "border-border bg-surface text-foreground hover:bg-muted"
               )}
             >
-              ₹{amt} ({calculateCreditsForInr(amt)} cr)
+              {formatInr(amt)} ({calculateCreditsForInr(amt)} cr)
             </button>
           ))}
         </div>
@@ -381,7 +486,11 @@ export function PricingPlans({
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-2 text-center text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Check className="size-4 text-success" />
-          Credits never expire
+          Paid credits never expire
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Check className="size-4 text-success" />
+          Free-window credits expire at the server-provided reset
         </span>
         <span className="flex items-center gap-1.5">
           <Check className="size-4 text-success" />

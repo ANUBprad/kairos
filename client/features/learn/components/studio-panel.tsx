@@ -25,6 +25,8 @@ import {
 import { ThemeLoader } from "@/components/ui/theme-loader";
 import { MovingBorderCard } from "@/components/ui/moving-border";
 import {
+  DEVELOPER_ENTITLEMENT_LABEL,
+  formatUtcInstant,
   getArtifactCreditCost,
   useUpgradeModal,
   useUsage,
@@ -154,16 +156,26 @@ export function StudioPanel({
   retryingArtifactId,
   selectedSourcesCount,
 }: StudioPanelProps) {
-  const { credits, dailyCredits, paidCredits, nextDailyResetAt } = useUsage();
+  const {
+    credits,
+    windowCredits,
+    paidCredits,
+    nextCreditResetAt,
+    bypassCredits,
+    isDeveloper,
+  } = useUsage();
   const [selectedArtifact, setSelectedArtifact] = useState<LearningArtifact | null>(null);
   const [generatingType, setGeneratingType] = useState<ArtifactType | null>(null);
   const [hoveredTool, setHoveredTool] = useState<ArtifactType | null>(null);
 
   const handleCreate = async (type: ArtifactType) => {
     const requiredCredits = getArtifactCreditCost(type);
-    if (credits < requiredCredits) {
+    if (!bypassCredits && credits < requiredCredits) {
+      const resetHint = nextCreditResetAt
+        ? ` Next free-window reset: ${formatUtcInstant(nextCreditResetAt)}.`
+        : "";
       useUpgradeModal.getState().openUpgradeModal({
-        reason: `${type === "PODCAST" ? "Audio Debate Podcast" : "Artifact generation"} requires ${requiredCredits} credits. You have ${dailyCredits} daily and ${paidCredits} paid credits left. Daily credits reset ${nextDailyResetAt ? `at ${nextDailyResetAt.slice(0, 10)} ${nextDailyResetAt.slice(11, 16)} UTC` : "at 00:00 UTC"}.`,
+        reason: `${type === "PODCAST" ? "Audio Debate Podcast" : "Artifact generation"} requires ${requiredCredits} credits. You have ${windowCredits} free-window and ${paidCredits} paid credits left.${resetHint}`,
         limitType: "credits",
         requiredCredits,
         currentCredits: credits,
@@ -249,6 +261,11 @@ export function StudioPanel({
             <p className="text-[11px] text-muted-foreground">Artifact workspace</p>
           </div>
           <span className="kairos-tag font-mono">{artifacts.length}</span>
+          {bypassCredits && (
+            <span className="kairos-tag border-brand/30 bg-brand-quiet text-brand">
+              {isDeveloper ? DEVELOPER_ENTITLEMENT_LABEL : "Credits bypassed"}
+            </span>
+          )}
         </div>
 
         <span className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground sm:block">
@@ -282,7 +299,7 @@ export function StudioPanel({
             {STUDIO_TOOLS.map((tool) => {
               const isThisGenerating = generatingType === tool.type;
               const requiredCost = getArtifactCreditCost(tool.type);
-              const hasInsufficientCredits = credits < requiredCost;
+              const hasInsufficientCredits = !bypassCredits && credits < requiredCost;
 
               const cardContent = (
                 <div className="flex h-full w-full flex-col justify-between p-3.5">
