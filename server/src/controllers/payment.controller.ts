@@ -10,9 +10,11 @@ import {
 } from "../validators/payment.validator.js";
 
 /**
- * Handles HTTP POST request to initiate a Razorpay checkout order for plan upgrades (PRO / PRO_PLUS).
+ * Handles HTTP POST request to initiate a Razorpay checkout order for a
+ * one-time credit pack or one-time, finite (30-day) PRO / PRO_PLUS access.
+ * There is no recurring billing.
  *
- * @param req - Express request with selected plan in body
+ * @param req - Express request with an allow-listed pack amount or plan key
  * @param res - Express response returning 201 Created with order ID and details
  */
 export async function createOrder(req: Request, res: Response) {
@@ -22,10 +24,11 @@ export async function createOrder(req: Request, res: Response) {
 }
 
 /**
- * Handles HTTP POST request to verify the cryptographic HMAC signature of a Razorpay payment and upgrade user.
+ * Verifies the checkout HMAC plus the provider-observed captured payment, then
+ * settles the server-created order exactly once.
  *
  * @param req - Express request with razorpay_order_id, razorpay_payment_id, and razorpay_signature
- * @param res - Express response returning upgrade success confirmation
+ * @param res - Express response returning the settlement result
  */
 export async function verifyPayment(req: Request, res: Response) {
     const input = verifyPaymentSchema.parse(req.body);

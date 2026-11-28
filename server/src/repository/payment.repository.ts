@@ -14,6 +14,8 @@ export interface CreatePaymentRecordData {
 
 /**
  * Inserts a new Razorpay payment record into PostgreSQL (status: PENDING by default).
+ * Amount and credits must come from server-owned pricing, never from the client.
+ * Existing rows are never rewritten on settlement of a later order.
  *
  * @param data - Payment record attributes
  * @returns Promise resolving to created PaymentRecord

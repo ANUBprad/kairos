@@ -74,8 +74,8 @@ behaviour remain **BLOCKED — CREDENTIALS/PERMISSIONS REQUIRED**.
 1. Configure staging Razorpay test-mode keys, webhook secret, DB identity and
    storage prefix gates; register `<staging-api>/api/payment/webhook` in the
    Razorpay test dashboard.
-2. Complete a small test-mode checkout for a credit pack and for a subscription;
-   confirm credits/plan in the staging DB exactly once.
+2. Complete a small test-mode checkout for a credit pack and for one-time
+   30-day plan access; confirm credits/plan in the staging DB exactly once.
 3. Replay the same webhook twice and out of order with verification; confirm no
    duplicate ledger rows.
 4. Trigger a cancellation/failure and confirm no grant.

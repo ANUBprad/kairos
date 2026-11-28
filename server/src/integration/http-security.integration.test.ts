@@ -101,12 +101,13 @@ describe("http security (integration)", () => {
     }
 
     const origin = "http://127.0.0.1:3000";
+    const TEST_PASSWORD = "Str0ngHttpTestPassword!23";
 
     async function signup(label: string): Promise<{ client: HttpClient; email: string; userId: string }> {
         const client = new HttpClient(label);
         // Better Auth normalizes emails to lowercase; fixtures must match.
         const email = `http-${label.toLowerCase()}-${randomUUID()}@example.test`;
-        const password = "Str0ngHttpTestPassword!23";
+        const password = TEST_PASSWORD;
         const res = await client.request("/api/auth/sign-up/email", {
             method: "POST",
             origin,
@@ -203,6 +204,30 @@ describe("http security (integration)", () => {
                 body: { email, password: "definitely-wrong-password" },
             });
             assert.equal(res.status, 401);
+        });
+
+        it("signs in with email and password and reuses the issued session", async () => {
+            const { email, client: signupClient } = await signup(
+                `goodlogin-${randomUUID().slice(0, 8)}`,
+            );
+            const logout = await signupClient.request("/api/auth/sign-out", {
+                method: "POST",
+                origin,
+            });
+            assert.equal(logout.status, 200);
+
+            const client = new HttpClient("email-signin");
+            const res = await client.request("/api/auth/sign-in/email", {
+                method: "POST",
+                origin,
+                body: { email, password: TEST_PASSWORD },
+            });
+            assert.equal(res.status, 200);
+            assert.ok(client.cookieHeader().includes("session_token"), "session cookie issued");
+
+            const authed = await client.request("/api/workspaces", { origin });
+            assert.equal(authed.status, 200);
+            assert.ok(Array.isArray(await authed.json()));
         });
 
         it("does not expose internal details in 404/500 responses", async () => {

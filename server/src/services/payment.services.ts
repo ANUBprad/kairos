@@ -7,11 +7,14 @@ import { logger } from "../lib/logger.js";
 import { findUserPlanDetails } from "../repository/user.repository.js";
 import {
     ALLOWED_CREDIT_AMOUNTS_INR,
+    CREDIT_PACKS,
     calculateCreditsForInr,
     PLAN_PRICES,
 } from "../lib/pricing.js";
 import {
+    assertRazorpayCredentials,
     settleCapturedPayment,
+    verifyCheckoutSignature,
     verifyWebhookSignature,
 } from "./payment-settlement.services.js";
 import { AppError, ValidationError } from "../types/app-error.js";
@@ -27,6 +30,15 @@ export type PaymentProviderOrder = {
     currency: string;
 };
 
+/** Server-side facts fetched from the provider before trusting a callback. */
+export type PaymentProviderPayment = {
+    id: string;
+    order_id: string;
+    status: string;
+    currency: string;
+    amount: string | number;
+};
+
 export type PaymentProvider = {
     createOrder(input: {
         amount: number;
@@ -34,6 +46,8 @@ export type PaymentProvider = {
         receipt: string;
         notes: Record<string, string>;
     }): Promise<PaymentProviderOrder>;
+    /** Optional only for order-only test doubles; checkout always requires it. */
+    fetchPayment?(paymentId: string): Promise<PaymentProviderPayment>;
 };
 
 let providerOverride: PaymentProvider | undefined;
@@ -49,15 +63,9 @@ export function setPaymentProviderForTests(provider: PaymentProvider | undefined
 
 /** Initializes the Razorpay SDK instance with configured credentials. */
 function getRazorpayInstance() {
-    const key_id = process.env.RAZORPAY_KEY_ID;
-    const key_secret = process.env.RAZORPAY_KEY_SECRET;
-
-    if (!key_id || !key_secret) {
-        throw new AppError(
-            500,
-            "Razorpay API keys are not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in server/.env",
-        );
-    }
+    assertRazorpayCredentials("Razorpay payment operations");
+    const key_id = process.env.RAZORPAY_KEY_ID!;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET!;
 
     if (providerOverride) {
         return {
@@ -66,6 +74,17 @@ function getRazorpayInstance() {
                     create: (
                         input: Parameters<PaymentProvider["createOrder"]>[0],
                     ) => providerOverride!.createOrder(input),
+                },
+                payments: {
+                    fetch: (paymentId: string) => {
+                        if (!providerOverride!.fetchPayment) {
+                            throw new AppError(
+                                502,
+                                "Payment provider lookup is unavailable",
+                            );
+                        }
+                        return providerOverride!.fetchPayment(paymentId);
+                    },
                 },
             } as unknown as Razorpay,
             keyId: key_id,
@@ -80,8 +99,9 @@ function getRazorpayInstance() {
 
 /**
  * Creates a Razorpay order using server-owned prices only.
- * Client-supplied amounts must match an existing credit pack; plan selection
- * uses the stored plan price and never falls back to PRO.
+ * Client-supplied amounts and credit awards are never trusted: an amount is
+ * checked against the pack allow-list, and plan selection uses the stored plan
+ * price without ever falling back to PRO.
  */
 export async function createRazorpayOrder(
     userId: string,
@@ -90,6 +110,9 @@ export async function createRazorpayOrder(
         plan?: "PRO" | "PRO_PLUS";
     },
 ) {
+    // Fail before any database or provider work when credentials are missing.
+    assertRazorpayCredentials("order creation");
+
     const user = await findUserPlanDetails(userId);
     if (!user) {
         throw new AppError(404, "User not found");
@@ -113,12 +136,14 @@ export async function createRazorpayOrder(
         amountInr = planConfig.pricePaise / 100;
         creditsToAward = planConfig.credits;
         targetPlan = selectedPlan;
-        description = planConfig.name;
+        // The label is a price display only; backend is explicit that this is
+        // one-time, finite access rather than a recurring subscription.
+        description = `${planConfig.name} - ${planConfig.access} (${planConfig.label})`;
     } else {
         // Credit packs are written with an explicit null plan. Legacy rows with
-        // plan='PRO' are ambiguous and settlement now rejects them.
+        // plan='PRO' are ambiguous and settlement rejects them.
         targetPlan = null;
-        amountInr = options?.amountInr ?? 50;
+        amountInr = options?.amountInr ?? CREDIT_PACKS[0].amountInr;
         if (!ALLOWED_CREDIT_AMOUNTS_INR.includes(amountInr)) {
             throw new ValidationError("Unsupported top-up amount");
         }
@@ -169,6 +194,8 @@ export async function createRazorpayOrder(
         status: "PENDING",
     });
 
+    // Only the public key ID is returned. Key secret and webhook secret never
+    // leave the server.
     return {
         orderId: order.id,
         amount: order.amount,
@@ -185,13 +212,77 @@ export async function createRazorpayOrder(
 }
 
 /**
- * Verifies the client checkout HMAC and applies the payment exactly once.
- * Client amount and plan values are deliberately ignored.
+ * Validates provider-observed payment facts before a callback can settle an
+ * order. A frontend "success" report alone is never sufficient.
+ */
+export function assertCapturedInrPayment(input: {
+    payment: PaymentProviderPayment;
+    orderId: string;
+    paymentId: string;
+    amountPaise: number;
+}): void {
+    const { payment, orderId, paymentId, amountPaise } = input;
+    if (payment.id !== paymentId || payment.order_id !== orderId) {
+        throw new ValidationError("Payment does not match the requested order");
+    }
+    if (payment.status !== "captured") {
+        throw new ValidationError("Payment is not captured");
+    }
+    if (payment.currency !== "INR") {
+        throw new ValidationError("Unexpected payment currency");
+    }
+    const actualAmount =
+        typeof payment.amount === "number" ? payment.amount : Number(payment.amount);
+    if (
+        !Number.isInteger(actualAmount) ||
+        actualAmount <= 0 ||
+        actualAmount !== amountPaise
+    ) {
+        throw new ValidationError("Payment amount does not match the order");
+    }
+}
+
+/**
+ * Verifies the client checkout HMAC, the provider-observed captured payment,
+ * and the server-owned order before applying the payment exactly once.
+ * Client amount, currency and plan values are deliberately ignored.
  */
 export async function verifyRazorpayPayment(
     userId: string,
     input: VerifyPaymentInput,
 ) {
+    assertRazorpayCredentials("payment verification");
+    // Verify the client HMAC before any provider lookup or database write, so a
+    // forged callback cannot consume provider API quota or touch a payment row.
+    verifyCheckoutSignature(
+        input.razorpay_order_id,
+        input.razorpay_payment_id,
+        input.razorpay_signature,
+    );
+
+    const record = await findPaymentRecordByOrderId(input.razorpay_order_id);
+    if (!record || record.userId !== userId) {
+        throw new AppError(404, "Payment order not found");
+    }
+
+    const { razorpay } = getRazorpayInstance();
+    let payment: PaymentProviderPayment;
+    try {
+        payment = await razorpay.payments.fetch(input.razorpay_payment_id);
+    } catch (error) {
+        logger.error("Razorpay payment lookup failed", {
+            errorType: error instanceof Error ? error.name : "UnknownError",
+        });
+        throw new AppError(502, "Failed to verify payment with Razorpay");
+    }
+
+    assertCapturedInrPayment({
+        payment,
+        orderId: input.razorpay_order_id,
+        paymentId: input.razorpay_payment_id,
+        amountPaise: record.amount,
+    });
+
     return settleCapturedPayment({
         userId,
         orderId: input.razorpay_order_id,
@@ -209,6 +300,7 @@ type RazorpayWebhookPayload = {
                 order_id?: string;
                 status?: string;
                 currency?: string;
+                amount?: string | number;
             };
         };
     };
@@ -219,6 +311,8 @@ export async function processRazorpayWebhook(
     rawBody: Buffer,
     signatureHeader: string | undefined,
 ) {
+    // verifyWebhookSignature checks the webhook secret only; order creation and
+    // checkout verification do not need to be configured for a signed webhook.
     verifyWebhookSignature(rawBody, signatureHeader);
 
     let body: RazorpayWebhookPayload;
@@ -234,11 +328,18 @@ export async function processRazorpayWebhook(
     if (event !== "payment.captured" || !payment?.id || !payment.order_id) {
         return { handled: false, reason: "ignored_event" as const };
     }
-    if (payment.status && payment.status !== "captured") {
+    // Require an explicit captured status; a frontend report is not enough.
+    if (payment.status !== "captured") {
         return { handled: false, reason: "ignored_event" as const };
     }
-    if (payment.currency && payment.currency !== "INR") {
+    if (payment.currency !== "INR") {
         throw new ValidationError("Unexpected webhook payment currency");
+    }
+
+    const paymentAmount =
+        typeof payment.amount === "number" ? payment.amount : Number(payment.amount);
+    if (!Number.isInteger(paymentAmount) || paymentAmount <= 0) {
+        throw new ValidationError("Invalid webhook payment amount");
     }
 
     const record = await findPaymentRecordByOrderId(payment.order_id);
@@ -247,6 +348,9 @@ export async function processRazorpayWebhook(
             orderId: payment.order_id,
         });
         return { handled: false, reason: "unknown_order" as const };
+    }
+    if (paymentAmount !== record.amount) {
+        throw new ValidationError("Webhook payment amount does not match order");
     }
 
     const result = await settleCapturedPayment({

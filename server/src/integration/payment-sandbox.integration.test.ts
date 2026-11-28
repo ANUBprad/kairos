@@ -4,6 +4,12 @@ import { after, describe, it } from "node:test";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { PrismaClient } from "../generated/prisma/client.js";
+import {
+  CREDIT_PACKS,
+  HISTORICAL_CREDIT_PACK_PRICES,
+  HISTORICAL_PLAN_PRICES,
+  PLAN_PRICES,
+} from "../lib/pricing.js";
 
 /**
  * Provider-mocked payment lifecycle tests against real PostgreSQL.
@@ -19,6 +25,13 @@ describe("payment sandbox (provider-mocked integration)", () => {
         it("requires TEST_DATABASE_URL", { skip: "TEST_DATABASE_URL not set" }, () => {});
         return;
     }
+
+    const STARTER = CREDIT_PACKS[0];
+    const PRO = PLAN_PRICES.PRO;
+    const LEGACY_STARTER = HISTORICAL_CREDIT_PACK_PRICES[0];
+    const LEGACY_PRO = HISTORICAL_PLAN_PRICES.PRO;
+    const STARTER_PAISE = STARTER.amountInr * 100;
+    const LEGACY_STARTER_PAISE = LEGACY_STARTER.amountInr * 100;
 
     const testUrl = process.env.TEST_DATABASE_URL;
     process.env.DATABASE_URL = testUrl;
@@ -61,17 +74,87 @@ describe("payment sandbox (provider-mocked integration)", () => {
             .digest("hex");
     }
 
+    function capturedPayment(
+        id: string,
+        pay: string,
+        overrides: Record<string, unknown> = {},
+    ) {
+        return {
+            id: pay,
+            order_id: id,
+            status: "captured",
+            currency: "INR",
+            amount: String(STARTER_PAISE),
+            ...overrides,
+        };
+    }
+
+    /** Installs a deterministic provider whose fetch mirrors the created order. */
+    async function installProvider(
+        onCreate?: (input: { amount: number; notes: Record<string, string> }) => void,
+    ) {
+        let lastOrder: { id: string; amount: number } | undefined;
+        const paymentsModule = await import("../services/payment.services.js");
+        paymentsModule.setPaymentProviderForTests({
+            createOrder: async (input) => {
+                const id = orderId();
+                lastOrder = { id, amount: input.amount };
+                onCreate?.({ amount: input.amount, notes: input.notes });
+                return { id, amount: input.amount, currency: "INR" };
+            },
+            fetchPayment: async (pay) => {
+                if (!lastOrder) throw new Error("provider has no created order");
+                return capturedPayment(lastOrder.id, pay, {
+                    amount: String(lastOrder.amount),
+                });
+            },
+        });
+        restoreProvider = () => paymentsModule.setPaymentProviderForTests(undefined);
+        return paymentsModule;
+    }
+
+    /** Provider facts for a manually created pending order, with no real calls. */
+    async function installCapturedProviderForOrder(
+        id: string,
+        amountPaise: number = STARTER_PAISE,
+    ) {
+        const paymentsModule = await import("../services/payment.services.js");
+        paymentsModule.setPaymentProviderForTests({
+            createOrder: async (input) => ({
+                id,
+                amount: input.amount,
+                currency: "INR",
+            }),
+            fetchPayment: async (pay) =>
+                capturedPayment(id, pay, { amount: String(amountPaise) }),
+        });
+        restoreProvider = () => paymentsModule.setPaymentProviderForTests(undefined);
+        return paymentsModule;
+    }
+
+    async function importSettlement() {
+        return await import("../services/payment-settlement.services.js");
+    }
+
     function webhookBody(
         id: string,
         pay: string,
         overrides: Record<string, unknown> = {},
+        amountPaise: number = STARTER_PAISE,
     ) {
         return Buffer.from(
             JSON.stringify({
                 event: "payment.captured",
                 payload: {
                     payment: {
-                        entity: { id: pay, order_id: id, status: "captured", currency: "INR", ...overrides },
+                        entity: {
+                            id: pay,
+                            order_id: id,
+                            status: "captured",
+                            currency: "INR",
+                            amount: String(amountPaise),
+                            ...overrides,
+                        },
                     },
                 },
             }),
@@ -116,22 +199,21 @@ describe("payment sandbox (provider-mocked integration)", () => {
     });
 
     it("creates a credit-pack order with server-owned pricing and settles it exactly once", async () => {
-        const payments = await import("../services/payment.services.js");
         const calls: Array<{ amount: number; notes: Record<string, string> }> = [];
-        payments.setPaymentProviderForTests({
-            createOrder: async (input) => {
-                calls.push({ amount: input.amount, notes: input.notes });
-                return { id: orderId(), amount: input.amount, currency: "INR" };
-            },
-        });
-        restoreProvider = () => payments.setPaymentProviderForTests(undefined);
+        const payments = await installProvider((input) => calls.push(input));
         const userId = await createUser();
 
-        // Client asks for a smaller amount; the server must use the pack price.
-        const order = await payments.createRazorpayOrder(userId, { amountInr: 50 });
-        assert.equal(order.amount, 5000);
-        assert.equal(order.credits, 100);
-        assert.equal(calls[0].amount, 5000);
+        const order = await payments.createRazorpayOrder(userId, {
+            amountInr: STARTER.amountInr,
+        });
+        assert.equal(order.amount, STARTER_PAISE);
+        assert.equal(order.credits, STARTER.credits);
+        assert.equal(calls[0].amount, STARTER_PAISE);
+        assert.equal(order.keyId, process.env.RAZORPAY_KEY_ID);
+        // Only the public key ID may reach the frontend.
+        const serialized = JSON.stringify(order);
+        assert.equal(serialized.includes(process.env.RAZORPAY_KEY_SECRET!), false);
+        assert.equal(serialized.includes(process.env.RAZORPAY_WEBHOOK_SECRET!), false);
 
         const pay = paymentId();
         const first = await payments.verifyRazorpayPayment(userId, {
@@ -140,7 +222,7 @@ describe("payment sandbox (provider-mocked integration)", () => {
             razorpay_signature: checkoutSignature(order.orderId, pay),
         });
         assert.equal(first.duplicate, false);
-        assert.equal(first.creditsAdded, 100);
+        assert.equal(first.creditsAdded, STARTER.credits);
 
         const repeated = await payments.verifyRazorpayPayment(userId, {
             razorpay_order_id: order.orderId,
@@ -151,7 +233,7 @@ describe("payment sandbox (provider-mocked integration)", () => {
         assert.equal(repeated.creditsAdded, 0);
 
         const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
-        assert.equal(user.credits, 100);
+        assert.equal(user.credits, STARTER.credits);
         assert.equal(user.plan, "FREE");
         assert.equal(
             await db.creditTransaction.count({
@@ -165,24 +247,19 @@ describe("payment sandbox (provider-mocked integration)", () => {
         );
     });
 
-    it("creates a subscription order from the plan price, ignoring client amount overrides", async () => {
-        const payments = await import("../services/payment.services.js");
+    it("creates a one-time plan order from the plan price, ignoring client amount overrides", async () => {
         const calls: number[] = [];
-        payments.setPaymentProviderForTests({
-            createOrder: async (input) => {
-                calls.push(input.amount);
-                return { id: orderId(), amount: input.amount, currency: "INR" };
-            },
-        });
+        const payments = await installProvider((input) => calls.push(input.amount));
         const userId = await createUser();
 
         const order = await payments.createRazorpayOrder(userId, {
             plan: "PRO",
-            amountInr: 50,
+            amountInr: STARTER.amountInr,
         } as never);
-        assert.equal(calls[0], 19900);
+        assert.equal(calls[0], PRO.pricePaise);
         assert.equal(order.plan, "PRO");
-        assert.equal(order.credits, 500);
+        assert.equal(order.credits, PRO.credits);
+        assert.match(order.planName, /One-time 30-day access/);
 
         const pay = paymentId();
         await payments.verifyRazorpayPayment(userId, {
@@ -193,7 +270,7 @@ describe("payment sandbox (provider-mocked integration)", () => {
         const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
         assert.equal(user.plan, "PRO");
         assert.ok(user.planExpiresAt && user.planExpiresAt > new Date());
-        assert.equal(user.credits, 500);
+        assert.equal(user.credits, PRO.credits);
     });
 
     it("rejects invalid amounts, quantities and plans before contacting the provider", async () => {
@@ -203,6 +280,10 @@ describe("payment sandbox (provider-mocked integration)", () => {
 
         assert.equal(createOrderSchema.safeParse({ amountInr: 1 }).success, false);
         assert.equal(createOrderSchema.safeParse({ amountInr: 123 }).success, false);
+        assert.equal(
+            createOrderSchema.safeParse({ amountInr: LEGACY_STARTER.amountInr }).success,
+            false,
+        );
         await assert.rejects(
             payments.createRazorpayOrder(userId, { amountInr: 1 }),
             /Unsupported top-up amount/,
@@ -215,8 +296,7 @@ describe("payment sandbox (provider-mocked integration)", () => {
     });
 
     it("rejects tampered order ids, wrong users and forged signatures", async () => {
-        const { verifyCheckoutSignature, settleCapturedPayment } =
-            await import("../services/payment-settlement.services.js");
+        const { verifyCheckoutSignature, settleCapturedPayment } = await importSettlement();
         const owner = await createUser();
         const attacker = await createUser();
         const id = orderId();
@@ -224,8 +304,8 @@ describe("payment sandbox (provider-mocked integration)", () => {
         await createPendingRecord({
             userId: owner,
             order: id,
-            credits: 100,
-            amountPaise: 5000,
+            credits: STARTER.credits,
+            amountPaise: STARTER_PAISE,
         });
 
         await assert.rejects(
@@ -248,12 +328,54 @@ describe("payment sandbox (provider-mocked integration)", () => {
         assert.equal((await db.user.findUniqueOrThrow({ where: { id: owner } })).credits, 0);
     });
 
+    it("does not settle a checkout callback when the provider has not captured it", async () => {
+        const payments = await import("../services/payment.services.js");
+        const userId = await createUser();
+        const id = orderId();
+        const pay = paymentId();
+        await createPendingRecord({
+            userId,
+            order: id,
+            credits: STARTER.credits,
+            amountPaise: STARTER_PAISE,
+        });
+        payments.setPaymentProviderForTests({
+            createOrder: async (input) => ({
+                id,
+                amount: input.amount,
+                currency: "INR",
+            }),
+            fetchPayment: async (paymentId) =>
+                capturedPayment(id, paymentId, { status: "authorized" }),
+        });
+        restoreProvider = () => payments.setPaymentProviderForTests(undefined);
+
+        await assert.rejects(
+            payments.verifyRazorpayPayment(userId, {
+                razorpay_order_id: id,
+                razorpay_payment_id: pay,
+                razorpay_signature: checkoutSignature(id, pay),
+            }),
+            /Payment is not captured/,
+        );
+        assert.equal((await db.user.findUniqueOrThrow({ where: { id: userId } })).credits, 0);
+        assert.equal(
+            (await db.paymentRecord.findUniqueOrThrow({ where: { razorpayOrderId: id } })).status,
+            "PENDING",
+        );
+    });
+
     it("rejects invalid and malformed webhooks without granting value", async () => {
         const payments = await import("../services/payment.services.js");
         const id = orderId();
         const pay = paymentId();
         const userId = await createUser();
-        await createPendingRecord({ userId, order: id, credits: 100, amountPaise: 5000 });
+        await createPendingRecord({
+            userId,
+            order: id,
+            credits: STARTER.credits,
+            amountPaise: STARTER_PAISE,
+        });
 
         const body = webhookBody(id, pay);
         await assert.rejects(
@@ -279,12 +401,17 @@ describe("payment sandbox (provider-mocked integration)", () => {
         );
     });
 
-    it("ignores cancelled/failed payments and unknown orders", async () => {
+    it("ignores cancelled/failed payments, unknown orders and amount mismatches", async () => {
         const payments = await import("../services/payment.services.js");
         const userId = await createUser();
         const id = orderId();
         const pay = paymentId();
-        await createPendingRecord({ userId, order: id, credits: 100, amountPaise: 5000 });
+        await createPendingRecord({
+            userId,
+            order: id,
+            credits: STARTER.credits,
+            amountPaise: STARTER_PAISE,
+        });
 
         const failed = webhookBody(id, pay, { status: "failed" });
         const result = await payments.processRazorpayWebhook(
@@ -299,6 +426,12 @@ describe("payment sandbox (provider-mocked integration)", () => {
             webhookSignature(unknown),
         );
         assert.deepEqual(unknownResult, { handled: false, reason: "unknown_order" });
+
+        const wrongAmount = webhookBody(id, pay, {}, STARTER_PAISE + 100);
+        await assert.rejects(
+            payments.processRazorpayWebhook(wrongAmount, webhookSignature(wrongAmount)),
+            /amount does not match order/,
+        );
         assert.equal((await db.user.findUniqueOrThrow({ where: { id: userId } })).credits, 0);
     });
 
@@ -307,7 +440,12 @@ describe("payment sandbox (provider-mocked integration)", () => {
         const userId = await createUser();
         const id = orderId();
         const pay = paymentId();
-        await createPendingRecord({ userId, order: id, credits: 100, amountPaise: 5000 });
+        await createPendingRecord({
+            userId,
+            order: id,
+            credits: STARTER.credits,
+            amountPaise: STARTER_PAISE,
+        });
 
         const body = webhookBody(id, pay);
         const signature = webhookSignature(body);
@@ -318,17 +456,22 @@ describe("payment sandbox (provider-mocked integration)", () => {
         assert.equal(results.filter((r) => r.duplicate === false).length, 1);
         assert.equal(results.filter((r) => r.duplicate === true).length, 1);
         const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
-        assert.equal(user.credits, 100);
+        assert.equal(user.credits, STARTER.credits);
         assert.equal(await db.creditTransaction.count({ where: { userId, type: "PURCHASE" } }), 1);
     });
 
     it("handles webhook-before-verification and verification-before-webhook idempotently", async () => {
-        const payments = await import("../services/payment.services.js");
         for (const webhookFirst of [true, false]) {
             const userId = await createUser();
             const id = orderId();
             const pay = paymentId();
-            await createPendingRecord({ userId, order: id, credits: 100, amountPaise: 5000 });
+            await createPendingRecord({
+                userId,
+                order: id,
+                credits: STARTER.credits,
+                amountPaise: STARTER_PAISE,
+            });
+            const payments = await installCapturedProviderForOrder(id);
             const body = webhookBody(id, pay);
             const signature = webhookSignature(body);
             const verify = () =>
@@ -346,17 +489,65 @@ describe("payment sandbox (provider-mocked integration)", () => {
                 assert.equal((await verify()).duplicate, false);
                 assert.equal((await hook()).duplicate, true);
             }
-            assert.equal((await db.user.findUniqueOrThrow({ where: { id: userId } })).credits, 100);
+            assert.equal((await db.user.findUniqueOrThrow({ where: { id: userId } })).credits, STARTER.credits);
             assert.equal(await db.creditTransaction.count({ where: { userId, type: "PURCHASE" } }), 1);
         }
     });
 
+    it("preserves historical pending orders with their original amount and credit award", async () => {
+        const payments = await import("../services/payment.services.js");
+        const userId = await createUser();
+        const historicalOrders = [
+            { plan: null, credits: LEGACY_STARTER.credits, amountPaise: LEGACY_STARTER_PAISE },
+            { plan: "PRO" as const, credits: LEGACY_PRO.credits, amountPaise: LEGACY_PRO.pricePaise },
+        ];
+
+        for (const orderFacts of historicalOrders) {
+            const id = orderId();
+            const pay = paymentId();
+            await createPendingRecord({
+                userId,
+                order: id,
+                plan: orderFacts.plan,
+                credits: orderFacts.credits,
+                amountPaise: orderFacts.amountPaise,
+            });
+            const body = webhookBody(
+                id,
+                pay,
+                { status: "captured", currency: "INR" },
+                orderFacts.amountPaise,
+            );
+            const result = await payments.processRazorpayWebhook(body, webhookSignature(body));
+            assert.equal(result.handled, true);
+            assert.equal(result.duplicate, false);
+
+            const record = await db.paymentRecord.findUniqueOrThrow({
+                where: { razorpayOrderId: id },
+            });
+            assert.equal(record.amount, orderFacts.amountPaise);
+            assert.equal(record.creditsPurchased, orderFacts.credits);
+            assert.equal(record.status, "SUCCESS");
+        }
+
+        const user = await db.user.findUniqueOrThrow({ where: { id: userId } });
+        assert.equal(user.credits, LEGACY_STARTER.credits + LEGACY_PRO.credits);
+        assert.equal(user.plan, "PRO");
+        assert.ok(user.planExpiresAt && user.planExpiresAt > new Date());
+    });
+
     it("fails closed for ambiguous legacy records and never grants a plan or credits", async () => {
-        const { settleCapturedPayment } = await import("../services/payment-settlement.services.js");
+        const { settleCapturedPayment } = await importSettlement();
         const userId = await createUser();
         const id = orderId();
         // Legacy shape: PRO plan with a credit-pack amount is ambiguous.
-        await createPendingRecord({ userId, order: id, plan: "PRO", credits: 0, amountPaise: 5000 });
+        await createPendingRecord({
+            userId,
+            order: id,
+            plan: "PRO",
+            credits: 0,
+            amountPaise: LEGACY_STARTER_PAISE,
+        });
 
         await assert.rejects(
             settleCapturedPayment({ userId, orderId: id, paymentId: paymentId() }),
@@ -378,9 +569,10 @@ describe("payment sandbox (provider-mocked integration)", () => {
                 throw new Error("provider unavailable");
             },
         });
+        restoreProvider = () => payments.setPaymentProviderForTests(undefined);
         const userId = await createUser();
         await assert.rejects(
-            payments.createRazorpayOrder(userId, { amountInr: 50 }),
+            payments.createRazorpayOrder(userId, { amountInr: STARTER.amountInr }),
             /Failed to create payment order/,
         );
         assert.equal(await db.paymentRecord.count({ where: { userId } }), 0);

@@ -4,14 +4,50 @@ import { timingSafeEqualHex } from "../lib/crypto.js";
 import { AppError, ValidationError } from "../types/app-error.js";
 import { computePlanExpiry } from "../repository/user.repository.js";
 import {
+    HISTORICAL_PLAN_PRICES,
+    PLAN_ACCESS_DESCRIPTION,
     PLAN_PRICES,
     calculateCreditsForInr,
+    historicalCreditPackCreditsForInr,
 } from "../lib/pricing.js";
 import type { PurchasablePlan } from "../lib/pricing.js";
 import type { PlanType, Prisma } from "../generated/prisma/client.js";
 
 const ORDER_ID_PATTERN = /^order_[A-Za-z0-9]{6,}$/;
 const PAYMENT_ID_PATTERN = /^pay_[A-Za-z0-9]{6,}$/;
+
+/** Required at payment-operation time; env.ts keeps them optional at startup. */
+const REQUIRED_RAZORPAY_ENV_VARS = [
+    "RAZORPAY_KEY_ID",
+    "RAZORPAY_KEY_SECRET",
+    "RAZORPAY_WEBHOOK_SECRET",
+] as const;
+type RazorpayCredentialName = (typeof REQUIRED_RAZORPAY_ENV_VARS)[number];
+
+/** Each operation only requires the credentials it actually uses. */
+const CHECKOUT_SIGNATURE_CREDENTIALS: readonly RazorpayCredentialName[] = [
+    "RAZORPAY_KEY_SECRET",
+];
+const WEBHOOK_CREDENTIALS: readonly RazorpayCredentialName[] = [
+    "RAZORPAY_WEBHOOK_SECRET",
+];
+
+/**
+ * Fails clearly when the credentials needed by an operation are absent. Only
+ * variable NAMES are reported; values are never logged or returned.
+ */
+export function assertRazorpayCredentials(
+    operation: string,
+    required: readonly RazorpayCredentialName[] = REQUIRED_RAZORPAY_ENV_VARS,
+): void {
+    const missing = required.filter((name) => !process.env[name]?.trim());
+    if (missing.length > 0) {
+        throw new AppError(
+            500,
+            `Missing Razorpay credentials for ${operation}: ${missing.join(", ")} must be configured on the server`,
+        );
+    }
+}
 
 export interface SettlePaymentInput {
     userId: string;
@@ -60,13 +96,36 @@ function isPurchasablePlan(plan: PlanType): plan is PurchasablePlan {
     return Object.prototype.hasOwnProperty.call(PLAN_PRICES, plan);
 }
 
+function matchesCurrentPlanPrice(
+    plan: PurchasablePlan,
+    amountPaise: number,
+    creditsPurchased: number,
+): boolean {
+    const price = PLAN_PRICES[plan];
+    return amountPaise === price.pricePaise && creditsPurchased === price.credits;
+}
+
+function matchesHistoricalPlanPrice(
+    plan: PurchasablePlan,
+    amountPaise: number,
+    creditsPurchased: number,
+): boolean {
+    const price = HISTORICAL_PLAN_PRICES[plan];
+    return amountPaise === price.pricePaise && creditsPurchased === price.credits;
+}
+
 /**
  * Derives an entitlement strictly from server-owned pricing facts.
  *
+ * Current prices are the only prices allowed for NEW orders. Historical price
+ * pairs are accepted only for rows that were already created before the price
+ * change, so a pending or successful legacy order keeps its original amount
+ * and credit award without any retroactive rewrite.
+ *
  * Historical payment rows can look like subscriptions because `plan` used to
- * be NOT NULL DEFAULT 'PRO'. Those rows are rejected as ambiguous instead of
- * being guessed as either a credit pack or a subscription, so they can never
- * grant PRO by accident. A credit pack is a payment with an explicit null plan.
+ * be NOT NULL DEFAULT 'PRO'. Those that do not match an exact current or
+ * historical price pair are rejected as ambiguous instead of being guessed,
+ * so they can never grant PRO by accident.
  */
 export function classifyPaymentOrder(
     record: PaymentOrderFacts,
@@ -91,12 +150,11 @@ export function classifyPaymentOrder(
         if (!isPurchasablePlan(plan)) {
             rejectPaymentOrder("plan_not_purchasable");
         }
-        const price = PLAN_PRICES[plan];
         if (
-            amountPaise !== price.pricePaise ||
-            creditsPurchased !== price.credits
+            !matchesCurrentPlanPrice(plan, amountPaise, creditsPurchased) &&
+            !matchesHistoricalPlanPrice(plan, amountPaise, creditsPurchased)
         ) {
-            rejectPaymentOrder("subscription_fields_mismatch");
+            rejectPaymentOrder("plan_fields_mismatch");
         }
         return {
             kind: "subscription",
@@ -107,8 +165,8 @@ export function classifyPaymentOrder(
         };
     }
 
-    // Legacy PRO rows with zero credits or a pack amount must never reach the
-    // plan update below: only an explicit null plan identifies a credit pack.
+    // Legacy PRO rows with zero credits or an unrelated amount must never reach
+    // the plan update below: only an exact price pair identifies an entitlement.
     if (creditsPurchased === 0) {
         rejectPaymentOrder("missing_pack_credits");
     }
@@ -122,6 +180,9 @@ export function classifyPaymentOrder(
         expectedCredits = calculateCreditsForInr(amountInr);
     } catch {
         expectedCredits = null;
+    }
+    if (expectedCredits === null) {
+        expectedCredits = historicalCreditPackCreditsForInr(amountInr);
     }
     if (expectedCredits === null || creditsPurchased !== expectedCredits) {
         rejectPaymentOrder("pack_fields_mismatch");
@@ -148,10 +209,11 @@ export function verifyCheckoutSignature(
     paymentId: string,
     signature: string,
 ): void {
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keySecret) {
-        throw new AppError(500, "RAZORPAY_KEY_SECRET is not configured on the server");
-    }
+    assertRazorpayCredentials(
+        "checkout signature verification",
+        CHECKOUT_SIGNATURE_CREDENTIALS,
+    );
+    const keySecret = process.env.RAZORPAY_KEY_SECRET!;
     assertPaymentIdentifiers(orderId, paymentId);
 
     const expected = crypto
@@ -168,10 +230,8 @@ export function verifyWebhookSignature(
     rawBody: Buffer,
     signatureHeader: string | undefined,
 ): void {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-        throw new AppError(503, "RAZORPAY_WEBHOOK_SECRET is not configured on the server");
-    }
+    assertRazorpayCredentials("webhook signature verification", WEBHOOK_CREDENTIALS);
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET!;
     if (!signatureHeader) {
         throw new ValidationError("Missing Razorpay webhook signature");
     }
@@ -188,13 +248,17 @@ export function verifyWebhookSignature(
 /**
  * Atomically claims a server-created payment record and applies its entitlement.
  *
- * The payment status transition, credit ledger write and plan renewal all occur
- * in one database transaction. A concurrent or repeated settlement sees the
- * already-SUCCESS row and returns `duplicate: true` without re-granting anything.
+ * The payment status transition, credit ledger write and one-time plan access
+ * all occur in one database transaction. A concurrent or repeated settlement
+ * sees the already-SUCCESS row and returns `duplicate: true` without
+ * re-granting anything.
  */
 export async function settleCapturedPayment(
     input: SettlePaymentInput,
 ): Promise<SettlementResult> {
+    // The caller has already verified either the checkout HMAC or the webhook
+    // HMAC with its own scoped credential gate. Settlement itself only applies
+    // server-owned facts and needs no additional provider credential.
     assertPaymentIdentifiers(input.orderId, input.paymentId);
 
     return prisma.$transaction((tx) =>
@@ -225,7 +289,7 @@ export async function settleCapturedPaymentInTransaction(
 
     // Classify before the atomic claim and before any write. Even a duplicate
     // SUCCESS row must be classified: if it cannot be, settlement fails closed
-    // instead of reporting PRO as applied.
+    // instead of reporting plan access as applied.
     const classified = classifyPaymentOrder({
         plan: record.plan,
         creditsPurchased: record.creditsPurchased,
@@ -332,8 +396,9 @@ export async function settleCapturedPaymentInTransaction(
         }
     }
 
-    // Only a validated subscription may change the user's plan. Credit packs
-    // (including ambiguous legacy rows, already rejected above) never do.
+    // Only a validated plan payment may change the user's plan. That access is
+    // one-time and finite (planExpiresAt); there is no recurring billing or
+    // automatic renewal job. Credit packs never change the plan.
     if (classified.kind === "subscription" && classified.plan) {
         const existing = await tx.user.findUnique({
             where: { id: input.userId },
@@ -360,7 +425,7 @@ export async function settleCapturedPaymentInTransaction(
         creditsAdded: classified.creditsPurchased,
         planApplied: classified.plan,
         message: classified.plan
-            ? `${classified.plan} activated with ${classified.creditsPurchased} credits.`
-            : `${classified.creditsPurchased} credits added.`,
+            ? `${classified.plan} ${PLAN_ACCESS_DESCRIPTION.toLowerCase()} activated with ${classified.creditsPurchased} credits. No recurring billing is configured.`
+            : `${classified.creditsPurchased} credits added as a one-time credit pack.`,
     };
 }
