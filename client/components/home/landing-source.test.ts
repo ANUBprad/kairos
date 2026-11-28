@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -19,6 +19,7 @@ const globals = readFileSync(
 test("landing sections render in one continuous narrative order", () => {
   const sectionTags = [
     "<Hero",
+    "<Workflow",
     "<CinematicPipeline",
     "<IntegrationsStrip",
     "<GroundingIntro",
@@ -38,6 +39,7 @@ test("landing sections render in one continuous narrative order", () => {
 });
 
 test("landing anchors are defined exactly once", () => {
+  const workflow = source("workflow.tsx");
   const pipeline = source("cinematic-pipeline.tsx");
   const integrations = source("integrations-strip.tsx");
   const grounding = source("grounding-intro.tsx");
@@ -46,7 +48,9 @@ test("landing anchors are defined exactly once", () => {
   const faq = source("faq.tsx");
   const finalCta = source("final-cta.tsx");
 
-  assert.equal((pipeline.match(/id="workflow"/g) ?? []).length, 1);
+  assert.equal((workflow.match(/^\s+id="workflow"/gm) ?? []).length, 1);
+  assert.equal((pipeline.match(/^\s+id="pipeline"/gm) ?? []).length, 1);
+  assert.doesNotMatch(pipeline, /id="workflow"/);
   assert.match(integrations, /id="sources"/);
   assert.match(grounding, /id="grounding"/);
   assert.match(features, /id="features"/);
@@ -57,6 +61,7 @@ test("landing anchors are defined exactly once", () => {
   assert.doesNotMatch(features, /id: "sources"/);
 
   const anchoredSources = {
+    workflow,
     pipeline,
     integrations,
     grounding,
@@ -66,7 +71,7 @@ test("landing anchors are defined exactly once", () => {
     finalCta,
   };
   const ids = Object.values(anchoredSources).flatMap((text) => [
-    ...Array.from(text.matchAll(/id="([^"]+)"/g), (match) => match[1]),
+    ...Array.from(text.matchAll(/(?:^|\s)id="([^"]+)"/g), (match) => match[1]),
     ...Array.from(text.matchAll(/id: "([^"]+)"/g), (match) => match[1]),
   ]);
   assert.equal(
@@ -74,6 +79,31 @@ test("landing anchors are defined exactly once", () => {
     ids.length,
     `Landing IDs must be unique; found: ${ids.join(", ")}`,
   );
+});
+
+test("hero uses a local cinematic video with a real poster fallback", () => {
+  const hero = source("hero.tsx");
+
+  assert.match(hero, /const HERO_VIDEO = "\/landing\/sunrise-beach\.mp4";/);
+  assert.match(hero, /const HERO_POSTER = "\/landing\/sunrise-beach-poster\.jpg";/);
+  assert.match(hero, /<video[\s\S]*?autoPlay[\s\S]*?muted[\s\S]*?loop[\s\S]*?playsInline[\s\S]*?preload="metadata"/);
+  assert.match(hero, /poster=\{HERO_POSTER\}/);
+  assert.match(hero, /<source src=\{HERO_VIDEO\} type="video\/mp4" \/>/);
+  assert.match(hero, /data-testid="hero-video"/);
+  assert.match(hero, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.match(hero, /new IntersectionObserver/);
+  assert.match(hero, /aria-hidden="true" className="kairos-hero-media"/);
+  assert.match(globals, /\.kairos-hero-poster,\s*\.kairos-hero-video \{[\s\S]*?object-fit: cover/);
+  assert.doesNotMatch(hero, /The evidence loop|LOOP_STEPS|Free-window credits/);
+
+  for (const asset of [
+    "../../public/landing/sunrise-beach.mp4",
+    "../../public/landing/sunrise-beach-poster.jpg",
+  ]) {
+    const path = fileURLToPath(new URL(asset, import.meta.url));
+    assert.ok(existsSync(path), `${asset} exists`);
+    assert.ok(statSync(path).size > 0, `${asset} is not empty`);
+  }
 });
 
 test("footer keeps legal and support routes", () => {
@@ -101,9 +131,18 @@ test("footer uses three valid navigation columns and a decorative atmosphere", (
   assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?var\(--primary\)/);
   assert.match(globals, /\.dark \.kairos-footer \{/);
   assert.match(globals, /\.kairos-footer-content \{[\s\S]*?clamp\(/);
-  assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?bottom: clamp\(/);
+  assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?bottom: 1\.5rem;/);
   assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?font-size: clamp\(/);
+  assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?line-height: 1;/);
   assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?max-width:/);
+
+  const wordmarkBlock =
+    globals.match(/\.kairos-footer-wordmark \{([\s\S]*?)\n\}/)?.[1] ?? "";
+  assert.match(wordmarkBlock, /color: color-mix\(/);
+  assert.doesNotMatch(
+    wordmarkBlock,
+    /background-clip|-webkit-text-fill-color|linear-gradient/,
+  );
 });
 
 test("integration carousel uses verified brands and supports real interaction", () => {
@@ -111,8 +150,10 @@ test("integration carousel uses verified brands and supports real interaction", 
   const carousel = source("integrations-carousel.tsx");
 
   assert.match(integrations, /<IntegrationsCarousel \/>/);
-  assert.match(integrations, /Files and links/);
-  assert.match(integrations, /Connected accounts[\s\S]*Source types[\s\S]*Processing services/);
+  assert.doesNotMatch(
+    integrations,
+    /Files and links|Connected accounts|Source types|Processing services/,
+  );
 
   for (const logo of [
     "/integrations/google-drive-logo.png",
@@ -129,9 +170,10 @@ test("integration carousel uses verified brands and supports real interaction", 
     assert.ok(carousel.includes(logo), `${logo} is used by the carousel`);
   }
 
-  for (const category of ["Connected account", "Source type", "Processing service"]) {
-    assert.ok(carousel.includes(`category: "${category}"`));
-  }
+  assert.doesNotMatch(carousel, /category:/);
+  assert.doesNotMatch(carousel, /kairos-carousel-category/);
+  assert.match(carousel, /logoWidth: 48/);
+  assert.doesNotMatch(carousel, /scale\(/);
 
   assert.match(carousel, /"use client"/);
   assert.match(carousel, /onError=\{\(\) => setFailed\(true\)\}/);
@@ -148,6 +190,42 @@ test("integration carousel uses verified brands and supports real interaction", 
   assert.match(carousel, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
   assert.match(carousel, /new IntersectionObserver/);
   assert.match(carousel, /new ResizeObserver/);
+});
+
+test("workflow is a deterministic six-stage scroll narrative", () => {
+  const workflow = source("workflow.tsx");
+  const pipeline = source("cinematic-pipeline.tsx");
+
+  for (const title of [
+    "Add sources",
+    "Process and index",
+    "Ask a question",
+    "Retrieve evidence",
+    "Grounded answer",
+    "Turn research into outputs",
+  ]) {
+    assert.match(workflow, new RegExp(`title: "${title}"`));
+  }
+
+  assert.match(workflow, /"use client"/);
+  assert.match(workflow, /const STAGES: WorkflowStage\[\]/);
+  assert.match(workflow, /id="workflow"/);
+  assert.match(workflow, /data-active-stage=\{activeStage\}/);
+  assert.match(workflow, /data-state=\{stateFor\(index, activeStage\)\}/);
+  assert.match(workflow, /data-testid="workflow-demo"/);
+  assert.match(workflow, /setProperty\("--workflow-progress"/);
+  assert.match(workflow, /new IntersectionObserver/);
+  assert.match(workflow, /requestAnimationFrame\(update\)/);
+  assert.match(workflow, /no live data or backend jobs are run here/);
+  assert.doesNotMatch(workflow, /\bfetch\(|axios|\/api\/|useMutation/);
+
+  assert.doesNotMatch(pipeline, /const STAGES|Illustrative visualization/);
+  assert.match(globals, /\.kairos-workflow-scroll \{[\s\S]*?height: 520vh/);
+  assert.match(globals, /\.kairos-workflow-sticky \{[\s\S]*?position: sticky/);
+  assert.match(
+    globals,
+    /prefers-reduced-motion: reduce[\s\S]*?\.kairos-workflow-panel/,
+  );
 });
 
 test("scroll reveals are one-shot and disabled under reduced motion", () => {
@@ -195,6 +273,7 @@ test("rendered landing surfaces avoid hardcoded legacy brand and fixed theme col
   const renderedSurfaces = [
     "site-nav.tsx",
     "hero.tsx",
+    "workflow.tsx",
     "cinematic-pipeline.tsx",
     "integrations-strip.tsx",
     "integrations-carousel.tsx",

@@ -113,29 +113,6 @@ const CARDS: PipelineCardData[] = [
   },
 ];
 
-const STAGES = [
-  {
-    number: "01",
-    label: "COLLECT",
-    copy: "Documents, websites, videos and repositories enter Kairos.",
-  },
-  {
-    number: "02",
-    label: "PROCESS",
-    copy: "Content is extracted, cleaned, chunked and embedded.",
-  },
-  {
-    number: "03",
-    label: "CONNECT",
-    copy: "Structured knowledge is indexed for retrieval.",
-  },
-  {
-    number: "04",
-    label: "INTERACT",
-    copy: "Ask questions and create outputs from your sources.",
-  },
-];
-
 function hash(a: number, b: number): number {
   const value = Math.sin(a * 127.1 + b * 311.7) * 43758.5453;
   return value - Math.floor(value);
@@ -604,7 +581,7 @@ export function CinematicPipeline() {
   return (
     <section
       ref={sectionRef}
-      id="workflow"
+      id="pipeline"
       className="scroll-mt-20 overflow-hidden border-t border-pipeline-line bg-pipeline px-0 py-24 text-pipeline-ink sm:py-28"
       aria-labelledby="pipeline-heading"
     >
@@ -692,26 +669,6 @@ export function CinematicPipeline() {
         </div>
       </div>
 
-      <div className="kairos-section-wrap mt-8">
-        <div className="grid gap-4 border-t border-pipeline-line pt-6 font-mono sm:grid-cols-2 lg:grid-cols-4">
-          {STAGES.map((stage) => (
-            <div key={stage.number} className="flex gap-3">
-              <span className="shrink-0 text-processing-deep">{stage.number}</span>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-pipeline-ink">
-                  {stage.label}
-                </p>
-                <p className="mt-1 text-[12px] leading-relaxed text-pipeline-muted">
-                  {stage.copy}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.14em] text-pipeline-muted/75">
-          Illustrative visualization · no live pipeline is executed here
-        </p>
-      </div>
     </section>
   );
 }

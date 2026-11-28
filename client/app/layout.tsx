@@ -105,7 +105,7 @@ export default function RootLayout({
             </PWAProvider>
           </QueryProvider>
         </ThemeProvider>
-        <Analytics />
+        {process.env.VERCEL === "1" ? <Analytics /> : null}
       </body>
     </html>
   );

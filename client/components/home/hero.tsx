@@ -1,41 +1,34 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, FileText, Quote, ScanSearch, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { ScrollReveal } from "./scroll-motion";
 
 interface HeroProps {
   isAuthenticated?: boolean;
 }
 
-const LOOP_STEPS = [
-  {
-    icon: FileText,
-    number: "01",
-    label: "Capture",
-    detail: "PDFs, pages, transcripts, notes",
-  },
-  {
-    icon: ScanSearch,
-    number: "02",
-    label: "Retrieve",
-    detail: "Passages matched to the question",
-  },
-  {
-    icon: Quote,
-    number: "03",
-    label: "Answer",
-    detail: "Every claim linked to its source",
-  },
-];
+const HERO_VIDEO = "/landing/sunrise-beach.mp4";
+const HERO_POSTER = "/landing/sunrise-beach-poster.jpg";
 
 export function Hero({ isAuthenticated = false }: HeroProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const atmosphereRef = useRef<HTMLDivElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
   const ledeRef = useRef<HTMLParagraphElement>(null);
-  const visualRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [showVideo, setShowVideo] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setShowVideo(!media.matches);
+
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -49,7 +42,6 @@ export function Hero({ isAuthenticated = false }: HeroProps) {
         atmosphereRef.current,
         headlineRef.current,
         ledeRef.current,
-        visualRef.current,
       ];
 
       layers.forEach((element) => {
@@ -73,17 +65,14 @@ export function Hero({ isAuthenticated = false }: HeroProps) {
       );
 
       if (atmosphereRef.current) {
-        atmosphereRef.current.style.transform = `translate3d(0, ${(progress * 30).toFixed(1)}px, 0)`;
+        atmosphereRef.current.style.transform = `translate3d(0, ${(progress * 24).toFixed(1)}px, 0)`;
       }
       if (headlineRef.current) {
-        headlineRef.current.style.transform = `translate3d(0, ${(-progress * 18).toFixed(1)}px, 0)`;
+        headlineRef.current.style.transform = `translate3d(0, ${(-progress * 14).toFixed(1)}px, 0)`;
       }
       if (ledeRef.current) {
-        ledeRef.current.style.transform = `translate3d(0, ${(-progress * 10).toFixed(1)}px, 0)`;
-        ledeRef.current.style.opacity = (1 - progress * 0.12).toFixed(3);
-      }
-      if (visualRef.current) {
-        visualRef.current.style.transform = `translate3d(0, ${(progress * 22).toFixed(1)}px, 0)`;
+        ledeRef.current.style.transform = `translate3d(0, ${(-progress * 8).toFixed(1)}px, 0)`;
+        ledeRef.current.style.opacity = (1 - progress * 0.1).toFixed(3);
       }
     };
 
@@ -105,29 +94,87 @@ export function Hero({ isAuthenticated = false }: HeroProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const section = sectionRef.current;
+    const video = videoRef.current;
+    if (!section || !video || !showVideo) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries[0]?.isIntersecting ?? false;
+        if (visible) {
+          void video.play().catch(() => undefined);
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.05 },
+    );
+
+    observer.observe(section);
+    return () => {
+      observer.disconnect();
+      video.pause();
+    };
+  }, [showVideo]);
+
   return (
     <section
       ref={sectionRef}
-      className="kairos-dark-section kairos-aurora relative overflow-hidden pb-32 pt-32 sm:pb-36 sm:pt-40"
+      className="kairos-hero kairos-dark-section relative isolate flex min-h-[calc(100svh-4rem)] flex-col justify-center overflow-hidden pb-24 pt-28 sm:pb-28 sm:pt-32"
+      aria-labelledby="hero-heading"
     >
+      <div aria-hidden="true" className="kairos-hero-media">
+        <Image
+          src={HERO_POSTER}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="kairos-hero-poster"
+        />
+        {showVideo ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            poster={HERO_POSTER}
+            tabIndex={-1}
+            className="kairos-hero-video"
+            data-testid="hero-video"
+          >
+            <source src={HERO_VIDEO} type="video/mp4" />
+          </video>
+        ) : null}
+        <div className="kairos-hero-scrim" />
+        <div className="kairos-hero-warmth" />
+        <div className="kairos-hero-fade" />
+      </div>
+
       <div
         ref={atmosphereRef}
-        className="kairos-grid pointer-events-none absolute inset-x-0 top-0 h-[440px] opacity-30"
+        aria-hidden="true"
+        className="kairos-grid pointer-events-none absolute inset-x-0 top-0 z-0 h-[360px] opacity-20"
       />
 
-      <div className="kairos-section-wrap relative">
+      <div className="kairos-section-wrap relative z-10">
         <div className="mx-auto max-w-3xl text-center">
           <ScrollReveal>
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/60 px-3 py-1.5">
-              <Sparkles className="size-3.5 text-primary" />
-              <span className="kairos-kicker text-muted-foreground">Evidence-first research workspace</span>
-            </span>
+            <p className="kairos-hero-brand">
+              <span aria-hidden="true" className="kairos-hero-brand-rule" />
+              Kairos
+              <span aria-hidden="true" className="kairos-hero-brand-rule" />
+            </p>
           </ScrollReveal>
 
           <ScrollReveal delay={80}>
             <h1
               ref={headlineRef}
-              className="kairos-editorial-title mt-7 text-[44px] sm:text-[64px] lg:text-[78px]"
+              id="hero-heading"
+              className="kairos-editorial-title mt-6 text-[44px] sm:text-[64px] lg:text-[78px]"
             >
               Research that keeps
               <br />
@@ -140,9 +187,9 @@ export function Hero({ isAuthenticated = false }: HeroProps) {
               ref={ledeRef}
               className="kairos-lede mx-auto mt-6 text-center text-[15px] sm:text-base"
             >
-              Kairos reads across your sources, answers with citations you can open,
-              then turns the same library into study material and a podcast you can
-              interrupt.
+              Kairos reads across your sources, answers with citations you can
+              open, then turns the same library into study material and a
+              podcast you can interrupt.
             </p>
           </ScrollReveal>
 
@@ -153,69 +200,18 @@ export function Hero({ isAuthenticated = false }: HeroProps) {
                 className="kairos-button kairos-button-light"
               >
                 {isAuthenticated ? "Open dashboard" : "Start researching"}
-                <ArrowRight className="size-4" />
+                <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
               <Link
                 href="/#workflow"
-                className="kairos-button border border-border bg-surface/60 text-foreground hover:bg-surface-hover"
+                className="kairos-button border border-border bg-surface/70 text-foreground backdrop-blur-sm hover:bg-surface-hover"
               >
-                See the pipeline
+                See the workflow
               </Link>
             </div>
           </ScrollReveal>
-
-          <ScrollReveal delay={260}>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-              <span>Free-window credits + welcome bonus</span>
-              <span aria-hidden="true" className="size-1 rounded-full bg-border" />
-              <span>No recurring subscription</span>
-              <span aria-hidden="true" className="size-1 rounded-full bg-border" />
-              <span>Your library, one workspace</span>
-            </div>
-          </ScrollReveal>
         </div>
-
-        <ScrollReveal delay={180}>
-          <div
-            ref={visualRef}
-            className="relative mt-16 overflow-hidden rounded-[22px] border border-border bg-surface/60 sm:mt-20"
-          >
-            <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-7">
-              <div className="flex items-center gap-2.5">
-                <span className="size-1.5 rounded-full bg-primary shadow-[0_0_10px_2px_color-mix(in_srgb,var(--primary)_45%,transparent)]" />
-                <span className="text-sm font-semibold text-foreground">The evidence loop</span>
-              </div>
-              <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground sm:block">
-                capture → retrieve → cite
-              </span>
-            </div>
-
-            <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-              {LOOP_STEPS.map((step) => (
-                <div key={step.label} className="p-6 sm:p-7">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-surface/60 text-primary">
-                      <step.icon className="size-5" strokeWidth={1.5} />
-                    </span>
-                    <span className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground/70">
-                      {step.number}
-                    </span>
-                  </div>
-                  <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {step.label}
-                  </p>
-                  <p className="mt-2 text-sm text-foreground/85">{step.detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </ScrollReveal>
       </div>
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-pipeline"
-      />
     </section>
   );
 }

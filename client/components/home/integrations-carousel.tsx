@@ -4,11 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-type Category = "Connected account" | "Source type" | "Processing service";
-
 interface CarouselItem {
   name: string;
-  category: Category;
   logo: string;
   darkLogo?: string;
   invertInDark?: boolean;
@@ -33,78 +30,69 @@ const PAUSED_SPEED = 0;
 const COPIES = 3;
 
 /**
- * Only brands that the application actually uses are shown here. Source
- * formats that have no brand mark stay in the separate file-format row.
+ * Only brands the application actually uses appear here. Each placard shows a
+ * single authentic logo and its name; source formats belong to the workflow.
  */
 const ITEMS: CarouselItem[] = [
   {
     name: "Google Drive",
-    category: "Connected account",
     logo: "/integrations/google-drive-logo.png",
-    logoWidth: 36,
-    logoHeight: 36,
+    logoWidth: 48,
+    logoHeight: 48,
   },
   {
     name: "Notion",
-    category: "Connected account",
     logo: "/integrations/notion-logo.webp",
     darkLogo: "/integrations/notion-logo-white.webp",
-    logoWidth: 36,
-    logoHeight: 36,
+    logoWidth: 46,
+    logoHeight: 46,
   },
   {
     name: "GitHub",
-    category: "Connected account",
     logo: "/integrations/github.svg",
     invertInDark: true,
-    logoWidth: 36,
-    logoHeight: 36,
+    logoWidth: 46,
+    logoHeight: 46,
   },
   {
     name: "YouTube",
-    category: "Source type",
     logo: "/integrations/youtube.svg",
-    logoWidth: 36,
-    logoHeight: 36,
+    logoWidth: 50,
+    logoHeight: 50,
   },
   {
     name: "Firecrawl",
-    category: "Processing service",
     logo: "/integrations/firecrawl.png",
-    logoWidth: 36,
-    logoHeight: 36,
+    logoWidth: 46,
+    logoHeight: 46,
   },
   {
     name: "Tavily",
-    category: "Processing service",
     logo: "/integrations/tavily.svg",
     invertInDark: true,
-    logoWidth: 36,
-    logoHeight: 36,
+    logoWidth: 46,
+    logoHeight: 46,
   },
   {
     name: "Pinecone",
-    category: "Processing service",
     logo: "/integrations/pinecone.png",
     invertInDark: true,
-    logoWidth: 36,
-    logoHeight: 36,
+    logoWidth: 46,
+    logoHeight: 46,
   },
   {
     name: "ElevenLabs",
-    category: "Processing service",
     logo: "/integrations/elevenlabs.svg",
     invertInDark: true,
-    logoWidth: 32,
-    logoHeight: 32,
+    logoWidth: 42,
+    logoHeight: 42,
   },
   {
     name: "Mem0",
-    category: "Processing service",
     logo: "/integrations/mem0.svg",
     invertInDark: true,
     logoWidth: 120,
-    logoHeight: 34,
+    logoHeight: 38,
   },
 ];
 
@@ -149,6 +137,7 @@ function LogoImage({ item }: { item: CarouselItem }) {
           className={cn(imageClass, "dark:hidden")}
           draggable={false}
           unoptimized
+          loading="eager"
           onError={() => setFailed(true)}
         />
         <Image
@@ -160,6 +149,7 @@ function LogoImage({ item }: { item: CarouselItem }) {
           className={cn(imageClass, "hidden dark:block")}
           draggable={false}
           unoptimized
+          loading="eager"
           onError={() => setFailed(true)}
         />
       </span>
@@ -176,6 +166,7 @@ function LogoImage({ item }: { item: CarouselItem }) {
       className={imageClass}
       draggable={false}
       unoptimized
+      loading="eager"
       onError={() => setFailed(true)}
     />
   );
@@ -195,7 +186,6 @@ function Placard({
       </div>
       <div className="mt-auto">
         <p className="kairos-carousel-name">{item.name}</p>
-        <p className="kairos-carousel-category">{item.category}</p>
       </div>
       <span aria-hidden="true" className="kairos-carousel-card-mark" />
     </div>
@@ -261,9 +251,9 @@ function MotionCarousel() {
       track.style.transform = `translate3d(${-offsetRef.current}px, 0, 0)`;
 
       const viewportWidth = viewport.clientWidth || 1;
-      const halfSpan = Math.max(viewportWidth * 0.62, 220);
+      const halfSpan = Math.max(viewportWidth * 0.72, 260);
       const maxRotation =
-        viewportWidth < 640 ? 4 : viewportWidth < 1024 ? 7 : 10;
+        viewportWidth < 640 ? 1 : viewportWidth < 1024 ? 1.75 : 2.5;
 
       measuredRef.current.forEach(({ element, center }) => {
         const distance = wrapDistance(
@@ -272,13 +262,12 @@ function MotionCarousel() {
         );
         const normalized = Math.min(Math.abs(distance) / halfSpan, 1);
         const eased = normalized * normalized * (3 - 2 * normalized);
-        const scale = 1 - 0.22 * eased;
-        const opacity = 1 - 0.62 * eased;
+        const opacity = 1 - 0.28 * eased;
         const rotation = -Math.sign(distance) * maxRotation * eased;
 
-        element.style.transform = `perspective(900px) rotateY(${rotation.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+        element.style.transform = `perspective(1200px) rotateY(${rotation.toFixed(2)}deg)`;
         element.style.opacity = opacity.toFixed(3);
-        element.style.zIndex = String(20 - Math.round(eased * 12));
+        element.style.zIndex = String(20 - Math.round(eased * 4));
       });
     };
 

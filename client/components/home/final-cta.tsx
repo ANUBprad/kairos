@@ -59,7 +59,7 @@ export function FinalCta({ isAuthenticated = false }: FinalCtaProps) {
               href={isAuthenticated ? "/#sources" : "/#workflow"}
               className="kairos-button border border-border bg-surface/60 text-foreground hover:bg-surface-hover"
             >
-              {isAuthenticated ? "View sources" : "See the pipeline"}
+              {isAuthenticated ? "View sources" : "See the workflow"}
             </Link>
           </div>
 

@@ -14,7 +14,7 @@ interface SiteNavProps {
 }
 
 const NAV_LINKS = [
-  { href: "/#workflow", label: "Pipeline" },
+  { href: "/#workflow", label: "Workflow" },
   { href: "/#features", label: "Features" },
   { href: "/#use-cases", label: "Use cases" },
   { href: "/pricing", label: "Pricing" },
