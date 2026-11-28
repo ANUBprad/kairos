@@ -423,6 +423,220 @@
     );
 }
 
+/* One-shot reveals: content starts visible in the server render and is hidden
+   only after hydration, so a failed hydration cannot make it unreachable. */
+.kairos-reveal {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  transition:
+    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 720ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 720ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.kairos-reveal[data-visible="false"] {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  filter: blur(4px);
+}
+
+/* Continuous source carousel. Motion is applied to transforms and opacity only;
+   the track keeps three copies so the loop never exposes an edge. */
+.kairos-carousel {
+  position: relative;
+  overflow: hidden;
+}
+
+.kairos-carousel-viewport {
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y;
+  perspective: 1200px;
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    black 11%,
+    black 89%,
+    transparent 100%
+  );
+}
+
+.kairos-carousel-viewport:active {
+  cursor: grabbing;
+}
+
+.kairos-carousel-viewport:focus-visible {
+  outline: 1px solid var(--primary-border);
+  outline-offset: -2px;
+}
+
+.kairos-carousel-track {
+  position: relative;
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
+.kairos-carousel-group {
+  display: flex;
+  flex: none;
+  gap: 1rem;
+  padding-right: 1rem;
+}
+
+.kairos-carousel-card {
+  position: relative;
+  display: flex;
+  width: clamp(11rem, 16vw, 14rem);
+  height: clamp(10.75rem, 15vw, 12.75rem);
+  flex: none;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  padding: 1rem;
+  box-shadow: var(--shadow-panel);
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.kairos-carousel-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 54%,
+    color-mix(in srgb, var(--primary) 9%, transparent) 100%
+  );
+  transition: opacity 240ms ease;
+}
+
+.kairos-carousel-card:hover::before {
+  opacity: 1;
+}
+
+.kairos-carousel-logo-frame {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.kairos-carousel-logo-pair {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kairos-carousel-logo {
+  object-fit: contain;
+}
+
+.kairos-carousel-logo-fallback {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--background-secondary);
+}
+
+.kairos-carousel-logo-fallback span {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  background: var(--primary);
+}
+
+.kairos-carousel-name {
+  position: relative;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.kairos-carousel-category {
+  position: relative;
+  margin-top: 0.25rem;
+  font-family: var(--font-kairos-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.kairos-carousel-card-mark {
+  position: absolute;
+  right: 0.9rem;
+  top: 0.9rem;
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: var(--primary);
+  opacity: 0.75;
+}
+
+.kairos-carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.kairos-carousel-hint {
+  font-family: var(--font-kairos-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.kairos-carousel-control {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  transition:
+    border-color 200ms ease,
+    color 200ms ease,
+    background-color 200ms ease;
+}
+
+.kairos-carousel-control:hover,
+.kairos-carousel-control:focus-visible {
+  border-color: var(--primary-border);
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+
+.kairos-carousel-static {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 1rem;
+}
+
+.kairos-carousel-static .kairos-carousel-card {
+  width: 100%;
+}
+
 .kairos-scanner-halo {
   background: radial-gradient(
     ellipse at center,
@@ -727,6 +941,10 @@
   --footer-wordmark-ink: var(--foreground);
 }
 
+.kairos-footer-content {
+  padding-bottom: clamp(8rem, 18vw, 16rem);
+}
+
 .kairos-footer-atmosphere {
   position: absolute;
   inset: auto 0 0;
@@ -780,25 +998,26 @@
 
 .kairos-footer-wordmark {
   position: absolute;
-  bottom: clamp(0.75rem, 2vw, 1.75rem);
+  bottom: clamp(1.5rem, 2.5vw, 2.5rem);
   left: 50%;
   z-index: 1;
+  width: max-content;
+  max-width: calc(100% - clamp(1rem, 4vw, 4rem));
   transform: translateX(-50%);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--footer-wordmark-ink) 32%, transparent) 0%,
-    color-mix(in srgb, var(--footer-wordmark-ink) 14%, transparent) 46%,
-    color-mix(in srgb, var(--primary) 28%, transparent) 76%,
-    transparent 100%
+    color-mix(in srgb, var(--footer-wordmark-ink) 44%, transparent) 0%,
+    color-mix(in srgb, var(--footer-wordmark-ink) 24%, transparent) 46%,
+    color-mix(in srgb, var(--primary) 30%, transparent) 78%,
+    color-mix(in srgb, var(--primary) 12%, transparent) 100%
   );
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 1px 0 color-mix(in srgb, var(--primary) 16%, transparent));
   font-family: var(--font-kairos-display);
-  font-size: clamp(5.25rem, 19vw, 18rem);
+  font-size: clamp(4.25rem, 16vw, 15rem);
   font-weight: 650;
-  letter-spacing: -0.075em;
-  line-height: 0.78;
+  letter-spacing: -0.08em;
+  line-height: 0.9;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
@@ -817,6 +1036,21 @@
   .gold-glitter-ring,
   .auth-rise {
     animation: none !important;
+  }
+
+  .kairos-reveal,
+  .kairos-reveal[data-visible="false"] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+  }
+
+  .kairos-carousel-card,
+  .kairos-carousel-card::before,
+  .kairos-carousel-control {
+    transition: none !important;
+    transform: none !important;
   }
 
   .kairos-card,

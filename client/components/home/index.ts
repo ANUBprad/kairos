@@ -9,6 +9,8 @@ export { Faq } from "./faq";
 export { FinalCta } from "./final-cta";
 export { SiteFooter } from "./site-footer";
 export { ShowcaseFrame } from "./showcase-frame";
+export { ScrollReveal } from "./scroll-motion";
+export { IntegrationsCarousel } from "./integrations-carousel";
 
 // Previous landing page sections, kept for reference.
 export { LandingNavbar } from "./landing-navbar";

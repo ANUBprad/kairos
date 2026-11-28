@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowRight, FileQuestion, Layers3, Quote } from "lucide-react";
+import { ScrollReveal } from "./scroll-motion";
 
 const PRINCIPLES = [
   {
@@ -28,49 +29,52 @@ export function GroundingIntro() {
       <div className="kairos-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] opacity-20" />
 
       <div className="kairos-section-wrap relative grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-20">
-        <div>
-          <p className="kairos-kicker">Grounded by design</p>
-          <h2 className="kairos-editorial-title mt-4 text-[34px] sm:text-[46px]">
-            Your sources are uploaded.
-            <br />
-            Your answers still need proof.
-          </h2>
-          <p className="kairos-lede mt-6">
-            Chat gives you fluent text. Search gives you raw hits. Kairos reads
-            across your whole library, chooses the passages that answer the
-            question, and cites each one.
-          </p>
+        <ScrollReveal>
+          <div>
+            <p className="kairos-kicker">Grounded by design</p>
+            <h2 className="kairos-editorial-title mt-4 text-[34px] sm:text-[46px]">
+              Your sources are uploaded.
+              <br />
+              Your answers still need proof.
+            </h2>
+            <p className="kairos-lede mt-6">
+              Chat gives you fluent text. Search gives you raw hits. Kairos reads
+              across your whole library, chooses the passages that answer the
+              question, and cites each one.
+            </p>
 
-          <div className="mt-9 grid gap-4 sm:grid-cols-2">
-            {PRINCIPLES.map((item) => (
-              <div key={item.number} className="kairos-dark-card p-5">
-                <div className="flex items-center justify-between">
-                  <item.icon className="size-4 text-primary" strokeWidth={1.6} />
-                  <span className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground/70">
-                    {item.number}
-                  </span>
+            <div className="mt-9 grid gap-4 sm:grid-cols-2">
+              {PRINCIPLES.map((item) => (
+                <div key={item.number} className="kairos-dark-card p-5">
+                  <div className="flex items-center justify-between">
+                    <item.icon className="size-4 text-primary" strokeWidth={1.6} />
+                    <span className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground/70">
+                      {item.number}
+                    </span>
+                  </div>
+                  <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    {item.label}
+                  </p>
+                  <h3 className="mt-2 font-serif text-[17px] leading-snug text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">{item.body}</p>
                 </div>
-                <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                  {item.label}
-                </p>
-                <h3 className="mt-2 font-serif text-[17px] leading-snug text-foreground">
-                  {item.title}
-                </h3>
-                <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">{item.body}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <Link
+              href="#features"
+              className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
+            >
+              Explore the features
+              <ArrowRight className="size-4" />
+            </Link>
           </div>
+        </ScrollReveal>
 
-          <Link
-            href="#features"
-            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
-          >
-            Explore the features
-            <ArrowRight className="size-4" />
-          </Link>
-        </div>
-
-        <div className="kairos-dark-card overflow-hidden">
+        <ScrollReveal delay={120}>
+          <div className="kairos-dark-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/55">
               Evidence set / decoded
@@ -118,7 +122,8 @@ export function GroundingIntro() {
           <div className="border-t border-border px-5 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground/70">
             Illustrative evidence view · no live query is executed here
           </div>
-        </div>
+          </div>
+        </ScrollReveal>
       </div>
 
       <div

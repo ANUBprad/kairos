@@ -10,6 +10,7 @@ import {
   Faq,
   FinalCta,
   SiteFooter,
+  ScrollReveal,
 } from "@/components/home";
 
 export const metadata = {
@@ -28,7 +29,9 @@ export default async function HomePage() {
 
       <main className="flex-1">
         <Hero isAuthenticated={isAuthenticated} />
-        <CinematicPipeline />
+        <ScrollReveal>
+          <CinematicPipeline />
+        </ScrollReveal>
         <IntegrationsStrip />
         <GroundingIntro />
         <FeatureRows />

@@ -1,4 +1,5 @@
 import React from "react";
+import { ScrollReveal } from "./scroll-motion";
 
 interface UseCase {
   number: string;
@@ -47,20 +48,23 @@ export function UseCases() {
       className="scroll-mt-24 border-b border-border bg-surface py-24 sm:py-28"
     >
       <div className="kairos-section-wrap">
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end lg:gap-16">
-          <div>
-            <p className="kairos-kicker">Use cases</p>
-            <h2 className="kairos-editorial-title mt-4 text-[34px] sm:text-[46px]">
-              For the work that starts with a question.
-            </h2>
+        <ScrollReveal>
+          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end lg:gap-16">
+            <div>
+              <p className="kairos-kicker">Use cases</p>
+              <h2 className="kairos-editorial-title mt-4 text-[34px] sm:text-[46px]">
+                For the work that starts with a question.
+              </h2>
+            </div>
+            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
+              Kairos stays useful from the first read to the final artifact because
+              every step returns to the same evidence.
+            </p>
           </div>
-          <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-            Kairos stays useful from the first read to the final artifact because
-            every step returns to the same evidence.
-          </p>
-        </div>
+        </ScrollReveal>
 
-        <div className="mt-12 border-t border-border">
+        <ScrollReveal delay={100}>
+          <div className="mt-12 border-t border-border">
           {USE_CASES.map((useCase) => (
             <article
               key={useCase.number}
@@ -89,7 +93,8 @@ export function UseCases() {
               </p>
             </article>
           ))}
-        </div>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

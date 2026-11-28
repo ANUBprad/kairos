@@ -42,7 +42,7 @@ export function SiteFooter() {
     <footer className="kairos-dark-section kairos-footer relative isolate overflow-hidden border-t border-border">
       <div aria-hidden="true" className="kairos-footer-atmosphere" />
 
-      <div className="kairos-section-wrap relative z-10 pb-[19rem] pt-16 sm:pb-[22rem] sm:pt-20 lg:pb-[24rem]">
+      <div className="kairos-section-wrap kairos-footer-content relative z-10 pt-16 sm:pt-20">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,2fr)] lg:gap-16">
           <div className="max-w-sm">
             <Link href="/" className="flex h-fit items-center" aria-label="Kairos home">

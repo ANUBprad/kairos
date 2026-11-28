@@ -100,6 +100,72 @@ test("footer uses three valid navigation columns and a decorative atmosphere", (
   assert.match(globals, /\.kairos-footer-atmosphere \{/);
   assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?var\(--primary\)/);
   assert.match(globals, /\.dark \.kairos-footer \{/);
+  assert.match(globals, /\.kairos-footer-content \{[\s\S]*?clamp\(/);
+  assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?bottom: clamp\(/);
+  assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?font-size: clamp\(/);
+  assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?max-width:/);
+});
+
+test("integration carousel uses verified brands and supports real interaction", () => {
+  const integrations = source("integrations-strip.tsx");
+  const carousel = source("integrations-carousel.tsx");
+
+  assert.match(integrations, /<IntegrationsCarousel \/>/);
+  assert.match(integrations, /Files and links/);
+  assert.match(integrations, /Connected accounts[\s\S]*Source types[\s\S]*Processing services/);
+
+  for (const logo of [
+    "/integrations/google-drive-logo.png",
+    "/integrations/notion-logo.webp",
+    "/integrations/notion-logo-white.webp",
+    "/integrations/github.svg",
+    "/integrations/youtube.svg",
+    "/integrations/firecrawl.png",
+    "/integrations/tavily.svg",
+    "/integrations/pinecone.png",
+    "/integrations/elevenlabs.svg",
+    "/integrations/mem0.svg",
+  ]) {
+    assert.ok(carousel.includes(logo), `${logo} is used by the carousel`);
+  }
+
+  for (const category of ["Connected account", "Source type", "Processing service"]) {
+    assert.ok(carousel.includes(`category: "${category}"`));
+  }
+
+  assert.match(carousel, /"use client"/);
+  assert.match(carousel, /onError=\{\(\) => setFailed\(true\)\}/);
+  assert.doesNotMatch(carousel, /from "lucide-react"/);
+  assert.match(carousel, /setPointerCapture\(event\.pointerId\)/);
+  assert.match(carousel, /releasePointerCapture\(event\.pointerId\)/);
+  assert.match(carousel, /tabIndex=\{0\}/);
+  assert.match(carousel, /onKeyDown=\{\(event\) =>/);
+  assert.match(carousel, /event\.key === "ArrowLeft"/);
+  assert.match(carousel, /event\.key === "ArrowRight"/);
+  assert.match(carousel, /PAUSED_SPEED = 0/);
+  assert.match(carousel, /aria-label="Previous source or service"/);
+  assert.match(carousel, /aria-label="Next source or service"/);
+  assert.match(carousel, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.match(carousel, /new IntersectionObserver/);
+  assert.match(carousel, /new ResizeObserver/);
+});
+
+test("scroll reveals are one-shot and disabled under reduced motion", () => {
+  const motion = source("scroll-motion.tsx");
+  assert.match(motion, /"use client"/);
+  assert.match(motion, /data-visible="true"/);
+  assert.match(motion, /dataset\.visible = "false"/);
+  assert.match(motion, /observer\?\.disconnect\(\)/);
+  assert.match(motion, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.match(globals, /\.kairos-reveal\[data-visible="false"\]/);
+  assert.match(
+    globals,
+    /prefers-reduced-motion: reduce[\s\S]*?\.kairos-reveal[\s\S]*?opacity: 1 !important/,
+  );
+  assert.match(
+    globals,
+    /prefers-reduced-motion: reduce[\s\S]*?\.kairos-carousel-card/,
+  );
 });
 
 test("landing surfaces and effects use shared design tokens", () => {
@@ -131,6 +197,8 @@ test("rendered landing surfaces avoid hardcoded legacy brand and fixed theme col
     "hero.tsx",
     "cinematic-pipeline.tsx",
     "integrations-strip.tsx",
+    "integrations-carousel.tsx",
+    "scroll-motion.tsx",
     "grounding-intro.tsx",
     "feature-rows.tsx",
     "use-cases.tsx",
