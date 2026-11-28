@@ -18,7 +18,7 @@ export default function PrivacyPage() {
         deployment-specific questions.
       </p>
       <p>
-        <a className="font-semibold text-[#101318] underline" href={DOCS_URL}>
+        <a className="font-semibold text-primary underline" href={DOCS_URL}>
           Review setup and provider configuration
         </a>
       </p>

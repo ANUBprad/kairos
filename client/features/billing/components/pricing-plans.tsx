@@ -264,7 +264,7 @@ export function PricingPlans({
                 )}
 
                 {pack.bonusPercent > 0 && !pack.isPopular && (
-                  <div className="absolute -top-2.5 right-3 rounded-full border border-brand/30 bg-brand-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground shadow-[var(--shadow-panel)]">
+                  <div className="absolute -top-2.5 right-3 rounded-full border border-primary-border bg-primary-subtle px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary shadow-[var(--shadow-panel)]">
                     +{pack.bonusPercent}% bonus
                   </div>
                 )}

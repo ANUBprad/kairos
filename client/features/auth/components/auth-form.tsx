@@ -19,11 +19,11 @@ interface FieldErrors {
 }
 
 const fieldClass =
-  "w-full rounded-xl border border-[#d9dee7] bg-white px-3.5 py-3 text-base text-[#101318] outline-none transition-colors placeholder:text-[#9aa3b2] focus:border-[#101318] focus:ring-2 focus:ring-[#101318]/10 disabled:cursor-not-allowed disabled:opacity-60";
-const labelClass = "mb-1.5 block text-[13px] font-semibold text-[#374151]";
-const errorClass = "mt-1.5 text-xs font-medium text-[#b42318]";
+  "w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-base text-foreground outline-none transition-colors placeholder:text-foreground-muted focus:border-ring focus:ring-2 focus:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-60";
+const labelClass = "mb-1.5 block text-[13px] font-semibold text-foreground-secondary";
+const errorClass = "mt-1.5 text-xs font-medium text-danger";
 const socialClass =
-  "inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-[#d9dee7] bg-white px-4 py-3 text-sm font-semibold text-[#101318] transition-colors hover:bg-[#f6f7f9] disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -94,13 +94,13 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
   return (
     <div className="w-full max-w-[420px]">
       <div className="auth-rise">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7b8494]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-foreground-muted">
           {mode === "login" ? "Welcome back" : "Get started"}
         </p>
-        <h2 className="kairos-display mt-3 text-[32px] leading-tight text-[#101318] sm:text-[36px]">
+        <h2 className="kairos-display mt-3 text-[32px] leading-tight text-foreground sm:text-[36px]">
           {mode === "login" ? "Sign in to Kairos." : "Create your workspace."}
         </h2>
-        <p className="mt-2.5 text-sm leading-relaxed text-[#6b7280]">
+        <p className="mt-2.5 text-sm leading-relaxed text-foreground-secondary">
           {mode === "login"
             ? "Your sources, conversations and ideas are waiting."
             : "Bring your material together and start asking better questions."}
@@ -112,7 +112,7 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
           <div
             id="auth-error"
             role="alert"
-            className="rounded-xl border border-[#f3c3bd] bg-[#fff3f1] px-3.5 py-3 text-sm font-medium text-[#b42318]"
+            className="rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm font-medium text-danger"
           >
             {authError}
           </div>
@@ -203,7 +203,7 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
               onClick={() => setShowPassword((visible) => !visible)}
               aria-label={showPassword ? "Hide password" : "Show password"}
               aria-pressed={showPassword}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#6b7280] transition-colors hover:text-[#101318]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-foreground-muted transition-colors hover:text-primary"
             >
               {showPassword ? (
                 <EyeOff className="size-4" />
@@ -220,7 +220,7 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
         </div>
 
         {mode === "login" ? (
-          <label htmlFor="remember" className="flex w-fit cursor-pointer items-center gap-2.5 text-[13px] text-[#4b5563]">
+          <label htmlFor="remember" className="flex w-fit cursor-pointer items-center gap-2.5 text-[13px] text-foreground-secondary">
             <input
               id="remember"
               name="remember"
@@ -228,7 +228,7 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
               checked={remember}
               onChange={(event) => setRemember(event.target.checked)}
               disabled={isLoading}
-              className="size-4 rounded border-[#cbd5e1] accent-[#101318]"
+              className="size-4 rounded border-input accent-primary"
             />
             Keep me signed in
           </label>
@@ -237,7 +237,7 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
         <button
           type="submit"
           disabled={isLoading}
-          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#101318] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-panel)] transition-colors hover:bg-[#2b3340] disabled:cursor-not-allowed disabled:opacity-60"
+          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? (
             <ThemeLoader size={18} />
@@ -249,21 +249,21 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
           )}
         </button>
 
-        <p className="text-center text-[13px] text-[#6b7280]">
+        <p className="text-center text-[13px] text-foreground-secondary">
           {mode === "login" ? "New to Kairos?" : "Already have an account?"}{" "}
           <button
             type="button"
             onClick={toggleMode}
             disabled={isLoading}
-            className="font-semibold text-[#101318] underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
+            className="font-semibold text-primary underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {mode === "login" ? "Create an account" : "Sign in"}
           </button>
         </p>
 
         <div className="relative flex items-center justify-center py-1">
-          <div className="w-full border-t border-[#e5e8ee]" />
-          <span className="absolute bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9aa3b2]">
+          <div className="w-full border-t border-border" />
+          <span className="absolute bg-background px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground-muted">
             or continue with
           </span>
         </div>
@@ -307,17 +307,17 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
           </button>
         </div>
 
-        <p className="pt-2 text-center text-[11px] text-[#8a94a3]">
+        <p className="pt-2 text-center text-[11px] text-foreground-muted">
           By continuing, you agree to our{" "}
-          <Link href="/terms" className="font-semibold text-[#4b5563] hover:text-[#101318]">
+          <Link href="/terms" className="font-semibold text-foreground-secondary hover:text-primary">
             Terms
           </Link>
           {" · "}
-          <Link href="/privacy" className="font-semibold text-[#4b5563] hover:text-[#101318]">
+          <Link href="/privacy" className="font-semibold text-foreground-secondary hover:text-primary">
             Privacy
           </Link>
           {" · "}
-          <Link href="/support" className="font-semibold text-[#4b5563] hover:text-[#101318]">
+          <Link href="/support" className="font-semibold text-foreground-secondary hover:text-primary">
             Support
           </Link>
         </p>

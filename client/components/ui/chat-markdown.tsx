@@ -21,7 +21,7 @@ function highlightCode(code: string, language: string = "code"): React.ReactNode
       return (
         <span key={lineIdx}>
           {commentMatch[1]}
-          <span className="text-zinc-500 dark:text-zinc-400 italic">
+          <span className="text-muted-foreground italic">
             {commentMatch[2]}
           </span>
           {"\n"}
@@ -45,13 +45,13 @@ function highlightCode(code: string, language: string = "code"): React.ReactNode
 
       if (comment) {
         parts.push(
-          <span key={match.index} className="text-zinc-500 dark:text-zinc-400 italic">
+          <span key={match.index} className="text-muted-foreground italic">
             {comment}
           </span>,
         );
       } else if (str) {
         parts.push(
-          <span key={match.index} className="text-emerald-800 dark:text-emerald-400 font-normal">
+          <span key={match.index} className="text-success font-normal">
             {str}
           </span>,
         );
@@ -63,7 +63,7 @@ function highlightCode(code: string, language: string = "code"): React.ReactNode
         );
       } else if (literal) {
         parts.push(
-          <span key={match.index} className="text-amber-800 dark:text-amber-400 font-medium">
+          <span key={match.index} className="text-warning font-medium">
             {literal}
           </span>,
         );
@@ -113,23 +113,23 @@ function CodeBlock({ language = "code", code }: CodeBlockProps) {
   const displayLanguage = language.trim() || "code";
 
   return (
-    <div className="my-4 rounded-xl overflow-hidden border border-zinc-300/80 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 shadow-xs">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-zinc-200/80 dark:bg-zinc-900 border-b border-zinc-300/80 dark:border-zinc-800 text-xs font-mono text-zinc-700 dark:text-zinc-400 select-none">
+    <div className="my-4 rounded-xl overflow-hidden border border-border bg-background-secondary text-foreground shadow-xs">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-surface border-b border-border text-xs font-mono text-foreground-secondary select-none">
         <div className="flex items-center gap-1.5 font-medium lowercase">
-          <Terminal className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-400" />
+          <Terminal className="w-3.5 h-3.5 text-foreground-muted" />
           <span>{displayLanguage}</span>
         </div>
 
         <button
           type="button"
           onClick={handleCopy}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700/80 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all text-[11px] font-medium cursor-pointer shadow-2xs"
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-surface border border-border text-foreground hover:bg-surface-hover transition-all text-[11px] font-medium cursor-pointer shadow-2xs"
           title="Copy"
         >
           {copied ? (
             <>
-              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Copied</span>
+              <Check className="w-3.5 h-3.5 text-success" />
+              <span className="text-success font-semibold">Copied</span>
             </>
           ) : (
             <>
@@ -140,7 +140,7 @@ function CodeBlock({ language = "code", code }: CodeBlockProps) {
         </button>
       </div>
 
-      <div className="px-5 py-4.5 overflow-x-auto font-mono text-[13px] leading-6 bg-zinc-100 dark:bg-zinc-950">
+      <div className="px-5 py-4.5 overflow-x-auto font-mono text-[13px] leading-6 bg-background-secondary">
         <pre className="m-0 p-0 font-mono">
           <code>{highlightCode(code, displayLanguage)}</code>
         </pre>
@@ -255,7 +255,7 @@ function renderInlineText(
           type="button"
           key={key++}
           onClick={() => citationId && options?.onCitationActivate?.(citationId)}
-          className="inline-flex items-center justify-center px-1.5 py-0.2 mx-0.5 text-[10px] font-mono font-medium rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/25 align-baseline cursor-pointer select-none hover:bg-sky-500/20"
+          className="inline-flex items-center justify-center px-1.5 py-0.2 mx-0.5 text-[10px] font-mono font-medium rounded-full bg-info/10 text-info border border-info/25 align-baseline cursor-pointer select-none hover:bg-info/20"
           title={citation?.sourceTitle ?? `Web citation ${label}`}
         >
           {label}

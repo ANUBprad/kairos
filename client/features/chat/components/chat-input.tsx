@@ -248,7 +248,7 @@ export function ChatInput({
               className={cn(
                 "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors motion-reduce:transition-none",
                 webSearchEnabled
-                  ? "border-foreground bg-foreground text-background"
+                  ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-surface text-muted-foreground hover:bg-brand-quiet hover:text-foreground",
               )}
             >

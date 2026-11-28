@@ -127,7 +127,7 @@ export function ArtifactModal({ artifact, onClose }: ArtifactModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-3 backdrop-blur-sm sm:p-6"
       onMouseDown={(e) => dismissOnBackdropClick(e, onClose)}
     >
       <div

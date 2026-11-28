@@ -112,8 +112,14 @@ export function useRazorpayCheckout() {
             email: orderData.user?.email || "",
           },
           theme: {
-            color: "#0f172a",
-            backdrop_color: "rgba(0, 0, 0, 0.75)",
+            color:
+              getComputedStyle(document.documentElement)
+                .getPropertyValue("--primary")
+                .trim() || "#FF6B2C",
+            backdrop_color:
+              getComputedStyle(document.documentElement)
+                .getPropertyValue("--overlay")
+                .trim() || "rgba(0, 0, 0, 0.65)",
           },
           handler: async (response: RazorpayPaymentSuccessResponse) => {
             try {

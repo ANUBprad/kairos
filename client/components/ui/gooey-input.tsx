@@ -76,8 +76,8 @@ export function GooeyInput({
         className={cn(
           "relative flex items-center rounded-2xl border transition-colors overflow-hidden",
           isFocused || currentValue
-            ? "w-64 sm:w-80 border-foreground/30 bg-card shadow-sm"
-            : "w-48 sm:w-60 border-border bg-card/80 hover:bg-card hover:border-zinc-400 dark:hover:border-zinc-600"
+            ? "w-64 sm:w-80 border-primary-border bg-card shadow-sm"
+            : "w-48 sm:w-60 border-border bg-card/80 hover:bg-card hover:border-primary-border"
         )}
       >
         <div className="pl-3 pr-2 flex items-center justify-center text-muted-foreground">

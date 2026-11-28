@@ -51,14 +51,14 @@ export function PremiumAvatar({
 
   const iconSize = size === "sm" ? "w-1.5 h-1.5" : size === "lg" ? "w-2.5 h-2.5" : "w-2 h-2";
 
-  // PRO Tier: Sleek black/monochrome ring with black mini crown badge
+  // PRO Tier: monochrome ring with a compact crown badge
   if (isPro) {
     return (
       <div
         className={cn(
           "group relative inline-flex items-center justify-center rounded-full shrink-0 p-[1.5px] transition-all duration-300",
-          "bg-linear-to-tr from-zinc-400 via-zinc-800 to-zinc-400 dark:from-zinc-700 dark:via-zinc-300 dark:to-zinc-700",
-          "shadow-[0_0_6px_rgba(0,0,0,0.1)] dark:shadow-[0_0_8px_rgba(255,255,255,0.08)]",
+          "bg-linear-to-tr from-border via-foreground to-border",
+          "shadow-[var(--shadow-panel)]",
           className
         )}
         title={tooltip}
@@ -72,7 +72,7 @@ export function PremiumAvatar({
         {/* Integrated Sleek PRO Crown Badge */}
         <div
           className={cn(
-            "absolute rounded-full bg-zinc-950 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900 border border-zinc-400 dark:border-zinc-700 flex items-center justify-center font-mono font-bold shadow-xs z-10",
+            "absolute rounded-full bg-foreground text-background border border-border flex items-center justify-center font-mono font-bold shadow-xs z-10",
             badgeSize
           )}
         >
@@ -82,12 +82,12 @@ export function PremiumAvatar({
     );
   }
 
-  // PRO+ Tier: Luxury Golden Glittery double-ring with gold shimmer & gold crown badge
+  // PRO+ Tier: orange shimmer double-ring with a matching crown badge
   return (
     <div
       className={cn(
         "group relative inline-flex items-center justify-center rounded-full shrink-0 p-0.5 transition-all duration-300",
-        "gold-glitter-ring shadow-[0_0_12px_rgba(234,179,8,0.45)]",
+        "gold-glitter-ring shadow-[0_0_12px_var(--primary-border)]",
         className
       )}
       title={tooltip}
@@ -101,15 +101,15 @@ export function PremiumAvatar({
         </div>
       </div>
 
-      {/* Integrated Golden Glitter PRO+ Badge */}
+      {/* Integrated PRO+ badge */}
       <div
         className={cn(
-          "absolute rounded-full gold-glitter-badge text-amber-950 border border-amber-300/80 flex items-center justify-center font-mono font-black shadow-[0_0_6px_rgba(234,179,8,0.5)] z-10",
+          "absolute rounded-full gold-glitter-badge text-primary-foreground border border-primary/60 flex items-center justify-center font-mono font-black shadow-[0_0_6px_var(--primary-border)] z-10",
           badgeSize
         )}
       >
         <span className="flex items-center justify-center leading-none">
-          <Crown className={cn("fill-amber-950 stroke-[1.5]", iconSize)} />
+          <Crown className={cn("fill-primary-foreground stroke-[1.5]", iconSize)} />
         </span>
       </div>
     </div>

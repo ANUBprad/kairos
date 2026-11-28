@@ -477,7 +477,7 @@ export function AddSourceDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs flex items-center justify-center p-4"
       onMouseDown={(e) => dismissOnBackdropClick(e, handleClose)}
     >
       <div
@@ -1307,7 +1307,7 @@ export function AddSourceDialog({
                                             className={cn(
                                               "rounded border px-1.5 py-0.2 font-mono text-[9px]",
                                               repo.isPrivate
-                                                ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                                ? "border-warning/30 bg-warning/10 text-warning"
                                                 : "border-border bg-muted/50 text-muted-foreground",
                                             )}
                                           >
@@ -1329,7 +1329,7 @@ export function AddSourceDialog({
                                     <span className="flex shrink-0 items-center gap-2">
                                       {repo.stargazersCount > 0 && (
                                         <span className="flex items-center gap-0.5 font-mono text-[10px] text-muted-foreground">
-                                          <Star className="size-2.5 fill-amber-400 text-amber-400" />
+                                          <Star className="size-2.5 fill-warning text-warning" />
                                           {repo.stargazersCount}
                                         </span>
                                       )}

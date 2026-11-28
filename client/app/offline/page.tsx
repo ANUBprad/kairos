@@ -10,7 +10,7 @@ export default function OfflinePage() {
         <WifiOff className="w-8 h-8 text-muted-foreground animate-pulse" />
       </div>
 
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-4">
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/25 mb-4">
         <span>Offline Mode</span>
       </div>
 

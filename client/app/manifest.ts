@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Kairos turns your sources into grounded answers, study material, and conversations you can trust.",
     start_url: "/",
     display: "standalone",
-    background_color: "#0a0f14",
-    theme_color: "#0a0f14",
+    background_color: "#F5F5F5",
+    theme_color: "#080808",
     orientation: "portrait-primary",
     icons: [
       {

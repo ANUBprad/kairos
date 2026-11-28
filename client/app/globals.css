@@ -8,6 +8,8 @@
   --color-background: var(--background);
   --color-background-secondary: var(--background-secondary);
   --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-muted: var(--foreground-muted);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-kairos-mono);
   --font-serif: var(--font-kairos-serif);
@@ -591,7 +593,7 @@
     135deg,
     var(--primary-hover) 0%,
     var(--primary) 25%,
-    var(--primary-foreground) 50%,
+    var(--primary-hover) 50%,
     var(--primary) 75%,
     var(--primary-hover) 100%
   );
@@ -604,7 +606,7 @@
     135deg,
     var(--primary-hover) 0%,
     var(--primary) 25%,
-    var(--primary-foreground) 50%,
+    var(--primary-hover) 50%,
     var(--primary) 75%,
     var(--primary-hover) 100%
   );

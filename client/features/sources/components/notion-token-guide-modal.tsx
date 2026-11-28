@@ -17,7 +17,7 @@ export function NotionTokenGuideModal({
 
   return (
     <div
-      className="fixed inset-0 z-60 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-60 bg-overlay backdrop-blur-xs flex items-center justify-center p-4"
       onMouseDown={(e) => dismissOnBackdropClick(e, onClose)}
     >
       <div className="kairos-panel relative max-h-[calc(100vh-2rem)] w-full max-w-md animate-fadeIn space-y-4 overflow-y-auto p-6 text-foreground shadow-[var(--shadow-lift)] motion-reduce:animate-none">

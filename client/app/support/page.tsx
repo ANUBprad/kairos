@@ -13,12 +13,12 @@ export default function SupportPage() {
         issue tracker.
       </p>
       <p>
-        <a className="font-semibold text-[#101318] underline" href={DOCS_URL}>
+        <a className="font-semibold text-primary underline" href={DOCS_URL}>
           Documentation
         </a>
         {" · "}
         <a
-          className="font-semibold text-[#101318] underline"
+          className="font-semibold text-primary underline"
           href={`${GITHUB_URL}/issues`}
         >
           Report an issue

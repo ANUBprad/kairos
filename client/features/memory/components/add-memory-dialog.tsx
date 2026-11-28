@@ -32,7 +32,7 @@ export function AddMemoryDialog({ open, onOpenChange }: AddMemoryDialogProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs flex items-center justify-center p-4"
       onMouseDown={(e) => dismissOnBackdropClick(e, () => onOpenChange(false))}
     >
       <div

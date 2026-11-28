@@ -34,7 +34,7 @@ export function SourcePreviewDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
       onMouseDown={(e) => dismissOnBackdropClick(e, onClose)}
     >
       <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-border bg-card text-foreground shadow-[var(--shadow-lift)] animate-fadeIn motion-reduce:animate-none sm:max-h-[85vh] sm:max-w-3xl sm:rounded-2xl">

@@ -18,7 +18,7 @@ export default function TermsPage() {
         from the documentation.
       </p>
       <p>
-        <a className="font-semibold text-[#101318] underline" href={DOCS_URL}>
+        <a className="font-semibold text-primary underline" href={DOCS_URL}>
           Read the repository documentation
         </a>
       </p>

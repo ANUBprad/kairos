@@ -51,7 +51,7 @@ export function KairosMark({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="29" cy="10.5" r="3.4" fill="var(--brand-accent)" />
+      <circle cx="29" cy="10.5" r="3.4" fill="var(--foreground)" />
     </svg>
   );
 }
