@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Upload,
   ImageIcon,
@@ -42,6 +42,13 @@ import {
   NotionIcon,
 } from "@/components/ui/integration-brand-icons";
 import { integrationErrorFromQuery } from "@/features/integrations/lib/integration-callback";
+import {
+  clearAddSourceDraft,
+  hasDraftContent,
+  readAddSourceDraft,
+  writeAddSourceDraft,
+  type AddSourceTab,
+} from "../lib/add-source-draft";
 
 
 export interface AddSourceDialogProps {
@@ -56,22 +63,12 @@ export interface AddSourceDialogProps {
   onCreateTextSource?: (title: string, content: string) => Promise<unknown>;
 }
 
-type TabType =
-  | "pdf"
-  | "image"
-  | "website"
-  | "youtube"
-  | "text"
-  | "google-drive"
-  | "notion"
-  | "github";
-
 const FORM_CONTROL_CLASSNAME =
   "kairos-inset w-full px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand";
 const IMAGE_ACCEPT =
   "image/png,image/jpeg,image/gif,image/webp,image/bmp,image/tiff,image/heic,image/heif,.png,.jpg,.jpeg,.gif,.webp,.bmp,.tif,.tiff,.heic,.heif";
 
-const SOURCE_TABS: Array<{ id: TabType; label: string; icon: React.ReactNode }> = [
+const SOURCE_TABS: Array<{ id: AddSourceTab; label: string; icon: React.ReactNode }> = [
   { id: "pdf", label: "PDF", icon: <Upload className="size-5" /> },
   { id: "image", label: "Image", icon: <ImageIcon className="size-5" /> },
   {
@@ -98,6 +95,7 @@ interface IntegrationsStatus {
   };
   notion: {
     connected: boolean;
+    needsReconnect?: boolean;
     account?: { metadata?: { workspaceName?: string } } | null;
   };
   github: {
@@ -208,6 +206,36 @@ function IntegrationStatusGate({
   return <>{children}</>;
 }
 
+/** Semantic, theme-aware connection state that distinguishes stale rows. */
+function ConnectionState({
+  connected,
+  needsReconnect,
+}: {
+  connected: boolean | undefined;
+  needsReconnect: boolean | undefined;
+}) {
+  const state = connected
+    ? "Connected"
+    : needsReconnect
+      ? "Reconnect needed"
+      : "Not connected";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[10px]",
+        connected
+          ? "border-success/30 bg-success/10 text-success"
+          : needsReconnect
+            ? "border-warning/30 bg-warning/10 text-warning"
+            : "border-border bg-muted/50 text-muted-foreground",
+      )}
+    >
+      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+      {state}
+    </span>
+  );
+}
+
 export function AddSourceDialog({
   isOpen,
   onClose,
@@ -220,8 +248,10 @@ export function AddSourceDialog({
   onCreateTextSource,
 }: AddSourceDialogProps) {
   const isDialogOpen = open !== undefined ? open : (isOpen || false);
+  const [restoredDraft] = useState(() => readAddSourceDraft(workspaceId));
+  const hasRestoredDraft = hasDraftContent(restoredDraft);
 
-  const [activeTab, setActiveTab] = useState<TabType>("pdf");
+  const [activeTab, setActiveTab] = useState<AddSourceTab>(restoredDraft.activeTab);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [callbackError, setCallbackError] = useState(() =>
@@ -240,32 +270,88 @@ export function AddSourceDialog({
   const importNotionMutation = useImportNotionSource(workspaceId || "");
   const importGithubMutation = useImportGithubSource(workspaceId || "");
 
-  // Form states
+  // Form states — restored from session storage after an OAuth redirect.
+  // File objects and the Notion token are intentionally never persisted.
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfTitle, setPdfTitle] = useState("");
+  const [pdfTitle, setPdfTitle] = useState(restoredDraft.pdfTitle);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imageTitle, setImageTitle] = useState("");
-  const [webUrl, setWebUrl] = useState("");
-  const [webTitle, setWebTitle] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [youtubeTitle, setYoutubeTitle] = useState("");
-  const [textTitle, setTextTitle] = useState("");
-  const [textContent, setTextContent] = useState("");
+  const [imageTitle, setImageTitle] = useState(restoredDraft.imageTitle);
+  const [webUrl, setWebUrl] = useState(restoredDraft.webUrl);
+  const [webTitle, setWebTitle] = useState(restoredDraft.webTitle);
+  const [youtubeUrl, setYoutubeUrl] = useState(restoredDraft.youtubeUrl);
+  const [youtubeTitle, setYoutubeTitle] = useState(restoredDraft.youtubeTitle);
+  const [textTitle, setTextTitle] = useState(restoredDraft.textTitle);
+  const [textContent, setTextContent] = useState(restoredDraft.textContent);
 
   // Integration specific states
-  const [driveSearch, setDriveSearch] = useState("");
-  const [selectedDriveFileId, setSelectedDriveFileId] = useState<string | null>(null);
-  const [notionSearch, setNotionSearch] = useState("");
-  const [selectedNotionPageId, setSelectedNotionPageId] = useState<string | null>(null);
+  const [driveSearch, setDriveSearch] = useState(restoredDraft.driveSearch);
+  const [selectedDriveFileId, setSelectedDriveFileId] = useState<string | null>(
+    restoredDraft.selectedDriveFileId,
+  );
+  const [notionSearch, setNotionSearch] = useState(restoredDraft.notionSearch);
+  const [selectedNotionPageId, setSelectedNotionPageId] = useState<string | null>(
+    restoredDraft.selectedNotionPageId,
+  );
   const [notionTokenInput, setNotionTokenInput] = useState("");
   const [isConnectingNotion, setIsConnectingNotion] = useState(false);
   const [showNotionHelp, setShowNotionHelp] = useState(false);
-  const [githubUrl, setGithubUrl] = useState("");
-  const [githubTitle, setGithubTitle] = useState("");
-
+  const [githubUrl, setGithubUrl] = useState(restoredDraft.githubUrl);
+  const [githubTitle, setGithubTitle] = useState(restoredDraft.githubTitle);
+  const [githubSearch, setGithubSearch] = useState(restoredDraft.githubSearch);
+  const [selectedGithubRepoUrl, setSelectedGithubRepoUrl] = useState<string | null>(
+    restoredDraft.selectedGithubRepoUrl,
+  );
+  const [isManualGithubUrl, setIsManualGithubUrl] = useState(
+    restoredDraft.isManualGithubUrl,
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isDialogOpen) return;
+    writeAddSourceDraft(workspaceId, {
+      activeTab,
+      pdfTitle,
+      imageTitle,
+      webUrl,
+      webTitle,
+      youtubeUrl,
+      youtubeTitle,
+      textTitle,
+      textContent,
+      driveSearch,
+      selectedDriveFileId,
+      notionSearch,
+      selectedNotionPageId,
+      githubUrl,
+      githubTitle,
+      githubSearch,
+      selectedGithubRepoUrl,
+      isManualGithubUrl,
+    });
+  }, [
+    workspaceId,
+    isDialogOpen,
+    activeTab,
+    pdfTitle,
+    imageTitle,
+    webUrl,
+    webTitle,
+    youtubeUrl,
+    youtubeTitle,
+    textTitle,
+    textContent,
+    driveSearch,
+    selectedDriveFileId,
+    notionSearch,
+    selectedNotionPageId,
+    githubUrl,
+    githubTitle,
+    githubSearch,
+    selectedGithubRepoUrl,
+    isManualGithubUrl,
+  ]);
 
   // Query connected integrations
   const {
@@ -321,10 +407,7 @@ export function AddSourceDialog({
     enabled: isDialogOpen && activeTab === "notion" && !!integrations?.notion?.connected,
   });
 
-  // GitHub repository browsing state & query
-  const [githubSearch, setGithubSearch] = useState("");
-  const [selectedGithubRepoUrl, setSelectedGithubRepoUrl] = useState<string | null>(null);
-  const [isManualGithubUrl, setIsManualGithubUrl] = useState(false);
+  // GitHub repository browsing query (state restored above).
   const debouncedGithubSearch = useDebouncedValue(githubSearch, 300);
 
   const githubReposQuery = useInfiniteQuery<GithubReposPage>({
@@ -346,8 +429,11 @@ export function AddSourceDialog({
   if (!isDialogOpen) return null;
 
   const resetForm = () => {
+    setActiveTab("pdf");
     setPdfFile(null);
     setPdfTitle("");
+    setImageFile(null);
+    setImageTitle("");
     setWebUrl("");
     setWebTitle("");
     setYoutubeUrl("");
@@ -356,19 +442,29 @@ export function AddSourceDialog({
     setTextContent("");
     setDriveSearch("");
     setSelectedDriveFileId(null);
+    setNotionSearch("");
     setSelectedNotionPageId(null);
+    setNotionTokenInput("");
     setGithubUrl("");
     setGithubTitle("");
     setGithubSearch("");
     setSelectedGithubRepoUrl(null);
     setIsManualGithubUrl(false);
     setError(null);
+    setCallbackError(null);
   };
 
+  /** Closing keeps the recoverable draft; only an explicit reset clears it. */
   const handleClose = () => {
-    resetForm();
+    setError(null);
+    setCallbackError(null);
     if (onOpenChange) onOpenChange(false);
     if (onClose) onClose();
+  };
+
+  const handleClearDraft = () => {
+    clearAddSourceDraft(workspaceId);
+    resetForm();
   };
 
   const handleConnectGoogleDrive = async () => {
@@ -489,6 +585,8 @@ export function AddSourceDialog({
           });
           break;
       }
+      clearAddSourceDraft(workspaceId);
+      resetForm();
       handleClose();
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to add source. Please try again."));
@@ -544,8 +642,8 @@ export function AddSourceDialog({
                 className={cn(
                   "flex min-h-[4.25rem] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border px-1.5 py-2.5 text-[11px] font-medium transition-colors motion-reduce:transition-none",
                   activeTab === tab.id
-                    ? "border-brand bg-primary text-primary-foreground shadow-[var(--shadow-panel)]"
-                    : "border-border bg-card text-muted-foreground hover:border-brand/40 hover:bg-brand-soft hover:text-brand",
+                    ? "border-brand/40 bg-brand-soft text-brand"
+                    : "border-border bg-surface text-muted-foreground hover:border-brand/30 hover:bg-brand-quiet hover:text-foreground",
                 )}
               >
                 <span
@@ -564,12 +662,59 @@ export function AddSourceDialog({
 
         {/* Content Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {(error || callbackError?.message) && (
+          {callbackError && (
             <div
-              className="animate-fadeIn rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive motion-reduce:animate-none"
+              className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-warning"
               role="alert"
             >
-              {error || callbackError?.message}
+              <div className="flex items-start gap-2">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="font-medium">Connection needs attention</p>
+                  <p>{callbackError.message}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCallbackError(null);
+                        void refetchIntegrations();
+                      }}
+                      className="cursor-pointer rounded-lg border border-warning/30 px-2.5 py-1 text-[11px] font-medium transition-colors hover:bg-warning/10 motion-reduce:transition-none"
+                    >
+                      Retry connection check
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCallbackError(null)}
+                      className="cursor-pointer rounded-lg px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div
+              className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
+
+          {hasRestoredDraft && !callbackError && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-brand/20 bg-brand-quiet px-3 py-2 text-[11px] text-muted-foreground">
+              <span>We restored your previous details after reconnecting.</span>
+              <button
+                type="button"
+                onClick={handleClearDraft}
+                className="cursor-pointer shrink-0 font-medium text-brand hover:underline"
+              >
+                Clear draft
+              </button>
             </div>
           )}
 
@@ -686,6 +831,12 @@ export function AddSourceDialog({
               <div className="space-y-4">
               {!integrations?.googleDrive?.connected ? (
                 <div className="space-y-4 rounded-2xl border border-border bg-brand-quiet p-8 text-center">
+                  <div className="flex justify-center">
+                    <ConnectionState
+                      connected={integrations?.googleDrive?.connected}
+                      needsReconnect={integrations?.googleDrive?.needsReconnect}
+                    />
+                  </div>
                   <GoogleDriveIcon size={48} className="mx-auto" />
                   <div className="space-y-1">
                     <h3 className="kairos-section-title text-sm text-primary">
@@ -711,6 +862,15 @@ export function AddSourceDialog({
                 </div>
               ) : (
                 <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <ConnectionState
+                      connected={integrations?.googleDrive?.connected}
+                      needsReconnect={integrations?.googleDrive?.needsReconnect}
+                    />
+                    <span className="truncate text-[11px] text-muted-foreground">
+                      {integrations?.googleDrive?.account?.metadata?.email || "Google Drive"}
+                    </span>
+                  </div>
                   <div className="relative">
                     <Search
                       className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground"
@@ -859,6 +1019,12 @@ export function AddSourceDialog({
                   </button>
 
                   <div className="space-y-1 text-center">
+                    <div className="flex justify-center">
+                      <ConnectionState
+                        connected={integrations?.notion?.connected}
+                        needsReconnect={integrations?.notion?.needsReconnect}
+                      />
+                    </div>
                     <NotionIcon size={36} className="mx-auto" />
                     <h3 className="kairos-section-title text-sm text-primary">
                       Connect your Notion workspace
@@ -898,6 +1064,15 @@ export function AddSourceDialog({
 
 
                 <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <ConnectionState
+                      connected={integrations?.notion?.connected}
+                      needsReconnect={integrations?.notion?.needsReconnect}
+                    />
+                    <span className="truncate text-[11px] text-muted-foreground">
+                      {integrations?.notion?.account?.metadata?.workspaceName || "Notion"}
+                    </span>
+                  </div>
                   <div className="relative">
                     <Search
                       className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-muted-foreground"
@@ -1095,6 +1270,12 @@ export function AddSourceDialog({
               {!integrations?.github?.connected ? (
                 <>
                   <div className="space-y-3 rounded-xl border border-border bg-brand-quiet p-4">
+                    <div className="flex justify-center">
+                      <ConnectionState
+                        connected={integrations?.github?.connected}
+                        needsReconnect={integrations?.github?.needsReconnect}
+                      />
+                    </div>
                     <div className="flex items-start gap-3">
                       <GithubIcon size={20} className="mt-0.5 shrink-0 text-brand" />
                       <div className="space-y-1">
@@ -1161,11 +1342,14 @@ export function AddSourceDialog({
                 /* Connected State: List user's repositories */
                 <div className="space-y-3">
                   {/* Account Badge & Switch Mode */}
-                  <div className="flex items-center justify-between rounded-xl border border-brand/20 bg-brand-quiet px-3 py-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Check className="size-3.5 text-success" aria-hidden="true" />
-                      <span>
-                        Connected as{" "}
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-brand/20 bg-brand-quiet px-3 py-2 text-xs text-muted-foreground">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ConnectionState
+                        connected={integrations.github.connected}
+                        needsReconnect={integrations.github.needsReconnect}
+                      />
+                      <span className="truncate">
+                        <span className="text-muted-foreground">as </span>
                         <span className="font-semibold text-primary">
                           {integrations.github.account?.metadata?.login || "GitHub User"}
                         </span>

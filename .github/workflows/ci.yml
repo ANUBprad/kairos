@@ -53,6 +53,8 @@ jobs:
         run: node scripts/check-integration-errors.mjs
       - name: Workspace icon guard
         run: node scripts/check-workspace-icons.mjs
+      - name: Add Knowledge dialog guard
+        run: node scripts/check-add-source-dialog.mjs
 
   server:
     runs-on: ubuntu-latest
