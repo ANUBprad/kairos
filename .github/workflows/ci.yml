@@ -47,6 +47,8 @@ jobs:
         run: node scripts/check-staging-blueprint.mjs render.yaml --legacy
       - name: Auth redirect guard
         run: node scripts/check-safe-redirect.mjs
+      - name: OAuth error message guard
+        run: node scripts/check-auth-errors.mjs
 
   server:
     runs-on: ubuntu-latest

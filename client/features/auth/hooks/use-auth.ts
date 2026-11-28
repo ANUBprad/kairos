@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { signIn, signUp, signOut, useSession } from "../lib/auth-client";
 import { authRoutes } from "../lib/auth-routes";
+import { authErrorFromQuery, friendlyAuthError, type AuthProvider } from "../lib/auth-error";
 import { safeRedirectPath } from "../lib/safe-redirect";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -28,11 +29,28 @@ function toAbsoluteUrl(pathOrUrl: string): string {
   return new URL(safeRedirectPath(pathOrUrl), getClientOrigin()).toString();
 }
 
+/**
+ * Better Auth appends `error` and `error_description` to this URL. Sending the
+ * user back to the login form keeps the form state and lets us display a fixed,
+ * provider-specific message instead of the default error page.
+ */
+function toErrorCallbackUrl(provider: AuthProvider, callbackPath: string): string {
+  const url = new URL(authRoutes.login, getClientOrigin());
+  url.searchParams.set("auth_provider", provider);
+  url.searchParams.set("callbackUrl", safeRedirectPath(callbackPath));
+  return url.toString();
+}
+
+function initialCallbackError(): string | null {
+  if (typeof window === "undefined") return null;
+  return authErrorFromQuery(new URLSearchParams(window.location.search));
+}
+
 export function useAuth() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const session = useSession();
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(initialCallbackError);
 
   const loginMutation = useMutation({
     mutationFn: async ({
@@ -123,20 +141,21 @@ export function useAuth() {
     },
   });
 
-  const signInWithGoogle = async (customCallbackUrl?: string) => {
+  const signInWithSocial = async (
+    provider: AuthProvider,
+    customCallbackUrl?: string,
+  ) => {
     setAuthError(null);
     try {
-      const targetPath = customCallbackUrl || getCallbackPath();
-      // Ensure callbackURL is an absolute client frontend URL (e.g. http://localhost:3000/dashboard)
-      const absoluteCallbackUrl = toAbsoluteUrl(targetPath);
-
+      const targetPath = safeRedirectPath(customCallbackUrl || getCallbackPath());
       const { data, error } = await signIn.social({
-        provider: "google",
-        callbackURL: absoluteCallbackUrl,
+        provider,
+        callbackURL: toAbsoluteUrl(targetPath),
+        errorCallbackURL: toErrorCallbackUrl(provider, targetPath),
       });
 
       if (error) {
-        setAuthError(error.message ?? "Something went wrong with Google sign in.");
+        setAuthError(friendlyAuthError(error, provider));
         return;
       }
 
@@ -144,41 +163,15 @@ export function useAuth() {
         window.location.href = data.url;
       }
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setAuthError(err.message);
-      } else {
-        setAuthError("Failed to sign in with Google");
-      }
+      setAuthError(friendlyAuthError(err, provider));
     }
   };
 
-  const signInWithGithub = async (customCallbackUrl?: string) => {
-    setAuthError(null);
-    try {
-      const targetPath = customCallbackUrl || getCallbackPath();
-      const absoluteCallbackUrl = toAbsoluteUrl(targetPath);
+  const signInWithGoogle = (customCallbackUrl?: string) =>
+    signInWithSocial("google", customCallbackUrl);
 
-      const { data, error } = await signIn.social({
-        provider: "github",
-        callbackURL: absoluteCallbackUrl,
-      });
-
-      if (error) {
-        setAuthError(error.message ?? "Something went wrong with GitHub sign in.");
-        return;
-      }
-
-      if (data?.url && data.redirect) {
-        window.location.href = data.url;
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setAuthError(err.message);
-      } else {
-        setAuthError("Failed to sign in with GitHub");
-      }
-    }
-  };
+  const signInWithGithub = (customCallbackUrl?: string) =>
+    signInWithSocial("github", customCallbackUrl);
 
   return {
     session: session.data,

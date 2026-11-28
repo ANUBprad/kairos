@@ -74,8 +74,15 @@ unset), `STAGING_DATABASE_ID`, `STAGING_RESOURCE_PREFIX`. Optional:
 
 OAuth (staging-registered apps/callbacks): `GOOGLE_CLIENT_ID`,
 `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`,
-`GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`, `NOTION_CLIENT_ID`,
+`GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`,
+`GITHUB_INTEGRATION_CLIENT_ID`, `GITHUB_INTEGRATION_CLIENT_SECRET`,
+`GITHUB_INTEGRATION_REDIRECT_URI`, `NOTION_CLIENT_ID`,
 `NOTION_CLIENT_SECRET`, `NOTION_REDIRECT_URI`.
+
+Sign-in apps must register `${BETTER_AUTH_URL}/api/auth/callback/google` and
+`${BETTER_AUTH_URL}/api/auth/callback/github`. The GitHub workspace integration
+uses its own OAuth app and must register
+`${SERVER_URL}/api/integrations/github/callback`; never reuse the sign-in app.
 
 Providers (test/dev keys where the vendor offers them): `OPENAI_API_KEY`,
 `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `PINECONE_API_KEY`, `PINECONE_INDEX`,

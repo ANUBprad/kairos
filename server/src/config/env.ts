@@ -21,6 +21,16 @@ const baseSchema = z.object({
         .string()
         .min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
     BETTER_AUTH_URL: z.string().url().optional(),
+    /** Better Auth social sign-in. Separate from source-integration OAuth apps. */
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    GITHUB_CLIENT_ID: z.string().optional(),
+    GITHUB_CLIENT_SECRET: z.string().optional(),
+    /** Workspace source integrations (never reuse the sign-in credentials). */
+    GOOGLE_REDIRECT_URI: z.string().url().optional(),
+    GITHUB_INTEGRATION_CLIENT_ID: z.string().optional(),
+    GITHUB_INTEGRATION_CLIENT_SECRET: z.string().optional(),
+    GITHUB_INTEGRATION_REDIRECT_URI: z.string().url().optional(),
     OPENAI_API_KEY: z.string().optional(),
     GEMINI_API_KEY: z.string().optional(),
     CHAT_PROVIDER: z.enum(["gemini", "openai"]).default("gemini"),
@@ -333,6 +343,14 @@ export function getServerEnv(): ServerEnv {
             "CLOUDINARY_API_SECRET",
             "BETTER_AUTH_URL",
             "SERVER_URL",
+            "GOOGLE_CLIENT_ID",
+            "GOOGLE_CLIENT_SECRET",
+            "GITHUB_CLIENT_ID",
+            "GITHUB_CLIENT_SECRET",
+            "GITHUB_INTEGRATION_CLIENT_ID",
+            "GITHUB_INTEGRATION_CLIENT_SECRET",
+            "GOOGLE_REDIRECT_URI",
+            "GITHUB_INTEGRATION_REDIRECT_URI",
         ];
         const missing = requiredInProd.filter((key) =>
             isPlaceholder(env[key] as string | undefined),

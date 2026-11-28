@@ -85,13 +85,20 @@ Document and query embeddings must use the same provider, model, and dimensions.
 
 #### OAuth callbacks
 
-Local development uses these integration callbacks:
+Google and GitHub **sign-in** are Better Auth providers. Register these exact callbacks on the sign-in OAuth apps:
+
+- `http://localhost:8081/api/auth/callback/google`
+- `http://localhost:8081/api/auth/callback/github`
+
+In deployed environments replace `http://localhost:8081` with `BETTER_AUTH_URL`. Do not register the integration callbacks on the sign-in apps.
+
+Workspace source integrations use separate OAuth apps and callbacks:
 
 - `http://localhost:8081/api/integrations/google-drive/callback`
 - `http://localhost:8081/api/integrations/github/callback`
 - `http://localhost:8081/api/integrations/notion/callback`
 
-If a `GOOGLE_REDIRECT_URI`, `GITHUB_REDIRECT_URI`, or `NOTION_REDIRECT_URI` value is omitted, Kairos derives it from `SERVER_URL` or `BETTER_AUTH_URL`. Deployed environments must set each variable to the exact callback registered with the provider; no production hostname is committed here.
+If `GOOGLE_REDIRECT_URI`, `GITHUB_INTEGRATION_REDIRECT_URI`, or `NOTION_REDIRECT_URI` is omitted, Kairos derives it from `SERVER_URL` or `BETTER_AUTH_URL`. Deployed environments must set each variable to the exact callback registered with the matching provider app; no production hostname is committed here. `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` are sign-in only; `GITHUB_INTEGRATION_CLIENT_ID`/`GITHUB_INTEGRATION_CLIENT_SECRET` are GitHub workspace integration only.
 
 ### 3. Start PostgreSQL
 

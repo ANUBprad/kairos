@@ -39,8 +39,10 @@ describe("authentication form accessibility and wiring", () => {
   it("keeps the real social providers and redirect guard", () => {
     assert.match(formSource, /signInWithGoogle\(\)/);
     assert.match(formSource, /signInWithGithub\(\)/);
-    assert.match(hookSource, /provider: "google"/);
-    assert.match(hookSource, /provider: "github"/);
+    assert.match(hookSource, /signInWithSocial\("google"/);
+    assert.match(hookSource, /signInWithSocial\("github"/);
+    assert.match(hookSource, /provider: AuthProvider/);
+    assert.match(hookSource, /provider,\s*\n\s*callbackURL:/);
     assert.match(hookSource, /safeRedirectPath\(cb\)/);
     assert.doesNotMatch(formSource, /Apple/i);
   });

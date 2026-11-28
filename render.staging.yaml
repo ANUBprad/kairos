@@ -57,6 +57,13 @@ services:
         sync: false
       - key: GITHUB_REDIRECT_URI
         sync: false
+      # Separate OAuth app for GitHub workspace source integration.
+      - key: GITHUB_INTEGRATION_CLIENT_ID
+        sync: false
+      - key: GITHUB_INTEGRATION_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_INTEGRATION_REDIRECT_URI
+        sync: false
       - key: NOTION_CLIENT_ID
         sync: false
       - key: NOTION_CLIENT_SECRET
