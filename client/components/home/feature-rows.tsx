@@ -64,7 +64,7 @@ function FeaturePreview({ id }: { id: string }) {
           <PreviewLabel>Illustrative answer</PreviewLabel>
           <span className="font-mono text-[9px] text-processing-deep">3 citations</span>
         </div>
-        <div className="ml-auto mt-4 w-fit max-w-[85%] rounded-xl rounded-br-sm bg-navy px-3 py-2 text-[11px] text-white">
+        <div className="ml-auto mt-4 w-fit max-w-[85%] rounded-xl rounded-br-sm bg-surface-elevated px-3 py-2 text-[11px] text-foreground">
           What does the paper actually replace?
         </div>
         <p className="mt-3 font-serif text-[17px] leading-snug text-foreground">

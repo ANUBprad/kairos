@@ -88,6 +88,10 @@ test("landing surfaces and effects use shared design tokens", () => {
   for (const token of [
     "--navy:",
     "--navy-card:",
+    "--editorial-bg:",
+    "--editorial-ink:",
+    "--editorial-border:",
+    "--editorial-surface:",
     "--pipeline-bg:",
     "--pipeline-line:",
     "--processing:",
@@ -100,5 +104,34 @@ test("landing surfaces and effects use shared design tokens", () => {
     ".kairos-final-glow",
   ]) {
     assert.ok(globals.includes(token), `${token} is defined in globals.css`);
+  }
+});
+
+test("rendered landing surfaces avoid hardcoded legacy brand and fixed theme colors", () => {
+  const renderedSurfaces = [
+    "site-nav.tsx",
+    "hero.tsx",
+    "cinematic-pipeline.tsx",
+    "integrations-strip.tsx",
+    "grounding-intro.tsx",
+    "feature-rows.tsx",
+    "use-cases.tsx",
+    "faq.tsx",
+    "final-cta.tsx",
+    "site-footer.tsx",
+  ];
+
+  for (const file of renderedSurfaces) {
+    const text = source(file);
+    assert.doesNotMatch(
+      text,
+      /\b(?:bg|text|border|divide|from|via|to)-(?:white|navy|brand-accent)\b/,
+      `${file} uses theme-aware utilities`,
+    );
+    assert.doesNotMatch(
+      text,
+      /#(?:f6f7f4|0a0f14|155e56|c8f169|071225|103b36|e7f0ed|e8663a)\b/i,
+      `${file} avoids legacy brand literals`,
+    );
   }
 });

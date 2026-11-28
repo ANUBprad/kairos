@@ -158,7 +158,7 @@ function RawLayer({ card }: { card: PipelineCardData }) {
   return (
     <div
       data-layer="raw"
-      className="absolute inset-0 overflow-hidden rounded-2xl border border-pipeline-line bg-white p-4 shadow-[var(--pipeline-shadow-card)] sm:p-5"
+      className="absolute inset-0 overflow-hidden rounded-2xl border border-pipeline-line bg-surface p-4 shadow-[var(--pipeline-shadow-card)] sm:p-5"
     >
       <div className="flex items-center justify-between gap-3 border-b border-pipeline-line pb-3 font-mono text-[9px] uppercase tracking-[0.14em] text-pipeline-muted">
         <span className="flex min-w-0 items-center gap-2">
@@ -211,11 +211,11 @@ function RawLayer({ card }: { card: PipelineCardData }) {
 
       {card.kind === "youtube" ? (
         <div className="mt-3">
-          <div className="relative flex h-20 items-center justify-center overflow-hidden rounded-lg bg-navy">
-            <span className="flex size-9 items-center justify-center rounded-full bg-white/90 text-[11px] text-processing-deep">
+          <div className="relative flex h-20 items-center justify-center overflow-hidden rounded-lg bg-editorial-bg">
+            <span className="flex size-9 items-center justify-center rounded-full bg-surface text-[11px] text-processing-deep">
               ▶
             </span>
-            <span className="absolute bottom-1.5 right-2 font-mono text-[8px] text-white/70">
+            <span className="absolute bottom-1.5 right-2 font-mono text-[8px] text-editorial-muted">
               18:42
             </span>
           </div>
@@ -236,7 +236,7 @@ function RawLayer({ card }: { card: PipelineCardData }) {
             <div>src/retrieve.ts</div>
             <div>src/chunking.ts</div>
           </div>
-          <div className="mt-2 rounded bg-navy px-2 py-1.5 text-[8px] text-processing">
+          <div className="mt-2 rounded bg-editorial-bg px-2 py-1.5 text-[8px] text-processing">
             const matches = await retrieve(query);
           </div>
         </div>
@@ -261,7 +261,7 @@ function RawLayer({ card }: { card: PipelineCardData }) {
 
       {card.kind === "chat" ? (
         <div className="mt-3 space-y-2">
-          <div className="ml-auto w-4/5 rounded-xl rounded-br-sm bg-navy px-2.5 py-2 text-[9px] text-white">
+          <div className="ml-auto w-4/5 rounded-xl rounded-br-sm bg-editorial-bg px-2.5 py-2 text-[9px] text-editorial-ink">
             What changed in the attention design?
           </div>
           <div className="w-11/12 rounded-xl rounded-bl-sm border border-pipeline-line bg-pipeline px-2.5 py-2 text-[9px] leading-relaxed text-pipeline-ink">
@@ -280,13 +280,13 @@ function StructuredLayer({ card }: { card: PipelineCardData }) {
   return (
     <div
       data-layer="structured"
-      className="absolute inset-0 overflow-hidden rounded-2xl border border-processing/30 bg-navy p-4 text-white sm:p-5"
+      className="absolute inset-0 overflow-hidden rounded-2xl border border-processing/30 bg-editorial-bg p-4 text-editorial-ink sm:p-5"
     >
       <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-processing">
         {card.stage} / indexed
       </div>
-      <h3 className="mt-2 truncate font-mono text-[12px] text-white/90">{card.title}</h3>
-      <div className="mt-3 space-y-1.5 font-mono text-[9px] leading-relaxed text-white/55">
+      <h3 className="mt-2 truncate font-mono text-[12px] text-editorial-ink">{card.title}</h3>
+      <div className="mt-3 space-y-1.5 font-mono text-[9px] leading-relaxed text-editorial-muted">
         {card.lines.map((line, index) => (
           <div key={line} className="flex gap-2">
             <span className="shrink-0 text-processing">
@@ -296,8 +296,8 @@ function StructuredLayer({ card }: { card: PipelineCardData }) {
           </div>
         ))}
       </div>
-      <div className="absolute bottom-3 left-4 right-4 h-px bg-white/10" />
-      <div className="absolute bottom-1.5 left-4 font-mono text-[8px] uppercase tracking-[0.16em] text-white/30">
+      <div className="absolute bottom-3 left-4 right-4 h-px bg-editorial-border" />
+      <div className="absolute bottom-1.5 left-4 font-mono text-[8px] uppercase tracking-[0.16em] text-editorial-muted/70">
         kairos://knowledge
       </div>
     </div>
@@ -672,7 +672,7 @@ export function CinematicPipeline() {
           className="kairos-scanner-line pointer-events-none absolute -top-3 bottom-[-12px] left-1/2 z-40 w-px -translate-x-1/2"
         />
 
-        <div className="pointer-events-none absolute left-1/2 top-3 z-50 w-44 -translate-x-1/2 rounded-full border border-processing/25 bg-white/90 px-3 py-2 shadow-[var(--pipeline-shadow-badge)]">
+        <div className="pointer-events-none absolute left-1/2 top-3 z-50 w-44 -translate-x-1/2 rounded-full border border-processing/25 bg-surface/90 px-3 py-2 shadow-[var(--pipeline-shadow-badge)]">
           <span className="block text-center font-mono text-[8px] uppercase tracking-[0.18em] text-pipeline-muted">
             Knowledge processed
           </span>

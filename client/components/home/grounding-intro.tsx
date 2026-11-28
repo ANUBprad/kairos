@@ -45,25 +45,25 @@ export function GroundingIntro() {
             {PRINCIPLES.map((item) => (
               <div key={item.number} className="kairos-dark-card p-5">
                 <div className="flex items-center justify-between">
-                  <item.icon className="size-4 text-brand-accent" strokeWidth={1.6} />
-                  <span className="font-mono text-[10px] tracking-[0.16em] text-white/35">
+                  <item.icon className="size-4 text-primary" strokeWidth={1.6} />
+                  <span className="font-mono text-[10px] tracking-[0.16em] text-muted-foreground/70">
                     {item.number}
                   </span>
                 </div>
-                <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.16em] text-white/50">
+                <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                   {item.label}
                 </p>
-                <h3 className="mt-2 font-serif text-[17px] leading-snug text-white">
+                <h3 className="mt-2 font-serif text-[17px] leading-snug text-foreground">
                   {item.title}
                 </h3>
-                <p className="mt-3 text-[13px] leading-relaxed text-white/60">{item.body}</p>
+                <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">{item.body}</p>
               </div>
             ))}
           </div>
 
           <Link
             href="#features"
-            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-brand-accent transition-colors hover:text-white"
+            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
           >
             Explore the features
             <ArrowRight className="size-4" />
@@ -71,26 +71,26 @@ export function GroundingIntro() {
         </div>
 
         <div className="kairos-dark-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/55">
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/55">
               Evidence set / decoded
             </span>
-            <span className="inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-brand-accent">
+            <span className="inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-primary">
               <Quote className="size-3" />
               grounded
             </span>
           </div>
 
           <div className="space-y-5 p-5 sm:p-7">
-            <div className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm border border-white/10 bg-white/5 px-3.5 py-2.5 text-[12px] text-white/80">
+            <div className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm border border-border bg-surface/60 px-3.5 py-2.5 text-[12px] text-foreground/80">
               What changed in the attention design?
             </div>
 
             <div>
-              <p className="font-serif text-[20px] leading-snug text-white">
+              <p className="font-serif text-[20px] leading-snug text-foreground">
                 Recurrence gives way to attention over the full sequence.
               </p>
-              <p className="mt-3 max-w-lg text-[13px] leading-relaxed text-white/60">
+              <p className="mt-3 max-w-lg text-[13px] leading-relaxed text-muted-foreground">
                 The claim is assembled from selected passages, not from an
                 unattributed summary. Each source stays open for inspection.
               </p>
@@ -104,18 +104,18 @@ export function GroundingIntro() {
               ].map((citation) => (
                 <div
                   key={citation.source}
-                  className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5"
+                  className="rounded-xl border border-border bg-surface/60 px-3 py-2.5"
                 >
-                  <span className="block font-mono text-[9px] uppercase tracking-[0.14em] text-brand-accent">
+                  <span className="block font-mono text-[9px] uppercase tracking-[0.14em] text-primary">
                     {citation.source}
                   </span>
-                  <span className="mt-1 block text-[11px] text-white/60">{citation.locator}</span>
+                  <span className="mt-1 block text-[11px] text-muted-foreground">{citation.locator}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="border-t border-white/10 px-5 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-white/35">
+          <div className="border-t border-border px-5 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground/70">
             Illustrative evidence view · no live query is executed here
           </div>
         </div>

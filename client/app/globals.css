@@ -6,6 +6,7 @@
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-kairos-mono);
@@ -14,6 +15,7 @@
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -23,6 +25,9 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-border: var(--primary-border);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -30,12 +35,20 @@
   --color-selection: var(--selection);
   --color-selection-foreground: var(--selection-foreground);
   --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-hover: var(--surface-hover);
   --color-surface-raised: var(--surface-raised);
   --color-panel: var(--panel);
+  --color-overlay: var(--overlay);
   --color-brand: var(--brand);
   --color-brand-accent: var(--brand-accent);
   --color-brand-soft: var(--brand-soft);
   --color-brand-quiet: var(--brand-quiet);
+  --color-editorial-bg: var(--editorial-bg);
+  --color-editorial-ink: var(--editorial-ink);
+  --color-editorial-muted: var(--editorial-muted);
+  --color-editorial-border: var(--editorial-border);
+  --color-editorial-surface: var(--editorial-surface);
   --color-navy: var(--navy);
   --color-navy-card: var(--navy-card);
   --color-pipeline: var(--pipeline-bg);
@@ -47,6 +60,7 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-info: var(--info);
   --radius-card: var(--radius-card);
   --shadow-panel: var(--shadow-panel);
   --shadow-lift: var(--shadow-lift);
@@ -54,91 +68,155 @@
 
 :root {
   --font-sans: var(--font-geist-sans);
-  --background: #f6f7f4;
-  --foreground: #101820;
+
+  /* Light: warm-neutral surfaces with a single orange brand accent. */
+  --background: #f5f5f5;
+  --background-secondary: #eeeeee;
   --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-hover: #ebebeb;
   --surface-raised: #ffffff;
-  --panel: #fdfefd;
+  --panel: #ffffff;
   --card: #ffffff;
-  --card-foreground: #101820;
+  --card-foreground: #111111;
   --popover: #ffffff;
-  --popover-foreground: #101820;
-  --primary: #155e56;
-  --primary-foreground: #ffffff;
-  --secondary: #e7f0ed;
-  --secondary-foreground: #103b36;
-  --muted: #eff1ee;
-  --muted-foreground: #64706b;
-  --accent: #e7f0ed;
-  --accent-foreground: #103b36;
+  --popover-foreground: #111111;
+
+  --foreground: #111111;
+  --foreground-secondary: #525252;
+  --foreground-muted: #737373;
+
+  --primary: #f05a24;
+  --primary-hover: #d94b19;
+  --primary-foreground: #0a0a0a;
+  --primary-subtle: rgba(240, 90, 36, 0.08);
+  --primary-border: rgba(240, 90, 36, 0.25);
+
+  --secondary: #eeeeee;
+  --secondary-foreground: #111111;
+  --muted: #ebebeb;
+  --muted-foreground: #737373;
+  --accent: var(--primary-subtle);
+  --accent-foreground: #111111;
   --destructive: #c43d3d;
-  --border: #dde3de;
-  --input: #d5ddd8;
-  --ring: #155e56;
-  --brand: #155e56;
-  --brand-accent: #c8f169;
-  --brand-soft: #e7f0ed;
-  --brand-quiet: #f3f7f1;
-  --navy: #071225;
-  --navy-card: #101d2e;
-  --pipeline-bg: #eceef1;
-  --pipeline-ink: #1b2027;
-  --pipeline-muted: #626c79;
-  --pipeline-line: #d2d7dd;
-  --processing: #e8663a;
-  --processing-deep: #a55432;
-  --processing-rgb: 232 102 58;
-  --processing-deep-rgb: 165 84 50;
-  --spark-rgb: 255 176 118;
-  --brand-accent-rgb: 200 241 105;
-  --pipeline-shadow-card: 0 20px 50px rgb(20 27 35 / 0.1);
-  --pipeline-shadow-badge: 0 8px 30px rgb(20 27 35 / 0.08);
+  --border: #dedede;
+  --border-subtle: #e8e8e8;
+  --input: #dedede;
+  --ring: #f05a24;
+
   --success: #167c5a;
   --warning: #a76413;
   --danger: #c43d3d;
-  --selection: #c8f169;
-  --selection-foreground: #101820;
+  --info: #2563eb;
+  --overlay: rgba(0, 0, 0, 0.38);
+
+  /* Compatibility aliases: legacy names resolve to the one token system. */
+  --brand: var(--primary);
+  --brand-accent: var(--primary);
+  --brand-soft: var(--primary-subtle);
+  --brand-quiet: color-mix(in srgb, var(--background) 94%, var(--primary));
+
+  --editorial-bg: var(--background);
+  --editorial-ink: var(--foreground);
+  --editorial-muted: var(--foreground-secondary);
+  --editorial-border: var(--border);
+  --editorial-surface: var(--surface);
+  --navy: var(--editorial-bg);
+  --navy-card: var(--card);
+
+  --pipeline-bg: var(--background-secondary);
+  --pipeline-ink: #111111;
+  --pipeline-muted: #525252;
+  --pipeline-line: #dedede;
+  --processing: var(--primary);
+  --processing-deep: #c94116;
+  --processing-rgb: 240 90 36;
+  --processing-deep-rgb: 201 65 22;
+  --spark-rgb: 255 107 44;
+  --pipeline-shadow-card: 0 20px 50px rgb(17 17 17 / 0.1);
+  --pipeline-shadow-badge: 0 8px 30px rgb(17 17 17 / 0.08);
+
+  --selection: rgba(240, 90, 36, 0.18);
+  --selection-foreground: #111111;
   --radius: 0.75rem;
   --radius-card: 1.25rem;
-  --shadow-panel: 0 1px 2px rgba(16, 24, 32, 0.04),
-    0 14px 34px -22px rgba(16, 24, 32, 0.24);
-  --shadow-lift: 0 20px 48px -26px rgba(16, 24, 32, 0.36);
+  --shadow-panel: 0 1px 2px rgba(17, 17, 17, 0.04),
+    0 14px 34px -22px rgba(17, 17, 17, 0.24);
+  --shadow-lift: 0 20px 48px -26px rgba(17, 17, 17, 0.36);
 }
 
 .dark {
-  --background: #0a0f14;
-  --foreground: #f3f7f5;
-  --surface: #101820;
-  --surface-raised: #151f29;
-  --panel: #0e151c;
-  --card: #111a23;
-  --card-foreground: #f3f7f5;
-  --popover: #111a23;
-  --popover-foreground: #f3f7f5;
-  --primary: #c8f169;
-  --primary-foreground: #0b160b;
-  --secondary: #1b2832;
-  --secondary-foreground: #dce8e1;
-  --muted: #17222c;
-  --muted-foreground: #9aa9a4;
-  --accent: #1b2832;
-  --accent-foreground: #f3f7f5;
+  /* Dark: near-black surfaces with a single orange brand accent. */
+  --background: #080808;
+  --background-secondary: #101010;
+  --surface: #171717;
+  --surface-elevated: #171717;
+  --surface-hover: #202020;
+  --surface-raised: #171717;
+  --panel: #101010;
+  --card: #141414;
+  --card-foreground: #f5f5f5;
+  --popover: #141414;
+  --popover-foreground: #f5f5f5;
+
+  --foreground: #f5f5f5;
+  --foreground-secondary: #a3a3a3;
+  --foreground-muted: #737373;
+
+  --primary: #ff6b2c;
+  --primary-hover: #ff814d;
+  --primary-foreground: #0a0a0a;
+  --primary-subtle: rgba(255, 107, 44, 0.1);
+  --primary-border: rgba(255, 107, 44, 0.3);
+
+  --secondary: #171717;
+  --secondary-foreground: #f5f5f5;
+  --muted: #202020;
+  --muted-foreground: #a3a3a3;
+  --accent: var(--primary-subtle);
+  --accent-foreground: #f5f5f5;
   --destructive: #f87171;
-  --border: #25333d;
-  --input: #2a3945;
-  --ring: #c8f169;
-  --brand: #c8f169;
-  --brand-accent: #8fe3c6;
-  --brand-soft: #1b2c28;
-  --brand-quiet: #12201c;
-  --success: #5ee0a0;
+  --border: #292929;
+  --border-subtle: #1f1f1f;
+  --input: #292929;
+  --ring: #ff6b2c;
+
+  --success: #4ade80;
   --warning: #f5c36b;
   --danger: #f87171;
-  --selection: #2e4b36;
-  --selection-foreground: #f3f7f5;
-  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3),
-    0 18px 48px -28px rgba(0, 0, 0, 0.8);
-  --shadow-lift: 0 24px 60px -28px rgba(0, 0, 0, 0.85);
+  --info: #60a5fa;
+  --overlay: rgba(0, 0, 0, 0.65);
+
+  --brand: var(--primary);
+  --brand-accent: var(--primary);
+  --brand-soft: var(--primary-subtle);
+  --brand-quiet: color-mix(in srgb, var(--background) 92%, var(--primary));
+
+  --editorial-bg: #080808;
+  --editorial-ink: #f5f5f5;
+  --editorial-muted: #a3a3a3;
+  --editorial-border: #292929;
+  --editorial-surface: #171717;
+  --navy: var(--editorial-bg);
+  --navy-card: var(--card);
+
+  --pipeline-bg: #101010;
+  --pipeline-ink: #f5f5f5;
+  --pipeline-muted: #a3a3a3;
+  --pipeline-line: #292929;
+  --processing: #ff6b2c;
+  --processing-deep: #ff814d;
+  --processing-rgb: 255 107 44;
+  --processing-deep-rgb: 255 129 77;
+  --spark-rgb: 255 176 118;
+  --pipeline-shadow-card: 0 20px 50px rgb(0 0 0 / 0.5);
+  --pipeline-shadow-badge: 0 8px 30px rgb(0 0 0 / 0.55);
+
+  --selection: rgba(255, 107, 44, 0.28);
+  --selection-foreground: #f5f5f5;
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 18px 48px -28px rgba(0, 0, 0, 0.85);
+  --shadow-lift: 0 24px 60px -28px rgba(0, 0, 0, 0.9);
 }
 
 @layer base {
@@ -273,7 +351,7 @@
 }
 
 .kairos-button-primary:hover {
-  background: color-mix(in srgb, var(--primary) 88%, black);
+  background: var(--primary-hover);
 }
 
 .kairos-button-secondary {
@@ -283,40 +361,49 @@
 }
 
 .kairos-button-secondary:hover {
-  background: var(--muted);
+  background: var(--surface-hover);
 }
 
 .kairos-button-light {
-  background: var(--brand-accent);
-  color: var(--navy);
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .kairos-button-light:hover {
-  background: color-mix(in srgb, var(--brand-accent) 88%, white);
+  background: var(--primary-hover);
 }
 
+/* Editorial sections inherit the active theme's monochromatic surface and ink. */
 .kairos-dark-section {
-  --border: rgba(255, 255, 255, 0.14);
-  --muted-foreground: rgba(243, 247, 245, 0.68);
-  --surface: rgba(255, 255, 255, 0.05);
-  --panel: rgba(255, 255, 255, 0.04);
-  --card: rgba(255, 255, 255, 0.05);
-  background: var(--navy);
-  color: #f3f7f5;
+  --background: var(--editorial-bg);
+  --foreground: var(--editorial-ink);
+  --foreground-secondary: var(--editorial-muted);
+  --foreground-muted: var(--editorial-muted);
+  --border: var(--editorial-border);
+  --border-subtle: var(--editorial-border);
+  --surface: var(--editorial-surface);
+  --surface-elevated: var(--editorial-surface);
+  --surface-hover: color-mix(in srgb, var(--editorial-surface) 88%, var(--editorial-ink));
+  --panel: var(--editorial-surface);
+  --card: var(--editorial-surface);
+  --navy: var(--editorial-bg);
+  --navy-card: var(--editorial-surface);
+  background: var(--editorial-bg);
+  color: var(--foreground);
 }
 
 .kairos-dark-section .kairos-kicker,
 .kairos-dark-section .kairos-eyebrow {
-  color: var(--brand-accent);
+  color: var(--primary);
 }
 
 .kairos-dark-section .kairos-lede {
-  color: rgba(243, 247, 245, 0.68);
+  color: var(--editorial-muted);
 }
 
 .kairos-dark-card {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: color-mix(in srgb, var(--navy-card) 86%, transparent);
+  border: 1px solid var(--border);
+  background: var(--surface);
   border-radius: 1rem;
 }
 
@@ -324,12 +411,12 @@
   background:
     radial-gradient(
       circle at 18% 18%,
-      color-mix(in srgb, var(--brand-accent) 10%, transparent),
+      color-mix(in srgb, var(--primary) 10%, transparent),
       transparent 38%
     ),
     radial-gradient(
       circle at 82% 78%,
-      color-mix(in srgb, var(--processing) 12%, transparent),
+      color-mix(in srgb, var(--primary) 12%, transparent),
       transparent 40%
     );
 }
@@ -415,8 +502,8 @@
   height: 640px;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 25%, color-mix(in srgb, var(--brand) 18%, transparent), transparent 42%),
-    radial-gradient(circle at 78% 18%, color-mix(in srgb, var(--brand-accent) 14%, transparent), transparent 38%);
+    radial-gradient(circle at 18% 25%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 42%),
+    radial-gradient(circle at 78% 18%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 38%);
   filter: blur(18px);
 }
 
@@ -424,7 +511,7 @@
   background: linear-gradient(
     100deg,
     var(--brand-soft) 20%,
-    color-mix(in srgb, var(--brand-accent) 28%, var(--brand-soft)) 50%,
+    color-mix(in srgb, var(--primary) 24%, var(--brand-soft)) 50%,
     var(--brand-soft) 80%
   );
   background-size: 200% 100%;
@@ -486,8 +573,8 @@
   }
 }
 
-/* Premium tier accent, retained from the existing billing visual language. */
-@keyframes gold-shimmer {
+/* Premium tier shimmer uses the brand orange instead of a competing accent. */
+@keyframes premium-shimmer {
   0% {
     background-position: 0% 50%;
   }
@@ -502,27 +589,27 @@
 .gold-glitter-badge {
   background: linear-gradient(
     135deg,
-    #bf953f 0%,
-    #fcf6ba 25%,
-    #b38728 50%,
-    #fbf5b7 75%,
-    #aa771c 100%
+    var(--primary-hover) 0%,
+    var(--primary) 25%,
+    var(--primary-foreground) 50%,
+    var(--primary) 75%,
+    var(--primary-hover) 100%
   );
   background-size: 200% 200%;
-  animation: gold-shimmer 4s ease infinite;
+  animation: premium-shimmer 4s ease infinite;
 }
 
 .gold-glitter-ring {
   background: linear-gradient(
     135deg,
-    #d4af37 0%,
-    #fff6cc 25%,
-    #aa771c 50%,
-    #fef08a 75%,
-    #d97706 100%
+    var(--primary-hover) 0%,
+    var(--primary) 25%,
+    var(--primary-foreground) 50%,
+    var(--primary) 75%,
+    var(--primary-hover) 100%
   );
   background-size: 200% 200%;
-  animation: gold-shimmer 4s ease infinite;
+  animation: premium-shimmer 4s ease infinite;
 }
 
 /* Authentication entrance motion. Delay is supplied per element so the form

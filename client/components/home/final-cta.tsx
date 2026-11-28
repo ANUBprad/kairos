@@ -23,9 +23,9 @@ export function FinalCta({ isAuthenticated = false }: FinalCtaProps) {
       />
 
       <div className="kairos-section-wrap relative text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5">
-          <Sparkles className="size-3.5 text-brand-accent" />
-          <span className="kairos-kicker text-white/75">Begin with a question</span>
+        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/60 px-3 py-1.5">
+          <Sparkles className="size-3.5 text-primary" />
+          <span className="kairos-kicker text-muted-foreground">Begin with a question</span>
         </span>
 
         <h2
@@ -34,7 +34,7 @@ export function FinalCta({ isAuthenticated = false }: FinalCtaProps) {
         >
           Bring your sources.
           <br />
-          <span className="text-brand-accent">Keep the receipts.</span>
+          <span className="text-primary">Keep the receipts.</span>
         </h2>
 
         <p className="kairos-lede mx-auto mt-6 text-center text-[15px] sm:text-base">
@@ -49,13 +49,13 @@ export function FinalCta({ isAuthenticated = false }: FinalCtaProps) {
           </Link>
           <Link
             href={isAuthenticated ? "/#sources" : "/#workflow"}
-            className="kairos-button border border-white/15 bg-white/5 text-white hover:bg-white/10"
+            className="kairos-button border border-border bg-surface/60 text-foreground hover:bg-surface-hover"
           >
             {isAuthenticated ? "View sources" : "See the pipeline"}
           </Link>
         </div>
 
-        <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">
+        <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/80">
           One-time plans · free credits each window · no recurring subscription
         </p>
       </div>
