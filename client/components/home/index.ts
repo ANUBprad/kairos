@@ -4,7 +4,9 @@ export { CinematicPipeline } from "./cinematic-pipeline";
 export { IntegrationsStrip } from "./integrations-strip";
 export { GroundingIntro } from "./grounding-intro";
 export { FeatureRows } from "./feature-rows";
+export { UseCases } from "./use-cases";
 export { Faq } from "./faq";
+export { FinalCta } from "./final-cta";
 export { SiteFooter } from "./site-footer";
 export { ShowcaseFrame } from "./showcase-frame";
 

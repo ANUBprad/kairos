@@ -51,44 +51,53 @@ export function Faq() {
   return (
     <section
       id="faq"
-      className="mx-auto grid w-full max-w-6xl scroll-mt-24 gap-10 px-5 pb-24 pt-24 sm:px-6 sm:pb-28 sm:pt-28 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20"
+      className="scroll-mt-24 border-t border-border bg-background py-24 sm:py-28"
     >
-      <div>
-        <p className="kairos-eyebrow">Good questions</p>
-        <h2 className="kairos-section-title mt-3 text-[30px] sm:text-[38px]">
-          The practical
-          <br />
-          bits, answered.
-        </h2>
-        <p className="mt-5 max-w-xs text-sm leading-relaxed text-muted-foreground">
-          What Kairos grounds, what it generates for you, and what stays under
-          your control.
-        </p>
-      </div>
+      <div className="kairos-section-wrap grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+        <div className="lg:sticky lg:top-28 lg:self-start">
+          <p className="kairos-kicker">Good questions</p>
+          <h2 className="kairos-editorial-title mt-4 text-[34px] sm:text-[46px]">
+            The practical
+            <br />
+            bits, answered.
+          </h2>
+          <p className="mt-6 max-w-xs text-sm leading-relaxed text-muted-foreground">
+            What Kairos grounds, what it generates for you, and what stays under
+            your control.
+          </p>
+        </div>
 
-      <div className="kairos-panel px-5 py-2 sm:px-7">
-        <Accordion.Root className="flex w-full flex-col">
-          {FAQS.map((faq) => (
-            <Accordion.Item
-              key={faq.question}
-              value={faq.question}
-              className="border-b border-border last:border-0"
-            >
-              <Accordion.Header>
-                <Accordion.Trigger className="group/trigger flex w-full items-center justify-between gap-6 py-5 text-left text-[15px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
-                  {faq.question}
-                  <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-aria-expanded/trigger:rotate-180" />
-                </Accordion.Trigger>
-              </Accordion.Header>
+        <div className="border-y border-border">
+          <Accordion.Root className="flex w-full flex-col">
+            {FAQS.map((faq, index) => (
+              <Accordion.Item
+                key={faq.question}
+                value={faq.question}
+                className="border-b border-border last:border-0"
+              >
+                <Accordion.Header>
+                  <Accordion.Trigger className="group/trigger flex w-full items-start justify-between gap-6 py-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40 sm:py-6">
+                    <span className="flex gap-4">
+                      <span className="pt-0.5 font-mono text-[10px] tracking-[0.14em] text-processing-deep">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="text-[15px] font-medium text-foreground sm:text-base">
+                        {faq.question}
+                      </span>
+                    </span>
+                    <ChevronDown className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-aria-expanded/trigger:rotate-180" />
+                  </Accordion.Trigger>
+                </Accordion.Header>
 
-              <Accordion.Panel className="overflow-hidden data-closed:animate-accordion-up data-open:animate-accordion-down">
-                <p className="h-(--accordion-panel-height) max-w-xl pb-5 text-sm leading-relaxed text-muted-foreground data-ending-style:h-0 data-starting-style:h-0">
-                  {faq.answer}
-                </p>
-              </Accordion.Panel>
-            </Accordion.Item>
-          ))}
-        </Accordion.Root>
+                <Accordion.Panel className="overflow-hidden data-closed:animate-accordion-up data-open:animate-accordion-down">
+                  <p className="h-(--accordion-panel-height) max-w-xl pb-6 pl-0 text-sm leading-relaxed text-muted-foreground sm:pl-[2.1rem] data-ending-style:h-0 data-starting-style:h-0">
+                    {faq.answer}
+                  </p>
+                </Accordion.Panel>
+              </Accordion.Item>
+            ))}
+          </Accordion.Root>
+        </div>
       </div>
     </section>
   );

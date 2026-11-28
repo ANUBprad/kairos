@@ -14,8 +14,9 @@ interface SiteNavProps {
 }
 
 const NAV_LINKS = [
+  { href: "/#workflow", label: "Pipeline" },
   { href: "/#features", label: "Features" },
-  { href: "/#workflow", label: "Workflow" },
+  { href: "/#use-cases", label: "Use cases" },
   { href: "/pricing", label: "Pricing" },
   { href: "/#faq", label: "FAQ" },
 ];
@@ -37,23 +38,26 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 border-b transition-colors duration-300",
-        isScrolled || isMenuOpen
-          ? "border-border bg-background/90 backdrop-blur-xl"
-          : "border-transparent bg-background/55 backdrop-blur-md"
+        "fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-navy/80 backdrop-blur-xl transition-colors duration-300",
+        (isScrolled || isMenuOpen) && "bg-navy/95"
       )}
     >
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-6">
+      <div className="kairos-section-wrap flex h-16 items-center justify-between">
         <Link href="/" aria-label="Kairos home" className="flex items-center">
-          <KairosLogo size={26} textSize="text-[17px]" />
+          <KairosLogo
+            size={26}
+            textSize="text-[17px]"
+            textColor="text-white"
+            iconClassName="text-white"
+          />
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex" aria-label="Main navigation">
+        <nav className="hidden items-center gap-6 lg:flex" aria-label="Main navigation">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.label}
               href={link.href}
-              className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-[13px] font-medium text-white/65 transition-colors hover:text-white"
             >
               {link.label}
             </Link>
@@ -62,7 +66,7 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
             href={DOCS_URL}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+            className="inline-flex items-center gap-1 text-[13px] font-medium text-white/65 transition-colors hover:text-white"
           >
             Docs
             <ArrowUpRight className="size-3" />
@@ -75,14 +79,16 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
             target="_blank"
             rel="noreferrer noopener"
             aria-label="Kairos on GitHub"
-            className="hidden text-muted-foreground/70 transition-colors hover:text-foreground sm:inline-flex"
+            className="hidden text-white/60 transition-colors hover:text-white sm:inline-flex"
           >
             <GithubIcon />
           </a>
-          <ThemeToggle />
+          <div className="[&_button]:border-white/20 [&_button]:bg-white/10 [&_button]:text-white [&_button]:hover:bg-white/15">
+            <ThemeToggle />
+          </div>
           <Link
             href={ctaHref}
-            className="hidden items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground transition-all hover:brightness-110 sm:inline-flex"
+            className="kairos-button kairos-button-light hidden px-4 py-2 text-[13px] sm:inline-flex"
           >
             {ctaLabel}
             <ArrowUpRight className="size-3.5" />
@@ -92,7 +98,7 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
             onClick={() => setIsMenuOpen((open) => !open)}
             aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={isMenuOpen}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-surface text-muted-foreground transition-colors hover:text-foreground md:hidden"
+            className="inline-flex size-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-white lg:hidden"
           >
             {isMenuOpen ? <X className="size-4" /> : <Menu className="size-4" />}
           </button>
@@ -101,7 +107,7 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
 
       {isMenuOpen ? (
         <nav
-          className="border-t border-border bg-background/95 px-5 py-4 backdrop-blur-xl md:hidden"
+          className="border-t border-white/10 bg-navy/95 px-5 py-4 backdrop-blur-xl lg:hidden"
           aria-label="Mobile navigation"
         >
           <div className="mx-auto flex max-w-6xl flex-col gap-1">
@@ -110,7 +116,7 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
                 key={link.label}
                 href={link.href}
                 onClick={() => setIsMenuOpen(false)}
-                className="rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="rounded-xl px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
               >
                 {link.label}
               </Link>
@@ -120,7 +126,7 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
               target="_blank"
               rel="noreferrer noopener"
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
             >
               Docs
               <ArrowUpRight className="size-4" />
@@ -130,7 +136,7 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
               target="_blank"
               rel="noreferrer noopener"
               onClick={() => setIsMenuOpen(false)}
-              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white"
             >
               GitHub
               <ArrowUpRight className="size-4" />
@@ -138,7 +144,7 @@ export function SiteNav({ isAuthenticated = false }: SiteNavProps) {
             <Link
               href={ctaHref}
               onClick={() => setIsMenuOpen(false)}
-              className="mt-2 flex items-center justify-between rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground sm:hidden"
+              className="kairos-button kairos-button-light mt-2 justify-between rounded-xl px-3 py-2.5 sm:hidden"
             >
               {ctaLabel}
               <ArrowUpRight className="size-4" />

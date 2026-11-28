@@ -6,7 +6,9 @@ import {
   IntegrationsStrip,
   GroundingIntro,
   FeatureRows,
+  UseCases,
   Faq,
+  FinalCta,
   SiteFooter,
 } from "@/components/home";
 
@@ -30,7 +32,9 @@ export default async function HomePage() {
         <IntegrationsStrip />
         <GroundingIntro />
         <FeatureRows />
+        <UseCases />
         <Faq />
+        <FinalCta isAuthenticated={isAuthenticated} />
       </main>
 
       <SiteFooter />

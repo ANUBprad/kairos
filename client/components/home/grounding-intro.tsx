@@ -1,63 +1,130 @@
 import React from "react";
-import { ArrowRight, FileQuestion, Layers3 } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, FileQuestion, Layers3, Quote } from "lucide-react";
 
-const COLUMNS = [
+const PRINCIPLES = [
   {
     icon: FileQuestion,
-    label: "the question",
+    number: "01",
+    label: "The question",
     title: "Where did this claim come from?",
-    body: "A fluent answer is not evidence. Kairos keeps the passage, page, or timestamp attached to every statement it makes.",
+    body: "A fluent answer is not evidence. The passage, page or timestamp stays attached to the statement.",
   },
   {
     icon: Layers3,
-    label: "the retrieval",
+    number: "02",
+    label: "The retrieval",
     title: "What should the model actually read?",
-    body: "Kairos selects the passages that answer your question, keeps them inside the context budget, and presents one grounded evidence set.",
+    body: "Passages are selected for the question, held inside the context budget and presented as one evidence set.",
   },
 ];
 
 export function GroundingIntro() {
   return (
-    <section id="grounding" className="scroll-mt-24 px-5 pt-24 sm:px-6 sm:pt-28">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-20">
+    <section
+      id="grounding"
+      className="kairos-dark-section relative overflow-hidden py-24 sm:py-28"
+    >
+      <div className="kairos-grid pointer-events-none absolute inset-x-0 top-0 h-[420px] opacity-20" />
+
+      <div className="kairos-section-wrap relative grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center lg:gap-20">
         <div>
-          <p className="kairos-eyebrow">Grounded by design</p>
-          <h2 className="kairos-section-title mt-3 text-[30px] sm:text-[38px]">
+          <p className="kairos-kicker">Grounded by design</p>
+          <h2 className="kairos-editorial-title mt-4 text-[34px] sm:text-[46px]">
             Your sources are uploaded.
             <br />
             Your answers still need proof.
           </h2>
-          <p className="mt-5 max-w-lg text-sm leading-relaxed text-muted-foreground">
+          <p className="kairos-lede mt-6">
             Chat gives you fluent text. Search gives you raw hits. Kairos reads
             across your whole library, chooses the passages that answer the
             question, and cites each one.
           </p>
-          <a
+
+          <div className="mt-9 grid gap-4 sm:grid-cols-2">
+            {PRINCIPLES.map((item) => (
+              <div key={item.number} className="kairos-dark-card p-5">
+                <div className="flex items-center justify-between">
+                  <item.icon className="size-4 text-brand-accent" strokeWidth={1.6} />
+                  <span className="font-mono text-[10px] tracking-[0.16em] text-white/35">
+                    {item.number}
+                  </span>
+                </div>
+                <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.16em] text-white/50">
+                  {item.label}
+                </p>
+                <h3 className="mt-2 font-serif text-[17px] leading-snug text-white">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-[13px] leading-relaxed text-white/60">{item.body}</p>
+              </div>
+            ))}
+          </div>
+
+          <Link
             href="#features"
-            className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-brand-accent"
+            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-brand-accent transition-colors hover:text-white"
           >
-            Explore the workflow
+            Explore the features
             <ArrowRight className="size-4" />
-          </a>
+          </Link>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {COLUMNS.map((column) => (
-            <div key={column.label} className="kairos-panel p-6">
-              <div className="kairos-inset inline-flex size-10 items-center justify-center rounded-xl text-primary">
-                <column.icon className="size-5" />
-              </div>
-              <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                {column.label}
+        <div className="kairos-dark-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/55">
+              Evidence set / decoded
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-brand-accent">
+              <Quote className="size-3" />
+              grounded
+            </span>
+          </div>
+
+          <div className="space-y-5 p-5 sm:p-7">
+            <div className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm border border-white/10 bg-white/5 px-3.5 py-2.5 text-[12px] text-white/80">
+              What changed in the attention design?
+            </div>
+
+            <div>
+              <p className="font-serif text-[20px] leading-snug text-white">
+                Recurrence gives way to attention over the full sequence.
               </p>
-              <h3 className="kairos-section-title mt-2 text-lg">{column.title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {column.body}
+              <p className="mt-3 max-w-lg text-[13px] leading-relaxed text-white/60">
+                The claim is assembled from selected passages, not from an
+                unattributed summary. Each source stays open for inspection.
               </p>
             </div>
-          ))}
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                { source: "PDF", locator: "p. 3 · architecture" },
+                { source: "Transcript", locator: "04:18 · retrieval" },
+                { source: "Web page", locator: "§ methods" },
+              ].map((citation) => (
+                <div
+                  key={citation.source}
+                  className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2.5"
+                >
+                  <span className="block font-mono text-[9px] uppercase tracking-[0.14em] text-brand-accent">
+                    {citation.source}
+                  </span>
+                  <span className="mt-1 block text-[11px] text-white/60">{citation.locator}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-white/10 px-5 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-white/35">
+            Illustrative evidence view · no live query is executed here
+          </div>
         </div>
       </div>
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-background"
+      />
     </section>
   );
 }

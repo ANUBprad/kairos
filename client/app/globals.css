@@ -36,6 +36,14 @@
   --color-brand-accent: var(--brand-accent);
   --color-brand-soft: var(--brand-soft);
   --color-brand-quiet: var(--brand-quiet);
+  --color-navy: var(--navy);
+  --color-navy-card: var(--navy-card);
+  --color-pipeline: var(--pipeline-bg);
+  --color-pipeline-ink: var(--pipeline-ink);
+  --color-pipeline-muted: var(--pipeline-muted);
+  --color-pipeline-line: var(--pipeline-line);
+  --color-processing: var(--processing);
+  --color-processing-deep: var(--processing-deep);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
@@ -71,6 +79,20 @@
   --brand-accent: #c8f169;
   --brand-soft: #e7f0ed;
   --brand-quiet: #f3f7f1;
+  --navy: #071225;
+  --navy-card: #101d2e;
+  --pipeline-bg: #eceef1;
+  --pipeline-ink: #1b2027;
+  --pipeline-muted: #626c79;
+  --pipeline-line: #d2d7dd;
+  --processing: #e8663a;
+  --processing-deep: #a55432;
+  --processing-rgb: 232 102 58;
+  --processing-deep-rgb: 165 84 50;
+  --spark-rgb: 255 176 118;
+  --brand-accent-rgb: 200 241 105;
+  --pipeline-shadow-card: 0 20px 50px rgb(20 27 35 / 0.1);
+  --pipeline-shadow-badge: 0 8px 30px rgb(20 27 35 / 0.08);
   --success: #167c5a;
   --warning: #a76413;
   --danger: #c43d3d;
@@ -183,6 +205,156 @@
   font-weight: 650;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+/* Landing-page primitives. Type uses the serif/sans/mono roles consistently;
+   surfaces use the same navy, paper and processing tokens as the auth and
+   pipeline sections. */
+.kairos-kicker {
+  color: var(--brand);
+  font-family: var(--font-kairos-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.kairos-editorial-title {
+  font-family: var(--font-kairos-serif);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
+}
+
+.kairos-lede {
+  max-width: 38rem;
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+
+.kairos-section-wrap {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .kairos-section-wrap {
+    padding-inline: 1.5rem;
+  }
+}
+
+.kairos-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.7rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.kairos-button:hover {
+  transform: translateY(-1px);
+}
+
+.kairos-button-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.kairos-button-primary:hover {
+  background: color-mix(in srgb, var(--primary) 88%, black);
+}
+
+.kairos-button-secondary {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+.kairos-button-secondary:hover {
+  background: var(--muted);
+}
+
+.kairos-button-light {
+  background: var(--brand-accent);
+  color: var(--navy);
+}
+
+.kairos-button-light:hover {
+  background: color-mix(in srgb, var(--brand-accent) 88%, white);
+}
+
+.kairos-dark-section {
+  --border: rgba(255, 255, 255, 0.14);
+  --muted-foreground: rgba(243, 247, 245, 0.68);
+  --surface: rgba(255, 255, 255, 0.05);
+  --panel: rgba(255, 255, 255, 0.04);
+  --card: rgba(255, 255, 255, 0.05);
+  background: var(--navy);
+  color: #f3f7f5;
+}
+
+.kairos-dark-section .kairos-kicker,
+.kairos-dark-section .kairos-eyebrow {
+  color: var(--brand-accent);
+}
+
+.kairos-dark-section .kairos-lede {
+  color: rgba(243, 247, 245, 0.68);
+}
+
+.kairos-dark-card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--navy-card) 86%, transparent);
+  border-radius: 1rem;
+}
+
+.kairos-final-glow {
+  background:
+    radial-gradient(
+      circle at 18% 18%,
+      color-mix(in srgb, var(--brand-accent) 10%, transparent),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 82% 78%,
+      color-mix(in srgb, var(--processing) 12%, transparent),
+      transparent 40%
+    );
+}
+
+.kairos-scanner-halo {
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--processing) 15%, transparent),
+    transparent 70%
+  );
+}
+
+.kairos-scanner-line {
+  background: var(--processing);
+  box-shadow: 0 0 18px 4px color-mix(in srgb, var(--processing) 45%, transparent);
+}
+
+.kairos-rule {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--border) 90%, transparent),
+    transparent
+  );
 }
 
 .kairos-display {
@@ -386,6 +558,8 @@
 
   .kairos-card,
   .kairos-card:hover,
+  .kairos-button,
+  .kairos-button:hover,
   body {
     transition: none !important;
     transform: none !important;
