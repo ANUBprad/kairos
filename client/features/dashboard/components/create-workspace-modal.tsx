@@ -3,7 +3,10 @@
 import React, { useState } from "react";
 import { FolderPlus } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
-import { NotebookIconPicker } from "@/features/workspaces";
+import {
+  DEFAULT_NOTEBOOK_ICON,
+  NotebookIconPicker,
+} from "@/features/workspaces";
 import { dismissOnBackdropClick } from "@/lib/modal";
 
 interface CreateWorkspaceModalProps {
@@ -21,7 +24,7 @@ export function CreateWorkspaceModal({
 }: CreateWorkspaceModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState("📚");
+  const [icon, setIcon] = useState<string>(DEFAULT_NOTEBOOK_ICON);
 
   if (!isOpen) return null;
 

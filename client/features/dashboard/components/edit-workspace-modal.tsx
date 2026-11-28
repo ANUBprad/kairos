@@ -3,7 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { Edit3 } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
-import { NotebookIconPicker } from "@/features/workspaces";
+import {
+  DEFAULT_NOTEBOOK_ICON,
+  NotebookIconPicker,
+} from "@/features/workspaces";
 import { Workspace } from "@/hooks/use-workspaces";
 import { dismissOnBackdropClick } from "@/lib/modal";
 
@@ -22,13 +25,13 @@ export function EditWorkspaceModal({
 }: EditWorkspaceModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState("📚");
+  const [icon, setIcon] = useState<string>(DEFAULT_NOTEBOOK_ICON);
 
   useEffect(() => {
     if (workspace) {
       setTitle(workspace.title);
       setDescription(workspace.description || "");
-      setIcon(workspace.icon || "📚");
+      setIcon(workspace.icon || DEFAULT_NOTEBOOK_ICON);
     }
   }, [workspace]);
 

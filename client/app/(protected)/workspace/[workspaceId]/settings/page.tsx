@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, Save, Settings, ChevronDown, Check } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
-import { useWorkspace, useWorkspaces, NotebookIconPicker } from "@/features/workspaces";
+import {
+  DEFAULT_NOTEBOOK_ICON,
+  NotebookIconPicker,
+  useWorkspace,
+  useWorkspaces,
+} from "@/features/workspaces";
 import {
   CHAT_MODELS,
   CHAT_MODEL_LABELS,
@@ -42,7 +47,7 @@ export default function WorkspaceSettingsPage({
   const { deleteWorkspace } = useWorkspaces();
 
   const [title, setTitle] = useState("");
-  const [icon, setIcon] = useState("📚");
+  const [icon, setIcon] = useState<string>(DEFAULT_NOTEBOOK_ICON);
   const [defaultModel, setDefaultModel] = useState<ChatModelId>(DEFAULT_CHAT_MODEL);
   const [isSaved, setIsSaved] = useState(false);
   const [isModelOpen, setIsModelOpen] = useState(false);
@@ -61,7 +66,7 @@ export default function WorkspaceSettingsPage({
   useEffect(() => {
     if (workspace) {
       setTitle(workspace.title || "");
-      setIcon(workspace.icon || "📚");
+      setIcon(workspace.icon || DEFAULT_NOTEBOOK_ICON);
       setDefaultModel(resolveChatModel(workspace.defaultModel));
     }
   }, [workspace]);

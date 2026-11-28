@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { formatDate, cn } from "@/lib/utils";
 import { Workspace } from "@/hooks/use-workspaces";
+import { WorkspaceIcon } from "@/features/workspaces/components/notebook-icon-picker";
 
 interface WorkspaceCardProps {
   workspace: Workspace;
@@ -44,8 +45,12 @@ export function WorkspaceCard({
       <div>
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <div className="kairos-inset flex h-9 w-9 shrink-0 items-center justify-center text-base">
-              {workspace.icon || "📚"}
+            <div className="kairos-inset flex h-9 w-9 shrink-0 items-center justify-center">
+              <WorkspaceIcon
+                value={workspace.icon}
+                size={20}
+                className="text-brand"
+              />
             </div>
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <Link

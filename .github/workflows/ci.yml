@@ -51,6 +51,8 @@ jobs:
         run: node scripts/check-auth-errors.mjs
       - name: Integration callback error guard
         run: node scripts/check-integration-errors.mjs
+      - name: Workspace icon guard
+        run: node scripts/check-workspace-icons.mjs
 
   server:
     runs-on: ubuntu-latest

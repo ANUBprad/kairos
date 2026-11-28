@@ -30,6 +30,7 @@ import {
   useUsage,
 } from "@/features/billing";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { WorkspaceIcon } from "./notebook-icon-picker";
 
 
 
@@ -99,7 +100,11 @@ export function WorkspaceHeader({
             title="Switch Workspace"
             aria-expanded={isDropdownOpen}
           >
-            <span className="shrink-0 text-sm">{workspace?.icon || "📚"}</span>
+            <WorkspaceIcon
+              value={workspace?.icon}
+              size={18}
+              className="shrink-0 text-brand"
+            />
             <span className="truncate text-xs font-semibold sm:text-sm">
               {workspace?.title || "Untitled Notebook"}
             </span>
@@ -143,7 +148,11 @@ export function WorkspaceHeader({
                       aria-current={isCurrent ? "true" : undefined}
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <span className="shrink-0 text-sm">{ws.icon || "📚"}</span>
+                        <WorkspaceIcon
+                          value={ws.icon}
+                          size={16}
+                          className="shrink-0 text-muted-foreground"
+                        />
                         <span className="truncate">{ws.title}</span>
                       </div>
                       {isCurrent && <Check className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />}
