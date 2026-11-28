@@ -5,12 +5,21 @@ import { extractTextFromImageBuffer } from "../lib/sources/image-ocr.js";
 import {
     normalizeWebsiteUrl,
     scrapeWebsite,
+    WEBSITE_MAX_MARKDOWN_CHARS,
+    WEBSITE_MAX_TITLE_CHARS,
 } from "../lib/sources/firecrawl.js";
 import { buildFaviconUrl } from "../lib/sources/favicon.js";
 import {
     extractPdfFromBuffer,
+    ocrScannedPdf,
+    PDF_MAX_PAGES,
+    PDF_MAX_TEXT_CHARS,
     PDF_MAX_UPLOAD_BYTES,
+    type PdfExtractionDeps,
+    type PdfExtractResult,
+    type PdfOcr,
 } from "../lib/sources/pdf.js";
+import { assertSafePublicHttpUrl } from "../lib/safe-fetch.js";
 import prisma from "../lib/db.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import {
@@ -66,6 +75,96 @@ export interface SourceCreationTxInput {
     jobKey: string;
 }
 
+type SourceIdentity =
+    | { field: "metadata"; metadataKey: string; metadataValue: string }
+    | { field: "url"; url: string };
+
+/**
+ * Derives the stable identity of an imported source. TEXT/MARKDOWN sources are
+ * intentionally user-created documents and may legitimately repeat, so they
+ * are not deduplicated here.
+ */
+export function sourceIdentityFor(data: CreateSourceData): SourceIdentity | null {
+    if (data.type === "GITHUB_REPO") {
+        return data.url?.trim()
+            ? { field: "url", url: data.url.trim() }
+            : null;
+    }
+
+    const metadata = data.metadata;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+        return null;
+    }
+    const record = metadata as Record<string, unknown>;
+    const metadataValue = (key: string): string | null => {
+        const value = record[key];
+        return typeof value === "string" && value.trim() ? value.trim() : null;
+    };
+
+    for (const key of [
+        "websiteIdentity",
+        "contentHash",
+        "videoId",
+        "driveFileId",
+        "notionPageId",
+        "publicId",
+    ]) {
+        const value = metadataValue(key);
+        if (value) return { field: "metadata", metadataKey: key, metadataValue: value };
+    }
+    return null;
+}
+
+/**
+ * Serializes concurrent imports of the same workspace/type/identity and
+ * rechecks inside the transaction. This closes the check-then-create race that
+ * would otherwise create two sources and charge twice.
+ */
+export async function findActiveDuplicateInTransaction(
+    tx: Prisma.TransactionClient,
+    data: CreateSourceData,
+): Promise<SourceRecord | null> {
+    const identity = sourceIdentityFor(data);
+    if (!identity) return null;
+
+    const client = tx as unknown as {
+        $executeRaw?: (
+            strings: TemplateStringsArray,
+            ...values: unknown[]
+        ) => Promise<number>;
+        source?: {
+            findFirst?: (
+                args: Prisma.SourceFindFirstArgs,
+            ) => Promise<SourceRecord | null>;
+        };
+    };
+    const lockKey =
+        `source-import:${data.workspaceId}:${data.type}:` +
+        (identity.field === "url"
+            ? `url:${identity.url}`
+            : `${identity.metadataKey}:${identity.metadataValue}`);
+    if (typeof client.$executeRaw === "function") {
+        const executeRaw = client.$executeRaw.bind(client);
+        await executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+    }
+
+    const findFirst = client.source?.findFirst;
+    if (typeof findFirst !== "function") return null;
+    const where: Prisma.SourceWhereInput = {
+        workspaceId: data.workspaceId,
+        type: data.type,
+        status: { in: ["PENDING", "PROCESSING", "READY"] },
+        ...(identity.field === "url"
+            ? { url: identity.url }
+            : { metadata: { path: [identity.metadataKey], equals: identity.metadataValue } }),
+    };
+    return findFirst.call(client.source, {
+        where,
+        select: sourceSelect,
+        orderBy: { createdAt: "desc" },
+    });
+}
+
 /**
  * Atomic source ingestion: row + debit + outbox job. Exported so failure
  * windows can be exercised with a fake transaction client.
@@ -74,6 +173,9 @@ export async function insertSourceCreationInTransaction(
     tx: Prisma.TransactionClient,
     input: SourceCreationTxInput,
 ): Promise<SourceRecord> {
+    const duplicate = await findActiveDuplicateInTransaction(tx, input.data);
+    if (duplicate) return duplicate;
+
     await assertQuotaInTransaction(tx, input.userId, "sources");
 
     const source = await tx.source.create({
@@ -136,6 +238,10 @@ export async function createAndProcessSource(
             jobKey,
         }),
     );
+
+    // A concurrent import may have won the identity lock. In that case the
+    // existing source is returned with no new charge and no new job to dispatch.
+    if (source.id !== sourceId) return source;
 
     void dispatchDurableJob(jobKey).catch((error) => {
         logDurableJobError(jobKey, error);
@@ -375,6 +481,7 @@ export interface WebsiteImportDeps {
     findActiveSource?: typeof findActiveSourceByMetadataKey;
     assertQuota?: typeof assertCanCreateSource;
     scrape?: typeof scrapeWebsite;
+    assertSafeUrl?: typeof assertSafePublicHttpUrl;
     createSource?: typeof createAndProcessSource;
 }
 
@@ -383,6 +490,7 @@ type ResolvedWebsiteImportDeps = {
     findActiveSource: typeof findActiveSourceByMetadataKey;
     assertQuota: typeof assertCanCreateSource;
     scrape: typeof scrapeWebsite;
+    assertSafeUrl: typeof assertSafePublicHttpUrl;
     createSource: typeof createAndProcessSource;
 };
 
@@ -395,6 +503,7 @@ function resolveWebsiteImportDeps(
             deps?.findActiveSource ?? findActiveSourceByMetadataKey,
         assertQuota: deps?.assertQuota ?? assertCanCreateSource,
         scrape: deps?.scrape ?? scrapeWebsite,
+        assertSafeUrl: deps?.assertSafeUrl ?? assertSafePublicHttpUrl,
         createSource: deps?.createSource ?? createAndProcessSource,
     };
 }
@@ -430,7 +539,37 @@ export async function importWebsiteSource(
 
     await resolved.assertQuota(userId);
     const scraped = await resolved.scrape(input.url);
-    const faviconUrl = buildFaviconUrl(scraped.sourceUrl);
+
+    // A 200 response is not a successful import: only bounded, non-empty
+    // extracted content may be persisted and later marked READY.
+    const content =
+        typeof scraped?.markdown === "string" ? scraped.markdown.trim() : "";
+    if (!content) {
+        throw new ValidationError(
+            "This page has no readable text to import. It may require JavaScript or block automated access.",
+        );
+    }
+    if (content.length > WEBSITE_MAX_MARKDOWN_CHARS) {
+        throw new ValidationError(
+            "This page contains too much text to import. Try a smaller page.",
+        );
+    }
+
+    // A provider-reported canonical URL after redirects must pass the same
+    // public-URL checks as the submitted URL. Never persist an unsafe URL.
+    let sourceUrl = identity;
+    if (typeof scraped?.sourceUrl === "string" && scraped.sourceUrl.trim()) {
+        try {
+            sourceUrl = (
+                await resolved.assertSafeUrl(scraped.sourceUrl.trim())
+            ).toString();
+        } catch {
+            throw new ValidationError(
+                "The scraper returned an unsafe redirect URL. Try a different public URL.",
+            );
+        }
+    }
+    const faviconUrl = buildFaviconUrl(sourceUrl);
 
     return resolved.createSource(
         {
@@ -438,20 +577,78 @@ export async function importWebsiteSource(
             type: "WEBSITE",
             title: (
                 input.title?.trim() ||
-                scraped.title ||
+                (typeof scraped?.title === "string" ? scraped.title : "") ||
                 identity
-            ).slice(0, 200),
-            content: scraped.markdown,
-            url: scraped.sourceUrl,
+            ).slice(0, WEBSITE_MAX_TITLE_CHARS),
+            content,
+            url: sourceUrl,
             status: "PENDING",
             metadata: {
-                importedFrom: scraped.sourceUrl,
+                importedFrom: sourceUrl,
                 websiteIdentity: identity,
                 ...(faviconUrl ? { faviconUrl } : {}),
             },
         },
         userId,
     );
+}
+
+/** Dependencies are injectable so storage/parser failures can be tested offline. */
+export interface PdfUploadDeps {
+    getWorkspace?: typeof getWorkspaceByIdForUser;
+    findActiveSource?: typeof findActiveSourceByMetadataKey;
+    assertQuota?: typeof assertCanCreateSource;
+    extractPdf?: (
+        buffer: Buffer,
+        deps?: PdfExtractionDeps,
+    ) => Promise<PdfExtractResult>;
+    uploadPdf?: typeof uploadPdfToCloudinary;
+    createSource?: typeof createAndProcessSource;
+    ocr?: PdfOcr;
+}
+
+type ResolvedPdfUploadDeps = {
+    getWorkspace: typeof getWorkspaceByIdForUser;
+    findActiveSource: typeof findActiveSourceByMetadataKey;
+    assertQuota: typeof assertCanCreateSource;
+    extractPdf: (
+        buffer: Buffer,
+        deps?: PdfExtractionDeps,
+    ) => Promise<PdfExtractResult>;
+    uploadPdf: typeof uploadPdfToCloudinary;
+    createSource: typeof createAndProcessSource;
+    ocr: PdfOcr;
+};
+
+function resolvePdfUploadDeps(deps?: PdfUploadDeps): ResolvedPdfUploadDeps {
+    return {
+        getWorkspace: deps?.getWorkspace ?? getWorkspaceByIdForUser,
+        findActiveSource:
+            deps?.findActiveSource ?? findActiveSourceByMetadataKey,
+        assertQuota: deps?.assertQuota ?? assertCanCreateSource,
+        extractPdf: deps?.extractPdf ?? extractPdfFromBuffer,
+        uploadPdf: deps?.uploadPdf ?? uploadPdfToCloudinary,
+        createSource: deps?.createSource ?? createAndProcessSource,
+        ocr: deps?.ocr ?? ocrScannedPdf,
+    };
+}
+
+/** Safe provider diagnostics: status codes and error names only, never bodies. */
+function providerDiagnostic(error: unknown): Record<string, unknown> {
+    const status =
+        error && typeof error === "object" && "status" in error
+            ? Number((error as { status?: unknown }).status)
+            : undefined;
+    const rawName = error instanceof Error ? error.name : "UnknownError";
+    return {
+        errorName: /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(rawName)
+            ? rawName
+            : "ProviderError",
+        status:
+            typeof status === "number" && Number.isInteger(status)
+                ? status
+                : undefined,
+    };
 }
 
 /**
@@ -468,8 +665,17 @@ export async function uploadPdfSource(
     userId: string,
     file: Express.Multer.File,
     title?: string,
+    deps?: PdfUploadDeps,
 ) {
-    await getWorkspaceByIdForUser(workspaceId, userId);
+    const resolved = resolvePdfUploadDeps(deps);
+    await resolved.getWorkspace(workspaceId, userId);
+
+    if (!Buffer.isBuffer(file?.buffer) || file.buffer.byteLength === 0) {
+        throw new ValidationError("PDF file is empty");
+    }
+    if (!/\.pdf$/i.test(file.originalname ?? "")) {
+        throw new ValidationError("Only PDF files are supported");
+    }
 
     // Multer enforces this on the HTTP boundary; guard the service too so a
     // direct caller cannot bypass the upload cap.
@@ -480,7 +686,7 @@ export async function uploadPdfSource(
     }
 
     const contentHash = createHash("sha256").update(file.buffer).digest("hex");
-    const existing = await findActiveSourceByMetadataKey(
+    const existing = await resolved.findActiveSource(
         workspaceId,
         "PDF",
         "contentHash",
@@ -490,45 +696,71 @@ export async function uploadPdfSource(
         return existing;
     }
 
-    await assertCanCreateSource(userId);
+    await resolved.assertQuota(userId);
 
-    // Fail closed before Cloudinary upload, charging, or job creation. A
-    // corrupt, encrypted, or image-only PDF must not become a charged source.
-    const extracted = await extractPdfFromBuffer(file.buffer);
-
-    let uploadMetadata: Record<string, unknown> = {};
-    try {
-        const upload = await uploadPdfToCloudinary(
-            file.buffer,
-            file.originalname,
+    // Fail closed before storage, charging, or job creation. A corrupt,
+    // encrypted, or unreadable PDF must not become a charged source.
+    const extracted = await resolved.extractPdf(file.buffer, {
+        ocr: resolved.ocr,
+    });
+    const content = extracted.text.trim();
+    if (!content) {
+        throw new ValidationError("No text could be extracted from the PDF");
+    }
+    if (content.length > PDF_MAX_TEXT_CHARS) {
+        throw new ValidationError(
+            "PDF contains too much text to index. Split it into smaller documents.",
         );
-        uploadMetadata = {
-            fileUrl: upload.secureUrl,
-            fileName: upload.originalFilename,
-            fileSize: upload.bytes,
-            publicId: upload.publicId,
-            resourceType: upload.resourceType,
-        };
-    } catch (cloudErr) {
-        logger.warn("Cloudinary upload skipped or failed (PDF will still be indexed locally)", { err: cloudErr });
-        uploadMetadata = {
-            fileName: file.originalname,
-            fileSize: file.size,
-        };
+    }
+    if (
+        !Number.isInteger(extracted.pageCount) ||
+        extracted.pageCount < 1 ||
+        extracted.pageCount > PDF_MAX_PAGES
+    ) {
+        throw new ValidationError(
+            `PDF has too many pages. The maximum is ${PDF_MAX_PAGES} pages.`,
+        );
     }
 
-    return createAndProcessSource(
+    // Storage is part of ingestion success: a PDF that cannot be stored must
+    // never be reported as uploaded or charged for indexing.
+    let upload: Awaited<ReturnType<ResolvedPdfUploadDeps["uploadPdf"]>> | undefined;
+    try {
+        upload = await resolved.uploadPdf(file.buffer, file.originalname);
+    } catch (storageError) {
+        logger.warn("PDF storage failed", providerDiagnostic(storageError));
+        throw new ValidationError(
+            "The PDF could not be stored. Please try again.",
+            { code: "PDF_UPLOAD_FAILED" },
+        );
+    }
+    if (!upload?.secureUrl || !upload?.publicId) {
+        throw new ValidationError(
+            "The PDF could not be stored. Please try again.",
+            { code: "PDF_UPLOAD_FAILED" },
+        );
+    }
+
+    return resolved.createSource(
         {
             workspaceId,
             type: "PDF",
-            title: title?.trim() || file.originalname.replace(/\.pdf$/i, ""),
-            content: extracted.text,
+            title: (title?.trim() || file.originalname.replace(/\.pdf$/i, "")).slice(
+                0,
+                WEBSITE_MAX_TITLE_CHARS,
+            ),
+            content,
             status: "PENDING",
             metadata: {
-                ...uploadMetadata,
+                fileUrl: upload.secureUrl,
+                fileName: upload.originalFilename || file.originalname,
+                fileSize: upload.bytes || file.buffer.byteLength,
+                publicId: upload.publicId,
+                resourceType: upload.resourceType,
                 contentHash,
                 pageCount: extracted.pageCount,
                 pageTexts: extracted.pages,
+                ...(extracted.ocrModel ? { ocrModel: extracted.ocrModel } : {}),
             },
         },
         userId,

@@ -138,6 +138,61 @@ describe("PDF extraction", () => {
         );
     });
 
+    it("uses injected OCR for scanned PDFs and bounds its output", async () => {
+        let ocrCalls = 0;
+        const result = await extractPdfFromBuffer(makePdf(["", ""]), {
+            ocr: async () => {
+                ocrCalls += 1;
+                return { text: "  Scanned page text  ", model: "test-ocr" };
+            },
+        });
+
+        assert.equal(ocrCalls, 1);
+        assert.equal(result.text, "Scanned page text");
+        assert.equal(result.pageCount, 2);
+        assert.deepEqual(result.pages, ["Scanned page text"]);
+        assert.equal(result.ocrModel, "test-ocr");
+
+        await assert.rejects(
+            () =>
+                extractPdfFromBuffer(makePdf(["", ""]), {
+                    ocr: async () => ({ text: "x".repeat(PDF_MAX_TEXT_CHARS + 1) }),
+                }),
+            (error: unknown) =>
+                error instanceof PdfExtractionError && error.code === "TOO_LARGE",
+        );
+
+        await assert.rejects(
+            () =>
+                extractPdfFromBuffer(makePdf(["", ""]), {
+                    ocr: async () => {
+                        throw new Error("provider detail with secret");
+                    },
+                }),
+            (error: unknown) => {
+                assert.ok(error instanceof PdfExtractionError);
+                assert.equal(error.code, "OCR_FAILED");
+                assert.equal(error.message.includes("secret"), false);
+                return true;
+            },
+        );
+    });
+
+    it("does not run OCR on encrypted or malformed PDFs", async () => {
+        let ocrCalls = 0;
+        const ocr = async () => {
+            ocrCalls += 1;
+            return { text: "should not be used" };
+        };
+
+        await assert.rejects(
+            () => extractPdfFromBuffer(Buffer.from("not a pdf"), { ocr }),
+            (error: unknown) =>
+                error instanceof PdfExtractionError && error.code === "CORRUPT",
+        );
+        assert.equal(ocrCalls, 0);
+    });
+
     it("retries only private-asset download failures with a signed URL", () => {
         for (const status of [401, 403, 404]) {
             assert.equal(

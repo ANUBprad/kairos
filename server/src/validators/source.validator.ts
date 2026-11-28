@@ -42,13 +42,21 @@ export const uploadPdfBodySchema = z.object({
 export const createTextSourceSchema = z.object({
     type: z.literal("TEXT"),
     title: z.string().trim().min(1, "Title is required").max(200),
-    content: z.string().trim().min(1, "Content is required"),
+    content: z
+        .string()
+        .trim()
+        .min(1, "Content is required")
+        .max(500_000, "Content is too long"),
 });
 
 export const createMarkdownSourceSchema = z.object({
     type: z.literal("MARKDOWN"),
     title: z.string().trim().min(1, "Title is required").max(200),
-    content: z.string().trim().min(1, "Content is required"),
+    content: z
+        .string()
+        .trim()
+        .min(1, "Content is required")
+        .max(500_000, "Content is too long"),
 });
 
 export const createSourceSchema = z.discriminatedUnion("type", [
@@ -65,11 +73,16 @@ export const importWebsiteSchema = z.object({
         .refine((value) => {
             try {
                 const parsed = new URL(value);
-                return parsed.protocol === "http:" || parsed.protocol === "https:";
+                return (
+                    (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+                    !parsed.username &&
+                    !parsed.password &&
+                    (!parsed.port || parsed.port === "80" || parsed.port === "443")
+                );
             } catch {
                 return false;
             }
-        }, "Enter an http(s) URL"),
+        }, "Enter a public http(s) URL without credentials or custom ports"),
     title: z.string().trim().max(200).optional(),
 });
 
@@ -93,8 +106,8 @@ export const reprocessSourcesSchema = z.object({
 
 export const importWebSearchSchema = z.object({
     title: z.string().trim().min(1).max(200),
-    content: z.string().trim().min(1),
-    url: z.string().trim().url(),
+    content: z.string().trim().min(1).max(500_000),
+    url: z.string().trim().url().max(2048),
 });
 
 export type CreateSourceInput = z.infer<typeof createSourceSchema>;

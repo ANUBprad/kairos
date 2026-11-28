@@ -56,52 +56,123 @@ export function normalizeWebsiteUrl(input: string): string | null {
     }
 }
 
-/** Maps provider failures to status-based messages that never reflect upstream text. */
-function safeScrapeError(error: unknown): ValidationError {
+type ProviderSignal = {
+    status?: number;
+    /** Only stable enum-like values are inspected; upstream message text is never read. */
+    signals: string;
+};
+
+/**
+ * Collects numeric status and enum-like provider fields only. Provider error
+ * messages can contain credentials or account identifiers, so they are never
+ * copied into the client-facing error or into logs.
+ */
+function readProviderSignal(error: unknown, depth = 0): ProviderSignal {
+    if (!error || typeof error !== "object" || depth > 3) return { signals: "" };
+
+    const record = error as Record<string, unknown>;
+    const response = record.response;
+    const responseStatus =
+        response && typeof response === "object"
+            ? (response as Record<string, unknown>).status
+            : undefined;
+    const rawStatus = record.status ?? record.statusCode ?? responseStatus;
     const status =
-        error && typeof error === "object" && "status" in error
-            ? Number((error as { status?: unknown }).status)
+        typeof rawStatus === "number" && Number.isInteger(rawStatus)
+            ? rawStatus
             : undefined;
 
+    const enumValue = [record.name, record.code, record.reason, record.type]
+        .filter((value): value is string => typeof value === "string")
+        .join(" ")
+        .toLowerCase();
+    const nested = readProviderSignal(record.cause, depth + 1);
+    return {
+        status: status ?? nested.status,
+        signals: `${enumValue} ${nested.signals}`.trim(),
+    };
+}
+
+/** Maps provider failures to status-based messages that never reflect upstream text. */
+function safeScrapeError(error: unknown): ValidationError {
+    const { status, signals } = readProviderSignal(error);
+
+    const rawName = error instanceof Error ? error.name : "UnknownError";
     logger.warn("Website provider request failed", {
         operation: "scrape",
-        status:
-            typeof status === "number" && Number.isInteger(status)
-                ? status
-                : undefined,
-        errorName: error instanceof Error ? error.name : "UnknownError",
+        status,
+        // Only a short enum-like type name is logged, never upstream text.
+        errorName: /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(rawName)
+            ? rawName
+            : "ProviderError",
     });
 
-    if (status === 401 || status === 403) {
+    if (
+        status === 408 ||
+        status === 504 ||
+        /timeout|timed.?out|abort|etimedout/.test(signals)
+    ) {
         return new ValidationError(
-            "The scraping provider rejected this request. Check the server configuration or try again later.",
+            "The page took too long to load. Try again or import a different URL.",
             { provider: "FIRECRAWL", status },
         );
     }
-    if (status === 429) {
+    if (status === 401 || /unauthorized|invalid.api.key/.test(signals)) {
+        return new ValidationError(
+            "The scraping provider rejected its API credentials. Check the server configuration.",
+            { provider: "FIRECRAWL", status },
+        );
+    }
+    if (
+        status === 403 ||
+        status === 451 ||
+        /blocked|forbidden|access.denied|captcha/.test(signals)
+    ) {
+        return new ValidationError(
+            "This site blocked the scraper. Check that the page is public, or try a different URL.",
+            { provider: "FIRECRAWL", status },
+        );
+    }
+    if (status === 429 || /rate.limit|quota/.test(signals)) {
         return new ValidationError(
             "The scraping provider is rate limiting requests. Please try again shortly.",
             { provider: "FIRECRAWL", status },
         );
     }
     if (
-        typeof status === "number" &&
-        Number.isInteger(status) &&
-        status >= 500
+        status === 400 ||
+        status === 404 ||
+        status === 410 ||
+        status === 415 ||
+        status === 422 ||
+        /unsupported|not.supported/.test(signals)
     ) {
+        return new ValidationError(
+            "This URL or domain is not supported by the scraping provider. Try another public page.",
+            { provider: "FIRECRAWL", status },
+        );
+    }
+    if (typeof status === "number" && status >= 500) {
         return new ValidationError(
             "The scraping provider is temporarily unavailable. Please try again.",
             { provider: "FIRECRAWL", status },
         );
     }
     return new ValidationError(
-        "Could not extract content from this URL. Check that the page is public and try again.",
+        "Could not reach this URL. Check that it is public and try again.",
         { provider: "FIRECRAWL" },
     );
 }
 
 function metadataString(value: unknown): string | undefined {
     return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/** Detects shell pages that returned HTTP 200 but contain no readable article. */
+function isNonContentPage(markdown: string): boolean {
+    return /(?:javascript\s+(?:is\s+)?(?:required|disabled|not\s+available)|enable\s+javascript|javascript\s+required|captcha|verify\s+you\s+are\s+(?:a\s+)?human|just\s+a\s+moment\b|access\s+denied)/i.test(
+        markdown.slice(0, 2000),
+    );
 }
 
 /**
@@ -137,8 +208,11 @@ export async function scrapeWebsite(
 
     const markdown =
         typeof result?.markdown === "string" ? result.markdown.trim() : "";
-    if (!markdown) {
-        throw new ValidationError("Could not extract content from this URL");
+    if (!markdown || isNonContentPage(markdown)) {
+        throw new ValidationError(
+            "This page has no readable text. It may require JavaScript or block automated access; try a different URL.",
+            { provider: "FIRECRAWL" },
+        );
     }
     if (markdown.length > WEBSITE_MAX_MARKDOWN_CHARS) {
         throw new ValidationError(

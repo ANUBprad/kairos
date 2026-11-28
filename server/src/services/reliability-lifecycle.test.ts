@@ -397,6 +397,43 @@ describe("reliability failure windows", () => {
         assert.equal(state.ledger.filter((row) => row.type === "REFUND").length, 1);
     });
 
+    it("duplicate source refund reports produce one refund row", async () => {
+        const state = createState();
+        createUser(state);
+        state.ledger.push({
+            id: "charge-s1",
+            idempotencyKey: "source-charge:s1",
+            userId: "u1",
+            amount: -1,
+            type: "SOURCE_UPLOAD",
+            bucket: "DAILY",
+            dailyAmount: 1,
+            paidAmount: 0,
+            metadata: { dailyCreditDay: new Date().toISOString().slice(0, 10) },
+        });
+        const tx = makeTx(state);
+
+        const first = await refundChargeInTransaction(tx, {
+            chargeIdempotencyKey: "source-charge:s1",
+            refundIdempotencyKey: "source-refund:s1",
+            expectedUserId: "u1",
+            reason: "website extraction failed",
+        });
+        const second = await refundChargeInTransaction(tx, {
+            chargeIdempotencyKey: "source-charge:s1",
+            refundIdempotencyKey: "source-refund:s1",
+            expectedUserId: "u1",
+            reason: "duplicate report",
+        });
+
+        assert.equal(first, true);
+        assert.equal(second, true);
+        assert.equal(
+            state.ledger.filter((row) => row.type === "REFUND").length,
+            1,
+        );
+    });
+
     it("READY artifacts are never failed by the conditional transition", async () => {
         const state = createState();
         state.artifacts.set("ready-1", {

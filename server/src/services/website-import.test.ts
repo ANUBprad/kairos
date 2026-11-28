@@ -85,6 +85,7 @@ describe("website source import", () => {
                     identity: "https://example.com/article",
                 };
             },
+            assertSafeUrl: async (url: string) => new URL(url),
             createSource: async (data: Record<string, unknown>) => {
                 state.calls.create += 1;
                 state.created.push(data);
@@ -171,6 +172,93 @@ describe("website source import", () => {
                 ),
             /Scrape failed/,
         );
+        assert.equal(state.calls.create, 0);
+    });
+
+    it("does not create a source when extraction is empty", async () => {
+        const state = baseDeps();
+        const deps = {
+            getWorkspace: async () => ({}),
+            findActiveSource: async () => null,
+            assertQuota: async () => {},
+            scrape: async () => ({ markdown: "  ", sourceUrl: VALID_URL }),
+            assertSafeUrl: async (url: string) => new URL(url),
+            createSource: async () => {
+                state.calls.create += 1;
+                return {};
+            },
+        } as unknown as WebsiteImportDeps;
+
+        await assert.rejects(
+            () =>
+                importWebsiteSource("workspace-1", "user-1", { url: VALID_URL }, deps),
+            /no readable text/i,
+        );
+        assert.equal(state.calls.create, 0);
+    });
+
+    it("rejects an unsafe provider redirect before creating a source", async () => {
+        const state = baseDeps();
+        const deps = {
+            getWorkspace: async () => ({}),
+            findActiveSource: async () => null,
+            assertQuota: async () => {},
+            scrape: async () => ({
+                markdown: "Article text",
+                sourceUrl: "http://169.254.169.254/latest/meta-data",
+            }),
+            assertSafeUrl: async (url: string) => {
+                if (url.includes("169.254.169.254")) {
+                    throw new ValidationError("Private address rejected");
+                }
+                return new URL(url);
+            },
+            createSource: async () => {
+                state.calls.create += 1;
+                return {};
+            },
+        } as unknown as WebsiteImportDeps;
+
+        await assert.rejects(
+            () =>
+                importWebsiteSource("workspace-1", "user-1", { url: VALID_URL }, deps),
+            /unsafe redirect/i,
+        );
+        assert.equal(state.calls.create, 0);
+    });
+
+    it("reuses an active source for equivalent URLs with different hashes", async () => {
+        const state = baseDeps();
+        const deps = {
+            getWorkspace: async () => ({}),
+            findActiveSource: async (
+                _workspaceId: string,
+                _type: string,
+                key: string,
+                value: string,
+            ) => {
+                state.calls.find += 1;
+                assert.equal(key, "websiteIdentity");
+                assert.equal(value, "https://example.com/article");
+                return { id: "source-existing" };
+            },
+            assertQuota: async () => {},
+            scrape: async () => {
+                throw new Error("duplicate import must not scrape");
+            },
+            createSource: async () => {
+                state.calls.create += 1;
+                return {};
+            },
+        } as unknown as WebsiteImportDeps;
+
+        const result = await importWebsiteSource(
+            "workspace-1",
+            "user-1",
+            { url: "https://example.com/article#top" },
+            deps,
+        );
+        assert.deepEqual(result, { id: "source-existing" });
         assert.equal(state.calls.create, 0);
     });
 });

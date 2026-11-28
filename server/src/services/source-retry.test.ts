@@ -85,6 +85,11 @@ function makeDb(state: State) {
             [...state.sources.values()].find((row) => matches(row, where)) ?? null,
         findUnique: async ({ where }: { where: { id: string } }) =>
             state.sources.get(where.id) ?? null,
+        findUniqueOrThrow: async ({ where }: { where: { id: string } }) => {
+            const found = state.sources.get(where.id);
+            if (!found) throw new Error("source missing");
+            return found;
+        },
         updateMany: async ({ where, data }: { where: Row; data: Row }) => {
             let count = 0;
             for (const row of state.sources.values()) {
@@ -115,15 +120,40 @@ function makeDb(state: State) {
                 (row) => !keys || keys.includes(row.idempotencyKey),
             );
         },
+        create: async ({ data }: { data: Row }) => {
+            if (
+                state.ledger.some(
+                    (row) => row.idempotencyKey === data.idempotencyKey,
+                )
+            ) {
+                throw Object.assign(new Error("duplicate ledger key"), {
+                    code: "P2002",
+                });
+            }
+            state.ledger.push({ ...data, id: `ledger-${state.ledger.length + 1}` });
+            return data;
+        },
+    };
+
+    const user = {
+        findUniqueOrThrow: async () => ({
+            id: "u1",
+            credits: 10,
+            dailyCredits: 10,
+            dailyCreditDay: new Date().toISOString().slice(0, 10),
+        }),
+        update: async () => ({}),
     };
 
     const db = {
         durableJob,
         source,
         creditTransaction,
+        user,
         workspace: {
             findFirst: async ({ where }: { where: { id: string; userId: string } }) =>
                 state.workspaces.get(where.id) ?? null,
+            findUnique: async () => ({ userId: "u1" }),
         },
         $transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
     };
@@ -138,6 +168,7 @@ const { setOutboxStoreForTests } = await import("../lib/outbox.js");
 setOutboxStoreForTests(db as any);
 const {
     describeEmbeddingFailure,
+    markSourceFailed,
 } = await import("./source-processing.services.js");
 const {
     applySourceRetryState,
@@ -149,6 +180,8 @@ function seed(options: {
     status?: string;
     jobStatus?: string;
     refunded?: boolean;
+    type?: string;
+    charged?: boolean;
 } = {}) {
     state.sources.clear();
     state.jobs.clear();
@@ -157,15 +190,28 @@ function seed(options: {
     state.sources.set("s1", {
         id: "s1",
         workspaceId: "w1",
-        type: "YOUTUBE",
-        title: "YouTube source",
-        content: "transcript text",
-        url: "https://www.youtube.com/watch?v=0SWb97L8nI8",
+        type: options.type ?? "YOUTUBE",
+        title: "Test source",
+        content: "source text",
+        url: "https://example.com/article",
         status: options.status ?? "FAILED",
         metadata: { processingError: "429 You have no credits remaining" },
         createdAt: new Date(),
         updatedAt: new Date(),
     });
+    if (options.charged) {
+        state.ledger.push({
+            id: "charge-s1",
+            idempotencyKey: "source-charge:s1",
+            userId: "u1",
+            amount: -1,
+            type: "SOURCE_UPLOAD",
+            bucket: "DAILY",
+            dailyAmount: 1,
+            paidAmount: 0,
+            metadata: { dailyCreditDay: new Date().toISOString().slice(0, 10) },
+        });
+    }
     state.jobs.set("source.process:s1", {
         key: "source.process:s1",
         type: "source.process",
@@ -271,6 +317,62 @@ describe("source retry lifecycle", () => {
             undefined,
         );
         assert.ok(state.sources.get("s1")?.metadata.retriedAt);
+    });
+
+    it("refunds a terminal website/PDF failure exactly once", async () => {
+        seed({ type: "WEBSITE", charged: true });
+        state.sources.set("s1", {
+            ...state.sources.get("s1")!,
+            status: "PROCESSING",
+        });
+
+        await markSourceFailed("s1", new Error("provider failed"), {});
+        await markSourceFailed("s1", new Error("duplicate report"), {});
+
+        const refunds = state.ledger.filter(
+            (row) => row.idempotencyKey === "source-refund:s1",
+        );
+        assert.equal(refunds.length, 1);
+        assert.equal(refunds[0]?.type, "REFUND");
+        assert.equal(state.ledger.filter((row) => row.amount < 0).length, 1);
+        assert.equal(state.sources.get("s1")?.status, "FAILED");
+    });
+
+    it("retries a failed PDF without a second charge", async () => {
+        seed({ type: "PDF", jobStatus: "PENDING", charged: true });
+        const chargeCount = () =>
+            state.ledger.filter((row) => row.idempotencyKey === "source-charge:s1")
+                .length;
+        assert.equal(chargeCount(), 1);
+
+        // A retryable worker failure keeps the charge; only a later explicit
+        // retry rewinds the existing job.
+        await markSourceFailed(
+            "s1",
+            new Error("temporary extraction failure"),
+            {},
+        );
+        assert.equal(chargeCount(), 1);
+        assert.equal(
+            state.ledger.some((row) => row.idempotencyKey === "source-refund:s1"),
+            false,
+        );
+
+        const dispatched: string[] = [];
+        const result = await reprocessSourceForWorkspace(
+            "w1",
+            "s1",
+            "u1",
+            async (key) => {
+                dispatched.push(key);
+                return true;
+            },
+        );
+
+        assert.deepEqual(result, { reprocessed: true });
+        assert.deepEqual(dispatched, ["source.process:s1"]);
+        assert.equal(chargeCount(), 1);
+        assert.equal(state.sources.get("s1")?.status, "PENDING");
     });
 });
 

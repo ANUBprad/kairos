@@ -114,15 +114,89 @@ describe("website scraping", () => {
         );
     });
 
-    it("rejects empty and oversized extracted content", async () => {
-        await assert.rejects(
-            () =>
-                scrapeWebsite(
-                    "https://example.com/article",
-                    deps({ scrape: async () => ({ markdown: "   " }) }),
-                ),
-            /Could not extract content/i,
-        );
+    it("reports timeouts, blocked pages, and unsupported domains distinctly", async () => {
+        const cases: Array<{
+            thrown: unknown;
+            pattern: RegExp;
+        }> = [
+            {
+                thrown: Object.assign(new Error("secret-timeout-detail"), {
+                    name: "TimeoutError",
+                }),
+                pattern: /took too long/i,
+            },
+            {
+                thrown: Object.assign(new Error("secret-blocked-detail"), {
+                    status: 403,
+                    reason: "blocked",
+                }),
+                pattern: /blocked the scraper/i,
+            },
+            {
+                thrown: Object.assign(new Error("secret-unsupported-detail"), {
+                    status: 415,
+                }),
+                pattern: /not supported/i,
+            },
+        ];
+
+        for (const { thrown, pattern } of cases) {
+            await assert.rejects(
+                () =>
+                    scrapeWebsite(
+                        "https://example.com/article",
+                        deps({
+                            scrape: async () => {
+                                throw thrown;
+                            },
+                        }),
+                    ),
+                (error: unknown) => {
+                    assert.ok(error instanceof ValidationError);
+                    assert.match(error.message, pattern);
+                    assert.equal(
+                        `${error.message} ${JSON.stringify(error.details)}`.includes(
+                            "secret-",
+                        ),
+                        false,
+                    );
+                    return true;
+                },
+            );
+        }
+    });
+
+    it("rejects malformed URLs before any provider call", async () => {
+        let calls = 0;
+        for (const url of ["not a url", "ftp://example.com/file", "https://user:pw@example.com/"]) {
+            await assert.rejects(
+                () =>
+                    scrapeWebsite(
+                        url,
+                        deps({
+                            scrape: async () => {
+                                calls += 1;
+                                return { markdown: "text" };
+                            },
+                        }),
+                    ),
+                /valid public http\(s\) URL|valid public/i,
+            );
+        }
+        assert.equal(calls, 0);
+    });
+
+    it("rejects empty, JavaScript-only, and oversized extracted content", async () => {
+        for (const markdown of ["   ", "Please enable JavaScript to view this page"]) {
+            await assert.rejects(
+                () =>
+                    scrapeWebsite(
+                        "https://example.com/article",
+                        deps({ scrape: async () => ({ markdown }) }),
+                    ),
+                /no readable text/i,
+            );
+        }
 
         await assert.rejects(
             () =>
