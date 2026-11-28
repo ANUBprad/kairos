@@ -353,6 +353,24 @@
   animation: gold-shimmer 4s ease infinite;
 }
 
+/* Authentication entrance motion. Delay is supplied per element so the form
+   settles in sequence without React state updates or layout shifts. */
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.auth-rise {
+  animation: auth-rise 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--auth-delay, 0ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -361,7 +379,8 @@
   .marquee-track,
   .kairos-shimmer,
   .gold-glitter-badge,
-  .gold-glitter-ring {
+  .gold-glitter-ring,
+  .auth-rise {
     animation: none !important;
   }
 

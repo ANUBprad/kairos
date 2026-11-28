@@ -17,7 +17,7 @@ function getClientOrigin(): string {
 function getCallbackPath(): string {
   if (typeof window !== "undefined") {
     const params = new URLSearchParams(window.location.search);
-    const cb = params.get("callbackUrl");
+    const cb = params.get("callbackUrl") ?? params.get("redirect");
     if (cb) return safeRedirectPath(cb);
   }
   return authRoutes.dashboard;
@@ -38,16 +38,19 @@ export function useAuth() {
     mutationFn: async ({
       email,
       password,
+      rememberMe,
       callbackUrl,
     }: {
       email: string;
       password: string;
+      rememberMe?: boolean;
       callbackUrl?: string;
     }) => {
       setAuthError(null);
       const res = await signIn.email({
         email,
         password,
+        rememberMe,
       });
       if (res.error) {
         throw new Error(res.error.message || "Failed to log in");

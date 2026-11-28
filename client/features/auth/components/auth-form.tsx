@@ -3,25 +3,38 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { KairosLogo } from "@/components/brand/kairos-logo";
-import { useAuth } from "../hooks/use-auth";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
 import { GithubIcon } from "@/components/ui/github-icon";
+import { useAuth } from "../hooks/use-auth";
 
 interface AuthFormProps {
   initialMode?: "login" | "signup";
 }
 
+interface FieldErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+}
+
 const fieldClass =
-  "w-full rounded-xl border border-input bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-[#d9dee7] bg-white px-3.5 py-3 text-base text-[#101318] outline-none transition-colors placeholder:text-[#9aa3b2] focus:border-[#101318] focus:ring-2 focus:ring-[#101318]/10 disabled:cursor-not-allowed disabled:opacity-60";
+const labelClass = "mb-1.5 block text-[13px] font-semibold text-[#374151]";
+const errorClass = "mt-1.5 text-xs font-medium text-[#b42318]";
+const socialClass =
+  "inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-[#d9dee7] bg-white px-4 py-3 text-sm font-semibold text-[#101318] transition-colors hover:bg-[#f6f7f9] disabled:cursor-not-allowed disabled:opacity-60";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function AuthForm({ initialMode = "login" }: AuthFormProps) {
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const router = useRouter();
 
   const {
@@ -35,116 +48,162 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
 
   const isLoading = loginMutation.isPending || signupMutation.isPending;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isLoading) return;
+
     setAuthError(null);
 
-    if (!email || !password) {
-      setAuthError("Please fill in all required fields.");
-      return;
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const nextErrors: FieldErrors = {};
+
+    if (mode === "signup" && !trimmedName) {
+      nextErrors.name = "Please enter your name.";
+    }
+    if (!trimmedEmail) {
+      nextErrors.email = "Please enter your email address.";
+    } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+    if (!password) {
+      nextErrors.password = "Please enter your password.";
+    } else if (mode === "signup" && password.length < 8) {
+      nextErrors.password = "Use at least 8 characters.";
     }
 
-    if (mode === "signup" && !name) {
-      setAuthError("Please enter your name.");
-      return;
-    }
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
 
     if (mode === "login") {
-      loginMutation.mutate({ email, password });
+      loginMutation.mutate({ email: trimmedEmail, password, rememberMe: remember });
     } else {
-      signupMutation.mutate({ name, email, password });
+      signupMutation.mutate({ name: trimmedName, email: trimmedEmail, password });
     }
   };
 
   const toggleMode = () => {
     setAuthError(null);
+    setFieldErrors({});
+    setShowPassword(false);
     const nextMode = mode === "login" ? "signup" : "login";
     setMode(nextMode);
     router.replace(nextMode === "login" ? "/login" : "/signup");
   };
 
   return (
-    <div className="flex w-full max-w-105 flex-col justify-center px-6 py-10 sm:px-10">
-      <div className="flex flex-col items-center text-center">
-        <KairosLogo size={34} textSize="text-2xl" className="mb-8" />
-
-        <h1 className="kairos-display text-[28px] sm:text-[32px]">
-          {mode === "login" ? "Welcome back." : "Start with the sources."}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+    <div className="w-full max-w-[420px]">
+      <div className="auth-rise">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#7b8494]">
+          {mode === "login" ? "Welcome back" : "Get started"}
+        </p>
+        <h2 className="kairos-display mt-3 text-[32px] leading-tight text-[#101318] sm:text-[36px]">
+          {mode === "login" ? "Sign in to Kairos." : "Create your workspace."}
+        </h2>
+        <p className="mt-2.5 text-sm leading-relaxed text-[#6b7280]">
           {mode === "login"
-            ? "Sign in to continue your research."
-            : "Create a workspace and bring your material together."}
+            ? "Your sources, conversations and ideas are waiting."
+            : "Bring your material together and start asking better questions."}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
         {authError ? (
           <div
+            id="auth-error"
             role="alert"
-            className="rounded-xl border border-danger/25 bg-danger/10 px-3 py-2.5 text-center text-xs font-medium text-danger"
+            className="rounded-xl border border-[#f3c3bd] bg-[#fff3f1] px-3.5 py-3 text-sm font-medium text-[#b42318]"
           >
             {authError}
           </div>
         ) : null}
 
         {mode === "signup" ? (
-          <div className="space-y-1.5 text-left">
-            <label htmlFor="name" className="text-xs font-semibold text-foreground">
+          <div>
+            <label htmlFor="name" className={labelClass}>
               Full name
             </label>
             <input
               id="name"
+              name="name"
               type="text"
               required
               autoComplete="name"
               disabled={isLoading}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                setFieldErrors((current) => ({ ...current, name: undefined }));
+              }}
               placeholder="Jane Doe"
+              aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={fieldErrors.name ? "name-error" : undefined}
               className={fieldClass}
             />
+            {fieldErrors.name ? (
+              <p id="name-error" className={errorClass}>
+                {fieldErrors.name}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
-        <div className="space-y-1.5 text-left">
-          <label htmlFor="email" className="text-xs font-semibold text-foreground">
+        <div>
+          <label htmlFor="email" className={labelClass}>
             Email address
           </label>
           <input
             id="email"
+            name="email"
             type="email"
             required
             autoComplete="email"
             disabled={isLoading}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setFieldErrors((current) => ({ ...current, email: undefined }));
+            }}
             placeholder="you@example.com"
+            aria-invalid={Boolean(fieldErrors.email)}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
             className={fieldClass}
           />
+          {fieldErrors.email ? (
+            <p id="email-error" className={errorClass}>
+              {fieldErrors.email}
+            </p>
+          ) : null}
         </div>
 
-        <div className="space-y-1.5 text-left">
-          <label htmlFor="password" className="text-xs font-semibold text-foreground">
+        <div>
+          <label htmlFor="password" className={labelClass}>
             Password
           </label>
           <div className="relative">
             <input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
               required
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               disabled={isLoading}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              className={`${fieldClass} pr-11`}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setFieldErrors((current) => ({ ...current, password: undefined }));
+              }}
+              placeholder={mode === "login" ? "Enter your password" : "At least 8 characters"}
+              aria-invalid={Boolean(fieldErrors.password)}
+              aria-describedby={fieldErrors.password ? "password-error" : undefined}
+              className={`${fieldClass} pr-12`}
             />
             <button
               type="button"
               onClick={() => setShowPassword((visible) => !visible)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              aria-pressed={showPassword}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[#6b7280] transition-colors hover:text-[#101318]"
             >
               {showPassword ? (
                 <EyeOff className="size-4" />
@@ -153,37 +212,58 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
               )}
             </button>
           </div>
+          {fieldErrors.password ? (
+            <p id="password-error" className={errorClass}>
+              {fieldErrors.password}
+            </p>
+          ) : null}
         </div>
+
+        {mode === "login" ? (
+          <label htmlFor="remember" className="flex w-fit cursor-pointer items-center gap-2.5 text-[13px] text-[#4b5563]">
+            <input
+              id="remember"
+              name="remember"
+              type="checkbox"
+              checked={remember}
+              onChange={(event) => setRemember(event.target.checked)}
+              disabled={isLoading}
+              className="size-4 rounded border-[#cbd5e1] accent-[#101318]"
+            />
+            Keep me signed in
+          </label>
+        ) : null}
 
         <button
           type="submit"
           disabled={isLoading}
-          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-transform hover:-translate-y-0.5 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#101318] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-panel)] transition-colors hover:bg-[#2b3340] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? (
             <ThemeLoader size={18} />
           ) : (
             <>
-              <span>{mode === "login" ? "Log in" : "Create account"}</span>
+              <span>{mode === "login" ? "Sign in" : "Create account"}</span>
               <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </>
           )}
         </button>
 
-        <p className="text-center text-xs text-muted-foreground">
+        <p className="text-center text-[13px] text-[#6b7280]">
           {mode === "login" ? "New to Kairos?" : "Already have an account?"}{" "}
           <button
             type="button"
             onClick={toggleMode}
-            className="font-semibold text-primary hover:underline"
+            disabled={isLoading}
+            className="font-semibold text-[#101318] underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {mode === "login" ? "Create an account" : "Log in"}
+            {mode === "login" ? "Create an account" : "Sign in"}
           </button>
         </p>
 
-        <div className="relative flex items-center justify-center py-2">
-          <div className="w-full border-t border-border" />
-          <span className="absolute bg-surface px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="relative flex items-center justify-center py-1">
+          <div className="w-full border-t border-[#e5e8ee]" />
+          <span className="absolute bg-white px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9aa3b2]">
             or continue with
           </span>
         </div>
@@ -193,7 +273,7 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
             type="button"
             onClick={() => void signInWithGoogle()}
             disabled={isLoading}
-            className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            className={socialClass}
           >
             <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true">
               <path
@@ -220,23 +300,28 @@ export function AuthForm({ initialMode = "login" }: AuthFormProps) {
             type="button"
             onClick={() => void signInWithGithub()}
             disabled={isLoading}
-            className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            className={socialClass}
           >
             <GithubIcon size={16} />
             Continue with GitHub
           </button>
         </div>
-      </form>
 
-      <p className="mt-7 text-center text-[11px] text-muted-foreground">
-        By continuing, you agree to our{" "}
-        <Link
-          href="/terms"
-          className="font-semibold text-foreground transition-colors hover:text-primary"
-        >
-          terms &amp; conditions
-        </Link>
-      </p>
+        <p className="pt-2 text-center text-[11px] text-[#8a94a3]">
+          By continuing, you agree to our{" "}
+          <Link href="/terms" className="font-semibold text-[#4b5563] hover:text-[#101318]">
+            Terms
+          </Link>
+          {" · "}
+          <Link href="/privacy" className="font-semibold text-[#4b5563] hover:text-[#101318]">
+            Privacy
+          </Link>
+          {" · "}
+          <Link href="/support" className="font-semibold text-[#4b5563] hover:text-[#101318]">
+            Support
+          </Link>
+        </p>
+      </form>
     </div>
   );
 }
