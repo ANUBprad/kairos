@@ -48,9 +48,10 @@ export function SourceTypeIcon({ type, className, source }: SourceTypeIconProps)
       <img
         src={faviconUrl}
         alt=""
+        aria-hidden="true"
         width={16}
         height={16}
-        className={cn("w-4 h-4 shrink-0 rounded-sm object-contain", className)}
+        className={cn("size-4 shrink-0 rounded-sm object-contain", className)}
         onError={() => setFaviconFailed(true)}
         loading="lazy"
         decoding="async"
@@ -61,10 +62,8 @@ export function SourceTypeIcon({ type, className, source }: SourceTypeIconProps)
   const Icon = iconMap[type] || FileText;
   return (
     <Icon
-      className={cn(
-        "size-4 shrink-0 text-brand",
-        className
-      )}
+      aria-hidden="true"
+      className={cn("size-4 shrink-0 text-brand", className)}
     />
   );
 }

@@ -68,18 +68,18 @@ export function SourceItem({
             type="button"
             onClick={() => onPreview(source)}
             title={source.title}
-            className="block w-full truncate text-left text-xs font-medium text-foreground transition-colors hover:text-brand hover:underline motion-reduce:transition-none"
+            className="block w-full break-words text-left text-[13px] font-medium leading-snug text-foreground line-clamp-2 transition-colors hover:text-brand hover:underline motion-reduce:transition-none"
           >
             {source.title}
           </button>
 
           <div className="mt-0.5 flex flex-wrap items-center gap-1">
-            <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
               {SOURCE_TYPE_LABELS[source.type]}
             </span>
             <SourceStatusBadge
               status={source.status}
-              className="px-1.5 py-0 text-[9px]"
+              className="px-1.5 py-0 text-[10px]"
             />
             {canRetry && onRetry ? (
               <button

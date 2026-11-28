@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Source } from "../lib/types";
+import { SOURCE_TYPE_LABELS } from "../lib/constants";
 import { SourceItem } from "./source-item";
 import { AddSourceDialog } from "./add-source-dialog";
 import { SourcePreviewDialog } from "./source-preview-dialog";
@@ -10,6 +11,7 @@ import {
   Search,
   CheckSquare,
   Square,
+  Minus,
   FileBox,
   Layers,
 } from "lucide-react";
@@ -20,8 +22,8 @@ interface SourcesPanelProps {
   sources: Source[];
   selectedSourceIds: string[];
   onToggleSelect: (id: string) => void;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
+  onSelectAll: (ids: string[]) => void;
+  onDeselectAll: (ids: string[]) => void;
   onUploadPdf: (file: File, title?: string) => Promise<unknown>;
   onImportWebsite: (url: string, title?: string) => Promise<unknown>;
   onImportYoutube: (url: string, title?: string) => Promise<unknown>;
@@ -49,12 +51,22 @@ export function SourcesPanel({
   const [previewSource, setPreviewSource] = useState<Source | null>(null);
   const reprocessMutation = useReprocessSource(workspaceId ?? "");
 
-  const filteredSources = sources.filter((s) =>
-    s.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const needle = searchQuery.trim().toLowerCase();
+  const filteredSources = needle
+    ? sources.filter(
+        (s) =>
+          s.title.toLowerCase().includes(needle) ||
+          SOURCE_TYPE_LABELS[s.type].toLowerCase().includes(needle),
+      )
+    : sources;
 
-  const allSelected =
-    sources.length > 0 && selectedSourceIds.length === sources.length;
+  const visibleIds = filteredSources.map((s) => s.id);
+  const allVisibleSelected =
+    visibleIds.length > 0 &&
+    visibleIds.every((id) => selectedSourceIds.includes(id));
+  const someVisibleSelected = visibleIds.some((id) =>
+    selectedSourceIds.includes(id),
+  );
 
   return (
     <div className="flex h-full select-none flex-col border-r border-border bg-panel text-foreground">
@@ -100,17 +112,26 @@ export function SourcesPanel({
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
-              onClick={allSelected ? onDeselectAll : onSelectAll}
-              aria-pressed={allSelected}
+              onClick={() =>
+                allVisibleSelected
+                  ? onDeselectAll(visibleIds)
+                  : onSelectAll(visibleIds)
+              }
+              aria-pressed={allVisibleSelected}
               className="inline-flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-brand focus-visible:text-brand motion-reduce:transition-none"
             >
-              {allSelected ? (
+              {allVisibleSelected ? (
                 <CheckSquare className="size-3.5 shrink-0 text-brand" aria-hidden="true" />
+              ) : someVisibleSelected ? (
+                <Minus className="size-3.5 shrink-0 text-brand" aria-hidden="true" />
               ) : (
                 <Square className="size-3.5 shrink-0" aria-hidden="true" />
               )}
               <span className="truncate">
-                {allSelected ? "Deselect all" : "Select all"}
+                {allVisibleSelected ? "Deselect all" : "Select all"}
+                {needle && filteredSources.length !== sources.length
+                  ? ` (${filteredSources.length})`
+                  : ""}
               </span>
             </button>
 
@@ -167,7 +188,7 @@ export function SourcesPanel({
               No matching sources
             </span>
             <span className="text-[11px] text-muted-foreground">
-              Try a different title.
+              Try a different title or source type.
             </span>
           </div>
         ) : (

@@ -12,10 +12,10 @@ interface SourceStatusBadgeProps {
 }
 
 const STATUS_STYLES: Record<SourceStatus, string> = {
-  READY: "border-border bg-surface text-foreground",
-  PROCESSING: "border-border bg-muted text-muted-foreground",
+  READY: "border-success/30 bg-success/10 text-success",
+  PROCESSING: "border-warning/30 bg-warning/10 text-warning",
   PENDING: "border-border bg-muted text-muted-foreground",
-  FAILED: "border-foreground/25 bg-foreground/5 text-foreground",
+  FAILED: "border-danger/30 bg-danger/10 text-danger",
 };
 
 export function SourceStatusBadge({

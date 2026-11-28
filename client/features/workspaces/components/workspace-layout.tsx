@@ -21,6 +21,12 @@ import {
 import { ChatPanel, useChat } from "@/features/chat";
 import { StudioPanel, useArtifacts } from "@/features/learn";
 import { useWorkspace } from "../hooks/use-workspace";
+import {
+  includeNewSourceIds,
+  parsePersistedSelection,
+  pruneSelectedSourceIds,
+  selectedSourcesStorageKey,
+} from "../lib/source-selection";
 import { Layers, MessageSquare, Sparkles } from "lucide-react";
 import { ThemeLoader } from "@/components/ui/theme-loader";
 import { cn } from "@/lib/utils";
@@ -35,7 +41,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
   const [mobileTab, setMobileTab] = useState<MobileTab>("chat");
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
   const initialSelectionDone = useRef(false);
-  const prevSourcesLength = useRef(0);
+  const knownSourceIds = useRef<string[]>([]);
 
   const {
     workspace,
@@ -47,67 +53,78 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
   const sources = useMemo(() => sourcesQuery.data || [], [sourcesQuery.data]);
   const isSourcesLoading = sourcesQuery.isLoading;
 
-  const storageKey = `kairos_selected_sources_${workspaceId}`;
+  const sourceIds = useMemo(() => sources.map((s) => s.id), [sources]);
+  const storageKey = useMemo(
+    () => selectedSourcesStorageKey(workspaceId),
+    [workspaceId],
+  );
 
-  // Initial load: restore persisted selection or default to all sources
-  useEffect(() => {
-    if (sources.length > 0 && !initialSelectionDone.current) {
-      if (typeof window !== "undefined") {
-        try {
-          const saved = localStorage.getItem(storageKey);
-          if (saved !== null) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed)) {
-              // Keep only source IDs that still exist in current workspace sources
-              const valid = parsed.filter((id) =>
-                sources.some((s) => s.id === id)
-              );
-              setSelectedSourceIds(valid);
-              initialSelectionDone.current = true;
-              return;
-            }
-          }
-        } catch {}
-      }
-      // If first time, default to all sources and persist
-      const allIds = sources.map((s) => s.id);
-      setSelectedSourceIds(allIds);
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(allIds));
-        } catch {}
-      }
-      initialSelectionDone.current = true;
-    }
-  }, [sources, storageKey]);
+  // The selection used for counts, chat and artifacts is always a subset of
+  // the sources that actually exist in this workspace.
+  const effectiveSelectedIds = useMemo(
+    () => pruneSelectedSourceIds(selectedSourceIds, sourceIds),
+    [selectedSourceIds, sourceIds],
+  );
 
-  // Helper to update selection and persist to localStorage
-  const updateAndPersistSelection = useCallback(
-    (updater: (prev: string[]) => string[]) => {
-      setSelectedSourceIds((prev) => {
-        const next = updater(prev);
-        if (typeof window !== "undefined") {
-          try {
-            localStorage.setItem(storageKey, JSON.stringify(next));
-          } catch {}
-        }
-        return next;
-      });
+  const persistSelection = useCallback(
+    (ids: string[]) => {
+      if (typeof window === "undefined") return;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(ids));
+      } catch {}
     },
     [storageKey],
   );
 
-  // When newly created/imported sources appear, include them in selection and persist
-  useEffect(() => {
-    if (sources.length > prevSourcesLength.current && prevSourcesLength.current > 0) {
-      updateAndPersistSelection((prev) => {
-        const allIds = sources.map((s) => s.id);
-        const added = allIds.filter((id) => !prev.includes(id));
-        return [...prev, ...added];
+  const updateAndPersistSelection = useCallback(
+    (updater: (prev: string[]) => string[]) => {
+      setSelectedSourceIds((prev) => {
+        const next = updater(prev);
+        if (next !== prev) persistSelection(next);
+        return next;
       });
+    },
+    [persistSelection],
+  );
+
+  // A workspace switch starts from a clean selection for that workspace so
+  // IDs from the previous workspace can never be counted or sent to chat.
+  useEffect(() => {
+    initialSelectionDone.current = false;
+    knownSourceIds.current = [];
+    setSelectedSourceIds([]);
+  }, [workspaceId]);
+
+  // Restore once per workspace, pruning IDs for sources that no longer exist.
+  useEffect(() => {
+    if (initialSelectionDone.current || sources.length === 0) return;
+    let saved: string | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        saved = localStorage.getItem(storageKey);
+      } catch {}
     }
-    prevSourcesLength.current = sources.length;
-  }, [sources, updateAndPersistSelection]);
+    const restored = parsePersistedSelection(saved);
+    const next = pruneSelectedSourceIds(restored ?? sourceIds, sourceIds);
+    knownSourceIds.current = sourceIds;
+    setSelectedSourceIds(next);
+    persistSelection(next);
+    initialSelectionDone.current = true;
+  }, [sources.length, sourceIds, storageKey, persistSelection]);
+
+  // Refresh on source-list changes: drop deleted IDs, include genuinely new
+  // sources, and keep sources the user deselected untouched.
+  useEffect(() => {
+    if (!initialSelectionDone.current) return;
+    const previouslyKnown = knownSourceIds.current;
+    knownSourceIds.current = sourceIds;
+    updateAndPersistSelection((prev) => {
+      const next = includeNewSourceIds(prev, sourceIds, previouslyKnown);
+      return next.length === prev.length && next.every((id, i) => id === prev[i])
+        ? prev
+        : next;
+    });
+  }, [sourceIds, updateAndPersistSelection]);
 
   const uploadPdfMutation = useUploadPdfSource(workspaceId);
   const importWebsiteMutation = useImportWebsiteSource(workspaceId);
@@ -117,21 +134,22 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
 
   const toggleSourceSelection = (id: string) => {
     updateAndPersistSelection((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
-  const selectAllSources = () => {
-    const allIds = sources.map((s) => s.id);
-    updateAndPersistSelection(() => allIds);
+  const selectSources = (ids: string[]) => {
+    updateAndPersistSelection((prev) =>
+      pruneSelectedSourceIds([...prev, ...ids], sourceIds),
+    );
   };
 
-  const deselectAllSources = () => {
-    updateAndPersistSelection(() => []);
+  const deselectSources = (ids: string[]) => {
+    const removing = new Set(ids);
+    updateAndPersistSelection((prev) =>
+      prev.filter((id) => !removing.has(id)),
+    );
   };
-
-
-
   const {
     messages,
     isStreaming,
@@ -196,10 +214,10 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
             <SourcesPanel
               workspaceId={workspaceId}
               sources={sources}
-              selectedSourceIds={selectedSourceIds}
+              selectedSourceIds={effectiveSelectedIds}
               onToggleSelect={toggleSourceSelection}
-              onSelectAll={selectAllSources}
-              onDeselectAll={deselectAllSources}
+              onSelectAll={selectSources}
+              onDeselectAll={deselectSources}
               onUploadPdf={(file, title) => uploadPdfMutation.mutateAsync({ file, title })}
               onImportWebsite={(url, title) => importWebsiteMutation.mutateAsync({ url, title })}
               onImportYoutube={(url, title) => importYoutubeMutation.mutateAsync({ url, title })}
@@ -225,7 +243,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
               onSendMessage={sendMessage}
               onStopStreaming={stopStreaming}
               onNewChat={startNewChat}
-              selectedSourcesCount={selectedSourceIds.length}
+              selectedSourcesCount={effectiveSelectedIds.length}
               webSearchEnabled={webSearchEnabled}
               onToggleWebSearch={() => setWebSearchEnabled(!webSearchEnabled)}
               conversations={conversations}
@@ -251,7 +269,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
               onCreateArtifact={(type) =>
                 createArtifact({
                   type,
-                  sourceIds: selectedSourceIds,
+                  sourceIds: effectiveSelectedIds,
                 })
               }
               onDeleteArtifact={deleteArtifact}
@@ -259,7 +277,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
               isCreating={isArtifactCreating}
               isRetrying={isArtifactRetrying}
               retryingArtifactId={retryingArtifactId}
-              selectedSourcesCount={selectedSourceIds.length}
+              selectedSourcesCount={effectiveSelectedIds.length}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -273,10 +291,10 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
               <SourcesPanel
                 workspaceId={workspaceId}
                 sources={sources}
-                selectedSourceIds={selectedSourceIds}
+                selectedSourceIds={effectiveSelectedIds}
                 onToggleSelect={toggleSourceSelection}
-                onSelectAll={selectAllSources}
-                onDeselectAll={deselectAllSources}
+                onSelectAll={selectSources}
+                onDeselectAll={deselectSources}
                 onUploadPdf={(file, title) => uploadPdfMutation.mutateAsync({ file, title })}
                 onImportWebsite={(url, title) => importWebsiteMutation.mutateAsync({ url, title })}
                 onImportYoutube={(url, title) => importYoutubeMutation.mutateAsync({ url, title })}
@@ -298,7 +316,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
                 onSendMessage={sendMessage}
                 onStopStreaming={stopStreaming}
                 onNewChat={startNewChat}
-                selectedSourcesCount={selectedSourceIds.length}
+                selectedSourcesCount={effectiveSelectedIds.length}
                 webSearchEnabled={webSearchEnabled}
                 onToggleWebSearch={() => setWebSearchEnabled(!webSearchEnabled)}
                 conversations={conversations}
@@ -315,7 +333,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
                 onCreateArtifact={(type) =>
                   createArtifact({
                     type,
-                    sourceIds: selectedSourceIds,
+                    sourceIds: effectiveSelectedIds,
                   })
                 }
                 onDeleteArtifact={deleteArtifact}
@@ -323,7 +341,7 @@ export function WorkspaceLayout({ workspaceId }: WorkspaceLayoutProps) {
                 isCreating={isArtifactCreating}
                 isRetrying={isArtifactRetrying}
                 retryingArtifactId={retryingArtifactId}
-                selectedSourcesCount={selectedSourceIds.length}
+                selectedSourcesCount={effectiveSelectedIds.length}
               />
             )}
           </div>

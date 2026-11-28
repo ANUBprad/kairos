@@ -55,6 +55,8 @@ jobs:
         run: node scripts/check-workspace-icons.mjs
       - name: Add Knowledge dialog guard
         run: node scripts/check-add-source-dialog.mjs
+      - name: Source sidebar guard
+        run: node scripts/check-source-sidebar.mjs
 
   server:
     runs-on: ubuntu-latest
