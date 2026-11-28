@@ -6,9 +6,6 @@ import confetti from "canvas-confetti";
 import { apiClient } from "@/lib/api-client";
 import { RazorpayOrderResponse, RazorpayPaymentSuccessResponse } from "../types";
 
-/** Mirrors the smallest server-owned credit pack. The server is authoritative. */
-const DEFAULT_TOPUP_AMOUNT_INR = 99;
-
 function loadRazorpayScript(): Promise<boolean> {
   return new Promise((resolve) => {
     if (typeof window === "undefined") {
@@ -70,8 +67,6 @@ export function useRazorpayCheckout() {
     }) => {
       setIsLoading(true);
       setError(null);
-
-      const amountInr = options?.amountInr ?? DEFAULT_TOPUP_AMOUNT_INR;
 
       try {
         const scriptLoaded = await loadRazorpayScript();
