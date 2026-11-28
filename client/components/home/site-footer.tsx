@@ -1,55 +1,50 @@
 import React from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { KairosLogo } from "@/components/brand/kairos-logo";
 import { GithubIcon } from "./brand-icons";
 import { DOCS_URL, GITHUB_URL } from "./links";
 
 const FOOTER_COLUMNS: { heading: string; links: { label: string; href: string }[] }[] = [
   {
-    heading: "Workspace",
+    heading: "Product",
     links: [
-      { label: "Dashboard", href: "/dashboard" },
+      { label: "Features", href: "/#features" },
+      { label: "Pipeline", href: "/#workflow" },
       { label: "Sources", href: "/#sources" },
-      { label: "Studio", href: "/#studio" },
-      { label: "Podcast", href: "/#podcast" },
-      { label: "Cited chat", href: "/#chat" },
+      { label: "Pricing", href: "/pricing" },
+    ],
+  },
+  {
+    heading: "Resources",
+    links: [
+      { label: "Support", href: "/support" },
+      { label: "FAQ", href: "/#faq" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
     ],
   },
   {
     heading: "Account",
     links: [
-      { label: "Pricing", href: "/pricing" },
+      { label: "Sign in", href: "/login" },
+      { label: "Sign up", href: "/signup" },
+      { label: "Dashboard", href: "/dashboard" },
       { label: "Billing", href: "/settings/billing" },
-      { label: "Integrations", href: "/settings/integrations" },
-      { label: "Memory", href: "/settings/memory" },
-    ],
-  },
-  {
-    heading: "Learn",
-    links: [
-      { label: "Pipeline", href: "/#workflow" },
-      { label: "Grounding", href: "/#grounding" },
-      { label: "Features", href: "/#features" },
-      { label: "Use cases", href: "/#use-cases" },
-      { label: "FAQ", href: "/#faq" },
-    ],
-  },
-  {
-    heading: "Kairos",
-    links: [
-      { label: "Support", href: "/support" },
-      { label: "Terms", href: "/terms" },
-      { label: "Privacy", href: "/privacy" },
     ],
   },
 ];
 
 export function SiteFooter() {
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="kairos-dark-section border-t border-border">
-      <div className="kairos-section-wrap py-16 sm:py-20">
-        <div className="grid gap-12 lg:grid-cols-[1fr_2fr] lg:gap-16">
-          <div>
+    <footer className="kairos-dark-section kairos-footer relative isolate overflow-hidden border-t border-border">
+      <div aria-hidden="true" className="kairos-footer-atmosphere" />
+
+      <div className="kairos-section-wrap relative z-10 pb-[19rem] pt-16 sm:pb-[22rem] sm:pt-20 lg:pb-[24rem]">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,2fr)] lg:gap-16">
+          <div className="max-w-sm">
             <Link href="/" className="flex h-fit items-center" aria-label="Kairos home">
               <KairosLogo
                 size={28}
@@ -59,16 +54,51 @@ export function SiteFooter() {
                 subtitle="Research workspace"
               />
             </Link>
-            <p className="mt-6 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              Turn scattered sources into answers you can verify and material you
-              can actually use.
+
+            <p className="mt-6 text-base leading-relaxed text-foreground">
+              An AI-powered research and knowledge workspace.
             </p>
-            <p className="mt-6 font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground/70">
-              Evidence-first by design
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Add sources, ask cited questions, and turn the same library into
+              study material and an interruptible podcast.
             </p>
+
+            <Link href="/signup" className="kairos-button kairos-button-primary mt-7">
+              Start researching
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
+              <span>&copy; {year} Kairos</span>
+              <span aria-hidden="true" className="size-1 rounded-full bg-border" />
+              <span>Evidence-first by design</span>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] text-muted-foreground">
+              <a
+                href={DOCS_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="transition-colors hover:text-primary motion-reduce:transition-none"
+              >
+                Documentation
+              </a>
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="Kairos on GitHub"
+                className="inline-flex transition-colors hover:text-primary motion-reduce:transition-none"
+              >
+                <GithubIcon />
+              </a>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4">
+          <nav
+            aria-label="Footer"
+            className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 sm:gap-x-8"
+          >
             {FOOTER_COLUMNS.map((column) => (
               <div key={column.heading}>
                 <h2 className="font-mono text-[10px] uppercase tracking-[0.16em] text-primary">
@@ -79,7 +109,7 @@ export function SiteFooter() {
                     <li key={link.label}>
                       <Link
                         href={link.href}
-                        className="text-[13px] text-muted-foreground transition-colors hover:text-primary"
+                        className="text-[13px] text-muted-foreground transition-colors hover:text-primary motion-reduce:transition-none"
                       >
                         {link.label}
                       </Link>
@@ -88,34 +118,12 @@ export function SiteFooter() {
                 </ul>
               </div>
             ))}
-          </div>
+          </nav>
         </div>
+      </div>
 
-        <div className="mt-14 flex flex-col gap-5 border-t border-border pt-6 text-[12px] text-muted-foreground/80 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} Kairos</p>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <Link href="/pricing" className="transition-colors hover:text-primary">
-              Simple, pay-as-you-go credits
-            </Link>
-            <a
-              href={DOCS_URL}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="transition-colors hover:text-primary"
-            >
-              Docs
-            </a>
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label="Kairos on GitHub"
-              className="transition-colors hover:text-primary"
-            >
-              <GithubIcon />
-            </a>
-          </div>
-        </div>
+      <div aria-hidden="true" className="kairos-footer-wordmark">
+        Kairos
       </div>
     </footer>
   );

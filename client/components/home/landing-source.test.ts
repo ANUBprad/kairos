@@ -84,6 +84,24 @@ test("footer keeps legal and support routes", () => {
   assert.match(footer, /href: "\/pricing"/);
 });
 
+test("footer uses three valid navigation columns and a decorative atmosphere", () => {
+  const footer = source("site-footer.tsx");
+
+  assert.equal((footer.match(/heading: "/g) ?? []).length, 3);
+  for (const heading of ["Product", "Resources", "Account"]) {
+    assert.match(footer, new RegExp(`heading: "${heading}"`));
+  }
+  assert.match(footer, /<nav\s+aria-label="Footer"/);
+  assert.match(footer, /aria-hidden="true" className="kairos-footer-wordmark"/);
+  assert.match(footer, /href="\/signup"/);
+  assert.doesNotMatch(footer, /href: "#"/);
+  assert.doesNotMatch(footer, /<video\b|<source\b/i);
+
+  assert.match(globals, /\.kairos-footer-atmosphere \{/);
+  assert.match(globals, /\.kairos-footer-wordmark \{[\s\S]*?var\(--primary\)/);
+  assert.match(globals, /\.dark \.kairos-footer \{/);
+});
+
 test("landing surfaces and effects use shared design tokens", () => {
   for (const token of [
     "--navy:",

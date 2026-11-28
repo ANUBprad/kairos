@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  CREDIT_PACKS,
+  PLAN_CREDIT_ALLOWANCES,
+  PRICING_PLANS,
   calculateCreditsForInr,
   formatUtcInstant,
   resolveCreditWindow,
@@ -88,5 +91,31 @@ describe("server-aligned credit pricing", () => {
     assert.equal(calculateCreditsForInr(99), 100);
     assert.equal(calculateCreditsForInr(999), 1300);
     assert.equal(calculateCreditsForInr(50), 100);
+  });
+
+  it("keeps display mirrors aligned with server-owned pricing", () => {
+    assert.deepEqual(
+      CREDIT_PACKS.map(({ id, amountInr, credits, bonusPercent }) => [
+        id,
+        amountInr,
+        credits,
+        bonusPercent,
+      ]),
+      [
+        ["starter", 99, 100, 0],
+        ["learner", 199, 220, 10],
+        ["researcher", 499, 600, 20],
+        ["power", 999, 1300, 30],
+      ],
+    );
+    assert.deepEqual(
+      PRICING_PLANS.map(({ id, priceInr, access }) => [id, priceInr, access]),
+      [
+        ["FREE", 0, "No purchase required"],
+        ["PRO", 299, "One-time 30-day access"],
+        ["PRO_PLUS", 699, "One-time 30-day access"],
+      ],
+    );
+    assert.deepEqual(PLAN_CREDIT_ALLOWANCES, { PRO: 500, PRO_PLUS: 1500 });
   });
 });

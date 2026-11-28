@@ -143,6 +143,36 @@ test("active auth, legal, chat, and billing surfaces avoid legacy color literals
   }
 });
 
+test("pricing preserves server-owned values and the existing checkout path", () => {
+  const page = source("./pricing/page.tsx");
+  const plans = source("../features/billing/lib/plans.ts");
+  const pricingPlans = source("../features/billing/components/pricing-plans.tsx");
+
+  assert.match(page, /<PricingPlans variant="page" showHeader={false} \/>/);
+  assert.match(page, /id="pricing-plans"/);
+  assert.match(page, /kairos-editorial-title/);
+
+  assert.match(plans, /PRO: 500/);
+  assert.match(plans, /PRO_PLUS: 1500/);
+  assert.match(pricingPlans, /PLAN_CREDIT_ALLOWANCES/);
+
+  for (const token of [
+    "CREDIT_PACKS",
+    "PRICING_PLANS",
+    "useRazorpayCheckout",
+    "requireAuth",
+    "handleBuy",
+    "handlePlanBuy",
+    "checkout({",
+    '`/login?redirect=${encodeURIComponent("/pricing")}`',
+  ]) {
+    assert.ok(pricingPlans.includes(token), `pricing keeps ${token}`);
+  }
+  assert.doesNotMatch(pricingPlans, /create-order|verify-payment/);
+  assert.match(pricingPlans, /data-featured=\{pack\.isPopular/);
+  assert.doesNotMatch(pricingPlans, /text-success/);
+});
+
 test("portals and overlays inherit the active theme", () => {
   const files = [
     "../components/ui/alert-dialog.tsx",

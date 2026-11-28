@@ -198,6 +198,15 @@ export const PRICING_PLANS: PricingPlanConfig[] = [
   },
 ];
 
+/**
+ * Mirrors the credits awarded by the server-owned `PLAN_PRICES` for display.
+ * Prices, entitlement and validation remain server-controlled.
+ */
+export const PLAN_CREDIT_ALLOWANCES: Partial<Record<PlanType, number>> = {
+  PRO: 500,
+  PRO_PLUS: 1500,
+};
+
 export function formatInr(amount: number) {
   return `₹${amount.toLocaleString("en-IN")}`;
 }
