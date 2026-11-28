@@ -25,7 +25,7 @@ const INTEGRATIONS: { label: string; icon: React.ReactNode }[] = [
 
 export function IntegrationsStrip() {
   return (
-    <section id="workflow" className="scroll-mt-24 px-5 pt-24 sm:px-6 sm:pt-28">
+    <section className="px-5 pt-24 sm:px-6 sm:pt-28">
       <div className="mx-auto w-full max-w-6xl">
         <div className="max-w-xl">
           <p className="kairos-eyebrow">Connected research</p>

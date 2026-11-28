@@ -1,5 +1,6 @@
 export { SiteNav } from "./site-nav";
 export { Hero } from "./hero";
+export { CinematicPipeline } from "./cinematic-pipeline";
 export { IntegrationsStrip } from "./integrations-strip";
 export { GroundingIntro } from "./grounding-intro";
 export { FeatureRows } from "./feature-rows";

@@ -2,6 +2,7 @@ import { getSession } from "@/features/auth/lib/auth-server";
 import {
   SiteNav,
   Hero,
+  CinematicPipeline,
   IntegrationsStrip,
   GroundingIntro,
   FeatureRows,
@@ -25,6 +26,7 @@ export default async function HomePage() {
 
       <main className="flex-1">
         <Hero isAuthenticated={isAuthenticated} />
+        <CinematicPipeline />
         <IntegrationsStrip />
         <GroundingIntro />
         <FeatureRows />
