@@ -41,6 +41,7 @@ import {
   GoogleDriveIcon,
   NotionIcon,
 } from "@/components/ui/integration-brand-icons";
+import { integrationErrorFromQuery } from "@/features/integrations/lib/integration-callback";
 
 
 export interface AddSourceDialogProps {
@@ -92,6 +93,7 @@ const SOURCE_TABS: Array<{ id: TabType; label: string; icon: React.ReactNode }> 
 interface IntegrationsStatus {
   googleDrive: {
     connected: boolean;
+    needsReconnect?: boolean;
     account?: { metadata?: { email?: string; name?: string } } | null;
   };
   notion: {
@@ -100,6 +102,7 @@ interface IntegrationsStatus {
   };
   github: {
     connected: boolean;
+    needsReconnect?: boolean;
     account?: { metadata?: { login?: string; name?: string } } | null;
   };
 }
@@ -140,6 +143,16 @@ interface GithubReposPage {
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+/** Returns to the current workspace without replaying a stale OAuth result. */
+function currentReturnPath(): string {
+  if (typeof window === "undefined") return "/dashboard";
+  const url = new URL(window.location.href);
+  for (const key of ["google_drive_error", "github_error", "error", "connected"]) {
+    url.searchParams.delete(key);
+  }
+  return `${url.pathname}${url.search}`;
 }
 
 /** Keeps integration-dependent tabs from flashing a "connect" state while status loads. */
@@ -211,6 +224,11 @@ export function AddSourceDialog({
   const [activeTab, setActiveTab] = useState<TabType>("pdf");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [callbackError, setCallbackError] = useState(() =>
+    typeof window === "undefined"
+      ? null
+      : integrationErrorFromQuery(new URLSearchParams(window.location.search)),
+  );
 
   // Hook-based mutations
   const uploadPdfMutation = useUploadPdfSource(workspaceId || "");
@@ -354,8 +372,13 @@ export function AddSourceDialog({
   };
 
   const handleConnectGoogleDrive = async () => {
+    setError(null);
+    setCallbackError(null);
     try {
-      const res = await apiClient<{ url: string }>("/api/integrations/google-drive/auth-url");
+      const returnTo = currentReturnPath();
+      const res = await apiClient<{ url: string }>(
+        `/api/integrations/google-drive/auth-url?returnTo=${encodeURIComponent(returnTo)}`,
+      );
       if (res.url) {
         window.location.href = res.url;
       }
@@ -365,11 +388,10 @@ export function AddSourceDialog({
   };
 
   const handleConnectGithub = async () => {
+    setError(null);
+    setCallbackError(null);
     try {
-      const returnTo =
-        typeof window !== "undefined"
-          ? `${window.location.pathname}${window.location.search}`
-          : "/dashboard";
+      const returnTo = currentReturnPath();
       const res = await apiClient<{ url: string }>(
         `/api/integrations/github/auth-url?returnTo=${encodeURIComponent(returnTo)}`,
       );
@@ -542,12 +564,12 @@ export function AddSourceDialog({
 
         {/* Content Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
+          {(error || callbackError?.message) && (
             <div
               className="animate-fadeIn rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive motion-reduce:animate-none"
               role="alert"
             >
-              {error}
+              {error || callbackError?.message}
             </div>
           )}
 
@@ -667,10 +689,14 @@ export function AddSourceDialog({
                   <GoogleDriveIcon size={48} className="mx-auto" />
                   <div className="space-y-1">
                     <h3 className="kairos-section-title text-sm text-primary">
-                      Connect your Google Drive
+                      {integrations?.googleDrive?.needsReconnect
+                        ? "Reconnect your Google Drive"
+                        : "Connect your Google Drive"}
                     </h3>
                     <p className="mx-auto max-w-sm text-[11px] text-muted-foreground">
-                      Import Google Docs and PDFs directly into your Kairos sources with one click.
+                      {integrations?.googleDrive?.needsReconnect
+                        ? "Your saved Google Drive authorization is no longer usable. Reconnect to browse files again."
+                        : "Import Google Docs and PDFs directly into your Kairos sources with one click."}
                     </p>
                   </div>
                   <button
@@ -678,7 +704,9 @@ export function AddSourceDialog({
                     onClick={handleConnectGoogleDrive}
                     className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
                   >
-                    Connect Google Drive
+                    {integrations?.googleDrive?.needsReconnect
+                      ? "Reconnect Google Drive"
+                      : "Connect Google Drive"}
                   </button>
                 </div>
               ) : (
@@ -1071,10 +1099,14 @@ export function AddSourceDialog({
                       <GithubIcon size={20} className="mt-0.5 shrink-0 text-brand" />
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-primary">
-                          Connect GitHub to browse your repositories
+                          {integrations?.github?.needsReconnect
+                            ? "Reconnect GitHub to browse your repositories"
+                            : "Connect GitHub to browse your repositories"}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
-                          Connect your GitHub account to list and import both public and private repositories without rate limits.
+                          {integrations?.github?.needsReconnect
+                            ? "Your saved GitHub authorization was revoked or expired. Reconnect to browse repositories again."
+                            : "Connect your GitHub account to list and import both public and private repositories without rate limits."}
                         </p>
                       </div>
                     </div>
@@ -1083,7 +1115,9 @@ export function AddSourceDialog({
                       onClick={handleConnectGithub}
                       className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-[var(--shadow-panel)] transition-colors hover:opacity-90 motion-reduce:transition-none"
                     >
-                      Connect GitHub
+                      {integrations?.github?.needsReconnect
+                        ? "Reconnect GitHub"
+                        : "Connect GitHub"}
                     </button>
                   </div>
 

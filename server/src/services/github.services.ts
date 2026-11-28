@@ -2,6 +2,7 @@ import { getWorkspaceByIdForUser } from "./workspace.services.js";
 import { assertCanCreateSource } from "./usage.services.js";
 import { createAndProcessSource } from "./source.services.js";
 import {
+    deleteConnectedAccountByProvider,
     findConnectedAccount,
     upsertConnectedAccountRecord,
 } from "../repository/integration.repository.js";
@@ -18,6 +19,7 @@ import {
     getOAuthCallbackUrl,
     OAUTH_CALLBACK_PATHS,
 } from "../lib/oauth-callback.js";
+import { providerFailureStatus } from "../lib/integration-status.js";
 
 const TOKEN_ENDPOINT = "https://github.com/login/oauth/access_token";
 const USER_ENDPOINT = "https://api.github.com/user";
@@ -37,6 +39,7 @@ const MAX_REPOS_PAGE = 10_000;
 export interface GithubServiceDeps {
     fetch?: typeof providerFetch;
     findAccount?: typeof findConnectedAccount;
+    deleteAccount?: typeof deleteConnectedAccountByProvider;
     upsertAccount?: typeof upsertConnectedAccountRecord;
     getWorkspace?: typeof getWorkspaceByIdForUser;
     assertQuota?: typeof assertCanCreateSource;
@@ -47,6 +50,7 @@ export interface GithubServiceDeps {
 type ResolvedGithubDeps = {
     fetch: typeof providerFetch;
     findAccount: typeof findConnectedAccount;
+    deleteAccount: typeof deleteConnectedAccountByProvider;
     upsertAccount: typeof upsertConnectedAccountRecord;
     getWorkspace: typeof getWorkspaceByIdForUser;
     assertQuota: typeof assertCanCreateSource;
@@ -58,6 +62,7 @@ function resolveDeps(deps?: GithubServiceDeps): ResolvedGithubDeps {
     return {
         fetch: deps?.fetch ?? providerFetch,
         findAccount: deps?.findAccount ?? findConnectedAccount,
+        deleteAccount: deps?.deleteAccount ?? deleteConnectedAccountByProvider,
         upsertAccount: deps?.upsertAccount ?? upsertConnectedAccountRecord,
         getWorkspace: deps?.getWorkspace ?? getWorkspaceByIdForUser,
         assertQuota: deps?.assertQuota ?? assertCanCreateSource,
@@ -215,6 +220,17 @@ async function githubFetch<T>(
         throw await githubProviderError(response, operation);
     }
     return { data: await readProviderJson<T>(response), response };
+}
+
+/** Clears a definitively revoked token so status no longer reports connected. */
+async function clearRevokedGithubAccount(
+    userId: string,
+    error: unknown,
+    resolved: ResolvedGithubDeps,
+): Promise<void> {
+    if (providerFailureStatus(error) !== 401) return;
+    logger.warn("Discarding revoked GitHub connection", { provider: "GITHUB" });
+    await resolved.deleteAccount(userId, "GITHUB");
 }
 
 function safeMetadataString(value: unknown, fallback: string, max: number): string {
@@ -507,8 +523,13 @@ export async function listUserGithubRepos(
     const url = new URL(search ? `${API_BASE}/search/repositories` : `${API_BASE}/user/repos`);
 
     if (search) {
-        const login = await resolveAuthenticatedLogin(account, resolved);
-        url.searchParams.set("q", `${search} user:${login}`);
+        try {
+            const login = await resolveAuthenticatedLogin(account, resolved);
+            url.searchParams.set("q", `${search} user:${login}`);
+        } catch (error) {
+            await clearRevokedGithubAccount(userId, error, resolved);
+            throw error;
+        }
         url.searchParams.set("sort", "updated");
         url.searchParams.set("order", "desc");
     } else {
@@ -520,12 +541,19 @@ export async function listUserGithubRepos(
     url.searchParams.set("per_page", String(perPage));
     url.searchParams.set("page", String(page));
 
-    const { data, response } = await githubFetch<unknown>(
-        url.toString(),
-        account.accessToken,
-        resolved,
-        search ? "search" : "list",
-    );
+    let data: unknown;
+    let response: Response;
+    try {
+        ({ data, response } = await githubFetch<unknown>(
+            url.toString(),
+            account.accessToken,
+            resolved,
+            search ? "search" : "list",
+        ));
+    } catch (error) {
+        await clearRevokedGithubAccount(userId, error, resolved);
+        throw error;
+    }
 
     const rawItems = Array.isArray(data)
         ? data

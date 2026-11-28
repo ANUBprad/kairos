@@ -49,6 +49,8 @@ jobs:
         run: node scripts/check-safe-redirect.mjs
       - name: OAuth error message guard
         run: node scripts/check-auth-errors.mjs
+      - name: Integration callback error guard
+        run: node scripts/check-integration-errors.mjs
 
   server:
     runs-on: ubuntu-latest

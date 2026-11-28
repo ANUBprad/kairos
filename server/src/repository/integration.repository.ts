@@ -2,10 +2,11 @@ import prisma from "../lib/db.js";
 import type { IntegrationProvider, Prisma } from "../generated/prisma/client.js";
 
 /**
- * Queries all connected third-party integration accounts for a user (omitting token secrets).
+ * Queries connected integration accounts for status checks.
  *
- * @param userId - Unique identifier of the user
- * @returns Promise resolving to list of connected account summaries
+ * Expiry and refresh-token presence are needed to distinguish a usable
+ * connection from a stale row. Token values are used only for the derived
+ * status and are stripped by `toConnectedAccountDto` before any response.
  */
 export function findConnectedAccountsByUserId(userId: string) {
     return prisma.connectedAccount.findMany({
@@ -14,6 +15,8 @@ export function findConnectedAccountsByUserId(userId: string) {
             id: true,
             provider: true,
             metadata: true,
+            expiresAt: true,
+            refreshToken: true,
             createdAt: true,
             updatedAt: true,
         },

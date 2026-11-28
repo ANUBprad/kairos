@@ -12,10 +12,12 @@ import {
   NotionIcon,
 } from "@/components/ui/integration-brand-icons";
 import { IntegrationCard } from "./integration-card";
+import { integrationErrorFromQuery } from "../lib/integration-callback";
 
 interface IntegrationsStatus {
   googleDrive: {
     connected: boolean;
+    needsReconnect?: boolean;
     account?: {
       metadata?: { email?: string; name?: string };
       createdAt?: string;
@@ -23,6 +25,7 @@ interface IntegrationsStatus {
   };
   notion: {
     connected: boolean;
+    needsReconnect?: boolean;
     account?: {
       metadata?: { workspaceName?: string; avatarUrl?: string };
       createdAt?: string;
@@ -30,6 +33,7 @@ interface IntegrationsStatus {
   };
   github: {
     connected: boolean;
+    needsReconnect?: boolean;
     account?: {
       metadata?: { login?: string; name?: string; avatarUrl?: string };
       createdAt?: string;
@@ -54,6 +58,15 @@ export function IntegrationsSettingsView({
   const [notionError, setNotionError] = useState<string | null>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [githubError, setGithubError] = useState<string | null>(null);
+  const [callbackError, setCallbackError] = useState(() =>
+    typeof window === "undefined"
+      ? null
+      : integrationErrorFromQuery(new URLSearchParams(window.location.search)),
+  );
+  const googleMessage =
+    callbackError?.provider === "googleDrive" ? callbackError.message : googleError;
+  const githubMessage =
+    callbackError?.provider === "github" ? callbackError.message : githubError;
 
   const { data: integrations, isLoading } = useQuery<IntegrationsStatus>({
     queryKey: ["connected-integrations"],
@@ -88,6 +101,7 @@ export function IntegrationsSettingsView({
 
   const handleConnectGoogleDrive = async () => {
     setGoogleError(null);
+    setCallbackError(null);
     try {
       const res = await apiClient<{ url: string }>(
         "/api/integrations/google-drive/auth-url",
@@ -102,6 +116,7 @@ export function IntegrationsSettingsView({
 
   const handleConnectGithub = async () => {
     setGithubError(null);
+    setCallbackError(null);
     try {
       const res = await apiClient<{ url: string }>(
         "/api/integrations/github/auth-url",
@@ -145,16 +160,18 @@ export function IntegrationsSettingsView({
               onClick={handleConnectGoogleDrive}
               className={actionBtnPrimary}
             >
-              Connect Google Drive
+              {integrations?.googleDrive?.needsReconnect
+                ? "Reconnect Google Drive"
+                : "Connect Google Drive"}
               <ExternalLink className="size-3.5" />
             </button>
           )
         }
       >
-        {googleError && (
+        {googleMessage && (
           <div role="alert"
             className="rounded-xl border border-danger/20 bg-danger/5 p-2.5 text-xs text-danger">
-            {googleError}
+            {googleMessage}
           </div>
         )}
         {integrations?.googleDrive?.connected ? (
@@ -168,7 +185,9 @@ export function IntegrationsSettingsView({
           </div>
         ) : (
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Sign in with Google to choose Docs and PDFs when adding sources.
+            {integrations?.googleDrive?.needsReconnect
+              ? "Your saved Google Drive authorization is no longer usable. Reconnect to browse files again."
+              : "Connect Google Drive to choose Docs and PDFs when adding sources."}
           </p>
         )}
       </IntegrationCard>
@@ -275,16 +294,18 @@ export function IntegrationsSettingsView({
               onClick={handleConnectGithub}
               className={actionBtnPrimary}
             >
-              Connect GitHub
+              {integrations?.github?.needsReconnect
+                ? "Reconnect GitHub"
+                : "Connect GitHub"}
               <ExternalLink className="size-3.5" />
             </button>
           )
         }
       >
-        {githubError && (
+        {githubMessage && (
           <div role="alert"
             className="rounded-xl border border-danger/20 bg-danger/5 p-2.5 text-xs text-danger">
-            {githubError}
+            {githubMessage}
           </div>
         )}
         {integrations?.github?.connected ? (
@@ -298,7 +319,9 @@ export function IntegrationsSettingsView({
           </div>
         ) : (
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            OAuth connects your account so you can choose repositories as sources.
+            {integrations?.github?.needsReconnect
+              ? "Your saved GitHub authorization was revoked or expired. Reconnect to browse repositories again."
+              : "OAuth connects your account so you can choose repositories as sources."}
           </p>
         )}
       </IntegrationCard>
@@ -319,7 +342,8 @@ export function IntegrationsSettingsView({
         </div>
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
           Review the accounts saved to your Kairos profile and add sources from the
-          tools you already use. Connection status is read from your saved accounts.
+          tools you already use. A connection is shown only when its authorization
+          is still usable; expired or revoked access asks you to reconnect.
         </p>
       </div>
       {cards}

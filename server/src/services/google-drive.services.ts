@@ -2,6 +2,7 @@ import { getWorkspaceByIdForUser } from "./workspace.services.js";
 import { assertCanCreateSource } from "./usage.services.js";
 import { createAndProcessSource } from "./source.services.js";
 import {
+    deleteConnectedAccountByProvider,
     findConnectedAccount,
     updateConnectedAccountTokens,
     upsertConnectedAccountRecord,
@@ -16,6 +17,7 @@ import {
     OAUTH_CALLBACK_PATHS,
 } from "../lib/oauth-callback.js";
 import { importDriveFileSchema } from "../validators/integration.validator.js";
+import { providerFailureStatus } from "../lib/integration-status.js";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
@@ -39,6 +41,7 @@ const TOKEN_EXPIRY_SKEW_MS = 30_000;
 export interface GoogleDriveDeps {
     fetch?: typeof providerFetch;
     findAccount?: typeof findConnectedAccount;
+    deleteAccount?: typeof deleteConnectedAccountByProvider;
     updateTokens?: typeof updateConnectedAccountTokens;
     getWorkspace?: typeof getWorkspaceByIdForUser;
     assertQuota?: typeof assertCanCreateSource;
@@ -49,6 +52,7 @@ export interface GoogleDriveDeps {
 type ResolvedDeps = {
     fetch: typeof providerFetch;
     findAccount: typeof findConnectedAccount;
+    deleteAccount: typeof deleteConnectedAccountByProvider;
     updateTokens: typeof updateConnectedAccountTokens;
     getWorkspace: typeof getWorkspaceByIdForUser;
     assertQuota: typeof assertCanCreateSource;
@@ -60,6 +64,8 @@ function resolveDeps(deps?: GoogleDriveDeps): ResolvedDeps {
     return {
         fetch: deps?.fetch ?? providerFetch,
         findAccount: deps?.findAccount ?? findConnectedAccount,
+        deleteAccount:
+            deps?.deleteAccount ?? deleteConnectedAccountByProvider,
         updateTokens: deps?.updateTokens ?? updateConnectedAccountTokens,
         getWorkspace: deps?.getWorkspace ?? getWorkspaceByIdForUser,
         assertQuota: deps?.assertQuota ?? assertCanCreateSource,
@@ -111,12 +117,24 @@ async function googleProviderError(
 ): Promise<ValidationError | NotFoundError> {
     const status = response.status;
     // Consume the body so a failed upstream response cannot leave a socket open.
+    // Only a short, allowlisted provider reason code is retained; the raw body
+    // may contain account details and is never logged or returned.
+    let reasonCode: string | null = null;
     try {
-        await response.text();
+        const body = (await response.text()).slice(0, 4096);
+        const parsed = JSON.parse(body) as { error?: { reason?: unknown } };
+        const reason = parsed?.error?.reason;
+        if (typeof reason === "string" && /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(reason)) {
+            reasonCode = reason;
+        }
     } catch {
         // The body is not needed for the safe, status-based message.
     }
-    logger.warn("Google Drive provider request failed", { operation, status });
+    logger.warn("Google Drive provider request failed", {
+        operation,
+        status,
+        reasonCode: reasonCode ?? undefined,
+    });
 
     if (operation === "metadata" && status === 404) {
         return new NotFoundError("Google Drive file not found or inaccessible.");
@@ -129,9 +147,21 @@ async function googleProviderError(
         );
     }
     if (status === 403) {
+        if (reasonCode === "insufficientPermissions" || reasonCode === "insufficient_scope") {
+            return new ValidationError(
+                "Google Drive needs read permission. Reconnect Google Drive and approve the requested access.",
+                { provider: "GOOGLE_DRIVE", status, reasonCode },
+            );
+        }
+        if (reasonCode === "userNotAuthenticated") {
+            return new ValidationError(
+                "Google Drive authorization expired. Reconnect Google Drive to continue.",
+                { provider: "GOOGLE_DRIVE", status, reasonCode },
+            );
+        }
         return new ValidationError(
             "Google Drive access was denied. Grant read access to the file and try again.",
-            { provider: "GOOGLE_DRIVE", status },
+            { provider: "GOOGLE_DRIVE", status, reasonCode },
         );
     }
     if (status === 429) {
@@ -370,11 +400,28 @@ async function driveFetch(
         operation,
         status: response.status,
     });
-    const refreshedToken = await getValidAccessToken(userId, {
-        forceRefresh: true,
-        deps: resolved,
-    });
-    return resolved.fetch(url, withBearerToken(init, refreshedToken));
+    let refreshedToken: string;
+    try {
+        refreshedToken = await getValidAccessToken(userId, {
+            forceRefresh: true,
+            deps: resolved,
+        });
+    } catch (refreshError) {
+        // A rejected refresh token is a definitive revocation: clear the stale
+        // row so status and reconnect UX reflect that the account is unusable.
+        if (providerFailureStatus(refreshError) === 401) {
+            logger.warn("Discarding revoked Google Drive connection", { operation });
+            await resolved.deleteAccount(userId, "GOOGLE_DRIVE");
+        }
+        throw refreshError;
+    }
+
+    const retried = await resolved.fetch(url, withBearerToken(init, refreshedToken));
+    if (retried.status === 401) {
+        logger.warn("Discarding revoked Google Drive connection", { operation });
+        await resolved.deleteAccount(userId, "GOOGLE_DRIVE");
+    }
+    return retried;
 }
 
 /**

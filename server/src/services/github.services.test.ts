@@ -285,6 +285,32 @@ describe("GitHub integration", () => {
         );
     });
 
+    it("clears a revoked GitHub token after a 401 repository response", async () => {
+        const deleted: Array<[string, string]> = [];
+        const deps = {
+            findAccount: async () => fakeAccount(),
+            deleteAccount: async (userId: string, provider: string) => {
+                deleted.push([userId, provider]);
+                return { count: 1 };
+            },
+            fetch: (async () =>
+                new Response(JSON.stringify({ message: "Bad credentials" }), {
+                    status: 401,
+                    headers: { "Content-Type": "application/json" },
+                })) as typeof providerFetch,
+        } as unknown as GithubServiceDeps;
+
+        await assert.rejects(
+            () => listUserGithubRepos("user-1", { deps }),
+            (error: unknown) => {
+                assert.ok(error instanceof ValidationError);
+                assert.match(error.message, /reconnect/i);
+                return true;
+            },
+        );
+        assert.deepEqual(deleted, [["user-1", "GITHUB"]]);
+    });
+
     it("imports a private repo with the connected token and never leaks it", async () => {
         let capturedToken: string | undefined;
         const created: Array<Record<string, unknown>> = [];

@@ -89,6 +89,78 @@ describe("Google Drive integration", () => {
         assert.equal(calls.length, 1);
     });
 
+    it("uses the Drive reason code for an accurate 403 message without leaking the body", async () => {
+        const providerSecret = "private-account-detail-from-provider";
+        const warnings: string[] = [];
+        const originalWarn = console.warn;
+        console.warn = (...args: unknown[]) => {
+            warnings.push(args.map(String).join(" "));
+        };
+        const deps = {
+            now: () => NOW,
+            findAccount: async () => fakeAccount(),
+            fetch: async () =>
+                jsonResponse(
+                    {
+                        error: {
+                            reason: "insufficientPermissions",
+                            message: providerSecret,
+                        },
+                    },
+                    403,
+                ),
+        } as unknown as GoogleDriveDeps;
+
+        try {
+            await assert.rejects(
+                () => listGoogleDriveFiles("user-1", undefined, { deps }),
+                (error: unknown) => {
+                    assert.ok(error instanceof ValidationError);
+                    assert.match(error.message, /needs read permission/i);
+                    assert.equal(error.message.includes(providerSecret), false);
+                    return true;
+                },
+            );
+        } finally {
+            console.warn = originalWarn;
+        }
+
+        const logged = warnings.join("\n");
+        assert.match(logged, /"reasonCode":"insufficientPermissions"/);
+        assert.equal(logged.includes(providerSecret), false);
+    });
+
+    it("clears a revoked Drive account when refresh is rejected", async () => {
+        const deleted: Array<[string, string]> = [];
+        const responses = [
+            new Response("token expired", { status: 401 }),
+            new Response("refresh revoked", { status: 401 }),
+        ];
+        const deps = {
+            now: () => NOW,
+            findAccount: async () => fakeAccount(),
+            deleteAccount: async (userId: string, provider: string) => {
+                deleted.push([userId, provider]);
+                return { count: 1 };
+            },
+            fetch: async () => {
+                const response = responses.shift();
+                if (!response) throw new Error("unexpected extra provider call");
+                return response;
+            },
+        } as unknown as GoogleDriveDeps;
+
+        await assert.rejects(
+            () => listGoogleDriveFiles("user-1", undefined, { deps }),
+            (error: unknown) => {
+                assert.ok(error instanceof ValidationError);
+                assert.match(error.message, /reconnect/i);
+                return true;
+            },
+        );
+        assert.deepEqual(deleted, [["user-1", "GOOGLE_DRIVE"]]);
+    });
+
     it("refreshes and retries once when Drive rejects an unexpired token", async () => {
         const calls: Array<{ url: string; init?: RequestInit }> = [];
         const updatedTokens: Array<Record<string, unknown>> = [];

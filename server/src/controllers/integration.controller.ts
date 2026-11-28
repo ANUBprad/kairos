@@ -33,6 +33,7 @@ import {
     verifyOAuthState,
 } from "../lib/oauth-state.js";
 import { logger } from "../lib/logger.js";
+import { hasUsableIntegrationToken } from "../lib/integration-status.js";
 
 /**
  * Clears the single-use state cookie BEFORE ending the response.
@@ -49,6 +50,50 @@ function redirectClearingState(
 ): void {
     clearOAuthStateCookie(res, provider);
     res.redirect(url);
+}
+
+/** Builds a same-origin return URL for integration callbacks. */
+function getIntegrationCallbackRedirect(
+    returnTo: string | null,
+    params: Record<string, string>,
+): string {
+    const target = new URL(
+        validateReturnPath(returnTo ?? "/settings/integrations"),
+        getPrimaryClientUrl(),
+    );
+    for (const [key, value] of Object.entries(params)) {
+        target.searchParams.set(key, value);
+    }
+    return target.toString();
+}
+
+const OAUTH_DENIED_CODES = new Set([
+    "access_denied",
+    "user_denied",
+    "cancelled",
+    "canceled",
+]);
+
+export type IntegrationCallbackCode =
+    | "access_denied"
+    | "invalid_scope"
+    | "invalid_code"
+    | "oauth_failed"
+    | "oauth_state_invalid"
+    | "callback_failed";
+
+/**
+ * Provider `error_description` is deliberately discarded: it can contain
+ * account details or internal URLs. The browser only receives a fixed code
+ * that the client maps to a sanitized, provider-specific message.
+ */
+export function providerCallbackCode(code: unknown): IntegrationCallbackCode | null {
+    if (typeof code !== "string") return null;
+    const normalized = code.trim().toLowerCase();
+    if (!/^[a-z0-9_]{1,64}$/.test(normalized)) return null;
+    if (OAUTH_DENIED_CODES.has(normalized)) return "access_denied";
+    if (normalized === "invalid_scope") return "invalid_scope";
+    return "oauth_failed";
 }
 
 import {
@@ -91,6 +136,22 @@ export function toConnectedAccountDto(
     };
 }
 
+type StatusAccount = Pick<
+    ConnectedAccount,
+    "provider" | "expiresAt" | "refreshToken" | "id" | "metadata" | "createdAt" | "updatedAt"
+>;
+
+/** A stale row is reported as disconnected with an explicit reconnect hint. */
+function providerStatus(accounts: StatusAccount[], provider: IntegrationProvider) {
+    const account = accounts.find((row) => row.provider === provider);
+    const connected = hasUsableIntegrationToken(account);
+    return {
+        connected,
+        needsReconnect: Boolean(account) && !connected,
+        account: account ? toConnectedAccountDto(account) : null,
+    };
+}
+
 /**
  * Handles HTTP GET request to list all connected third-party accounts (Google Drive, Notion) for the current user.
  *
@@ -98,26 +159,13 @@ export function toConnectedAccountDto(
  * @param res - Express response returning connection status per provider
  */
 export async function getConnectedIntegrations(req: Request, res: Response) {
-    const accounts = (await findConnectedAccountsByUserId(req.session.user.id)).map(
-        toConnectedAccountDto,
-    );
+    const accounts = await findConnectedAccountsByUserId(req.session.user.id);
 
-    const result = {
-        googleDrive: {
-            connected: accounts.some((a) => a.provider === "GOOGLE_DRIVE"),
-            account: accounts.find((a) => a.provider === "GOOGLE_DRIVE") || null,
-        },
-        notion: {
-            connected: accounts.some((a) => a.provider === "NOTION"),
-            account: accounts.find((a) => a.provider === "NOTION") || null,
-        },
-        github: {
-            connected: accounts.some((a) => a.provider === "GITHUB"),
-            account: accounts.find((a) => a.provider === "GITHUB") || null,
-        },
-    };
-
-    res.json(result);
+    res.json({
+        googleDrive: providerStatus(accounts, "GOOGLE_DRIVE"),
+        notion: providerStatus(accounts, "NOTION"),
+        github: providerStatus(accounts, "GITHUB"),
+    });
 }
 
 /**
@@ -147,6 +195,7 @@ export async function getGoogleDriveAuth(req: Request, res: Response) {
     const issued = await issueOAuthState({
         userId: req.session.user.id,
         provider: "GOOGLE_DRIVE",
+        returnTo: req.query.returnTo,
     });
     setOAuthStateCookie(res, "GOOGLE_DRIVE", issued.nonce);
     const url = getGoogleDriveAuthUrl(issued.token);
@@ -158,22 +207,46 @@ export async function getGoogleDriveAuth(req: Request, res: Response) {
  * Identity comes only from a signed, single-use state bound to an HTTP-only cookie.
  */
 export async function googleDriveCallback(req: Request, res: Response) {
+    let returnTo: string | null = null;
+    let stateVerified = false;
     try {
         const verified = await verifyOAuthState({
             token: req.query.state,
             cookieNonce: readOAuthStateCookie(req, "GOOGLE_DRIVE"),
             provider: "GOOGLE_DRIVE",
         });
-        const code = req.query.code;
-        if (typeof code !== "string" || !code.trim()) {
-            throw new ValidationError("Missing Google authorization code.");
+        returnTo = verified.returnTo;
+        stateVerified = true;
+
+        const { code, error } = req.query;
+        if (typeof error === "string" && error.trim()) {
+            redirectClearingState(
+                res,
+                "GOOGLE_DRIVE",
+                getIntegrationCallbackRedirect(returnTo, {
+                    google_drive_error: providerCallbackCode(error) ?? "oauth_failed",
+                }),
+            );
+            return;
         }
 
-        await handleGoogleDriveCallback({ code: code.trim(), userId: verified.userId });
+        const trimmedCode = typeof code === "string" ? code.trim() : "";
+        if (!/^[A-Za-z0-9_-]{1,200}$/.test(trimmedCode)) {
+            redirectClearingState(
+                res,
+                "GOOGLE_DRIVE",
+                getIntegrationCallbackRedirect(returnTo, {
+                    google_drive_error: "invalid_code",
+                }),
+            );
+            return;
+        }
+
+        await handleGoogleDriveCallback({ code: trimmedCode, userId: verified.userId });
         redirectClearingState(
             res,
             "GOOGLE_DRIVE",
-            `${getPrimaryClientUrl()}/settings/integrations?connected=google-drive`,
+            getIntegrationCallbackRedirect(returnTo, { connected: "google-drive" }),
         );
     } catch (error) {
         logger.warn("Google Drive OAuth callback rejected", {
@@ -182,7 +255,9 @@ export async function googleDriveCallback(req: Request, res: Response) {
         redirectClearingState(
             res,
             "GOOGLE_DRIVE",
-            `${getPrimaryClientUrl()}/settings/integrations?error=oauth_invalid_state`,
+            getIntegrationCallbackRedirect(returnTo, {
+                google_drive_error: stateVerified ? "callback_failed" : "oauth_state_invalid",
+            }),
         );
     }
 }
@@ -365,18 +440,6 @@ export async function getGithubAuth(req: Request, res: Response) {
     res.json({ url });
 }
 
-function getGithubCallbackRedirect(
-    returnTo: string | null,
-    params: Record<string, string>,
-): string {
-    const safePath = validateReturnPath(returnTo ?? "/settings/integrations");
-    const target = new URL(safePath, getPrimaryClientUrl());
-    for (const [key, value] of Object.entries(params)) {
-        target.searchParams.set(key, value);
-    }
-    return target.toString();
-}
-
 /** Handles the GitHub OAuth callback with signed single-use state verification. */
 export async function githubCallback(req: Request, res: Response) {
     try {
@@ -390,15 +453,11 @@ export async function githubCallback(req: Request, res: Response) {
         if (typeof error === "string" && error.trim()) {
             // Never reflect provider-supplied error_description: it can contain
             // account details and is not needed for a safe retry message.
-            const message =
-                error.trim() === "access_denied"
-                    ? "GitHub authorization was cancelled or denied."
-                    : "GitHub authorization failed. Please try again.";
             redirectClearingState(
                 res,
                 "GITHUB",
-                getGithubCallbackRedirect(verified.returnTo, {
-                    github_error: message,
+                getIntegrationCallbackRedirect(verified.returnTo, {
+                    github_error: providerCallbackCode(error) ?? "oauth_failed",
                 }),
             );
             return;
@@ -409,8 +468,8 @@ export async function githubCallback(req: Request, res: Response) {
             redirectClearingState(
                 res,
                 "GITHUB",
-                getGithubCallbackRedirect(verified.returnTo, {
-                    github_error: "Missing or invalid GitHub authorization code.",
+                getIntegrationCallbackRedirect(verified.returnTo, {
+                    github_error: "invalid_code",
                 }),
             );
             return;
@@ -428,8 +487,8 @@ export async function githubCallback(req: Request, res: Response) {
             redirectClearingState(
                 res,
                 "GITHUB",
-                getGithubCallbackRedirect(verified.returnTo, {
-                    github_error: "Failed to connect GitHub.",
+                getIntegrationCallbackRedirect(verified.returnTo, {
+                    github_error: "oauth_failed",
                 }),
             );
             return;
@@ -438,7 +497,7 @@ export async function githubCallback(req: Request, res: Response) {
         redirectClearingState(
             res,
             "GITHUB",
-            getGithubCallbackRedirect(verified.returnTo, {
+            getIntegrationCallbackRedirect(verified.returnTo, {
                 connected: "github",
             }),
         );
@@ -449,8 +508,8 @@ export async function githubCallback(req: Request, res: Response) {
         redirectClearingState(
             res,
             "GITHUB",
-            getGithubCallbackRedirect("/settings/integrations", {
-                github_error: "OAuth state verification failed. Please retry.",
+            getIntegrationCallbackRedirect("/settings/integrations", {
+                github_error: "oauth_state_invalid",
             }),
         );
     }
